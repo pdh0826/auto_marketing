@@ -856,6 +856,7 @@ export function LlmSettingsClient() {
           <div>
             <h2>Call Logs</h2>
             <p className="muted">최근 LLM 호출 로그를 진단 정보 중심으로 확인합니다.</p>
+            <p className="muted">Call logs API는 prompt 전문, raw response, secret, API Key, content body를 반환하지 않습니다.</p>
           </div>
         </div>
         <div className="table-wrap">
@@ -863,11 +864,12 @@ export function LlmSettingsClient() {
             <thead>
               <tr>
                 <th>Task</th>
-                <th>Provider / Model</th>
                 <th>Status</th>
+                <th>Provider</th>
+                <th>Model</th>
+                <th>Content</th>
                 <th>Latency</th>
                 <th>Tokens</th>
-                <th>Cost</th>
                 <th>Error</th>
                 <th>Created</th>
                 <th>Metadata</th>
@@ -876,26 +878,27 @@ export function LlmSettingsClient() {
             <tbody>
               {logs.length === 0 ? (
                 <tr>
-                  <td colSpan={9}>최근 Call Log가 없습니다.</td>
+                  <td colSpan={10}>최근 Call Log가 없습니다.</td>
                 </tr>
               ) : (
                 logs.map((log) => (
                   <tr key={log.id}>
                     <td>{getTaskLabel(log.taskType)}</td>
-                    <td>{formatRouteTarget(log.providerId, log.modelId, providerById, modelById)}</td>
                     <td>{log.status}</td>
+                    <td>{formatLogProvider(log)}</td>
+                    <td>{formatLogModel(log)}</td>
+                    <td>{formatLogContent(log)}</td>
                     <td>{log.latencyMs == null ? "-" : `${log.latencyMs}ms`}</td>
                     <td>
                       {log.inputTokens ?? "-"} / {log.outputTokens ?? "-"}
                     </td>
-                    <td>{log.estimatedCost ?? "-"}</td>
                     <td>{log.errorMessage ?? "-"}</td>
                     <td>{formatDate(log.createdAt)}</td>
                     <td>
                       {log.metadata ? (
                         <details>
                           <summary>{Object.keys(log.metadata).length} keys</summary>
-                          <code>{summarizeMetadata(log.metadata)}</code>
+                          <pre>{formatMetadata(log.metadata)}</pre>
                         </details>
                       ) : (
                         "-"
@@ -1089,7 +1092,32 @@ function formatDate(value: string) {
   }).format(new Date(value));
 }
 
-function summarizeMetadata(metadata: Record<string, unknown>) {
-  const keys = Object.keys(metadata).slice(0, 8);
-  return keys.map((key) => `${key}: ${String(metadata[key]).slice(0, 48)}`).join(", ");
+function formatLogProvider(log: LlmCallLogAdmin) {
+  if (!log.provider) {
+    return log.providerId ?? "-";
+  }
+
+  return `${log.provider.name} (${getInvocationModeLabel(log.provider.invocationMode)}, ${getApiFormatLabel(log.provider.apiFormat)})`;
+}
+
+function formatLogModel(log: LlmCallLogAdmin) {
+  if (!log.model) {
+    return log.modelId ?? "-";
+  }
+
+  return log.model.displayName ?? log.model.name;
+}
+
+function formatLogContent(log: LlmCallLogAdmin) {
+  if (!log.contentItem) {
+    return log.contentItemId ?? "-";
+  }
+
+  const title = log.contentItem.title || "Untitled content";
+  const keyword = log.contentItem.targetKeyword ? ` / keyword: ${log.contentItem.targetKeyword}` : "";
+  return `${title} (${log.contentItem.mode}, ${log.contentItem.status}${keyword})`;
+}
+
+function formatMetadata(metadata: Record<string, unknown>) {
+  return JSON.stringify(metadata, null, 2);
 }

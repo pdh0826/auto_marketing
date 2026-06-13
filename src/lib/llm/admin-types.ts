@@ -1,4 +1,5 @@
 import type { LlmApiFormat, LlmCallStatus, LlmInvocationMode, LlmProviderTestStatus, LlmProviderType, LlmTaskType } from "./types";
+import type { ContentMode, ContentStatus } from "@/lib/content/types";
 
 export interface LlmProviderAdmin {
   id: string;
@@ -72,6 +73,29 @@ export interface LlmCallLogAdmin {
   errorMessage: string | null;
   metadata: Record<string, unknown> | null;
   createdAt: string;
-  provider?: LlmProviderAdmin | null;
-  model?: LlmModelAdmin | null;
+  provider?: LlmCallLogProviderSummary | null;
+  model?: LlmCallLogModelSummary | null;
+  contentItem?: LlmCallLogContentItemSummary | null;
+}
+
+export interface LlmCallLogProviderSummary {
+  id: string;
+  name: string;
+  providerType: LlmProviderType;
+  invocationMode: LlmInvocationMode;
+  apiFormat: LlmApiFormat;
+}
+
+export interface LlmCallLogModelSummary {
+  id: string;
+  name: string;
+  displayName: string | null;
+}
+
+export interface LlmCallLogContentItemSummary {
+  id: string;
+  title: string | null;
+  mode: ContentMode;
+  status: ContentStatus;
+  targetKeyword: string | null;
 }

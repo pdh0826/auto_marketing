@@ -181,3 +181,16 @@ npm run build
 - warning만 있는 후보는 `planJson에 반영`이 가능하지만 화면에 경고가 표시된다.
 - 생성 prompt는 투자/금융 서비스가 정보 제공 또는 참고 도구라는 원칙과 수익 보장/매수 추천/수익률 예시/성공 사례/안전하게 매수 금지를 포함한다.
 - 안전성 validation 결과는 error/warning count만 `llm_call_logs` metadata에 반영되며 prompt 전문, raw response 전문, API Key, request body 전문은 저장되지 않는다.
+
+## Patch 7D 수동 검증
+
+- `GET /api/settings/llm/call-logs` 응답의 provider는 `id`, `name`, `providerType`, `invocationMode`, `apiFormat`만 포함한다.
+- `GET /api/settings/llm/call-logs` 응답의 model은 `id`, `name`, `displayName`만 포함한다.
+- `GET /api/settings/llm/call-logs` 응답의 contentItem은 `id`, `title`, `mode`, `status`, `targetKeyword`만 포함한다.
+- call logs 응답에는 `sourceMemo`, `planJson`, `draftMarkdown`, `draftHtml`, `headersJson`, `requestTemplateJson`, `secretRef`, `apiKeyLast4`, `hasSecret`, `lastTestError`, `encryptedValue`가 포함되지 않는다.
+- `POST /api/settings/llm/call-logs`는 JSON 형태의 405 Method Not Allowed 응답을 반환한다.
+- `/settings/llm` Call Logs 화면은 task, status, provider, model, content summary, latency, tokens, error, createdAt, metadata만 표시한다.
+- Call Logs 화면에는 prompt 전문, raw response, secret, API Key, content body를 반환하지 않는다는 안내가 표시된다.
+- `/content/[id]` Generated Plan Candidate 영역은 validation status와 error/warning count를 표시한다.
+- validation error가 있으면 planJson 반영 불가 안내가 표시되고 `planJson에 반영` 버튼이 비활성화된다.
+- warning만 있으면 검토 후 반영 가능 안내가 표시된다.

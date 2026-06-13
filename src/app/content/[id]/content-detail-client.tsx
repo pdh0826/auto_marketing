@@ -377,6 +377,10 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
                 <div className={generatedPlan.validation.ok ? "notice" : "notice error"}>
                   <strong>Generated Plan Candidate</strong>
                   <p>
+                    validation: {generatedPlan.validation.ok ? "pass" : "fail"} / errors: {generatedPlan.validation.errors.length} / warnings:{" "}
+                    {generatedPlan.validation.warnings.length}
+                  </p>
+                  <p>
                     provider: {generatedPlan.route.providerName} / model: {generatedPlan.route.modelName} / fallback:{" "}
                     {generatedPlan.route.usedFallback ? "yes" : "no"}
                   </p>
@@ -384,8 +388,15 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
                     latency: {generatedPlan.metadata.latencyMs}ms / summary: {generatedPlan.metadata.responseSummary}
                   </p>
                 </div>
+                {!generatedPlan.validation.ok ? (
+                  <div className="notice error">이 후보는 validation error가 있어 planJson에 반영할 수 없습니다.</div>
+                ) : generatedPlan.validation.warnings.length > 0 ? (
+                  <div className="notice">warning이 있습니다. 내용을 검토한 뒤 planJson에 반영할 수 있습니다.</div>
+                ) : (
+                  <div className="notice">validation을 통과했습니다. 내용을 검토한 뒤 planJson에 반영할 수 있습니다.</div>
+                )}
                 <ValidationList title="Validation Errors" items={generatedPlan.validation.errors} emptyText="validation error가 없습니다." isError />
-                <ValidationList title="Validation Warnings" items={generatedPlan.validation.warnings} emptyText="validation warning이 없습니다." />
+                <ValidationList title="Validation Warnings" items={generatedPlan.validation.warnings} emptyText="validation warning이 없습니다." isWarning />
                 <PromptPreviewBlock title="Candidate planJson" value={JSON.stringify(generatedPlan.candidatePlanJson, null, 2)} />
                 <div className="form-actions">
                   <button
@@ -490,9 +501,23 @@ function PromptPreviewBlock({ title, value }: { title: string; value: string }) 
   );
 }
 
-function ValidationList({ title, items, emptyText, isError = false }: { title: string; items: string[]; emptyText: string; isError?: boolean }) {
+function ValidationList({
+  title,
+  items,
+  emptyText,
+  isError = false,
+  isWarning = false
+}: {
+  title: string;
+  items: string[];
+  emptyText: string;
+  isError?: boolean;
+  isWarning?: boolean;
+}) {
+  const className = isError && items.length > 0 ? "notice error" : isWarning && items.length > 0 ? "notice warning" : "notice";
+
   return (
-    <div className={isError && items.length > 0 ? "notice error" : "notice"}>
+    <div className={className}>
       <strong>{title}</strong>
       {items.length === 0 ? (
         <p>{emptyText}</p>

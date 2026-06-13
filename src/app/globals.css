@@ -183,6 +183,12 @@ a {
   color: #991b1b;
 }
 
+.notice.warning {
+  border-color: #fde68a;
+  background: #fffbeb;
+  color: #92400e;
+}
+
 .table-wrap {
   overflow-x: auto;
 }

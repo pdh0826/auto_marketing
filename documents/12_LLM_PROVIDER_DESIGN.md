@@ -152,3 +152,15 @@ Patch 7C는 `/content/[id]`에서 `content_plan` Task Route를 사용해 실제 
 - 투자/금융/서비스 홍보 안전성 검사는 생성 후보를 저장하기 전에 rule-based validation으로 수행한다.
 - 수익 보장, 매수/매도 추천, 수익률 예시, 성공 사례, 안전하게 매수 같은 심각 표현은 validation error로 처리해 `planJson` 반영을 차단한다.
 - 주의 표현은 warning으로 표시하되, 투자 관련 `service_promotion` 맥락에서는 더 엄격하게 error로 승격한다.
+
+## Patch 7D Call Log Safe DTO
+
+Patch 7D는 `/api/settings/llm/call-logs` 응답을 운영 화면용 Safe DTO로 축소한다.
+
+- provider relation은 `id`, `name`, `providerType`, `invocationMode`, `apiFormat`만 반환한다.
+- model relation은 `id`, `name`, `displayName`만 반환한다.
+- contentItem relation은 `id`, `title`, `mode`, `status`, `targetKeyword`만 반환한다.
+- `sourceMemo`, `planJson`, `draftMarkdown`, `draftHtml`, `headersJson`, `requestTemplateJson`, `secretRef`, `apiKeyLast4`, `hasSecret`, `lastTestError`, `encryptedValue`는 call logs 응답에서 제외한다.
+- `POST /api/settings/llm/call-logs`는 막고, 로그 생성은 서버 내부 `createLlmCallLog()` 호출로만 수행한다.
+- `/settings/llm` Call Logs 화면은 safe summary와 제한된 metadata만 표시한다.
+- `/content/[id]` Generated Plan Candidate UI는 validation error/warning count와 반영 가능 여부를 명확히 표시한다.
