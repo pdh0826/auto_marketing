@@ -116,3 +116,13 @@ npm run build
 - 연결 테스트는 `llm_call_logs.taskType = provider_test`로 제한된 metadata만 기록한다.
 - 테스트 로그 metadata에는 secret, API Key, prompt 전문, request body 전문, response 전문이 저장되지 않는다.
 - 실제 content_plan, 본문 생성, HTML 변환, 품질검사, Blogger API 호출은 발생하지 않는다.
+
+## Patch 7A-HOTFIX 수동 검증
+
+- 잘못된 OpenAI-compatible API Key로 연결 테스트를 실행해도 응답 JSON, Provider lastTestError, llm_call_logs errorMessage, metadata.responseSummary에 API Key 일부가 표시되지 않는다.
+- OpenAI HTTP 401/403 실패는 외부 error.message 전문이 아니라 `authentication_failed` 또는 `Authentication failed. Check the API key.` 수준의 안전 요약만 표시한다.
+- OpenAI HTTP 404 실패는 외부 응답 전문이 아니라 endpoint/model not found 수준의 안전 요약만 표시한다.
+- Ollama 실패도 외부 response body 전문을 저장하지 않고 HTTP status 기반 안전 요약만 저장한다.
+- provider_test metadata에는 secret, API Key, Bearer token, prompt 전문, request body 전문, response 전문이 저장되지 않는다.
+- `/settings/llm`에서 실패 응답 처리 시 `body stream already read` 오류가 표시되지 않는다.
+- Local Ollama provider 연결 테스트 success 흐름은 유지된다.

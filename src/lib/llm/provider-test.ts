@@ -1,5 +1,6 @@
 import type { LlmApiFormat, LlmInvocationMode, Prisma } from "@prisma/client";
 import { decryptSecret } from "@/lib/llm/secrets";
+import { safeErrorMessage, redactSensitiveText } from "@/lib/llm/redaction";
 import { createLlmCallLog } from "@/lib/db/llm-call-logs";
 import { getLlmProviderForTest } from "@/lib/db/llm-providers";
 import { prisma } from "@/lib/db/client";
@@ -38,12 +39,16 @@ export async function testLlmProvider(providerId: string): Promise<ProviderTestR
       result = disabledResult(provider.invocationMode, provider.apiFormat, startedAt, "Unsupported provider test format.");
     }
   } catch (error) {
+    const message = safeErrorMessage(error instanceof Error ? error.message : "Provider connection test failed.", 500);
     result = {
       ok: false,
       status: "failed",
-      message: error instanceof Error ? error.message : "Provider connection test failed.",
+      message,
       latencyMs: Date.now() - startedAt,
-      metadata: baseMetadata(provider.invocationMode, provider.apiFormat)
+      metadata: {
+        ...baseMetadata(provider.invocationMode, provider.apiFormat),
+        responseSummary: "provider_test_exception"
+      }
     };
   }
 
@@ -52,7 +57,7 @@ export async function testLlmProvider(providerId: string): Promise<ProviderTestR
     data: {
       lastTestStatus: result.status,
       lastTestedAt: new Date(),
-      lastTestError: result.ok ? null : result.message.slice(0, 500)
+      lastTestError: result.ok ? null : safeErrorMessage(result.message, 500)
     }
   });
 
@@ -61,7 +66,7 @@ export async function testLlmProvider(providerId: string): Promise<ProviderTestR
     providerId: provider.id,
     status: result.ok ? "success" : "failed",
     latencyMs: result.latencyMs,
-    errorMessage: result.ok ? null : result.message.slice(0, 500),
+    errorMessage: result.ok ? null : safeErrorMessage(result.message, 500),
     metadata: result.metadata as Prisma.InputJsonObject
   });
 
@@ -90,12 +95,13 @@ async function testOpenAiCompatible(provider: TestProvider, startedAt: number): 
 
   const body = await readJsonOrText(response);
   const latencyMs = Date.now() - startedAt;
-  const summary = summarizeOpenAiResponse(body);
+  const summary = response.ok ? summarizeOpenAiResponse(body) : summarizeHttpFailure("openai_compatible", response.status);
+  const failureMessage = safeProviderFailureMessage("OpenAI-compatible", response.status);
 
   return {
     ok: response.ok,
     status: response.ok ? "success" : "failed",
-    message: response.ok ? "OpenAI-compatible provider connection test succeeded." : `OpenAI-compatible provider test failed with HTTP ${response.status}.`,
+    message: response.ok ? "OpenAI-compatible provider connection test succeeded." : failureMessage,
     latencyMs,
     metadata: {
       ...baseMetadata(provider.invocationMode, provider.apiFormat),
@@ -125,16 +131,18 @@ async function testOllamaCompatible(provider: TestProvider, startedAt: number): 
 
   const body = await readJsonOrText(response);
   const latencyMs = Date.now() - startedAt;
+  const summary = response.ok ? summarizeOllamaResponse(body) : summarizeHttpFailure("ollama_compatible", response.status);
+  const failureMessage = safeProviderFailureMessage("Ollama-compatible", response.status);
 
   return {
     ok: response.ok,
     status: response.ok ? "success" : "failed",
-    message: response.ok ? "Ollama-compatible provider connection test succeeded." : `Ollama-compatible provider test failed with HTTP ${response.status}.`,
+    message: response.ok ? "Ollama-compatible provider connection test succeeded." : failureMessage,
     latencyMs,
     metadata: {
       ...baseMetadata(provider.invocationMode, provider.apiFormat),
       httpStatus: response.status,
-      responseSummary: summarizeOllamaResponse(body),
+      responseSummary: summary,
       latencyMs
     }
   };
@@ -222,9 +230,9 @@ function isSensitiveHeaderName(value: string) {
 
 function summarizeOpenAiResponse(value: unknown) {
   if (value && typeof value === "object") {
-    const objectValue = value as { choices?: unknown[]; id?: unknown; object?: unknown; error?: { message?: unknown } };
-    if (typeof objectValue.error?.message === "string") {
-      return truncate(`error: ${objectValue.error.message}`);
+    const objectValue = value as { choices?: unknown[]; object?: unknown; error?: unknown };
+    if (objectValue.error) {
+      return "openai_error";
     }
     return truncate(`object=${String(objectValue.object ?? "unknown")}; choices=${Array.isArray(objectValue.choices) ? objectValue.choices.length : 0}`);
   }
@@ -234,8 +242,8 @@ function summarizeOpenAiResponse(value: unknown) {
 function summarizeOllamaResponse(value: unknown) {
   if (value && typeof value === "object") {
     const objectValue = value as { done?: unknown; model?: unknown; error?: unknown };
-    if (typeof objectValue.error === "string") {
-      return truncate(`error: ${objectValue.error}`);
+    if (objectValue.error) {
+      return "ollama_error";
     }
     return truncate(`model=${String(objectValue.model ?? "unknown")}; done=${String(objectValue.done ?? "unknown")}`);
   }
@@ -243,7 +251,31 @@ function summarizeOllamaResponse(value: unknown) {
 }
 
 function truncate(value: string) {
-  return value.length > MAX_SUMMARY_LENGTH ? `${value.slice(0, MAX_SUMMARY_LENGTH)}...` : value;
+  const redacted = redactSensitiveText(value);
+  return redacted.length > MAX_SUMMARY_LENGTH ? `${redacted.slice(0, MAX_SUMMARY_LENGTH)}...` : redacted;
+}
+
+function safeProviderFailureMessage(label: string, status: number) {
+  if (status === 401 || status === 403) {
+    return `${label} provider test failed with HTTP ${status}. Authentication failed. Check the API key.`;
+  }
+  if (status === 404) {
+    return `${label} provider test failed with HTTP ${status}. Endpoint or model was not found.`;
+  }
+  return `${label} provider test failed with HTTP ${status}.`;
+}
+
+function summarizeHttpFailure(apiFormat: LlmApiFormat, status: number) {
+  if (status === 401 || status === 403) {
+    return "authentication_failed";
+  }
+  if (status === 404) {
+    return apiFormat === "ollama_compatible" ? "not_found_or_model_unavailable" : "not_found";
+  }
+  if (status >= 500) {
+    return "provider_server_error";
+  }
+  return "provider_http_error";
 }
 
 function baseMetadata(invocationMode: LlmInvocationMode, apiFormat: LlmApiFormat) {

@@ -11,21 +11,39 @@ export async function requestJson<T>(url: string, options?: RequestInit): Promis
     }
   });
 
+  const rawText = await response.text();
+  const payload = parseJsonPayload(rawText);
+
   if (!response.ok) {
-    let message = `Request failed with status ${response.status}`;
-    try {
-      const payload = (await response.json()) as { error?: string };
-      message = payload.error ?? message;
-    } catch {
-      const text = await response.text();
-      if (text) {
-        message = text.slice(0, 240);
-      }
-    }
+    const message = readErrorMessage(payload, rawText, response.status);
     throw new Error(message);
   }
 
-  return response.json() as Promise<T>;
+  return payload as T;
+}
+
+function parseJsonPayload(rawText: string) {
+  if (!rawText) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(rawText) as unknown;
+  } catch {
+    return null;
+  }
+}
+
+function readErrorMessage(payload: unknown, rawText: string, status: number) {
+  if (payload && typeof payload === "object" && "error" in payload && typeof payload.error === "string") {
+    return payload.error;
+  }
+
+  if (rawText) {
+    return rawText.slice(0, 240);
+  }
+
+  return `Request failed with status ${status}`;
 }
 
 export function optionalString(value: string) {
