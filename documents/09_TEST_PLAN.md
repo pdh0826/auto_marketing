@@ -46,3 +46,16 @@ npm run build
 - `/brands`의 배열 필드는 textarea 입력을 쉼표 또는 줄바꿈 기준으로 `String[]`로 저장한다.
 - `/brands`의 `isDefault`는 단일 기본값 강제를 하지 않는다.
 - `/brands`에는 OpenAI API, Local LLM, Blogger API 호출 기능이 없다.
+
+## Patch 5 수동 검증
+
+- `/content/new`에서 블로그 목록과 서비스/브랜드 프로필 목록을 선택할 수 있다.
+- `/content/new`에서 기존 글 생성 요청 목록, 빈 상태, 로딩 상태, 오류 상태가 표시된다.
+- `/content/new`에서 글 생성 요청 생성, 수정, 삭제가 가능하다.
+- `blogId`, `brandProfileId`가 비어 있으면 `null`로 저장된다.
+- `sourceMemo` 또는 `targetKeyword` 중 하나 이상 없으면 저장을 막고 오류를 표시한다.
+- `seo_keyword` 모드에서 targetKeyword가 없으면 권장 안내를 표시한다.
+- `service_promotion` 모드에서 brandProfileId가 없으면 권장 안내를 표시한다.
+- `existing_draft_improve`는 사용자가 직접 입력한 기존 글/초안 보강용이며 경쟁글 복사·재작성·재가공 용도가 아니라는 안내가 표시된다.
+- 목록 테이블에서 sourceMemo는 전체 본문이 아니라 요약으로 표시된다.
+- LLM 호출, 글 기획서 생성, 본문 생성, HTML 변환, 품질검사, Blogger 발행 기능은 없다.

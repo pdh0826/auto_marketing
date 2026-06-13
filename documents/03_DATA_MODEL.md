@@ -120,3 +120,13 @@ Patch 4는 기존 `blogs`, `brand_profiles` CRUD API를 `/blogs`, `/brands` 화�
 - `autoPublishEnabled`는 정책 설정값이며 실제 자동 발행 기능은 후속 패치에서 연결한다.
 - `isDefault`는 Patch 4에서 단일 기본값 강제를 구현하지 않는다.
 - Google OAuth, Blogger API, 실제 발행 기능은 Patch 4 범위가 아니다.
+
+## Patch 5 글 생성 요청 저장
+
+Patch 5는 기존 `content_items` CRUD API를 `/content/new` 화면에 연결한다.
+
+- `/content/new`는 블로그, 서비스/브랜드 프로필, mode, title, targetKeyword, sourceMemo, status를 입력받는다.
+- 기본 status는 `idea`다.
+- Patch 5는 글 생성 요청 저장까지만 구현한다.
+- LLM 호출, 글 기획서 생성, 본문 생성, HTML 변환, 품질검사, Blogger 발행은 후속 패치 범위다.
+- `existing_draft_improve`는 사용자가 직접 입력한 기존 글/초안 보강용이며 경쟁글 복사, 재작성, 재가공 용도가 아니다.
