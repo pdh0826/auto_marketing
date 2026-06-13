@@ -6,6 +6,7 @@ import type { ContentAssetAdmin } from "@/lib/content/asset-types";
 import type { ContentItemAdmin } from "@/lib/content/admin-types";
 import { buildContentPlanDryRun, type ContentPlanDryRunResult, type ReadinessStatus } from "@/lib/content/content-plan-preview";
 import { getContentModeLabel } from "@/lib/content/constants";
+import { buildDraftMarkdownDryRun, type DraftMarkdownDryRunResult } from "@/lib/content/draft-preview";
 import { formatPlanJson, hasUsablePlanJson } from "@/lib/content/plan-template";
 import { ApiResult, requestJson } from "@/lib/form-utils";
 import type { LlmTaskRouteAdmin } from "@/lib/llm/admin-types";
@@ -37,7 +38,9 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
   const [contentItem, setContentItem] = useState<ContentItemAdmin | null>(null);
   const [assets, setAssets] = useState<ContentAssetAdmin[]>([]);
   const [contentPlanRoute, setContentPlanRoute] = useState<LlmTaskRouteAdmin | null>(null);
+  const [contentDraftRoute, setContentDraftRoute] = useState<LlmTaskRouteAdmin | null>(null);
   const [dryRunResult, setDryRunResult] = useState<ContentPlanDryRunResult | null>(null);
+  const [draftDryRunResult, setDraftDryRunResult] = useState<DraftMarkdownDryRunResult | null>(null);
   const [generatedPlan, setGeneratedPlan] = useState<GeneratedPlanResult | null>(null);
   const [candidateText, setCandidateText] = useState("");
   const [candidateEditMode, setCandidateEditMode] = useState(false);
@@ -99,6 +102,7 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
     try {
       const result = await requestJson<ApiResult<LlmTaskRouteAdmin[]>>("/api/settings/llm/task-routes");
       setContentPlanRoute(result.data.find((route) => route.taskType === "content_plan") ?? null);
+      setContentDraftRoute(result.data.find((route) => route.taskType === "content_draft") ?? null);
     } catch (caught) {
       setRouteError(caught instanceof Error ? caught.message : "content_plan route 정보를 불러오지 못했습니다.");
     } finally {
@@ -177,6 +181,16 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
       return;
     }
     setDryRunResult(buildContentPlanDryRun(contentItem, assets, contentPlanRoute));
+  }
+
+  function runDraftMarkdownDryRun() {
+    setNotice(null);
+    setGenerationError(null);
+    if (!contentItem) {
+      setRouteError("글 생성 요청 상세 정보를 먼저 불러와야 합니다.");
+      return;
+    }
+    setDraftDryRunResult(buildDraftMarkdownDryRun(contentItem, assets, contentDraftRoute));
   }
 
   async function generatePlanCandidate() {
@@ -500,6 +514,78 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
           <section className="admin-section">
             <div className="section-heading">
               <div>
+                <h2>Draft Markdown Dry Run</h2>
+                <p className="muted">
+                  저장된 planJson을 기반으로 본문 초안 생성 준비 상태와 prompt preview만 확인합니다. 실제 LLM 호출과 draftMarkdown 저장은 하지 않습니다.
+                </p>
+              </div>
+              <button className="button secondary" type="button" disabled>
+                본문 초안 생성은 후속 패치에서 연결 예정
+              </button>
+            </div>
+
+            {!contentItem.planJson ? <div className="notice error">저장된 planJson이 없습니다. 먼저 planJson에 반영하세요.</div> : null}
+
+            <div className="detail-grid">
+              <DetailItem label="Task Route" value={contentDraftRoute ? "content_draft" : "미등록"} />
+              <DetailItem label="Route Status" value={contentDraftRoute?.isEnabled ? "enabled" : contentDraftRoute ? "disabled" : "-"} />
+              <DetailItem label="Primary Provider" value={formatProviderName(contentDraftRoute?.primaryProvider)} />
+              <DetailItem label="Primary Model" value={formatModelName(contentDraftRoute?.primaryModel)} />
+              <DetailItem label="Fallback Provider" value={formatProviderName(contentDraftRoute?.fallbackProvider)} />
+              <DetailItem label="Fallback Model" value={formatModelName(contentDraftRoute?.fallbackModel)} />
+            </div>
+
+            {contentDraftRoute?.primaryProvider ? <ProviderTestSummary title="Draft Primary Provider Test" provider={contentDraftRoute.primaryProvider} /> : null}
+            {contentDraftRoute?.fallbackProvider ? <ProviderTestSummary title="Draft Fallback Provider Test" provider={contentDraftRoute.fallbackProvider} /> : null}
+
+            <div className="form-actions">
+              <button className="button" type="button" disabled={routesLoading || loading || assetsLoading} onClick={runDraftMarkdownDryRun}>
+                Draft Dry Run
+              </button>
+            </div>
+
+            {draftDryRunResult ? (
+              <>
+                <div className={draftDryRunResult.ready ? "notice" : "notice error"}>
+                  {draftDryRunResult.ready
+                    ? "Draft dry-run 준비 상태가 통과되었습니다. 실제 LLM 호출은 수행하지 않았습니다."
+                    : "Draft dry-run 준비 상태에 실패 항목이 있습니다. 실제 LLM 호출은 수행하지 않았습니다."}
+                </div>
+                <div className="table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Check</th>
+                        <th>Status</th>
+                        <th>Message</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {draftDryRunResult.checks.map((check) => (
+                        <tr key={check.key}>
+                          <td>{check.label}</td>
+                          <td>{formatReadinessStatus(check.status)}</td>
+                          <td>{check.message}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <MediaMappingTable mappings={draftDryRunResult.mediaMapping} />
+                <PromptPreviewBlock title="Draft System" value={draftDryRunResult.promptPreview.system} />
+                <PromptPreviewBlock title="Draft User" value={draftDryRunResult.promptPreview.user} />
+                <PromptPreviewBlock title="Draft Output Format" value={draftDryRunResult.promptPreview.outputFormat} />
+              </>
+            ) : (
+              <div className="notice">
+                Draft Dry Run을 실행하면 저장된 planJson, content_draft route, 첨부 미디어와 mediaPlan의 연결 상태가 화면에만 생성됩니다.
+              </div>
+            )}
+          </section>
+
+          <section className="admin-section">
+            <div className="section-heading">
+              <div>
                 <h2>Attached Media</h2>
                 <p className="muted">첨부 미디어는 읽기 중심으로 표시합니다. 수정은 /content/new의 첨부 관리에서 수행하세요.</p>
               </div>
@@ -612,6 +698,48 @@ function ValidationList({
             <li key={item}>{item}</li>
           ))}
         </ul>
+      )}
+    </div>
+  );
+}
+
+function MediaMappingTable({ mappings }: { mappings: DraftMarkdownDryRunResult["mediaMapping"] }) {
+  return (
+    <div className="read-block">
+      <h3>Media Mapping Preview</h3>
+      {mappings.length === 0 ? (
+        <div className="notice">첨부 미디어가 없어 media placeholder preview가 없습니다.</div>
+      ) : (
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Asset</th>
+                <th>Type</th>
+                <th>Placement</th>
+                <th>Matched mediaPlan</th>
+                <th>Caption</th>
+                <th>Placeholder</th>
+              </tr>
+            </thead>
+            <tbody>
+              {mappings.map((mapping) => (
+                <tr key={mapping.assetId}>
+                  <td>{mapping.originalName}</td>
+                  <td>{mapping.assetType}</td>
+                  <td>
+                    {mapping.placementHint} / order {mapping.sortOrder} / primary {mapping.isPrimary ? "yes" : "no"}
+                  </td>
+                  <td>{mapping.matchedMediaPlan ? "yes" : "no"}</td>
+                  <td>{mapping.caption || "-"}</td>
+                  <td>
+                    <code>{mapping.placeholder}</code>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
   );

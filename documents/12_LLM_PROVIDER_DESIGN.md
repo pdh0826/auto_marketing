@@ -177,3 +177,16 @@ Patch 7E는 `/content/[id]`에서 생성된 `planJson` 후보를 사용자가 �
 - 편집된 후보는 재검증 전에는 `planJson`에 반영할 수 없다.
 - validation error가 있으면 반영을 막고, warning만 있으면 검토 후 반영할 수 있다.
 - 후보 편집과 재검증은 DB에 자동 저장하지 않고, 사용자가 `planJson에 반영`을 클릭해야 기존 content item PATCH 흐름으로 저장한다.
+
+## Patch 8A Draft Markdown Dry Run
+
+Patch 8A는 저장된 `planJson`을 기반으로 본문 초안 생성 준비 상태와 prompt preview를 확인한다.
+
+- draft generation task type은 기존 `content_draft`를 사용한다.
+- `content_plan` route를 본문 초안 생성 대용으로 재사용하지 않는다.
+- `content_draft` Task Route가 없으면 route not configured readiness fail로 표시한다.
+- Dry Run은 실제 OpenAI/Ollama/Local LLM 호출을 수행하지 않는다.
+- Dry Run은 `draftMarkdown`, `draftHtml`, `llm_call_logs`를 생성하거나 저장하지 않는다.
+- Draft prompt preview는 saved `planJson`, content item, blog profile, brand profile, attached media metadata를 기반으로 만든다.
+- Prompt preview에는 API Key, secret, provider headers, request template, media `storagePath`를 포함하지 않는다.
+- Media mapping preview는 `planJson.mediaPlan`과 attached media metadata가 본문 placeholder에 어떻게 연결될지 보여준다.

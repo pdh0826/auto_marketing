@@ -206,3 +206,18 @@ npm run build
 - 재검증만으로 DB의 `content_items.planJson`은 변경되지 않는다.
 - 재검증만으로 `llm_call_logs`가 생성되지 않는다.
 - `planJson에 반영`을 클릭해야 기존 content item PATCH 흐름으로 planJson이 저장된다.
+
+## Patch 8A 수동 검증
+
+- `/content/[id]`에 `Draft Markdown Dry Run` 섹션이 표시된다.
+- Draft Dry Run은 저장된 `contentItem.planJson`만 사용하고, 아직 `planJson에 반영`하지 않은 Generated Plan Candidate는 사용하지 않는다.
+- 저장된 `planJson`이 없으면 readiness fail과 `먼저 planJson에 반영하세요` 안내가 표시된다.
+- `content_draft` Task Route가 없으면 `draft generation route not configured` fail이 표시된다.
+- `content_plan` route는 draft generation 대용으로 사용되지 않는다.
+- 저장된 `planJson`이 있고 `content_draft` route가 준비되어 있으면 draft prompt preview가 system/user/outputFormat으로 표시된다.
+- readiness는 planJson 존재, validation, outline/coreMessage, route/provider/model enabled, provider lastTestStatus를 fail 기준으로 확인한다.
+- blog/brand 누락, provider test timestamp 없음 또는 24시간 초과, attached media 없음, mediaPlan/assets 불일치, fallback 미설정 또는 fallback test 미성공은 warning으로 표시된다.
+- media mapping preview는 attached media의 originalName, assetType, placementHint, caption, placeholder를 표시한다.
+- prompt preview와 media mapping에는 API Key, secret, provider headers, request template, media `storagePath`가 포함되지 않는다.
+- Draft Dry Run만으로 `draftMarkdown`, `draftHtml`, `llm_call_logs`가 변경되지 않는다.
+- 실제 OpenAI/Ollama/Local LLM 호출, HTML 변환, 품질검사, Blogger API 호출은 발생하지 않는다.

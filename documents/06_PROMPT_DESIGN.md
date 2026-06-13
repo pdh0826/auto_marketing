@@ -45,3 +45,17 @@ Patch 7C는 Patch 7B의 prompt 구성을 실제 `content_plan` LLM 호출에 사
 - 한국어 콘텐츠에서도 `수익률 예시`, `성공 사례`, `안전하게 매수` 같은 표현을 생성하지 않는다.
 
 LLM 응답 후보는 저장 전 rule-based validation을 통과해야 한다. 심각한 금융/투자 위험 표현은 validation error로 처리해 `planJson` 반영을 막고, 주의 표현은 warning으로 표시한다. 투자 관련 서비스 홍보 맥락에서는 주의 표현도 더 엄격하게 error로 처리한다.
+
+## Patch 8A draftMarkdown preview
+
+Patch 8A는 저장된 `planJson`을 기반으로 본문 초안 생성을 준비하는 dry-run prompt preview만 제공한다.
+
+- 실제 LLM 호출은 수행하지 않는다.
+- `draftMarkdown`과 `draftHtml`은 저장하지 않는다.
+- draft prompt는 `content_draft` Task Route를 기준으로 readiness를 확인한다.
+- `content_plan` route를 본문 초안 생성용으로 재사용하지 않는다.
+- prompt preview에는 저장된 content item, blog profile, brand profile, `planJson`, attached media metadata만 포함한다.
+- prompt preview에는 API Key, secret, provider headers, request template, media `storagePath`를 포함하지 않는다.
+- system prompt는 helpful, original, people-first article writer 역할과 Markdown 초안 작성 원칙을 포함한다.
+- 투자/금융 콘텐츠는 정보 제공/참고 도구로만 표현하고, 수익 보장, 매수/매도 추천, 성공 사례, 수익률 예시, 안전하게 매수 같은 표현을 금지한다.
+- output format은 Markdown only, H1/H2/H3 구조, intro/body/conclusion, FAQ, CTA, risk/disclaimer, media placeholder 사용 원칙을 포함한다.
