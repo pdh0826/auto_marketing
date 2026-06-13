@@ -3,7 +3,12 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import type { BlogAdmin } from "@/lib/blogs/admin-types";
 import type { BrandProfileAdmin } from "@/lib/brands/admin-types";
-import { CONTENT_ASSET_PLACEMENTS, type ContentAssetAdmin, type ContentAssetPlacement } from "@/lib/content/asset-types";
+import {
+  CONTENT_ASSET_PLACEMENTS,
+  type ContentAssetAdmin,
+  type ContentAssetMetadataSuggestion,
+  type ContentAssetPlacement
+} from "@/lib/content/asset-types";
 import type { ContentItemAdmin } from "@/lib/content/admin-types";
 import { CONTENT_MODE_OPTIONS, CONTENT_STATUS_OPTIONS, getContentModeHint, getContentModeLabel } from "@/lib/content/constants";
 import type { ContentMode, ContentStatus } from "@/lib/content/types";
@@ -61,8 +66,10 @@ export function ContentRequestClient() {
   const [assetsLoading, setAssetsLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [assetSaving, setAssetSaving] = useState(false);
+  const [suggestingAssetId, setSuggestingAssetId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [assetError, setAssetError] = useState<string | null>(null);
+  const [assetSuggestion, setAssetSuggestion] = useState<ContentAssetMetadataSuggestion | null>(null);
 
   const blogById = useMemo(() => new Map(blogs.map((blog) => [blog.id, blog])), [blogs]);
   const brandById = useMemo(() => new Map(brandProfiles.map((brand) => [brand.id, brand])), [brandProfiles]);
@@ -230,6 +237,7 @@ export function ContentRequestClient() {
         body: JSON.stringify(toAssetPayload(assetForm))
       });
       setEditingAssetId(null);
+      setAssetSuggestion(null);
       setAssetForm(emptyAssetForm);
       await loadAssets(selectedContentItemId);
     } catch (caught) {
@@ -250,6 +258,7 @@ export function ContentRequestClient() {
       await requestJson<ApiResult<{ id: string }>>(`/api/content-assets/${asset.id}`, { method: "DELETE" });
       if (editingAssetId === asset.id) {
         setEditingAssetId(null);
+        setAssetSuggestion(null);
         setAssetForm(emptyAssetForm);
       }
       if (selectedContentItemId) {
@@ -259,6 +268,37 @@ export function ContentRequestClient() {
       setAssetError(caught instanceof Error ? caught.message : "첨부 미디어 삭제에 실패했습니다.");
     } finally {
       setAssetSaving(false);
+    }
+  }
+
+  async function suggestAssetMetadata(asset: ContentAssetAdmin) {
+    const hasExistingMetadata = Boolean(asset.caption || asset.altText || asset.userNote);
+    if (hasExistingMetadata && !window.confirm("기존 메타데이터가 있습니다. 추천값을 편집 폼에 채울까요?")) {
+      return;
+    }
+
+    setSuggestingAssetId(asset.id);
+    setAssetError(null);
+
+    try {
+      const result = await requestJson<ApiResult<ContentAssetMetadataSuggestion>>(`/api/content-assets/${asset.id}/suggest-metadata`, {
+        method: "POST",
+        body: JSON.stringify({})
+      });
+      setEditingAssetId(asset.id);
+      setAssetSuggestion(result.data);
+      setAssetForm({
+        caption: result.data.caption,
+        altText: result.data.altText,
+        userNote: result.data.userNote,
+        placementHint: result.data.placementHint,
+        sortOrder: String(result.data.sortOrder),
+        isPrimary: result.data.recommendedIsPrimary
+      });
+    } catch (caught) {
+      setAssetError(caught instanceof Error ? caught.message : "첨부 미디어 메타데이터 추천에 실패했습니다.");
+    } finally {
+      setSuggestingAssetId(null);
     }
   }
 
@@ -449,6 +489,7 @@ export function ContentRequestClient() {
                     type="button"
                     onClick={() => {
                       setEditingAssetId(null);
+                      setAssetSuggestion(null);
                       setAssetForm(emptyAssetForm);
                     }}
                   >
@@ -456,6 +497,28 @@ export function ContentRequestClient() {
                   </button>
                 </div>
               </form>
+            ) : null}
+
+            {assetSuggestion ? (
+              <details className="notice" open>
+                <summary>추천 결과 안내</summary>
+                <p>추천값을 편집 폼에 채웠습니다. 확인 후 메타데이터 수정 버튼을 눌러 저장하세요.</p>
+                {assetSuggestion.recommendedIsPrimary ? (
+                  <p>대표 미디어 추천값이며 단일 대표 강제는 후속 패치에서 처리 예정입니다.</p>
+                ) : null}
+                <strong>근거</strong>
+                <ul>
+                  {assetSuggestion.rationale.map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ul>
+                <strong>주의</strong>
+                <ul>
+                  {assetSuggestion.warnings.map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ul>
+              </details>
             ) : null}
 
             <div className="asset-grid">
@@ -476,6 +539,14 @@ export function ContentRequestClient() {
                       <p className="muted">primary: {asset.isPrimary ? "yes" : "no"}</p>
                     </div>
                     <div className="action-cell">
+                      <button
+                        className="button small secondary"
+                        type="button"
+                        disabled={suggestingAssetId === asset.id}
+                        onClick={() => void suggestAssetMetadata(asset)}
+                      >
+                        메타데이터 자동 추천
+                      </button>
                       <button className="button small secondary" type="button" onClick={() => editAsset(asset)}>
                         수정
                       </button>
@@ -496,6 +567,7 @@ export function ContentRequestClient() {
   function selectContentItem(contentItemId: string) {
     setSelectedContentItemId(contentItemId);
     setEditingAssetId(null);
+    setAssetSuggestion(null);
     setAssetForm(emptyAssetForm);
   }
 
@@ -514,6 +586,7 @@ export function ContentRequestClient() {
 
   function editAsset(asset: ContentAssetAdmin) {
     setEditingAssetId(asset.id);
+    setAssetSuggestion(null);
     setAssetForm({
       caption: asset.caption ?? "",
       altText: asset.altText ?? "",

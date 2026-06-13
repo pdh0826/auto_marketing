@@ -74,3 +74,15 @@ npm run build
 - 자산 삭제 시 DB row와 로컬 파일을 함께 삭제한다.
 - content item 삭제 시 연결된 asset 파일도 정리한다.
 - 대표 미디어 단일 강제, 외부 스토리지, Blogger 업로드, LLM 호출은 구현하지 않는다.
+
+## Patch 6B 수동 검증
+
+- `/content/new`의 첨부 미디어 카드에서 `메타데이터 자동 추천` 버튼을 사용할 수 있다.
+- 기존 caption, altText, userNote가 있으면 추천값을 채우기 전 confirm이 표시된다.
+- 추천 버튼은 `POST /api/content-assets/[assetId]/suggest-metadata`를 호출한다.
+- 추천 API는 추천값을 DB에 바로 저장하지 않는다.
+- 추천 결과는 asset metadata edit form에 채워진다.
+- 사용자가 `메타데이터 수정` 버튼을 눌러야 DB에 저장된다.
+- 추천 결과 안내에 rationale과 warnings가 표시된다.
+- warnings에는 파일 내용 분석 없이 메타데이터만 사용했다는 한계가 표시된다.
+- OpenAI API, Local LLM, 이미지/영상 분석, Blogger API 호출은 발생하지 않는다.

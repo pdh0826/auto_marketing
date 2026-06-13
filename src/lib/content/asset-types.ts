@@ -20,6 +20,17 @@ export interface ContentAssetAdmin {
   updatedAt: string;
 }
 
+export interface ContentAssetMetadataSuggestion {
+  caption: string;
+  altText: string;
+  userNote: string;
+  placementHint: ContentAssetPlacement;
+  sortOrder: number;
+  recommendedIsPrimary: boolean;
+  rationale: string[];
+  warnings: string[];
+}
+
 export const CONTENT_ASSET_PLACEMENTS: Array<{ value: ContentAssetPlacement; label: string }> = [
   { value: "hero", label: "hero" },
   { value: "intro", label: "intro" },

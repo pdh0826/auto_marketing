@@ -143,3 +143,17 @@ Patch 6A는 `content_items`와 1:N 관계를 갖는 `content_assets` 모델을 �
 - `storagePath`는 public URL로 직접 노출하지 않고 파일 제공 API를 통해서만 사용한다.
 - `isPrimary` 단일 강제는 Patch 6A에서 구현하지 않는다.
 - 외부 스토리지, Blogger 업로드, 글 생성, 품질검사는 Patch 6A 범위가 아니다.
+
+## Patch 6B 첨부 미디어 메타데이터 추천
+
+Patch 6B는 `content_assets`의 caption, altText, userNote, placementHint, sortOrder를 룰 기반으로 추천한다.
+
+- 추천 API는 asset, content item, blog, brand profile 메타데이터만 사용한다.
+- 이미지/영상 파일 본문은 읽거나 분석하지 않는다.
+- OpenAI API, Local LLM, 비전 분석, 영상 분석은 사용하지 않는다.
+- 추천 결과는 DB에 바로 저장하지 않고 응답으로만 반환한다.
+- 사용자가 `/content/new`에서 추천값을 확인한 뒤 메타데이터 수정 버튼을 눌러 저장한다.
+- altText는 짧고 구체적으로 작성하며 targetKeyword를 반복 삽입하지 않는다.
+- caption은 본문에 보이는 자연스러운 설명문으로 추천한다.
+- userNote는 내부 작성 보조용 메모로 추천한다.
+- `recommendedIsPrimary`는 추천값이며 대표 미디어 단일 강제는 후속 패치에서 처리한다.

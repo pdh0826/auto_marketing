@@ -14,6 +14,21 @@ export function getContentAsset(id: string) {
   });
 }
 
+export function getContentAssetWithContext(id: string) {
+  return prisma.contentAsset.findUnique({
+    where: { id },
+    include: {
+      contentItem: {
+        include: {
+          blog: true,
+          brandProfile: true,
+          assets: true
+        }
+      }
+    }
+  });
+}
+
 export function createContentAsset(data: Prisma.ContentAssetUncheckedCreateInput) {
   return prisma.contentAsset.create({ data });
 }
