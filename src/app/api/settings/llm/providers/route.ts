@@ -7,7 +7,11 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const body = await request.json();
-  const provider = await createLlmProvider(body);
-  return NextResponse.json({ data: provider }, { status: 201 });
+  try {
+    const body = await request.json();
+    const provider = await createLlmProvider(body);
+    return NextResponse.json({ data: provider }, { status: 201 });
+  } catch (error) {
+    return NextResponse.json({ error: error instanceof Error ? error.message : "LLM provider could not be created." }, { status: 400 });
+  }
 }

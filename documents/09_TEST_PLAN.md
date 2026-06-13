@@ -100,3 +100,19 @@ npm run build
 - 첨부 미디어 상세 화면에는 `storagePath`가 표시되지 않는다.
 - `draftMarkdown`, `draftHtml`, `qualityScore`는 read-only로 표시되며 `draftHtml`은 실제 HTML로 렌더링하지 않는다.
 - OpenAI API, Local LLM, 글 생성, HTML 변환, 품질검사, Blogger API 호출은 발생하지 않는다.
+
+## Patch 7A 수동 검증
+
+- `/settings/llm` Provider 섹션에서 invocationMode와 apiFormat을 선택할 수 있다.
+- Provider에 baseUrl, endpointPath, defaultModel, headersJson, requestTemplateJson, cliExecutable, cliArgsJson을 저장할 수 있다.
+- API Key 입력 필드는 저장/교체 전용이며 저장 후 비워진다.
+- Provider 목록에는 API Key 전체값이 표시되지 않고 `hasSecret` 또는 `apiKeyLast4`만 표시된다.
+- `headersJson`에 authorization, token, api-key 계열 민감 header를 넣으면 저장이 실패한다.
+- CLI executable에 sh, bash, zsh, fish, sudo, rm, osascript, curl, wget을 넣으면 저장이 실패한다.
+- OpenAI-compatible Provider 연결 테스트는 `/v1/chat/completions` 형태의 짧은 내부 테스트 prompt를 사용한다.
+- Ollama-compatible Provider 연결 테스트는 `/api/generate` 형태의 짧은 내부 테스트 prompt를 사용한다.
+- custom_http, custom_cli 테스트는 Patch 7A에서 비활성 안내를 반환한다.
+- 연결 테스트 결과는 Provider의 lastTestStatus, lastTestedAt, lastTestError에 반영된다.
+- 연결 테스트는 `llm_call_logs.taskType = provider_test`로 제한된 metadata만 기록한다.
+- 테스트 로그 metadata에는 secret, API Key, prompt 전문, request body 전문, response 전문이 저장되지 않는다.
+- 실제 content_plan, 본문 생성, HTML 변환, 품질검사, Blogger API 호출은 발생하지 않는다.

@@ -1,15 +1,27 @@
-import type { LlmCallStatus, LlmProviderType, LlmTaskType } from "./types";
+import type { LlmApiFormat, LlmCallStatus, LlmInvocationMode, LlmProviderTestStatus, LlmProviderType, LlmTaskType } from "./types";
 
 export interface LlmProviderAdmin {
   id: string;
   providerType: LlmProviderType;
+  invocationMode: LlmInvocationMode;
+  apiFormat: LlmApiFormat;
   name: string;
   baseUrl: string | null;
+  endpointPath: string | null;
+  defaultModel: string | null;
+  headersJson: Record<string, unknown> | null;
+  requestTemplateJson: Record<string, unknown> | null;
+  cliExecutable: string | null;
+  cliArgsJson: string[] | null;
   secretRef: string | null;
   apiKeyLast4: string | null;
+  hasSecret: boolean;
   isEnabled: boolean;
   timeoutSeconds: number;
   maxRetries: number;
+  lastTestStatus: LlmProviderTestStatus;
+  lastTestedAt: string | null;
+  lastTestError: string | null;
   createdAt: string;
   updatedAt: string;
   models?: LlmModelAdmin[];

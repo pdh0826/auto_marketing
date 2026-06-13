@@ -1,6 +1,10 @@
-export type LlmProviderType = "openai" | "local";
+export type LlmProviderType = "openai" | "local" | "external_http" | "local_http" | "cli";
+export type LlmInvocationMode = "external_http" | "local_http" | "cli";
+export type LlmApiFormat = "openai_compatible" | "ollama_compatible" | "custom_http" | "custom_cli";
+export type LlmProviderTestStatus = "untested" | "success" | "failed";
 
 export type LlmTaskType =
+  | "provider_test"
   | "content_plan"
   | "content_draft"
   | "html_convert"
@@ -14,8 +18,11 @@ export type LlmTaskType =
 export interface LlmProviderConfig {
   id: string;
   providerType: LlmProviderType;
+  invocationMode: LlmInvocationMode;
+  apiFormat: LlmApiFormat;
   name: string;
   baseUrl?: string;
+  endpointPath?: string;
   secretRef?: string;
   apiKeyLast4?: string;
   defaultModel: string;

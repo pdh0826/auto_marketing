@@ -2,8 +2,17 @@
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import type { LlmCallLogAdmin, LlmModelAdmin, LlmProviderAdmin, LlmTaskRouteAdmin } from "@/lib/llm/admin-types";
-import { getProviderTypeLabel, getTaskLabel, LLM_PROVIDER_TYPES, LLM_TASK_TYPES } from "@/lib/llm/constants";
-import type { LlmProviderType, LlmTaskType } from "@/lib/llm/types";
+import {
+  getApiFormatLabel,
+  getInvocationModeLabel,
+  getProviderTypeLabel,
+  getTaskLabel,
+  LLM_API_FORMATS,
+  LLM_INVOCATION_MODES,
+  LLM_PROVIDER_TYPES,
+  LLM_ROUTE_TASK_TYPES
+} from "@/lib/llm/constants";
+import type { LlmApiFormat, LlmInvocationMode, LlmProviderType, LlmTaskType } from "@/lib/llm/types";
 
 interface ApiResult<T> {
   data: T;
@@ -13,9 +22,17 @@ interface ProviderFormState {
   id?: string;
   name: string;
   providerType: LlmProviderType | "";
+  invocationMode: LlmInvocationMode;
+  apiFormat: LlmApiFormat;
   baseUrl: string;
+  endpointPath: string;
+  defaultModel: string;
+  headersJson: string;
+  requestTemplateJson: string;
+  cliExecutable: string;
+  cliArgsJson: string;
   secretRef: string;
-  apiKeyLast4: string;
+  apiKey: string;
   isEnabled: boolean;
   timeoutSeconds: string;
   maxRetries: string;
@@ -46,9 +63,17 @@ interface RouteFormState {
 const emptyProviderForm: ProviderFormState = {
   name: "",
   providerType: "",
+  invocationMode: "external_http",
+  apiFormat: "openai_compatible",
   baseUrl: "",
+  endpointPath: "/v1/chat/completions",
+  defaultModel: "",
+  headersJson: "{}",
+  requestTemplateJson: "{}",
+  cliExecutable: "",
+  cliArgsJson: "[]",
   secretRef: "",
-  apiKeyLast4: "",
+  apiKey: "",
   isEnabled: true,
   timeoutSeconds: "60",
   maxRetries: "1"
@@ -85,6 +110,7 @@ export function LlmSettingsClient() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   const modelById = useMemo(() => new Map(models.map((model) => [model.id, model])), [models]);
   const providerById = useMemo(() => new Map(providers.map((provider) => [provider.id, provider])), [providers]);
@@ -121,6 +147,7 @@ export function LlmSettingsClient() {
   async function submitProvider(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
+    setNotice(null);
 
     if (!providerForm.name.trim()) {
       setError("Provider name is required.");
@@ -128,6 +155,14 @@ export function LlmSettingsClient() {
     }
     if (!providerForm.providerType) {
       setError("Provider type is required.");
+      return;
+    }
+    if (!providerForm.invocationMode) {
+      setError("Provider invocationMode is required.");
+      return;
+    }
+    if (!providerForm.apiFormat) {
+      setError("Provider apiFormat is required.");
       return;
     }
 
@@ -142,24 +177,55 @@ export function LlmSettingsClient() {
       return;
     }
 
+    const headersJson = parseJsonObjectInput(providerForm.headersJson, "headersJson");
+    if (!headersJson.ok) {
+      setError(headersJson.error);
+      return;
+    }
+    const requestTemplateJson = parseJsonObjectInput(providerForm.requestTemplateJson, "requestTemplateJson");
+    if (!requestTemplateJson.ok) {
+      setError(requestTemplateJson.error);
+      return;
+    }
+    const cliArgsJson = parseStringArrayInput(providerForm.cliArgsJson, "cliArgsJson");
+    if (!cliArgsJson.ok) {
+      setError(cliArgsJson.error);
+      return;
+    }
+
     const payload = {
       name: providerForm.name.trim(),
       providerType: providerForm.providerType,
+      invocationMode: providerForm.invocationMode,
+      apiFormat: providerForm.apiFormat,
       baseUrl: optionalString(providerForm.baseUrl),
+      endpointPath: optionalString(providerForm.endpointPath),
+      defaultModel: optionalString(providerForm.defaultModel),
+      headersJson: headersJson.value,
+      requestTemplateJson: requestTemplateJson.value,
+      cliExecutable: optionalString(providerForm.cliExecutable),
+      cliArgsJson: cliArgsJson.value,
       secretRef: optionalString(providerForm.secretRef),
-      apiKeyLast4: optionalString(providerForm.apiKeyLast4),
+      apiKey: optionalString(providerForm.apiKey),
       isEnabled: providerForm.isEnabled,
       timeoutSeconds,
       maxRetries
     };
 
-    await saveEntity(
-      providerForm.id ? `/api/settings/llm/providers/${providerForm.id}` : "/api/settings/llm/providers",
-      providerForm.id ? "PATCH" : "POST",
-      payload,
-      "provider"
-    );
-    setProviderForm(emptyProviderForm);
+    setSaving("provider");
+    try {
+      await requestJson<ApiResult<LlmProviderAdmin>>(providerForm.id ? `/api/settings/llm/providers/${providerForm.id}` : "/api/settings/llm/providers", {
+        method: providerForm.id ? "PATCH" : "POST",
+        body: JSON.stringify(payload)
+      });
+      setProviderForm(emptyProviderForm);
+      setNotice("Provider를 저장했습니다. API Key 전체값은 다시 표시되지 않습니다.");
+      await loadAll();
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "provider could not be saved.");
+    } finally {
+      setSaving(null);
+    }
   }
 
   async function submitModel(event: FormEvent<HTMLFormElement>) {
@@ -263,6 +329,25 @@ export function LlmSettingsClient() {
     }
   }
 
+  async function testProvider(provider: LlmProviderAdmin) {
+    setSaving(`test-${provider.id}`);
+    setError(null);
+    setNotice(null);
+
+    try {
+      const result = await requestJson<ApiResult<{ ok: boolean; message: string }>>(`/api/settings/llm/providers/${provider.id}/test`, {
+        method: "POST",
+        body: JSON.stringify({})
+      });
+      setNotice(result.data.message);
+      await loadAll();
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Provider connection test failed.");
+    } finally {
+      setSaving(null);
+    }
+  }
+
   return (
     <>
       <section className="card">
@@ -277,17 +362,16 @@ export function LlmSettingsClient() {
       </section>
 
       {error ? <div className="notice error">{error}</div> : null}
+      {notice ? <div className="notice">{notice}</div> : null}
       {loading ? <div className="notice">LLM 설정 데이터를 불러오는 중입니다.</div> : null}
 
       <section className="admin-section">
         <div className="section-heading">
           <div>
             <h2>Providers</h2>
-            <p className="muted">API Key 원문은 입력하지 않고 외부 secret 참조 메타 정보만 관리합니다.</p>
+            <p className="muted">API Key는 저장 후 다시 표시되지 않습니다. 연결 테스트는 Provider 검증용이며 글 생성에는 아직 연결되지 않았습니다.</p>
+            <p className="muted">CLI는 raw shell command가 아니라 executable + args 배열로만 설정합니다. CLI 테스트 실행은 Patch 7A에서 비활성화되어 있습니다.</p>
           </div>
-          <button className="button secondary" type="button" disabled>
-            연결 테스트 준비 중
-          </button>
         </div>
 
         <form className="admin-form" onSubmit={(event) => void submitProvider(event)}>
@@ -310,20 +394,82 @@ export function LlmSettingsClient() {
             </select>
           </label>
           <label>
+            Invocation Mode
+            <select
+              value={providerForm.invocationMode}
+              onChange={(event) => setProviderForm({ ...providerForm, invocationMode: event.target.value as LlmInvocationMode })}
+            >
+              {LLM_INVOCATION_MODES.map((mode) => (
+                <option key={mode.value} value={mode.value}>
+                  {mode.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            API Format
+            <select
+              value={providerForm.apiFormat}
+              onChange={(event) => {
+                const apiFormat = event.target.value as LlmApiFormat;
+                setProviderForm({
+                  ...providerForm,
+                  apiFormat,
+                  endpointPath: providerForm.endpointPath || defaultEndpointPath(apiFormat)
+                });
+              }}
+            >
+              {LLM_API_FORMATS.map((format) => (
+                <option key={format.value} value={format.value}>
+                  {format.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
             Base URL
             <input value={providerForm.baseUrl} onChange={(event) => setProviderForm({ ...providerForm, baseUrl: event.target.value })} />
+          </label>
+          <label>
+            Endpoint Path
+            <input value={providerForm.endpointPath} onChange={(event) => setProviderForm({ ...providerForm, endpointPath: event.target.value })} />
+          </label>
+          <label>
+            Default Model
+            <input value={providerForm.defaultModel} onChange={(event) => setProviderForm({ ...providerForm, defaultModel: event.target.value })} />
           </label>
           <label>
             Secret Ref
             <input value={providerForm.secretRef} onChange={(event) => setProviderForm({ ...providerForm, secretRef: event.target.value })} />
           </label>
           <label>
-            API Key Last 4
+            API Key
             <input
-              maxLength={4}
-              value={providerForm.apiKeyLast4}
-              onChange={(event) => setProviderForm({ ...providerForm, apiKeyLast4: event.target.value })}
+              type="password"
+              autoComplete="new-password"
+              placeholder="저장/교체 시에만 입력"
+              value={providerForm.apiKey}
+              onChange={(event) => setProviderForm({ ...providerForm, apiKey: event.target.value })}
             />
+          </label>
+          <label className="textarea-field">
+            Headers JSON
+            <textarea value={providerForm.headersJson} onChange={(event) => setProviderForm({ ...providerForm, headersJson: event.target.value })} />
+          </label>
+          <label className="textarea-field">
+            Request Template JSON
+            <textarea
+              value={providerForm.requestTemplateJson}
+              onChange={(event) => setProviderForm({ ...providerForm, requestTemplateJson: event.target.value })}
+            />
+          </label>
+          <label>
+            CLI Executable
+            <input value={providerForm.cliExecutable} onChange={(event) => setProviderForm({ ...providerForm, cliExecutable: event.target.value })} />
+          </label>
+          <label className="textarea-field">
+            CLI Args JSON
+            <textarea value={providerForm.cliArgsJson} onChange={(event) => setProviderForm({ ...providerForm, cliArgsJson: event.target.value })} />
           </label>
           <label>
             Timeout Seconds
@@ -369,9 +515,11 @@ export function LlmSettingsClient() {
               <tr>
                 <th>Name</th>
                 <th>Type</th>
-                <th>Base URL</th>
-                <th>Secret Ref</th>
-                <th>Last 4</th>
+                <th>Invocation</th>
+                <th>Format</th>
+                <th>Endpoint</th>
+                <th>Secret</th>
+                <th>Test</th>
                 <th>Status</th>
                 <th>Actions</th>
               </tr>
@@ -379,18 +527,32 @@ export function LlmSettingsClient() {
             <tbody>
               {providers.length === 0 ? (
                 <tr>
-                  <td colSpan={7}>등록된 Provider가 없습니다.</td>
+                  <td colSpan={9}>등록된 Provider가 없습니다.</td>
                 </tr>
               ) : (
                 providers.map((provider) => (
                   <tr key={provider.id}>
                     <td>{provider.name}</td>
                     <td>{getProviderTypeLabel(provider.providerType)}</td>
-                    <td>{provider.baseUrl ?? "-"}</td>
-                    <td>{provider.secretRef ?? "-"}</td>
-                    <td>{provider.apiKeyLast4 ?? "-"}</td>
+                    <td>{getInvocationModeLabel(provider.invocationMode)}</td>
+                    <td>{getApiFormatLabel(provider.apiFormat)}</td>
+                    <td>
+                      {provider.baseUrl ?? "-"}
+                      {provider.endpointPath ? provider.endpointPath : ""}
+                    </td>
+                    <td>
+                      {provider.hasSecret ? `stored (${provider.apiKeyLast4 ?? "last4 unknown"})` : provider.secretRef ?? "-"}
+                    </td>
+                    <td>
+                      <div>{provider.lastTestStatus}</div>
+                      <div className="muted">{provider.lastTestedAt ? formatDate(provider.lastTestedAt) : "not tested"}</div>
+                      {provider.lastTestError ? <div className="muted">{provider.lastTestError}</div> : null}
+                    </td>
                     <td>{provider.isEnabled ? "enabled" : "disabled"}</td>
                     <td className="action-cell">
+                      <button className="button small secondary" type="button" disabled={saving === `test-${provider.id}`} onClick={() => void testProvider(provider)}>
+                        연결 테스트
+                      </button>
                       <button className="button small secondary" type="button" onClick={() => editProvider(provider)}>
                         수정
                       </button>
@@ -524,7 +686,7 @@ export function LlmSettingsClient() {
             Task
             <select value={routeForm.taskType} onChange={(event) => setRouteForm({ ...routeForm, taskType: event.target.value as LlmTaskType })}>
               <option value="">선택</option>
-              {LLM_TASK_TYPES.map((task) => (
+              {LLM_ROUTE_TASK_TYPES.map((task) => (
                 <option key={task.value} value={task.value}>
                   {task.label}
                 </option>
@@ -754,9 +916,17 @@ export function LlmSettingsClient() {
       id: provider.id,
       name: provider.name,
       providerType: provider.providerType,
+      invocationMode: provider.invocationMode,
+      apiFormat: provider.apiFormat,
       baseUrl: provider.baseUrl ?? "",
+      endpointPath: provider.endpointPath ?? defaultEndpointPath(provider.apiFormat),
+      defaultModel: provider.defaultModel ?? "",
+      headersJson: JSON.stringify(provider.headersJson ?? {}, null, 2),
+      requestTemplateJson: JSON.stringify(provider.requestTemplateJson ?? {}, null, 2),
+      cliExecutable: provider.cliExecutable ?? "",
+      cliArgsJson: JSON.stringify(provider.cliArgsJson ?? [], null, 2),
       secretRef: provider.secretRef ?? "",
-      apiKeyLast4: provider.apiKeyLast4 ?? "",
+      apiKey: "",
       isEnabled: provider.isEnabled,
       timeoutSeconds: String(provider.timeoutSeconds),
       maxRetries: String(provider.maxRetries)
@@ -835,6 +1005,48 @@ function optionalInteger(value: string) {
   }
   const parsed = Number(value);
   return Number.isFinite(parsed) ? Math.trunc(parsed) : null;
+}
+
+function parseJsonObjectInput(value: string, label: string): { ok: true; value: Record<string, unknown> | null } | { ok: false; error: string } {
+  if (!value.trim()) {
+    return { ok: true, value: null };
+  }
+
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return { ok: false, error: `${label} must be a JSON object.` };
+    }
+    return { ok: true, value: parsed as Record<string, unknown> };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? `${label} is invalid JSON: ${error.message}` : `${label} is invalid JSON.` };
+  }
+}
+
+function parseStringArrayInput(value: string, label: string): { ok: true; value: string[] | null } | { ok: false; error: string } {
+  if (!value.trim()) {
+    return { ok: true, value: null };
+  }
+
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    if (!Array.isArray(parsed) || parsed.some((item) => typeof item !== "string")) {
+      return { ok: false, error: `${label} must be a JSON array of strings.` };
+    }
+    return { ok: true, value: parsed };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? `${label} is invalid JSON: ${error.message}` : `${label} is invalid JSON.` };
+  }
+}
+
+function defaultEndpointPath(apiFormat: LlmApiFormat) {
+  if (apiFormat === "ollama_compatible") {
+    return "/api/generate";
+  }
+  if (apiFormat === "openai_compatible") {
+    return "/v1/chat/completions";
+  }
+  return "";
 }
 
 function formatRouteTarget(

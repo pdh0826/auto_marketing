@@ -105,8 +105,8 @@ rewrite_needed
 ## LLM 보안 원칙
 
 - llm_providers에는 API Key 원문을 저장하지 않는다.
-- Patch 2에서는 API Key 저장/암호화 구현을 하지 않는다.
-- 필요한 경우 `secretRef`, `apiKeyLast4` 같은 안전한 메타 필드만 둔다.
+- Patch 7A부터 API Key는 `llm_provider_secrets.encryptedValue`에 암호화 저장한다.
+- 필요한 경우 `secretRef`, `apiKeyLast4`, `hasSecret` 같은 안전한 메타 필드만 화면에 표시한다.
 - llm_call_logs에는 secret, prompt 전문, 원문 본문 전체를 저장하지 않는다.
 - llm_call_logs.metadata는 제한된 진단 정보 저장용으로만 사용한다.
 
@@ -171,3 +171,20 @@ Patch 6C는 `/content/[id]` 상세 화면에서 `content_items`의 기본 정보
 - `draftHtml`은 실제 HTML로 렌더링하지 않고 문자열로만 표시한다.
 - 첨부 미디어 상세에는 `storagePath`를 표시하지 않는다.
 - 기획서 자동 생성, 본문 생성, HTML 변환, 품질검사, Blogger 발행은 후속 패치 범위다.
+
+## Patch 7A LLM Provider 연결 테스트 기반
+
+Patch 7A는 `/settings/llm`의 Provider 설정을 확장해 external HTTP, local HTTP, CLI 기반 Provider를 등록하고 연결 테스트 결과를 기록할 수 있게 한다.
+
+- 기존 `LlmProviderType`의 `openai`, `local` 값은 유지하고 `external_http`, `local_http`, `cli`를 추가한다.
+- 실제 호출 방식 판단은 `invocationMode`를 우선 사용한다.
+- `LlmInvocationMode`는 `external_http`, `local_http`, `cli`를 지원한다.
+- `LlmApiFormat`은 `openai_compatible`, `ollama_compatible`, `custom_http`, `custom_cli`를 지원한다.
+- `LlmProviderTestStatus`는 `untested`, `success`, `failed`를 지원한다.
+- `LlmTaskType`에는 연결 테스트 로그용 `provider_test`를 추가한다.
+- `llm_providers`에는 endpoint, 기본 모델, JSON header/template, CLI executable/args, 최신 테스트 결과 필드를 추가한다.
+- `llm_provider_secrets`는 Provider별 encrypted API Key와 `apiKeyLast4`를 저장한다.
+- `llm_call_logs`는 provider connection test 로그에도 재사용한다.
+- OpenAI-compatible과 Ollama-compatible 연결 테스트를 우선 지원한다.
+- custom HTTP/CLI 테스트 실행은 Patch 7A에서 제한하거나 비활성 안내를 반환한다.
+- 연결 테스트는 content planning, draft generation, quality check와 아직 연결하지 않는다.

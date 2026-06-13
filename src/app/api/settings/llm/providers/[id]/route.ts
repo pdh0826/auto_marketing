@@ -18,9 +18,13 @@ export async function GET(_request: Request, { params }: RouteContext) {
 }
 
 export async function PATCH(request: Request, { params }: RouteContext) {
-  const body = await request.json();
-  const provider = await updateLlmProvider(params.id, body);
-  return NextResponse.json({ data: provider });
+  try {
+    const body = await request.json();
+    const provider = await updateLlmProvider(params.id, body);
+    return NextResponse.json({ data: provider });
+  } catch (error) {
+    return NextResponse.json({ error: error instanceof Error ? error.message : "LLM provider could not be updated." }, { status: 400 });
+  }
 }
 
 export async function DELETE(_request: Request, { params }: RouteContext) {

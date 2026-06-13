@@ -54,9 +54,32 @@ enum ContentAssetPlacement {
 enum LlmProviderType {
   openai
   local
+  external_http
+  local_http
+  cli
+}
+
+enum LlmInvocationMode {
+  external_http
+  local_http
+  cli
+}
+
+enum LlmApiFormat {
+  openai_compatible
+  ollama_compatible
+  custom_http
+  custom_cli
+}
+
+enum LlmProviderTestStatus {
+  untested
+  success
+  failed
 }
 
 enum LlmTaskType {
+  provider_test
   content_plan
   content_draft
   html_convert
@@ -187,26 +210,58 @@ model ContentAsset {
 }
 
 model LlmProvider {
-  id             String          @id @default(cuid())
-  providerType   LlmProviderType
-  name           String
-  baseUrl        String?
-  secretRef      String?
-  apiKeyLast4    String?
-  isEnabled      Boolean         @default(true)
-  timeoutSeconds Int             @default(60)
-  maxRetries     Int             @default(1)
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
+  id                  String                @id @default(cuid())
+  providerType        LlmProviderType
+  invocationMode      LlmInvocationMode     @default(external_http)
+  apiFormat           LlmApiFormat          @default(openai_compatible)
+  name                String
+  baseUrl             String?
+  endpointPath        String?
+  defaultModel        String?
+  headersJson         Json?
+  requestTemplateJson Json?
+  cliExecutable       String?
+  cliArgsJson         Json?
+  secretRef           String?
+  apiKeyLast4         String?
+  isEnabled           Boolean               @default(true)
+  timeoutSeconds      Int                   @default(60)
+  maxRetries          Int                   @default(1)
+  lastTestStatus      LlmProviderTestStatus @default(untested)
+  lastTestedAt        DateTime?
+  lastTestError       String?
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
 
-  models         LlmModel[]
-  primaryRoutes  LlmTaskRoute[]  @relation("PrimaryProvider")
-  fallbackRoutes LlmTaskRoute[]  @relation("FallbackProvider")
-  callLogs       LlmCallLog[]
+  models              LlmModel[]
+  primaryRoutes       LlmTaskRoute[]        @relation("PrimaryProvider")
+  fallbackRoutes      LlmTaskRoute[]        @relation("FallbackProvider")
+  callLogs            LlmCallLog[]
+  secrets             LlmProviderSecret[]
 
   @@index([providerType])
+  @@index([invocationMode])
+  @@index([apiFormat])
   @@index([isEnabled])
+  @@index([lastTestStatus])
   @@map("llm_providers")
+}
+
+model LlmProviderSecret {
+  id             String      @id @default(cuid())
+  providerId     String
+  secretKind     String
+  encryptedValue String
+  keyVersion     String      @default("v1")
+  apiKeyLast4    String?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  provider       LlmProvider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+
+  @@unique([providerId, secretKind])
+  @@index([providerId])
+  @@map("llm_provider_secrets")
 }
 
 model LlmModel {
