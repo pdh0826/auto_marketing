@@ -16,9 +16,20 @@ export interface LlmProviderConfig {
   providerType: LlmProviderType;
   name: string;
   baseUrl?: string;
+  secretRef?: string;
+  apiKeyLast4?: string;
   defaultModel: string;
   timeoutSeconds: number;
   maxRetries: number;
+  isEnabled: boolean;
+}
+
+export interface LlmModelConfig {
+  id: string;
+  providerId: string;
+  name: string;
+  displayName?: string;
+  isDefault: boolean;
   isEnabled: boolean;
 }
 
@@ -50,6 +61,24 @@ export interface LlmGenerateResponse {
   latencyMs: number;
   inputTokens?: number;
   outputTokens?: number;
+}
+
+export type LlmCallStatus = "success" | "failed";
+
+export interface LlmCallLog {
+  id: string;
+  taskType: LlmTaskType;
+  providerId?: string;
+  modelId?: string;
+  contentItemId?: string;
+  status: LlmCallStatus;
+  latencyMs?: number;
+  inputTokens?: number;
+  outputTokens?: number;
+  estimatedCost?: string;
+  errorMessage?: string;
+  metadata?: Record<string, unknown>;
+  createdAt: Date;
 }
 
 export interface LlmProvider {

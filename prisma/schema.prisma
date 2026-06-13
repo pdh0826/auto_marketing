@@ -1,0 +1,236 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum BlogStatus {
+  active
+  inactive
+}
+
+enum CtaStrength {
+  weak
+  normal
+  strong
+}
+
+enum ContentMode {
+  seo_keyword
+  service_promotion
+  memo_expand
+  existing_draft_improve
+}
+
+enum ContentStatus {
+  idea
+  planned
+  drafted
+  quality_review
+  approved
+  scheduled
+  published
+  failed
+  rewrite_needed
+}
+
+enum LlmProviderType {
+  openai
+  local
+}
+
+enum LlmTaskType {
+  content_plan
+  content_draft
+  html_convert
+  quality_check
+  style_rewrite
+  cta_generate
+  keyword_analyze
+  serp_analyze
+  image_analyze
+}
+
+enum LlmCallStatus {
+  success
+  failed
+}
+
+model Blog {
+  id                     String        @id @default(cuid())
+  name                   String
+  url                    String
+  bloggerBlogId          String?
+  mainTopic              String?
+  subTopics              String[]      @default([])
+  targetReader           String?
+  tone                   String?
+  locale                 String        @default("ko-KR")
+  forbiddenPhrases       String[]      @default([])
+  preferredPhrases       String[]      @default([])
+  defaultContentLength   Int           @default(1200)
+  defaultCtaStrength     CtaStrength   @default(normal)
+  dailyPublishLimit      Int           @default(1)
+  nightExcludeStart      String?
+  nightExcludeEnd        String?
+  autoPublishEnabled     Boolean       @default(false)
+  manualApprovalRequired Boolean       @default(true)
+  status                 BlogStatus    @default(active)
+  createdAt              DateTime      @default(now())
+  updatedAt              DateTime      @updatedAt
+
+  contentItems           ContentItem[]
+
+  @@index([status])
+  @@map("blogs")
+}
+
+model BrandProfile {
+  id               String        @id @default(cuid())
+  name             String
+  serviceName      String?
+  shortDescription String?
+  longDescription  String?
+  targetUsers      String[]      @default([])
+  coreFeatures     String[]      @default([])
+  problemsSolved   String[]      @default([])
+  mainUrl          String?
+  ctaWeak          String?
+  ctaNormal        String?
+  ctaStrong        String?
+  forbiddenPhrases String[]      @default([])
+  preferredPhrases String[]      @default([])
+  riskDisclaimer   String?
+  isDefault        Boolean       @default(false)
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  contentItems     ContentItem[]
+
+  @@index([isDefault])
+  @@map("brand_profiles")
+}
+
+model ContentItem {
+  id             String         @id @default(cuid())
+  blogId         String?
+  brandProfileId String?
+  mode           ContentMode
+  status         ContentStatus  @default(idea)
+  title          String?
+  targetKeyword  String?
+  sourceMemo     String?
+  planJson       Json?
+  draftMarkdown  String?
+  draftHtml      String?
+  qualityScore   Int?
+  scheduledAt    DateTime?
+  publishedAt    DateTime?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  blog           Blog?          @relation(fields: [blogId], references: [id], onDelete: SetNull)
+  brandProfile   BrandProfile?  @relation(fields: [brandProfileId], references: [id], onDelete: SetNull)
+  llmCallLogs    LlmCallLog[]
+
+  @@index([blogId])
+  @@index([brandProfileId])
+  @@index([status])
+  @@index([mode])
+  @@map("content_items")
+}
+
+model LlmProvider {
+  id             String          @id @default(cuid())
+  providerType   LlmProviderType
+  name           String
+  baseUrl        String?
+  secretRef      String?
+  apiKeyLast4    String?
+  isEnabled      Boolean         @default(true)
+  timeoutSeconds Int             @default(60)
+  maxRetries     Int             @default(1)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  models         LlmModel[]
+  primaryRoutes  LlmTaskRoute[]  @relation("PrimaryProvider")
+  fallbackRoutes LlmTaskRoute[]  @relation("FallbackProvider")
+  callLogs       LlmCallLog[]
+
+  @@index([providerType])
+  @@index([isEnabled])
+  @@map("llm_providers")
+}
+
+model LlmModel {
+  id             String          @id @default(cuid())
+  providerId     String
+  name           String
+  displayName    String?
+  isDefault      Boolean         @default(false)
+  isEnabled      Boolean         @default(true)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  provider       LlmProvider     @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  primaryRoutes  LlmTaskRoute[]  @relation("PrimaryModel")
+  fallbackRoutes LlmTaskRoute[]  @relation("FallbackModel")
+  callLogs       LlmCallLog[]
+
+  @@unique([providerId, name])
+  @@index([isEnabled])
+  @@map("llm_models")
+}
+
+model LlmTaskRoute {
+  id                 String       @id @default(cuid())
+  taskType           LlmTaskType   @unique
+  primaryProviderId  String
+  primaryModelId     String
+  fallbackProviderId String?
+  fallbackModelId    String?
+  temperature        Float?
+  maxTokens          Int?
+  timeoutSeconds     Int?
+  isEnabled          Boolean      @default(true)
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+
+  primaryProvider    LlmProvider  @relation("PrimaryProvider", fields: [primaryProviderId], references: [id])
+  primaryModel       LlmModel     @relation("PrimaryModel", fields: [primaryModelId], references: [id])
+  fallbackProvider   LlmProvider? @relation("FallbackProvider", fields: [fallbackProviderId], references: [id])
+  fallbackModel      LlmModel?    @relation("FallbackModel", fields: [fallbackModelId], references: [id])
+
+  @@index([isEnabled])
+  @@map("llm_task_routes")
+}
+
+model LlmCallLog {
+  id            String        @id @default(cuid())
+  taskType      LlmTaskType
+  providerId    String?
+  modelId       String?
+  contentItemId String?
+  status        LlmCallStatus
+  latencyMs     Int?
+  inputTokens   Int?
+  outputTokens  Int?
+  estimatedCost Decimal?      @db.Decimal(10, 6)
+  errorMessage  String?
+  metadata      Json?
+  createdAt     DateTime      @default(now())
+
+  provider      LlmProvider?  @relation(fields: [providerId], references: [id], onDelete: SetNull)
+  model         LlmModel?     @relation(fields: [modelId], references: [id], onDelete: SetNull)
+  contentItem   ContentItem?  @relation(fields: [contentItemId], references: [id], onDelete: SetNull)
+
+  @@index([taskType])
+  @@index([status])
+  @@index([createdAt])
+  @@index([contentItemId])
+  @@map("llm_call_logs")
+}
