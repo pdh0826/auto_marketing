@@ -38,3 +38,6 @@ __pycache__/
 *.sqlite
 *.sqlite3
 local-data/
+
+# TypeScript build cache
+*.tsbuildinfo
