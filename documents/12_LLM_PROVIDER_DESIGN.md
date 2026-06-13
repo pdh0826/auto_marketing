@@ -164,3 +164,16 @@ Patch 7D는 `/api/settings/llm/call-logs` 응답을 운영 화면용 Safe DTO로
 - `POST /api/settings/llm/call-logs`는 막고, 로그 생성은 서버 내부 `createLlmCallLog()` 호출로만 수행한다.
 - `/settings/llm` Call Logs 화면은 safe summary와 제한된 metadata만 표시한다.
 - `/content/[id]` Generated Plan Candidate UI는 validation error/warning count와 반영 가능 여부를 명확히 표시한다.
+
+## Patch 7E Candidate Edit And Revalidation
+
+Patch 7E는 `/content/[id]`에서 생성된 `planJson` 후보를 사용자가 직접 수정하고, LLM 호출 없이 재검증할 수 있게 한다.
+
+- validation 로직은 provider 호출 모듈에서 분리된 순수 content 모듈에서 수행한다.
+- 재검증 API는 `POST /api/content-items/[id]/validate-plan`이다.
+- 재검증 API는 content item, blog, brand profile context만 조회하고 Provider, secret, route 설정은 조회하지 않는다.
+- 재검증은 OpenAI/Ollama/Local LLM 호출을 수행하지 않는다.
+- 재검증은 `llm_call_logs`를 생성하지 않는다.
+- 편집된 후보는 재검증 전에는 `planJson`에 반영할 수 없다.
+- validation error가 있으면 반영을 막고, warning만 있으면 검토 후 반영할 수 있다.
+- 후보 편집과 재검증은 DB에 자동 저장하지 않고, 사용자가 `planJson에 반영`을 클릭해야 기존 content item PATCH 흐름으로 저장한다.

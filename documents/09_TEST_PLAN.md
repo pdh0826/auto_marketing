@@ -194,3 +194,15 @@ npm run build
 - `/content/[id]` Generated Plan Candidate 영역은 validation status와 error/warning count를 표시한다.
 - validation error가 있으면 planJson 반영 불가 안내가 표시되고 `planJson에 반영` 버튼이 비활성화된다.
 - warning만 있으면 검토 후 반영 가능 안내가 표시된다.
+
+## Patch 7E 수동 검증
+
+- `/content/[id]` Generated Plan Candidate 영역에서 `후보 편집` 버튼으로 candidate planJson textarea를 편집 모드로 전환할 수 있다.
+- 후보를 편집하면 `편집된 후보는 재검증 후 반영할 수 있습니다.` 안내가 표시되고 `planJson에 반영` 버튼이 비활성화된다.
+- `재검증` 버튼은 실제 LLM 호출 없이 `POST /api/content-items/[id]/validate-plan`만 호출한다.
+- 잘못된 JSON을 입력하고 재검증하면 API 호출 없이 `유효하지 않은 JSON입니다. 재검증할 수 없습니다.` 안내가 표시된다.
+- 위험 표현이 포함된 JSON을 재검증하면 validation error가 표시되고 `planJson에 반영` 버튼이 비활성화된다.
+- warning만 있는 후보를 재검증하면 warning 안내가 표시되고 `planJson에 반영` 버튼을 사용할 수 있다.
+- 재검증만으로 DB의 `content_items.planJson`은 변경되지 않는다.
+- 재검증만으로 `llm_call_logs`가 생성되지 않는다.
+- `planJson에 반영`을 클릭해야 기존 content item PATCH 흐름으로 planJson이 저장된다.

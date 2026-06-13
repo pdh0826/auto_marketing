@@ -39,6 +39,10 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
   const [contentPlanRoute, setContentPlanRoute] = useState<LlmTaskRouteAdmin | null>(null);
   const [dryRunResult, setDryRunResult] = useState<ContentPlanDryRunResult | null>(null);
   const [generatedPlan, setGeneratedPlan] = useState<GeneratedPlanResult | null>(null);
+  const [candidateText, setCandidateText] = useState("");
+  const [candidateEditMode, setCandidateEditMode] = useState(false);
+  const [candidateDirty, setCandidateDirty] = useState(false);
+  const [candidateParseError, setCandidateParseError] = useState<string | null>(null);
   const [planText, setPlanText] = useState("");
   const [loading, setLoading] = useState(true);
   const [assetsLoading, setAssetsLoading] = useState(true);
@@ -47,6 +51,7 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
   const [changingStatus, setChangingStatus] = useState(false);
   const [generatingPlan, setGeneratingPlan] = useState(false);
   const [applyingPlan, setApplyingPlan] = useState(false);
+  const [revalidatingPlan, setRevalidatingPlan] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [assetsError, setAssetsError] = useState<string | null>(null);
   const [routeError, setRouteError] = useState<string | null>(null);
@@ -56,6 +61,7 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
 
   const parsedPlan = useMemo(() => parsePlan(planText), [planText]);
   const canMarkPlanned = parsedPlan.ok && hasUsablePlanJson(parsedPlan.value);
+  const canApplyGeneratedPlan = Boolean(generatedPlan?.validation.ok && !candidateDirty && !candidateParseError && !applyingPlan);
 
   const loadContentItem = useCallback(async () => {
     setLoading(true);
@@ -177,6 +183,10 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
     setNotice(null);
     setGenerationError(null);
     setGeneratedPlan(null);
+    setCandidateText("");
+    setCandidateEditMode(false);
+    setCandidateDirty(false);
+    setCandidateParseError(null);
     setGeneratingPlan(true);
 
     try {
@@ -185,6 +195,7 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
         body: JSON.stringify({})
       });
       setGeneratedPlan(result.data);
+      setCandidateText(JSON.stringify(result.data.candidatePlanJson, null, 2));
       setNotice("기획서 후보를 생성했습니다. 아직 DB에 저장되지 않았습니다.");
     } catch (caught) {
       setGenerationError(caught instanceof Error ? caught.message : "기획서 후보 생성에 실패했습니다.");
@@ -196,6 +207,14 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
   async function applyGeneratedPlan() {
     if (!generatedPlan?.validation.ok) {
       setGenerationError("validation을 통과한 후보만 planJson에 반영할 수 있습니다.");
+      return;
+    }
+    if (candidateParseError) {
+      setGenerationError("유효하지 않은 JSON입니다. 재검증할 수 없습니다.");
+      return;
+    }
+    if (candidateDirty) {
+      setGenerationError("편집된 후보는 재검증 후 반영할 수 있습니다.");
       return;
     }
 
@@ -215,6 +234,45 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
       setGenerationError(caught instanceof Error ? caught.message : "생성 후보를 planJson에 반영하지 못했습니다.");
     } finally {
       setApplyingPlan(false);
+    }
+  }
+
+  async function revalidateGeneratedPlan() {
+    if (!generatedPlan) {
+      return;
+    }
+
+    setGenerationError(null);
+    setNotice(null);
+    setCandidateParseError(null);
+
+    const parsed = parsePlan(candidateText);
+    if (!parsed.ok) {
+      setCandidateParseError("유효하지 않은 JSON입니다. 재검증할 수 없습니다.");
+      return;
+    }
+
+    setRevalidatingPlan(true);
+    try {
+      const result = await requestJson<ApiResult<Pick<GeneratedPlanResult, "candidatePlanJson" | "validation">>>(
+        `/api/content-items/${contentItemId}/validate-plan`,
+        {
+          method: "POST",
+          body: JSON.stringify({ candidatePlanJson: parsed.value })
+        }
+      );
+      setGeneratedPlan({
+        ...generatedPlan,
+        candidatePlanJson: result.data.candidatePlanJson,
+        validation: result.data.validation
+      });
+      setCandidateText(JSON.stringify(result.data.candidatePlanJson, null, 2));
+      setCandidateDirty(false);
+      setNotice("후보 planJson을 재검증했습니다. 아직 DB에 저장되지 않았습니다.");
+    } catch (caught) {
+      setGenerationError(caught instanceof Error ? caught.message : "후보 planJson 재검증에 실패했습니다.");
+    } finally {
+      setRevalidatingPlan(false);
     }
   }
 
@@ -388,7 +446,11 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
                     latency: {generatedPlan.metadata.latencyMs}ms / summary: {generatedPlan.metadata.responseSummary}
                   </p>
                 </div>
-                {!generatedPlan.validation.ok ? (
+                {candidateParseError ? (
+                  <div className="notice error">{candidateParseError}</div>
+                ) : candidateDirty ? (
+                  <div className="notice warning">편집된 후보는 재검증 후 반영할 수 있습니다.</div>
+                ) : !generatedPlan.validation.ok ? (
                   <div className="notice error">이 후보는 validation error가 있어 planJson에 반영할 수 없습니다.</div>
                 ) : generatedPlan.validation.warnings.length > 0 ? (
                   <div className="notice">warning이 있습니다. 내용을 검토한 뒤 planJson에 반영할 수 있습니다.</div>
@@ -397,12 +459,35 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
                 )}
                 <ValidationList title="Validation Errors" items={generatedPlan.validation.errors} emptyText="validation error가 없습니다." isError />
                 <ValidationList title="Validation Warnings" items={generatedPlan.validation.warnings} emptyText="validation warning이 없습니다." isWarning />
-                <PromptPreviewBlock title="Candidate planJson" value={JSON.stringify(generatedPlan.candidatePlanJson, null, 2)} />
+                <label className="plan-editor read-block">
+                  Candidate planJson
+                  <textarea
+                    value={candidateText}
+                    readOnly={!candidateEditMode}
+                    onChange={(event) => {
+                      setCandidateText(event.target.value);
+                      setCandidateDirty(true);
+                      setCandidateParseError(null);
+                    }}
+                    spellCheck={false}
+                  />
+                </label>
                 <div className="form-actions">
+                  <button className="button secondary" type="button" onClick={() => setCandidateEditMode((current) => !current)}>
+                    {candidateEditMode ? "읽기 모드" : "후보 편집"}
+                  </button>
+                  <button
+                    className="button secondary"
+                    type="button"
+                    disabled={revalidatingPlan || !candidateDirty}
+                    onClick={() => void revalidateGeneratedPlan()}
+                  >
+                    {revalidatingPlan ? "재검증 중" : "재검증"}
+                  </button>
                   <button
                     className="button"
                     type="button"
-                    disabled={!generatedPlan.validation.ok || applyingPlan}
+                    disabled={!canApplyGeneratedPlan}
                     onClick={() => void applyGeneratedPlan()}
                   >
                     planJson에 반영
