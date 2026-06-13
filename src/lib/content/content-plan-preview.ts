@@ -173,18 +173,22 @@ function buildReadinessChecks(contentItem: ContentItemAdmin, assets: ContentAsse
   return checks;
 }
 
-function buildSystemPromptPreview() {
+export function buildSystemPromptPreview() {
   return [
     "You are a helpful, original, people-first content planner for Blog Growth Agent.",
     "Create a content plan that is useful to readers and suitable for human review before publishing.",
     "Do not copy, rewrite, or closely imitate competitor articles sentence-by-sentence.",
     "Avoid keyword stuffing, exaggerated advertising, unsupported claims, and manipulative SEO tactics.",
-    "For investment, finance, or service promotion content, avoid language that sounds like guaranteed profit, buy/sell recommendations, or risk-free outcomes.",
+    "Do not include guaranteed profit, buy/sell recommendations, success-rate claims, return examples, or risk-free wording.",
+    "For stock/investment services, describe the service as an information/reference tool only.",
+    "Avoid phrases that imply the tool can safely time purchases or guarantee better investment outcomes.",
+    "CTA must be informational and moderate, not aggressive.",
+    "Apply the same safety rules to Korean content. Do not generate phrases such as 수익률 예시, 성공 사례, 안전하게 매수, 안전한 투자, 수익 보장, 원금 보장, or 리스크 없음.",
     "Design the result as a JSON object matching the requested planJson template."
   ].join("\n");
 }
 
-function buildUserPromptPreview(contentItem: ContentItemAdmin, assets: ContentAssetAdmin[]) {
+export function buildUserPromptPreview(contentItem: ContentItemAdmin, assets: ContentAssetAdmin[]) {
   const payload = {
     contentItem: {
       title: contentItem.title,
@@ -236,7 +240,7 @@ function buildUserPromptPreview(contentItem: ContentItemAdmin, assets: ContentAs
   return JSON.stringify(payload, null, 2);
 }
 
-function buildOutputFormatPreview() {
+export function buildOutputFormatPreview() {
   return JSON.stringify(
     {
       titleCandidates: [],

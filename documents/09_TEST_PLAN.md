@@ -148,3 +148,36 @@ npm run build
 - prompt preview에는 API Key, apiKeyLast4, secretRef 원문, encryptedValue, headersJson, requestTemplateJson, storagePath가 포함되지 않는다.
 - Dry Run은 `planJson`을 자동 저장하지 않고 `llm_call_logs`를 생성하지 않는다.
 - OpenAI API, Ollama API, Local LLM HTTP 호출, Blogger API 호출은 발생하지 않는다.
+
+## Patch 7C 수동 검증
+
+- `/content/[id]`의 `Content Plan Dry Run`에서 readiness가 통과하면 `기획서 생성` 버튼을 사용할 수 있다.
+- `POST /api/content-items/[id]/generate-plan`은 `content_plan` Task Route의 primary Provider/Model로 실제 LLM 호출을 수행한다.
+- primary provider 호출 자체가 실패하면 fallback Provider/Model이 있을 때 1회 fallback을 시도한다.
+- JSON parse 실패나 validation 실패는 fallback하지 않고 안전한 오류 또는 후보 검증 결과를 반환한다.
+- 생성 후보 planJson은 read-only preview로 표시되며 자동 저장되지 않는다.
+- validation error가 있으면 `planJson에 반영` 버튼이 비활성화된다.
+- warning만 있으면 `planJson에 반영` 버튼을 사용할 수 있다.
+- `planJson에 반영` 클릭 시에만 기존 `PATCH /api/content-items/[id]`로 planJson이 저장된다.
+- 반영 후 Manual Plan JSON textarea가 저장된 값으로 갱신된다.
+- planned 전환은 기존 버튼으로 별도 수행한다.
+- `llm_call_logs`에는 taskType `content_plan`, provider/model/contentItem, status, latency, 제한된 metadata만 저장된다.
+- `llm_call_logs`에는 prompt 전문, request body 전문, raw response 전문, API Key, Bearer token, secretRef 원문, encryptedValue, storagePath가 저장되지 않는다.
+- 본문 생성, HTML 변환, 품질검사, Blogger API 호출은 발생하지 않는다.
+
+## Patch 7C-HOTFIX 수동 검증
+
+- primary provider 호출 실패 후 fallback provider 호출도 실패하면 fallback provider/model 기준으로 `llm_call_logs` failed 로그가 남는다.
+- fallback이 없어서 primary 실패로 종료되면 primary provider/model 기준으로 `llm_call_logs` failed 로그가 남는다.
+- provider 호출은 성공했지만 LLM 응답 JSON parse가 실패하면 해당 provider/model 기준으로 `responseSummary: json_parse_failed` failed 로그가 남는다.
+- parse 실패 로그에는 prompt 전문, raw response 전문, request body 전문, API Key, Bearer token, secretRef 원문, encryptedValue, storagePath가 저장되지 않는다.
+
+## Patch 7C-SAFETY-HOTFIX 수동 검증
+
+- `content_plan` 후보 planJson에 `수익 보장`, `급등 확정`, `매수 추천`, `매도 추천`, `반드시 오른다`, `무조건 오른다`, `손실 없음`, `리스크 없음`, `원금 보장`, `수익률 예시`, `성공 사례`, `안전하게 매수`, `안전한 투자`, `확실한 수익`이 포함되면 validation error가 표시된다.
+- validation error가 있으면 `/content/[id]`의 `planJson에 반영` 버튼이 비활성화된다.
+- `무료 체험`, `지금 시작`, `신뢰할 수 있는 투자`, `매수 타이밍을 잡다`, `수익률`, `성공`은 기본적으로 validation warning으로 표시된다.
+- `service_promotion` 모드에서 연결된 brand profile이 투자/주식/종목/매수/급등/투자 인사이트 관련이면 위 warning 표현도 validation error로 승격된다.
+- warning만 있는 후보는 `planJson에 반영`이 가능하지만 화면에 경고가 표시된다.
+- 생성 prompt는 투자/금융 서비스가 정보 제공 또는 참고 도구라는 원칙과 수익 보장/매수 추천/수익률 예시/성공 사례/안전하게 매수 금지를 포함한다.
+- 안전성 validation 결과는 error/warning count만 `llm_call_logs` metadata에 반영되며 prompt 전문, raw response 전문, API Key, request body 전문은 저장되지 않는다.

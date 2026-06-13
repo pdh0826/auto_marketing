@@ -132,3 +132,23 @@ Patch 7B는 `/content/[id]`에서 실제 LLM 호출 전에 `content_plan` route�
 - prompt preview는 system, user, outputFormat으로 분리해 화면에만 표시한다.
 - prompt preview에는 content item, blog profile, brand profile, attached media metadata를 포함한다.
 - prompt preview에는 API Key, apiKeyLast4, secretRef, encryptedValue, headersJson, requestTemplateJson, storagePath를 포함하지 않는다.
+
+## Patch 7C Content Plan Generation Candidate
+
+Patch 7C는 `/content/[id]`에서 `content_plan` Task Route를 사용해 실제 LLM 호출로 planJson 후보를 생성한다.
+
+- 생성 API는 `POST /api/content-items/[id]/generate-plan`이다.
+- 생성 결과는 자동 저장하지 않고 화면의 후보 preview로만 반환한다.
+- 사용자가 `planJson에 반영` 버튼을 눌러야 기존 content item PATCH 흐름으로 저장한다.
+- primary Provider 호출 자체가 실패하면 fallback Provider/Model을 1회 시도할 수 있다.
+- JSON parse 실패와 validation 실패는 fallback하지 않는다.
+- OpenAI-compatible 호출은 `/v1/chat/completions`를 사용하며 모델명에 따라 `max_tokens` 또는 `max_completion_tokens`를 선택한다.
+- Ollama-compatible 호출은 `/api/generate`, `stream: false`를 사용한다.
+- LLM raw response는 JSON 추출/파싱에만 사용하고 DB에 저장하지 않는다.
+- `llm_call_logs` metadata에는 `purpose`, `usedFallback`, `apiFormat`, `invocationMode`, `responseSummary`, validation count만 저장한다.
+- prompt 전문, request body 전문, raw response 전문, API Key, Bearer token, secretRef, encryptedValue, media storagePath는 로그에 저장하지 않는다.
+- fallback provider 호출도 실패하면 fallback provider/model 기준으로 failed 로그를 남긴다.
+- JSON parse 실패는 provider 호출 성공 후 실패로 보고 해당 provider/model 기준으로 `json_parse_failed` 요약만 기록한다.
+- 투자/금융/서비스 홍보 안전성 검사는 생성 후보를 저장하기 전에 rule-based validation으로 수행한다.
+- 수익 보장, 매수/매도 추천, 수익률 예시, 성공 사례, 안전하게 매수 같은 심각 표현은 validation error로 처리해 `planJson` 반영을 차단한다.
+- 주의 표현은 warning으로 표시하되, 투자 관련 `service_promotion` 맥락에서는 더 엄격하게 error로 승격한다.

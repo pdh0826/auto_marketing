@@ -15,20 +15,42 @@ interface ContentDetailClientProps {
   contentItemId: string;
 }
 
+interface GeneratedPlanResult {
+  candidatePlanJson: Record<string, unknown>;
+  validation: {
+    ok: boolean;
+    errors: string[];
+    warnings: string[];
+  };
+  route: {
+    providerName: string;
+    modelName: string;
+    usedFallback: boolean;
+  };
+  metadata: {
+    latencyMs: number;
+    responseSummary: string;
+  };
+}
+
 export function ContentDetailClient({ contentItemId }: ContentDetailClientProps) {
   const [contentItem, setContentItem] = useState<ContentItemAdmin | null>(null);
   const [assets, setAssets] = useState<ContentAssetAdmin[]>([]);
   const [contentPlanRoute, setContentPlanRoute] = useState<LlmTaskRouteAdmin | null>(null);
   const [dryRunResult, setDryRunResult] = useState<ContentPlanDryRunResult | null>(null);
+  const [generatedPlan, setGeneratedPlan] = useState<GeneratedPlanResult | null>(null);
   const [planText, setPlanText] = useState("");
   const [loading, setLoading] = useState(true);
   const [assetsLoading, setAssetsLoading] = useState(true);
   const [routesLoading, setRoutesLoading] = useState(true);
   const [savingPlan, setSavingPlan] = useState(false);
   const [changingStatus, setChangingStatus] = useState(false);
+  const [generatingPlan, setGeneratingPlan] = useState(false);
+  const [applyingPlan, setApplyingPlan] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [assetsError, setAssetsError] = useState<string | null>(null);
   const [routeError, setRouteError] = useState<string | null>(null);
+  const [generationError, setGenerationError] = useState<string | null>(null);
   const [planError, setPlanError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -143,11 +165,57 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
 
   function runContentPlanDryRun() {
     setNotice(null);
+    setGenerationError(null);
     if (!contentItem) {
       setRouteError("글 생성 요청 상세 정보를 먼저 불러와야 합니다.");
       return;
     }
     setDryRunResult(buildContentPlanDryRun(contentItem, assets, contentPlanRoute));
+  }
+
+  async function generatePlanCandidate() {
+    setNotice(null);
+    setGenerationError(null);
+    setGeneratedPlan(null);
+    setGeneratingPlan(true);
+
+    try {
+      const result = await requestJson<ApiResult<GeneratedPlanResult>>(`/api/content-items/${contentItemId}/generate-plan`, {
+        method: "POST",
+        body: JSON.stringify({})
+      });
+      setGeneratedPlan(result.data);
+      setNotice("기획서 후보를 생성했습니다. 아직 DB에 저장되지 않았습니다.");
+    } catch (caught) {
+      setGenerationError(caught instanceof Error ? caught.message : "기획서 후보 생성에 실패했습니다.");
+    } finally {
+      setGeneratingPlan(false);
+    }
+  }
+
+  async function applyGeneratedPlan() {
+    if (!generatedPlan?.validation.ok) {
+      setGenerationError("validation을 통과한 후보만 planJson에 반영할 수 있습니다.");
+      return;
+    }
+
+    setApplyingPlan(true);
+    setGenerationError(null);
+    setNotice(null);
+
+    try {
+      const result = await requestJson<ApiResult<ContentItemAdmin>>(`/api/content-items/${contentItemId}`, {
+        method: "PATCH",
+        body: JSON.stringify({ planJson: generatedPlan.candidatePlanJson })
+      });
+      setContentItem(result.data);
+      setPlanText(formatPlanJson(result.data.planJson));
+      setNotice("생성 후보를 planJson에 반영했습니다. planned 전환은 기존 버튼으로 별도 수행하세요.");
+    } catch (caught) {
+      setGenerationError(caught instanceof Error ? caught.message : "생성 후보를 planJson에 반영하지 못했습니다.");
+    } finally {
+      setApplyingPlan(false);
+    }
   }
 
   return (
@@ -261,7 +329,13 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
               <button className="button" type="button" disabled={routesLoading || loading || assetsLoading} onClick={runContentPlanDryRun}>
                 Dry Run
               </button>
+              <button className="button secondary" type="button" disabled={!dryRunResult?.ready || generatingPlan} onClick={() => void generatePlanCandidate()}>
+                {generatingPlan ? "기획서 생성 중" : "기획서 생성"}
+              </button>
             </div>
+
+            {generationError ? <div className="notice error">{generationError}</div> : null}
+            {dryRunResult && !dryRunResult.ready ? <div className="notice error">Readiness fail 항목이 있어 기획서 생성 버튼을 비활성화했습니다.</div> : null}
 
             {dryRunResult ? (
               <>
@@ -297,6 +371,34 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
             ) : (
               <div className="notice">Dry Run을 실행하면 route readiness와 prompt preview가 화면에만 생성됩니다.</div>
             )}
+
+            {generatedPlan ? (
+              <div className="read-block">
+                <div className={generatedPlan.validation.ok ? "notice" : "notice error"}>
+                  <strong>Generated Plan Candidate</strong>
+                  <p>
+                    provider: {generatedPlan.route.providerName} / model: {generatedPlan.route.modelName} / fallback:{" "}
+                    {generatedPlan.route.usedFallback ? "yes" : "no"}
+                  </p>
+                  <p>
+                    latency: {generatedPlan.metadata.latencyMs}ms / summary: {generatedPlan.metadata.responseSummary}
+                  </p>
+                </div>
+                <ValidationList title="Validation Errors" items={generatedPlan.validation.errors} emptyText="validation error가 없습니다." isError />
+                <ValidationList title="Validation Warnings" items={generatedPlan.validation.warnings} emptyText="validation warning이 없습니다." />
+                <PromptPreviewBlock title="Candidate planJson" value={JSON.stringify(generatedPlan.candidatePlanJson, null, 2)} />
+                <div className="form-actions">
+                  <button
+                    className="button"
+                    type="button"
+                    disabled={!generatedPlan.validation.ok || applyingPlan}
+                    onClick={() => void applyGeneratedPlan()}
+                  >
+                    planJson에 반영
+                  </button>
+                </div>
+              </div>
+            ) : null}
           </section>
 
           <section className="admin-section">
@@ -385,6 +487,23 @@ function PromptPreviewBlock({ title, value }: { title: string; value: string }) 
       Prompt Preview: {title}
       <textarea value={value} readOnly spellCheck={false} />
     </label>
+  );
+}
+
+function ValidationList({ title, items, emptyText, isError = false }: { title: string; items: string[]; emptyText: string; isError?: boolean }) {
+  return (
+    <div className={isError && items.length > 0 ? "notice error" : "notice"}>
+      <strong>{title}</strong>
+      {items.length === 0 ? (
+        <p>{emptyText}</p>
+      ) : (
+        <ul>
+          {items.map((item) => (
+            <li key={item}>{item}</li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }
 
