@@ -157,3 +157,17 @@ Patch 6B는 `content_assets`의 caption, altText, userNote, placementHint, sortO
 - caption은 본문에 보이는 자연스러운 설명문으로 추천한다.
 - userNote는 내부 작성 보조용 메모로 추천한다.
 - `recommendedIsPrimary`는 추천값이며 대표 미디어 단일 강제는 후속 패치에서 처리한다.
+
+## Patch 6C 콘텐츠 상세와 수동 기획서
+
+Patch 6C는 `/content/[id]` 상세 화면에서 `content_items`의 기본 정보, 연결된 blog/brand profile, 첨부 미디어, `planJson`, `draftMarkdown`, `draftHtml`, `qualityScore`를 확인한다.
+
+- 새 DB 모델이나 migration은 추가하지 않는다.
+- `GET /api/content-items/[id]`, `PATCH /api/content-items/[id]`, `GET /api/content-items/[id]/assets`를 재사용한다.
+- `planJson`은 JSON textarea로 수동 입력, 수정, 저장한다.
+- 저장 전 `JSON.parse`로 object 여부를 검증한다.
+- 빈 `planJson`에는 기본 기획 템플릿을 표시한다.
+- `planned` 전환은 유효한 JSON이며 최소 하나 이상의 기획 항목이 있을 때만 허용한다.
+- `draftHtml`은 실제 HTML로 렌더링하지 않고 문자열로만 표시한다.
+- 첨부 미디어 상세에는 `storagePath`를 표시하지 않는다.
+- 기획서 자동 생성, 본문 생성, HTML 변환, 품질검사, Blogger 발행은 후속 패치 범위다.

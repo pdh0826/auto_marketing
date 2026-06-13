@@ -86,3 +86,17 @@ npm run build
 - 추천 결과 안내에 rationale과 warnings가 표시된다.
 - warnings에는 파일 내용 분석 없이 메타데이터만 사용했다는 한계가 표시된다.
 - OpenAI API, Local LLM, 이미지/영상 분석, Blogger API 호출은 발생하지 않는다.
+
+## Patch 6C 수동 검증
+
+- `/content/new` 목록에서 `상세` 링크로 `/content/[id]` 상세 화면에 이동할 수 있다.
+- `/content/[id]`에서 content item 기본 정보, blog name, brand profile name, sourceMemo가 표시된다.
+- `planJson`이 비어 있으면 기본 템플릿이 textarea에 표시된다.
+- 유효하지 않은 JSON은 저장하지 않고 오류를 표시한다.
+- 유효한 JSON object는 `PATCH /api/content-items/[id]`로 저장된다.
+- 빈 `{}` 또는 빈 템플릿만으로는 `planned` 전환을 허용하지 않는다.
+- 기획 항목이 있는 유효한 `planJson`은 저장 후 status를 `planned`로 전환할 수 있다.
+- 첨부 미디어는 이미지/동영상 미리보기와 메타데이터를 읽기 중심으로 표시한다.
+- 첨부 미디어 상세 화면에는 `storagePath`가 표시되지 않는다.
+- `draftMarkdown`, `draftHtml`, `qualityScore`는 read-only로 표시되며 `draftHtml`은 실제 HTML로 렌더링하지 않는다.
+- OpenAI API, Local LLM, 글 생성, HTML 변환, 품질검사, Blogger API 호출은 발생하지 않는다.

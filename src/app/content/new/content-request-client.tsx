@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import type { BlogAdmin } from "@/lib/blogs/admin-types";
 import type { BrandProfileAdmin } from "@/lib/brands/admin-types";
@@ -429,6 +430,9 @@ export function ContentRequestClient() {
                     <td>{summarize(item.sourceMemo)}</td>
                     <td>{formatDate(item.createdAt)}</td>
                     <td className="action-cell">
+                      <Link className="button small secondary" href={`/content/${item.id}`}>
+                        상세
+                      </Link>
                       <button className="button small secondary" type="button" onClick={() => selectContentItem(item.id)}>
                         첨부 관리
                       </button>

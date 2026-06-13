@@ -237,6 +237,56 @@ th {
   object-fit: contain;
 }
 
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  margin: 0 0 18px;
+}
+
+.detail-grid div {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px;
+}
+
+.detail-grid dt {
+  margin-bottom: 6px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.detail-grid dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.read-block {
+  margin-top: 14px;
+}
+
+.plan-editor {
+  display: grid;
+  gap: 6px;
+  color: #3f3f46;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.plan-editor textarea {
+  width: 100%;
+  min-height: 340px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--text);
+  padding: 12px;
+  font: 13px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  resize: vertical;
+}
+
 @media (max-width: 720px) {
   .section-heading {
     display: block;
