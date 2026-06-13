@@ -1,4 +1,5 @@
 import type { Prisma } from "@prisma/client";
+import { deleteContentAssetFiles } from "@/lib/content/storage";
 import { prisma } from "./client";
 
 export function listContentItems() {
@@ -20,7 +21,8 @@ export function getContentItem(id: string) {
       llmCallLogs: {
         orderBy: { createdAt: "desc" },
         take: 20
-      }
+      },
+      assets: true
     }
   });
 }
@@ -36,7 +38,14 @@ export function updateContentItem(id: string, data: Prisma.ContentItemUncheckedU
   });
 }
 
-export function deleteContentItem(id: string) {
+export async function deleteContentItem(id: string) {
+  const assets = await prisma.contentAsset.findMany({
+    where: { contentItemId: id },
+    select: { storagePath: true }
+  });
+
+  await deleteContentAssetFiles(assets);
+
   return prisma.contentItem.delete({
     where: { id }
   });

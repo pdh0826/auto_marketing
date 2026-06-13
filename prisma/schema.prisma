@@ -37,6 +37,20 @@ enum ContentStatus {
   rewrite_needed
 }
 
+enum ContentAssetType {
+  image
+  video
+}
+
+enum ContentAssetPlacement {
+  hero
+  intro
+  middle
+  outro
+  gallery
+  embed
+}
+
 enum LlmProviderType {
   openai
   local
@@ -135,12 +149,41 @@ model ContentItem {
   blog           Blog?          @relation(fields: [blogId], references: [id], onDelete: SetNull)
   brandProfile   BrandProfile?  @relation(fields: [brandProfileId], references: [id], onDelete: SetNull)
   llmCallLogs    LlmCallLog[]
+  assets         ContentAsset[]
 
   @@index([blogId])
   @@index([brandProfileId])
   @@index([status])
   @@index([mode])
   @@map("content_items")
+}
+
+model ContentAsset {
+  id            String                @id @default(cuid())
+  contentItemId String
+  assetType     ContentAssetType
+  fileName      String
+  originalName  String
+  mimeType      String
+  fileSize      Int
+  storagePath   String
+  thumbnailPath String?
+  caption       String?
+  altText       String?
+  userNote      String?
+  placementHint ContentAssetPlacement @default(gallery)
+  sortOrder     Int                   @default(0)
+  isPrimary     Boolean               @default(false)
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+
+  contentItem   ContentItem           @relation(fields: [contentItemId], references: [id], onDelete: Cascade)
+
+  @@index([contentItemId])
+  @@index([assetType])
+  @@index([placementHint])
+  @@index([isPrimary])
+  @@map("content_assets")
 }
 
 model LlmProvider {

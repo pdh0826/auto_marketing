@@ -130,3 +130,16 @@ Patch 5는 기존 `content_items` CRUD API를 `/content/new` 화면에 연결한
 - Patch 5는 글 생성 요청 저장까지만 구현한다.
 - LLM 호출, 글 기획서 생성, 본문 생성, HTML 변환, 품질검사, Blogger 발행은 후속 패치 범위다.
 - `existing_draft_improve`는 사용자가 직접 입력한 기존 글/초안 보강용이며 경쟁글 복사, 재작성, 재가공 용도가 아니다.
+
+## Patch 6A 첨부 미디어 자산
+
+Patch 6A는 `content_items`와 1:N 관계를 갖는 `content_assets` 모델을 추가한다.
+
+- 파일 본문은 DB가 아니라 `local-data/uploads/content-assets/{contentItemId}/`에 저장한다.
+- DB에는 파일 메타데이터와 글 배치용 정보만 저장한다.
+- 지원 asset type은 `image`, `video`다.
+- 지원 placement는 `hero`, `intro`, `middle`, `outro`, `gallery`, `embed`다.
+- 관리 메타데이터는 caption, altText, userNote, placementHint, sortOrder, isPrimary다.
+- `storagePath`는 public URL로 직접 노출하지 않고 파일 제공 API를 통해서만 사용한다.
+- `isPrimary` 단일 강제는 Patch 6A에서 구현하지 않는다.
+- 외부 스토리지, Blogger 업로드, 글 생성, 품질검사는 Patch 6A 범위가 아니다.

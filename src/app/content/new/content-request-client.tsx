@@ -3,6 +3,7 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import type { BlogAdmin } from "@/lib/blogs/admin-types";
 import type { BrandProfileAdmin } from "@/lib/brands/admin-types";
+import { CONTENT_ASSET_PLACEMENTS, type ContentAssetAdmin, type ContentAssetPlacement } from "@/lib/content/asset-types";
 import type { ContentItemAdmin } from "@/lib/content/admin-types";
 import { CONTENT_MODE_OPTIONS, CONTENT_STATUS_OPTIONS, getContentModeHint, getContentModeLabel } from "@/lib/content/constants";
 import type { ContentMode, ContentStatus } from "@/lib/content/types";
@@ -19,6 +20,15 @@ interface ContentFormState {
   status: ContentStatus;
 }
 
+interface AssetFormState {
+  caption: string;
+  altText: string;
+  userNote: string;
+  placementHint: ContentAssetPlacement;
+  sortOrder: string;
+  isPrimary: boolean;
+}
+
 const emptyContentForm: ContentFormState = {
   blogId: "",
   brandProfileId: "",
@@ -29,17 +39,34 @@ const emptyContentForm: ContentFormState = {
   status: "idea"
 };
 
+const emptyAssetForm: AssetFormState = {
+  caption: "",
+  altText: "",
+  userNote: "",
+  placementHint: "gallery",
+  sortOrder: "0",
+  isPrimary: false
+};
+
 export function ContentRequestClient() {
   const [blogs, setBlogs] = useState<BlogAdmin[]>([]);
   const [brandProfiles, setBrandProfiles] = useState<BrandProfileAdmin[]>([]);
   const [contentItems, setContentItems] = useState<ContentItemAdmin[]>([]);
+  const [assets, setAssets] = useState<ContentAssetAdmin[]>([]);
   const [form, setForm] = useState<ContentFormState>(emptyContentForm);
+  const [assetForm, setAssetForm] = useState<AssetFormState>(emptyAssetForm);
+  const [editingAssetId, setEditingAssetId] = useState<string | null>(null);
+  const [selectedContentItemId, setSelectedContentItemId] = useState<string>("");
   const [loading, setLoading] = useState(true);
+  const [assetsLoading, setAssetsLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [assetSaving, setAssetSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [assetError, setAssetError] = useState<string | null>(null);
 
   const blogById = useMemo(() => new Map(blogs.map((blog) => [blog.id, blog])), [blogs]);
   const brandById = useMemo(() => new Map(brandProfiles.map((brand) => [brand.id, brand])), [brandProfiles]);
+  const selectedContentItem = contentItems.find((item) => item.id === selectedContentItemId);
   const modeHint = getContentModeHint(form.mode);
   const guidance = getGuidance(form);
 
@@ -67,6 +94,29 @@ export function ContentRequestClient() {
   useEffect(() => {
     void loadAll();
   }, [loadAll]);
+
+  const loadAssets = useCallback(async (contentItemId: string) => {
+    setAssetsLoading(true);
+    setAssetError(null);
+
+    try {
+      const result = await requestJson<ApiResult<ContentAssetAdmin[]>>(`/api/content-items/${contentItemId}/assets`);
+      setAssets(result.data);
+    } catch (caught) {
+      setAssetError(caught instanceof Error ? caught.message : "첨부 미디어를 불러오지 못했습니다.");
+    } finally {
+      setAssetsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!selectedContentItemId) {
+      setAssets([]);
+      return;
+    }
+
+    void loadAssets(selectedContentItemId);
+  }, [loadAssets, selectedContentItemId]);
 
   async function submitContentRequest(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -117,11 +167,98 @@ export function ContentRequestClient() {
     setError(null);
     try {
       await requestJson<ApiResult<{ id: string }>>(`/api/content-items/${item.id}`, { method: "DELETE" });
+      if (selectedContentItemId === item.id) {
+        setSelectedContentItemId("");
+        setAssets([]);
+      }
       await loadAll();
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "글 생성 요청을 삭제하지 못했습니다.");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function submitAssetUpload(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setAssetError(null);
+
+    if (!selectedContentItemId) {
+      setAssetError("먼저 글 생성 요청을 선택하세요.");
+      return;
+    }
+
+    const formElement = event.currentTarget;
+    const fileInput = formElement.elements.namedItem("file") as HTMLInputElement | null;
+    const file = fileInput?.files?.[0];
+
+    if (!file) {
+      setAssetError("업로드할 파일을 선택하세요.");
+      return;
+    }
+
+    const formData = new FormData();
+    formData.set("file", file);
+    appendAssetMetadata(formData, assetForm);
+
+    setAssetSaving(true);
+    try {
+      await requestFormData<ApiResult<ContentAssetAdmin>>(`/api/content-items/${selectedContentItemId}/assets`, formData);
+      setAssetForm(emptyAssetForm);
+      formElement.reset();
+      await loadAssets(selectedContentItemId);
+    } catch (caught) {
+      setAssetError(caught instanceof Error ? caught.message : "첨부 미디어 업로드에 실패했습니다.");
+    } finally {
+      setAssetSaving(false);
+    }
+  }
+
+  async function submitAssetMetadata(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setAssetError(null);
+
+    if (!editingAssetId || !selectedContentItemId) {
+      setAssetError("수정할 첨부 미디어를 선택하세요.");
+      return;
+    }
+
+    setAssetSaving(true);
+    try {
+      await requestJson<ApiResult<ContentAssetAdmin>>(`/api/content-assets/${editingAssetId}`, {
+        method: "PATCH",
+        body: JSON.stringify(toAssetPayload(assetForm))
+      });
+      setEditingAssetId(null);
+      setAssetForm(emptyAssetForm);
+      await loadAssets(selectedContentItemId);
+    } catch (caught) {
+      setAssetError(caught instanceof Error ? caught.message : "첨부 미디어 메타데이터 수정에 실패했습니다.");
+    } finally {
+      setAssetSaving(false);
+    }
+  }
+
+  async function deleteAsset(asset: ContentAssetAdmin) {
+    if (!window.confirm(`Delete asset "${asset.originalName}"?`)) {
+      return;
+    }
+
+    setAssetSaving(true);
+    setAssetError(null);
+    try {
+      await requestJson<ApiResult<{ id: string }>>(`/api/content-assets/${asset.id}`, { method: "DELETE" });
+      if (editingAssetId === asset.id) {
+        setEditingAssetId(null);
+        setAssetForm(emptyAssetForm);
+      }
+      if (selectedContentItemId) {
+        await loadAssets(selectedContentItemId);
+      }
+    } catch (caught) {
+      setAssetError(caught instanceof Error ? caught.message : "첨부 미디어 삭제에 실패했습니다.");
+    } finally {
+      setAssetSaving(false);
     }
   }
 
@@ -252,6 +389,9 @@ export function ContentRequestClient() {
                     <td>{summarize(item.sourceMemo)}</td>
                     <td>{formatDate(item.createdAt)}</td>
                     <td className="action-cell">
+                      <button className="button small secondary" type="button" onClick={() => selectContentItem(item.id)}>
+                        첨부 관리
+                      </button>
                       <button className="button small secondary" type="button" onClick={() => editContentRequest(item)}>
                         수정
                       </button>
@@ -266,8 +406,98 @@ export function ContentRequestClient() {
           </table>
         </div>
       </section>
+
+      <section className="admin-section">
+        <div className="section-heading">
+          <div>
+            <h2>Attached Media</h2>
+            <p className="muted">사진과 동영상 파일은 로컬 저장소에 저장하고, DB에는 배치에 필요한 메타데이터만 저장합니다.</p>
+            <p className="muted">대표 미디어 단일 강제는 후속 패치에서 처리 예정입니다.</p>
+          </div>
+        </div>
+
+        {!selectedContentItem ? (
+          <div className="notice">먼저 글 생성 요청을 선택하세요.</div>
+        ) : (
+          <>
+            <div className="notice">선택된 요청: {selectedContentItem.title || selectedContentItem.targetKeyword || selectedContentItem.id}</div>
+            {assetError ? <div className="notice error">{assetError}</div> : null}
+            {assetsLoading ? <div className="notice">첨부 미디어를 불러오는 중입니다.</div> : null}
+
+            <form className="admin-form" onSubmit={(event) => void submitAssetUpload(event)}>
+              <label>
+                File
+                <input name="file" type="file" accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime" />
+              </label>
+              <AssetMetadataFields form={assetForm} setForm={setAssetForm} />
+              <div className="form-actions">
+                <button className="button" type="submit" disabled={assetSaving}>
+                  미디어 업로드
+                </button>
+              </div>
+            </form>
+
+            {editingAssetId ? (
+              <form className="admin-form" onSubmit={(event) => void submitAssetMetadata(event)}>
+                <AssetMetadataFields form={assetForm} setForm={setAssetForm} />
+                <div className="form-actions">
+                  <button className="button" type="submit" disabled={assetSaving}>
+                    메타데이터 수정
+                  </button>
+                  <button
+                    className="button secondary"
+                    type="button"
+                    onClick={() => {
+                      setEditingAssetId(null);
+                      setAssetForm(emptyAssetForm);
+                    }}
+                  >
+                    취소
+                  </button>
+                </div>
+              </form>
+            ) : null}
+
+            <div className="asset-grid">
+              {assets.length === 0 ? (
+                <div className="notice">첨부된 미디어가 없습니다.</div>
+              ) : (
+                assets.map((asset) => (
+                  <article className="asset-card" key={asset.id}>
+                    <AssetPreview asset={asset} />
+                    <div>
+                      <strong>{asset.originalName}</strong>
+                      <p className="muted">
+                        {asset.assetType} / {formatBytes(asset.fileSize)} / {asset.placementHint} / order {asset.sortOrder}
+                      </p>
+                      <p>{asset.caption || "-"}</p>
+                      <p className="muted">alt: {asset.altText || "-"}</p>
+                      <p className="muted">note: {asset.userNote || "-"}</p>
+                      <p className="muted">primary: {asset.isPrimary ? "yes" : "no"}</p>
+                    </div>
+                    <div className="action-cell">
+                      <button className="button small secondary" type="button" onClick={() => editAsset(asset)}>
+                        수정
+                      </button>
+                      <button className="button small danger" type="button" onClick={() => void deleteAsset(asset)}>
+                        삭제
+                      </button>
+                    </div>
+                  </article>
+                ))
+              )}
+            </div>
+          </>
+        )}
+      </section>
     </>
   );
+
+  function selectContentItem(contentItemId: string) {
+    setSelectedContentItemId(contentItemId);
+    setEditingAssetId(null);
+    setAssetForm(emptyAssetForm);
+  }
 
   function editContentRequest(item: ContentItemAdmin) {
     setForm({
@@ -281,6 +511,71 @@ export function ContentRequestClient() {
       status: item.status
     });
   }
+
+  function editAsset(asset: ContentAssetAdmin) {
+    setEditingAssetId(asset.id);
+    setAssetForm({
+      caption: asset.caption ?? "",
+      altText: asset.altText ?? "",
+      userNote: asset.userNote ?? "",
+      placementHint: asset.placementHint,
+      sortOrder: String(asset.sortOrder),
+      isPrimary: asset.isPrimary
+    });
+  }
+}
+
+interface AssetMetadataFieldsProps {
+  form: AssetFormState;
+  setForm: (form: AssetFormState) => void;
+}
+
+function AssetMetadataFields({ form, setForm }: AssetMetadataFieldsProps) {
+  return (
+    <>
+      <label>
+        Caption
+        <input value={form.caption} onChange={(event) => setForm({ ...form, caption: event.target.value })} />
+      </label>
+      <label>
+        Alt Text
+        <input value={form.altText} onChange={(event) => setForm({ ...form, altText: event.target.value })} />
+      </label>
+      <label>
+        Placement
+        <select value={form.placementHint} onChange={(event) => setForm({ ...form, placementHint: event.target.value as ContentAssetPlacement })}>
+          {CONTENT_ASSET_PLACEMENTS.map((placement) => (
+            <option key={placement.value} value={placement.value}>
+              {placement.label}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label>
+        Sort Order
+        <input type="number" value={form.sortOrder} onChange={(event) => setForm({ ...form, sortOrder: event.target.value })} />
+      </label>
+      <label className="textarea-field">
+        User Note
+        <textarea value={form.userNote} onChange={(event) => setForm({ ...form, userNote: event.target.value })} />
+      </label>
+      <label className="checkbox-row">
+        <input type="checkbox" checked={form.isPrimary} onChange={(event) => setForm({ ...form, isPrimary: event.target.checked })} />
+        Primary
+      </label>
+    </>
+  );
+}
+
+function AssetPreview({ asset }: { asset: ContentAssetAdmin }) {
+  const src = `/api/content-assets/${asset.id}/file`;
+
+  if (asset.assetType === "image") {
+    // eslint-disable-next-line @next/next/no-img-element
+    return <img className="asset-preview" src={src} alt={asset.altText || asset.caption || asset.originalName} />;
+  }
+
+  return <video className="asset-preview" src={src} controls />;
 }
 
 function getGuidance(form: ContentFormState) {
@@ -320,4 +615,54 @@ function formatDate(value: string) {
     dateStyle: "short",
     timeStyle: "short"
   }).format(new Date(value));
+}
+
+async function requestFormData<T>(url: string, body: FormData): Promise<T> {
+  const response = await fetch(url, {
+    method: "POST",
+    body
+  });
+
+  if (!response.ok) {
+    let message = `Request failed with status ${response.status}`;
+    try {
+      const payload = (await response.json()) as { error?: string };
+      message = payload.error ?? message;
+    } catch {
+      const text = await response.text();
+      if (text) {
+        message = text.slice(0, 240);
+      }
+    }
+    throw new Error(message);
+  }
+
+  return response.json() as Promise<T>;
+}
+
+function appendAssetMetadata(formData: FormData, form: AssetFormState) {
+  formData.set("caption", form.caption);
+  formData.set("altText", form.altText);
+  formData.set("userNote", form.userNote);
+  formData.set("placementHint", form.placementHint);
+  formData.set("sortOrder", form.sortOrder);
+  formData.set("isPrimary", String(form.isPrimary));
+}
+
+function toAssetPayload(form: AssetFormState) {
+  return {
+    caption: form.caption,
+    altText: form.altText,
+    userNote: form.userNote,
+    placementHint: form.placementHint,
+    sortOrder: Number.isFinite(Number(form.sortOrder)) ? Math.trunc(Number(form.sortOrder)) : 0,
+    isPrimary: form.isPrimary
+  };
+}
+
+function formatBytes(value: number) {
+  if (value < 1024 * 1024) {
+    return `${Math.round(value / 1024)}KB`;
+  }
+  return `${(value / 1024 / 1024).toFixed(1)}MB`;
 }

@@ -59,3 +59,18 @@ npm run build
 - `existing_draft_improve`는 사용자가 직접 입력한 기존 글/초안 보강용이며 경쟁글 복사·재작성·재가공 용도가 아니라는 안내가 표시된다.
 - 목록 테이블에서 sourceMemo는 전체 본문이 아니라 요약으로 표시된다.
 - LLM 호출, 글 기획서 생성, 본문 생성, HTML 변환, 품질검사, Blogger 발행 기능은 없다.
+
+## Patch 6A 수동 검증
+
+- `/content/new`에서 글 생성 요청을 선택한 뒤 첨부 미디어 섹션을 사용할 수 있다.
+- 선택된 글 생성 요청이 없으면 먼저 요청을 선택하라는 안내가 표시된다.
+- 허용된 이미지/동영상 MIME type만 업로드할 수 있다.
+- 이미지 최대 10MB, 영상 최대 100MB 제한을 적용한다.
+- 업로드 파일은 `local-data/uploads/content-assets/{contentItemId}/`에 저장되고 Git에 포함되지 않는다.
+- DB에는 파일 본문이 아니라 content asset 메타데이터만 저장된다.
+- UI에는 `storagePath`가 표시되지 않는다.
+- image는 이미지 미리보기, video는 controls가 있는 동영상 미리보기를 표시한다.
+- caption, altText, userNote, placementHint, sortOrder, isPrimary를 수정할 수 있다.
+- 자산 삭제 시 DB row와 로컬 파일을 함께 삭제한다.
+- content item 삭제 시 연결된 asset 파일도 정리한다.
+- 대표 미디어 단일 강제, 외부 스토리지, Blogger 업로드, LLM 호출은 구현하지 않는다.
