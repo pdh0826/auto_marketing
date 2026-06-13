@@ -109,3 +109,14 @@ rewrite_needed
 - 필요한 경우 `secretRef`, `apiKeyLast4` 같은 안전한 메타 필드만 둔다.
 - llm_call_logs에는 secret, prompt 전문, 원문 본문 전체를 저장하지 않는다.
 - llm_call_logs.metadata는 제한된 진단 정보 저장용으로만 사용한다.
+
+## Patch 4 프로필 관리 화면
+
+Patch 4는 기존 `blogs`, `brand_profiles` CRUD API를 `/blogs`, `/brands` 화면에 연결한다.
+
+- `/blogs`는 블로그별 주제, 문체, 금지/권장 표현, 발행 정책값을 관리한다.
+- `/brands`는 서비스/브랜드 설명, CTA, 금지/권장 표현, 리스크 고지를 관리한다.
+- 배열 필드는 textarea에서 쉼표 또는 줄바꿈 기준으로 입력받아 `String[]`로 저장한다.
+- `autoPublishEnabled`는 정책 설정값이며 실제 자동 발행 기능은 후속 패치에서 연결한다.
+- `isDefault`는 Patch 4에서 단일 기본값 강제를 구현하지 않는다.
+- Google OAuth, Blogger API, 실제 발행 기능은 Patch 4 범위가 아니다.

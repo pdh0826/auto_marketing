@@ -33,3 +33,16 @@ npm run build
 - Task Route 생성 시 fallback Provider에 속한 Model만 fallback Model 후보로 표시된다.
 - Task Route 중복 생성 실패 시 오류 메시지가 화면에 표시된다.
 - Call Log metadata는 전체 원문이 아니라 접기/요약 형태로 표시된다.
+
+## Patch 4 수동 검증
+
+- `/blogs`에서 블로그 프로필 목록, 빈 상태, 로딩 상태, 오류 상태가 표시된다.
+- `/blogs`에서 블로그 프로필 생성, 수정, 삭제가 가능하다.
+- `/blogs`의 배열 필드는 textarea 입력을 쉼표 또는 줄바꿈 기준으로 `String[]`로 저장한다.
+- `/blogs`의 `autoPublishEnabled`는 정책 설정값으로만 표시되며 실제 자동 발행은 연결하지 않는다.
+- `/blogs`에는 Blogger OAuth 실행 버튼이나 Blogger API 호출 기능이 없다.
+- `/brands`에서 서비스/브랜드 프로필 목록, 빈 상태, 로딩 상태, 오류 상태가 표시된다.
+- `/brands`에서 서비스/브랜드 프로필 생성, 수정, 삭제가 가능하다.
+- `/brands`의 배열 필드는 textarea 입력을 쉼표 또는 줄바꿈 기준으로 `String[]`로 저장한다.
+- `/brands`의 `isDefault`는 단일 기본값 강제를 하지 않는다.
+- `/brands`에는 OpenAI API, Local LLM, Blogger API 호출 기능이 없다.
