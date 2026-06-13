@@ -4,9 +4,12 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ContentAssetAdmin } from "@/lib/content/asset-types";
 import type { ContentItemAdmin } from "@/lib/content/admin-types";
+import { buildContentPlanDryRun, type ContentPlanDryRunResult, type ReadinessStatus } from "@/lib/content/content-plan-preview";
 import { getContentModeLabel } from "@/lib/content/constants";
 import { formatPlanJson, hasUsablePlanJson } from "@/lib/content/plan-template";
 import { ApiResult, requestJson } from "@/lib/form-utils";
+import type { LlmTaskRouteAdmin } from "@/lib/llm/admin-types";
+import { getApiFormatLabel, getInvocationModeLabel } from "@/lib/llm/constants";
 
 interface ContentDetailClientProps {
   contentItemId: string;
@@ -15,13 +18,17 @@ interface ContentDetailClientProps {
 export function ContentDetailClient({ contentItemId }: ContentDetailClientProps) {
   const [contentItem, setContentItem] = useState<ContentItemAdmin | null>(null);
   const [assets, setAssets] = useState<ContentAssetAdmin[]>([]);
+  const [contentPlanRoute, setContentPlanRoute] = useState<LlmTaskRouteAdmin | null>(null);
+  const [dryRunResult, setDryRunResult] = useState<ContentPlanDryRunResult | null>(null);
   const [planText, setPlanText] = useState("");
   const [loading, setLoading] = useState(true);
   const [assetsLoading, setAssetsLoading] = useState(true);
+  const [routesLoading, setRoutesLoading] = useState(true);
   const [savingPlan, setSavingPlan] = useState(false);
   const [changingStatus, setChangingStatus] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [assetsError, setAssetsError] = useState<string | null>(null);
+  const [routeError, setRouteError] = useState<string | null>(null);
   const [planError, setPlanError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -57,10 +64,25 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
     }
   }, [contentItemId]);
 
+  const loadRoutes = useCallback(async () => {
+    setRoutesLoading(true);
+    setRouteError(null);
+
+    try {
+      const result = await requestJson<ApiResult<LlmTaskRouteAdmin[]>>("/api/settings/llm/task-routes");
+      setContentPlanRoute(result.data.find((route) => route.taskType === "content_plan") ?? null);
+    } catch (caught) {
+      setRouteError(caught instanceof Error ? caught.message : "content_plan route 정보를 불러오지 못했습니다.");
+    } finally {
+      setRoutesLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     void loadContentItem();
     void loadAssets();
-  }, [loadAssets, loadContentItem]);
+    void loadRoutes();
+  }, [loadAssets, loadContentItem, loadRoutes]);
 
   async function savePlanJson() {
     setPlanError(null);
@@ -117,6 +139,15 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
     } finally {
       setChangingStatus(false);
     }
+  }
+
+  function runContentPlanDryRun() {
+    setNotice(null);
+    if (!contentItem) {
+      setRouteError("글 생성 요청 상세 정보를 먼저 불러와야 합니다.");
+      return;
+    }
+    setDryRunResult(buildContentPlanDryRun(contentItem, assets, contentPlanRoute));
   }
 
   return (
@@ -203,6 +234,74 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
           <section className="admin-section">
             <div className="section-heading">
               <div>
+                <h2>Content Plan Dry Run</h2>
+                <p className="muted">실제 LLM 호출 없이 content_plan route 준비 상태와 prompt preview만 확인합니다. Preview는 DB에 저장되지 않습니다.</p>
+              </div>
+              <button className="button secondary" type="button" disabled>
+                실제 기획서 생성은 후속 패치에서 연결 예정
+              </button>
+            </div>
+
+            {routeError ? <div className="notice error">{routeError}</div> : null}
+            {routesLoading ? <div className="notice">content_plan route 정보를 불러오는 중입니다.</div> : null}
+
+            <div className="detail-grid">
+              <DetailItem label="Task Route" value={contentPlanRoute ? "content_plan" : "미등록"} />
+              <DetailItem label="Route Status" value={contentPlanRoute?.isEnabled ? "enabled" : contentPlanRoute ? "disabled" : "-"} />
+              <DetailItem label="Primary Provider" value={formatProviderName(contentPlanRoute?.primaryProvider)} />
+              <DetailItem label="Primary Model" value={formatModelName(contentPlanRoute?.primaryModel)} />
+              <DetailItem label="Fallback Provider" value={formatProviderName(contentPlanRoute?.fallbackProvider)} />
+              <DetailItem label="Fallback Model" value={formatModelName(contentPlanRoute?.fallbackModel)} />
+            </div>
+
+            {contentPlanRoute?.primaryProvider ? <ProviderTestSummary title="Primary Provider Test" provider={contentPlanRoute.primaryProvider} /> : null}
+            {contentPlanRoute?.fallbackProvider ? <ProviderTestSummary title="Fallback Provider Test" provider={contentPlanRoute.fallbackProvider} /> : null}
+
+            <div className="form-actions">
+              <button className="button" type="button" disabled={routesLoading || loading || assetsLoading} onClick={runContentPlanDryRun}>
+                Dry Run
+              </button>
+            </div>
+
+            {dryRunResult ? (
+              <>
+                <div className={dryRunResult.ready ? "notice" : "notice error"}>
+                  {dryRunResult.ready
+                    ? "Dry-run 준비 상태가 통과되었습니다. 실제 LLM 호출은 수행하지 않았습니다."
+                    : "Dry-run 준비 상태에 실패 항목이 있습니다. 실제 LLM 호출은 수행하지 않았습니다."}
+                </div>
+                <div className="table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Check</th>
+                        <th>Status</th>
+                        <th>Message</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {dryRunResult.checks.map((check) => (
+                        <tr key={check.key}>
+                          <td>{check.label}</td>
+                          <td>{formatReadinessStatus(check.status)}</td>
+                          <td>{check.message}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <PromptPreviewBlock title="System" value={dryRunResult.promptPreview.system} />
+                <PromptPreviewBlock title="User" value={dryRunResult.promptPreview.user} />
+                <PromptPreviewBlock title="Output Format" value={dryRunResult.promptPreview.outputFormat} />
+              </>
+            ) : (
+              <div className="notice">Dry Run을 실행하면 route readiness와 prompt preview가 화면에만 생성됩니다.</div>
+            )}
+          </section>
+
+          <section className="admin-section">
+            <div className="section-heading">
+              <div>
                 <h2>Attached Media</h2>
                 <p className="muted">첨부 미디어는 읽기 중심으로 표시합니다. 수정은 /content/new의 첨부 관리에서 수행하세요.</p>
               </div>
@@ -263,6 +362,54 @@ function DetailItem({ label, value }: { label: string; value: string }) {
       <dd>{value}</dd>
     </div>
   );
+}
+
+function ProviderTestSummary({ title, provider }: { title: string; provider: NonNullable<LlmTaskRouteAdmin["primaryProvider"]> }) {
+  return (
+    <div className="notice">
+      <strong>{title}</strong>
+      <p className="muted">
+        {provider.name} / {getInvocationModeLabel(provider.invocationMode)} / {getApiFormatLabel(provider.apiFormat)}
+      </p>
+      <p>
+        status: {provider.lastTestStatus} / tested: {provider.lastTestedAt ? formatDate(provider.lastTestedAt) : "not tested"}
+      </p>
+      {provider.lastTestError ? <p className="muted">last error: {provider.lastTestError}</p> : null}
+    </div>
+  );
+}
+
+function PromptPreviewBlock({ title, value }: { title: string; value: string }) {
+  return (
+    <label className="plan-editor read-block">
+      Prompt Preview: {title}
+      <textarea value={value} readOnly spellCheck={false} />
+    </label>
+  );
+}
+
+function formatProviderName(provider: LlmTaskRouteAdmin["primaryProvider"] | LlmTaskRouteAdmin["fallbackProvider"] | undefined) {
+  if (!provider) {
+    return "-";
+  }
+  return provider.name;
+}
+
+function formatModelName(model: LlmTaskRouteAdmin["primaryModel"] | LlmTaskRouteAdmin["fallbackModel"] | undefined) {
+  if (!model) {
+    return "-";
+  }
+  return model.displayName ?? model.name;
+}
+
+function formatReadinessStatus(status: ReadinessStatus) {
+  if (status === "pass") {
+    return "pass";
+  }
+  if (status === "warn") {
+    return "warning";
+  }
+  return "fail";
 }
 
 function AssetPreview({ asset }: { asset: ContentAssetAdmin }) {

@@ -118,3 +118,17 @@ Patch 7A는 Provider 등록 구조를 `providerType`만으로 판단하지 않�
 - CLI 설정은 `cliExecutable`과 `cliArgsJson` string array로만 저장한다.
 - Patch 7A에서는 CLI 연결 테스트 실행을 비활성화한다.
 - 후속 패치에서 실행을 열 경우 `child_process.spawn`과 `shell: false`, timeout, stdout/stderr 길이 제한, dangerous executable 차단을 적용한다.
+
+## Patch 7B Content Plan Dry Run
+
+Patch 7B는 `/content/[id]`에서 실제 LLM 호출 전에 `content_plan` route와 prompt 구성을 검토하는 dry-run 화면을 제공한다.
+
+- `GET /api/settings/llm/task-routes`를 재사용해 `content_plan` route를 찾는다.
+- Primary/Fallback Provider와 Model, Provider test 상태를 표시한다.
+- Dry Run은 route readiness와 prompt preview만 생성한다.
+- OpenAI/Ollama/Local LLM 호출은 수행하지 않는다.
+- `planJson`은 자동 생성하거나 저장하지 않는다.
+- `llm_call_logs`는 생성하지 않는다.
+- prompt preview는 system, user, outputFormat으로 분리해 화면에만 표시한다.
+- prompt preview에는 content item, blog profile, brand profile, attached media metadata를 포함한다.
+- prompt preview에는 API Key, apiKeyLast4, secretRef, encryptedValue, headersJson, requestTemplateJson, storagePath를 포함하지 않는다.

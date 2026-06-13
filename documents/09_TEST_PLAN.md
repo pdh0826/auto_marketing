@@ -135,3 +135,16 @@ npm run build
 - OpenAI-compatible HTTP 400 실패는 외부 error body 전문이 아니라 `parameter_error` 또는 provider parameter 확인 수준의 안전 요약만 저장한다.
 - Local Ollama provider 연결 테스트 success 흐름은 유지된다.
 - provider_test 로그에는 API Key, Bearer token, request body 전문, response body 전문이 저장되지 않는다.
+
+## Patch 7B 수동 검증
+
+- `/content/[id]` 상세 화면에 `Content Plan Dry Run` 섹션이 표시된다.
+- 화면은 `GET /api/settings/llm/task-routes`를 재사용해 `content_plan` route를 표시한다.
+- Primary Provider/Model, Fallback Provider/Model, Provider lastTestStatus, lastTestedAt, lastTestError가 표시된다.
+- `Dry Run` 버튼은 실제 LLM 호출 없이 readiness checks와 prompt preview만 생성한다.
+- readiness는 route 존재, route 활성화, primary provider/model 존재 및 활성화, provider test success, sourceMemo 또는 targetKeyword 존재 여부를 fail 조건으로 판단한다.
+- blog 누락, brand 누락, media 없음, fallback 없음, fallback 중복, fallback test 실패는 warning으로 표시된다.
+- prompt preview는 system, user, outputFormat으로 분리되어 화면에만 표시된다.
+- prompt preview에는 API Key, apiKeyLast4, secretRef 원문, encryptedValue, headersJson, requestTemplateJson, storagePath가 포함되지 않는다.
+- Dry Run은 `planJson`을 자동 저장하지 않고 `llm_call_logs`를 생성하지 않는다.
+- OpenAI API, Ollama API, Local LLM HTTP 호출, Blogger API 호출은 발생하지 않는다.
