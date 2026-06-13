@@ -85,12 +85,7 @@ async function testOpenAiCompatible(provider: TestProvider, startedAt: number): 
       "Content-Type": "application/json",
       Authorization: `Bearer ${secret}`
     },
-    body: JSON.stringify({
-      model,
-      messages: [{ role: "user", content: TEST_PROMPT }],
-      temperature: 0,
-      max_tokens: 8
-    })
+    body: JSON.stringify(buildOpenAiCompatibleTestBody(model))
   }, provider.timeoutSeconds);
 
   const body = await readJsonOrText(response);
@@ -228,6 +223,39 @@ function isSensitiveHeaderName(value: string) {
   return normalized === "authorization" || normalized === "proxy-authorization" || normalized.includes("api-key") || normalized.includes("token");
 }
 
+export function buildOpenAiCompatibleTestBody(model: string) {
+  return {
+    model,
+    messages: [{ role: "user", content: TEST_PROMPT }],
+    temperature: 0,
+    [getOpenAiCompletionTokenParameter(model)]: 8
+  };
+}
+
+export function getOpenAiCompletionTokenParameter(model: string): "max_tokens" | "max_completion_tokens" {
+  const normalized = model.trim().toLowerCase();
+
+  if (usesMaxCompletionTokens(normalized)) {
+    return "max_completion_tokens";
+  }
+
+  return "max_tokens";
+}
+
+function usesMaxCompletionTokens(model: string) {
+  return (
+    model === "gpt-5" ||
+    model.startsWith("gpt-5.") ||
+    model.startsWith("gpt-5-") ||
+    model === "o1" ||
+    model.startsWith("o1-") ||
+    model === "o3" ||
+    model.startsWith("o3-") ||
+    model === "o4" ||
+    model.startsWith("o4-")
+  );
+}
+
 function summarizeOpenAiResponse(value: unknown) {
   if (value && typeof value === "object") {
     const objectValue = value as { choices?: unknown[]; object?: unknown; error?: unknown };
@@ -259,6 +287,9 @@ function safeProviderFailureMessage(label: string, status: number) {
   if (status === 401 || status === 403) {
     return `${label} provider test failed with HTTP ${status}. Authentication failed. Check the API key.`;
   }
+  if (status === 400) {
+    return `${label} provider test failed with HTTP ${status}. Check provider parameters.`;
+  }
   if (status === 404) {
     return `${label} provider test failed with HTTP ${status}. Endpoint or model was not found.`;
   }
@@ -268,6 +299,9 @@ function safeProviderFailureMessage(label: string, status: number) {
 function summarizeHttpFailure(apiFormat: LlmApiFormat, status: number) {
   if (status === 401 || status === 403) {
     return "authentication_failed";
+  }
+  if (status === 400) {
+    return "parameter_error";
   }
   if (status === 404) {
     return apiFormat === "ollama_compatible" ? "not_found_or_model_unavailable" : "not_found";

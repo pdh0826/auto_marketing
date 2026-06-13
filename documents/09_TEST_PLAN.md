@@ -126,3 +126,12 @@ npm run build
 - provider_test metadata에는 secret, API Key, Bearer token, prompt 전문, request body 전문, response 전문이 저장되지 않는다.
 - `/settings/llm`에서 실패 응답 처리 시 `body stream already read` 오류가 표시되지 않는다.
 - Local Ollama provider 연결 테스트 success 흐름은 유지된다.
+
+## Patch 7A-HOTFIX-2 수동 검증
+
+- OpenAI-compatible Provider의 defaultModel이 `gpt-5.4-mini`이면 연결 테스트 request body에 `max_completion_tokens`가 사용된다.
+- `gpt-5`, `gpt-5.*`, `gpt-5-*`, `o1*`, `o3*`, `o4*` 계열은 `max_completion_tokens`를 사용한다.
+- 그 외 구형 chat-completions 호환 모델은 `max_tokens`를 사용한다.
+- OpenAI-compatible HTTP 400 실패는 외부 error body 전문이 아니라 `parameter_error` 또는 provider parameter 확인 수준의 안전 요약만 저장한다.
+- Local Ollama provider 연결 테스트 success 흐름은 유지된다.
+- provider_test 로그에는 API Key, Bearer token, request body 전문, response body 전문이 저장되지 않는다.
