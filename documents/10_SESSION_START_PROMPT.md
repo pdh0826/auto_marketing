@@ -46,13 +46,12 @@ branch: master
 - draftMarkdown은 자동 저장되지 않고 사용자가 반영했을 때만 DB에 저장됨
 
 다음 세션 1순위 작업:
-Patch 8F 후보: publish readiness gate
+Patch 9A 후보: Blogger 연결 설정 설계
 
-Patch 8F 목표:
-- saved draftHtml과 quality preview 결과를 기반으로 publish readiness gate를 설계한다.
-- Blogger 연결 전제 조건, 수동 승인 상태, 안전성 조건을 점검한다.
-- publish/scheduled publish는 구현하지 않는다.
-- 실제 Blogger 연동은 아직 하지 않음
+Patch 9A 목표:
+- Blogger 연결 설정을 위한 DB/API/UI 설계를 검토한다.
+- OAuth/API 호출 전 필요한 설정값, 연결 상태 placeholder, secret/token 저장 정책을 설계한다.
+- 실제 Blogger OAuth/API/publish는 아직 구현하지 않는다.
 
 금지 사항:
 - Blogger OAuth/API/publish 구현부터 시작 금지
@@ -64,7 +63,7 @@ Patch 8F 목표:
 - git add . 또는 git add -A 금지
 - .env.local 읽기/출력/수정 금지
 
-첫 작업으로 Patch 8F 작업계획을 제안해줘. 아직 구현하지 말고 계획만 작성해줘.
+첫 작업으로 Patch 9A 작업계획을 제안해줘. 아직 구현하지 말고 계획만 작성해줘.
 ```
 
 ## 첫 점검 명령어

@@ -249,3 +249,14 @@ Patch 8E도 새 DB 모델이나 migration을 추가하지 않는다.
 - `quality_checks` 테이블은 아직 구현하지 않는다.
 - 원본 content item 객체와 원본 assets 객체를 API 응답에 그대로 반환하지 않는다.
 - `storagePath`, local upload path, secret, provider headers, request template은 응답과 UI에 포함하지 않는다.
+
+## Patch 8F publish readiness data policy
+
+Patch 8F도 새 DB 모델이나 migration을 추가하지 않는다.
+
+- `POST /api/content-items/[id]/publish-readiness`는 saved planJson, draftMarkdown, draftHtml, quality preview 결과를 read-only로 평가한다.
+- `contentReady`, `publishReady`, stage, blocking issues, warnings는 응답과 화면에만 표시한다.
+- `publishReady`는 Blogger 연결과 사용자 최종 승인 저장이 없으므로 Patch 8F에서 항상 false다.
+- status, qualityScore, draftHtml, publishedAt, scheduledAt은 변경하지 않는다.
+- `publish_jobs` 테이블은 아직 구현하지 않는다.
+- Blogger OAuth token, Blogger blog list, publish job은 생성하지 않는다.

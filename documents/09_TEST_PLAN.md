@@ -301,3 +301,15 @@ npm run build
 - quality-preview 호출만으로 `llm_call_logs`가 생성되지 않는다.
 - 응답과 UI에는 `storagePath`, local upload path, API Key, secret, token, provider headers, request template이 포함되지 않는다.
 - H1 없음, H1 2개 이상, H2/H3 부족, paragraph 부족, CTA 없음, FAQ 없음, external link rel 누락, unknown media reference, img alt 누락, 위험 HTML 패턴, 금융 위험 표현과 안전문구 누락이 check로 표시된다.
+
+## Patch 8F 수동 검증
+
+- `/content/[id]`에 `Publish Readiness Gate` 섹션이 표시된다.
+- `POST /api/content-items/[id]/publish-readiness`는 saved planJson, draftMarkdown, draftHtml, HTML validation, quality preview 결과를 read-only로 평가한다.
+- 응답에는 `ready`, `contentReady`, `publishReady`, stage, summary, checks, blockingIssues, warnings, metadata가 포함된다.
+- Patch 8F에서는 Blogger 연결과 사용자 최종 승인 저장이 없으므로 `publishReady`와 top-level `ready`는 false다.
+- Blogger connection은 `not_configured` placeholder로 표시된다.
+- publish-readiness 호출 전후 status, qualityScore, draftHtml, publishedAt, scheduledAt이 변경되지 않는다.
+- publish-readiness 호출만으로 `llm_call_logs`가 생성되지 않는다.
+- 응답과 UI에는 원본 content item/assets 객체, `storagePath`, local upload path, API Key, secret, token, provider headers, request template이 포함되지 않는다.
+- Blogger OAuth/API/draft/publish, scheduled publish는 발생하지 않는다.

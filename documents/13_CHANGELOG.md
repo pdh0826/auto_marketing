@@ -130,3 +130,19 @@ Policy:
 - `qualityScore`, status, draftHtml, publishedAt, and scheduledAt are not changed.
 - The API does not return raw content item or raw asset objects.
 - No LLM calls, no `llm_call_logs`, no Blogger OAuth/API/publish.
+
+## Patch 8F Publish Readiness Gate
+
+Implemented after Patch 8E:
+
+- Added `POST /api/content-items/[id]/publish-readiness`.
+- Added saved planJson, draftMarkdown, draftHtml, HTML validation, and quality preview based readiness checks.
+- Added `contentReady` and `publishReady` split.
+- Added `/content/[id]` Publish Readiness Gate UI.
+
+Policy:
+
+- `publish-readiness` does not mutate DB.
+- `publishReady` remains false until Blogger connection and manual approval storage exist.
+- status, qualityScore, draftHtml, publishedAt, and scheduledAt are not changed.
+- No LLM calls, no `llm_call_logs`, no Blogger OAuth/API/publish.

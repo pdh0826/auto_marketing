@@ -124,3 +124,23 @@ saved draftHtml
 - `scorePreview`와 `grade`는 화면 표시용이며 `content_items.qualityScore`에는 저장하지 않는다.
 - status, draftHtml, publishedAt, scheduledAt은 변경하지 않는다.
 - Blogger OAuth/API/publish, LLM 호출, `llm_call_logs` 생성은 수행하지 않는다.
+
+## Patch 8F Publish Readiness Gate
+
+Patch 8F는 저장된 생성 산출물과 quality preview를 바탕으로 발행 준비 상태를 read-only로 점검한다.
+
+```text
+saved planJson / draftMarkdown / draftHtml
+→ HTML validation
+→ quality preview reuse
+→ publish readiness checks
+→ contentReady / publishReady split
+→ UI preview only
+```
+
+- API는 `POST /api/content-items/[id]/publish-readiness`다.
+- `contentReady`는 콘텐츠 산출물과 품질 기준 통과 여부를 의미한다.
+- `publishReady`는 실제 발행 가능 여부를 의미하며 Patch 8F에서는 항상 false다.
+- Blogger 연결과 사용자 최종 승인 기능은 아직 없으므로 readiness gate는 preview 전용이다.
+- status, qualityScore, draftHtml, publishedAt, scheduledAt은 변경하지 않는다.
+- Blogger OAuth/API/publish, LLM 호출, `llm_call_logs` 생성은 수행하지 않는다.

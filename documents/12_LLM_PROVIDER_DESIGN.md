@@ -262,3 +262,13 @@ Patch 8E의 saved `draftHtml` 품질검사 dry-run/preview는 LLM Provider를 �
 - `llm_call_logs`는 생성하지 않는다.
 - score preview와 grade는 DB에 저장하지 않는다.
 - Blogger OAuth/API/publish도 수행하지 않는다.
+
+## Patch 8F Publish readiness and LLM boundary
+
+Patch 8F의 publish readiness gate는 LLM Provider를 사용하지 않는다.
+
+- `publish-readiness`는 provider/model/task route를 조회하지 않는다.
+- OpenAI/Ollama/Local LLM 호출은 없다.
+- `llm_call_logs`는 생성하지 않는다.
+- readiness 결과는 DB에 저장하지 않는다.
+- Blogger OAuth/API/publish도 수행하지 않는다.

@@ -11,6 +11,7 @@ import { validateDraftMarkdown, type DraftValidationResult } from "@/lib/content
 import type { HtmlQualityPreviewResult } from "@/lib/content/html-quality-preview";
 import type { HtmlCandidateValidationResult, HtmlPreviewDryRunResult } from "@/lib/content/html-preview";
 import { formatPlanJson, hasUsablePlanJson } from "@/lib/content/plan-template";
+import type { PublishReadinessResult } from "@/lib/content/publish-readiness";
 import { ApiResult, requestJson } from "@/lib/form-utils";
 import type { LlmTaskRouteAdmin } from "@/lib/llm/admin-types";
 import { getApiFormatLabel, getInvocationModeLabel } from "@/lib/llm/constants";
@@ -67,6 +68,7 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
   const [draftDryRunResult, setDraftDryRunResult] = useState<DraftMarkdownDryRunResult | null>(null);
   const [htmlPreviewResult, setHtmlPreviewResult] = useState<HtmlPreviewDryRunResult | null>(null);
   const [qualityPreviewResult, setQualityPreviewResult] = useState<HtmlQualityPreviewResult | null>(null);
+  const [publishReadinessResult, setPublishReadinessResult] = useState<PublishReadinessResult | null>(null);
   const [generatedPlan, setGeneratedPlan] = useState<GeneratedPlanResult | null>(null);
   const [generatedDraft, setGeneratedDraft] = useState<GeneratedDraftResult | null>(null);
   const [candidateText, setCandidateText] = useState("");
@@ -96,6 +98,7 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
   const [validatingHtml, setValidatingHtml] = useState(false);
   const [applyingHtml, setApplyingHtml] = useState(false);
   const [runningQualityPreview, setRunningQualityPreview] = useState(false);
+  const [runningPublishReadiness, setRunningPublishReadiness] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [assetsError, setAssetsError] = useState<string | null>(null);
   const [routeError, setRouteError] = useState<string | null>(null);
@@ -104,6 +107,7 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
   const [htmlPreviewError, setHtmlPreviewError] = useState<string | null>(null);
   const [htmlApplyError, setHtmlApplyError] = useState<string | null>(null);
   const [qualityPreviewError, setQualityPreviewError] = useState<string | null>(null);
+  const [publishReadinessError, setPublishReadinessError] = useState<string | null>(null);
   const [planError, setPlanError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -115,6 +119,7 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
   const canRunHtmlPreview = Boolean(contentItem?.draftMarkdown && !runningHtmlPreview);
   const canApplyHtmlCandidate = Boolean(htmlCandidateText && htmlCandidateValidation?.validation.ok && !htmlDirty && !applyingHtml);
   const canRunQualityPreview = Boolean(contentItem?.draftHtml && !runningQualityPreview);
+  const canRunPublishReadiness = Boolean(!runningPublishReadiness);
 
   const loadContentItem = useCallback(async () => {
     setLoading(true);
@@ -441,6 +446,25 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
     }
   }
 
+  async function runPublishReadiness() {
+    setNotice(null);
+    setPublishReadinessError(null);
+    setRunningPublishReadiness(true);
+
+    try {
+      const result = await requestJson<ApiResult<PublishReadinessResult>>(`/api/content-items/${contentItemId}/publish-readiness`, {
+        method: "POST",
+        body: JSON.stringify({})
+      });
+      setPublishReadinessResult(result.data);
+      setNotice("발행 준비 gate preview를 생성했습니다. DB에는 저장하지 않았고 Blogger API를 호출하지 않았습니다.");
+    } catch (caught) {
+      setPublishReadinessError(caught instanceof Error ? caught.message : "발행 준비 gate preview에 실패했습니다.");
+    } finally {
+      setRunningPublishReadiness(false);
+    }
+  }
+
   async function generatePlanCandidate() {
     setNotice(null);
     setGenerationError(null);
@@ -591,6 +615,71 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
               <h3>Source Memo</h3>
               <pre>{contentItem.sourceMemo || "-"}</pre>
             </div>
+          </section>
+
+          <section className="admin-section">
+            <div className="section-heading">
+              <div>
+                <h2>Publish Readiness Gate</h2>
+                <p className="muted">
+                  saved draftHtml과 quality preview 기준으로 발행 준비 상태를 확인합니다. 이 섹션은 Blogger API를 호출하지 않습니다.
+                </p>
+              </div>
+              <button className="button secondary" type="button" disabled>
+                Blogger 연결은 Patch 9A에서 설정 예정
+              </button>
+            </div>
+
+            {publishReadinessError ? <div className="notice error">{publishReadinessError}</div> : null}
+
+            <div className="form-actions">
+              <button className="button" type="button" disabled={!canRunPublishReadiness} onClick={() => void runPublishReadiness()}>
+                {runningPublishReadiness ? "Readiness Check 실행 중" : "Publish Readiness Check"}
+              </button>
+              <button className="button secondary" type="button" disabled>
+                Publish는 후속 패치에서 연결 예정
+              </button>
+            </div>
+
+            {publishReadinessResult ? (
+              <>
+                <div
+                  className={
+                    publishReadinessResult.publishReady
+                      ? "notice"
+                      : publishReadinessResult.contentReady
+                        ? "notice warning"
+                        : "notice error"
+                  }
+                >
+                  <strong>Publish Readiness Preview</strong>
+                  <p>
+                    ready: {publishReadinessResult.ready ? "yes" : "no"} / contentReady:{" "}
+                    {publishReadinessResult.contentReady ? "yes" : "no"} / publishReady:{" "}
+                    {publishReadinessResult.publishReady ? "yes" : "no"}
+                  </p>
+                  <p>
+                    stage: {publishReadinessResult.stage} / {publishReadinessResult.summary}
+                  </p>
+                  <p>publishReady는 Blogger 연결과 사용자 최종 승인 기능이 구현되기 전까지 false입니다.</p>
+                </div>
+                <div className="detail-grid">
+                  <DetailItem label="Has Plan" value={publishReadinessResult.metadata.hasPlan ? "yes" : "no"} />
+                  <DetailItem label="Has Draft Markdown" value={publishReadinessResult.metadata.hasDraftMarkdown ? "yes" : "no"} />
+                  <DetailItem label="Has Draft HTML" value={publishReadinessResult.metadata.hasDraftHtml ? "yes" : "no"} />
+                  <DetailItem label="HTML Validation" value={publishReadinessResult.metadata.htmlValidationOk ? "pass" : "fail"} />
+                  <DetailItem label="Quality Score Preview" value={String(publishReadinessResult.metadata.qualityScorePreview)} />
+                  <DetailItem label="Quality Grade" value={publishReadinessResult.metadata.qualityGrade} />
+                  <DetailItem label="Blogger Connection" value={publishReadinessResult.metadata.bloggerConnectionStatus} />
+                  <DetailItem label="Manual Approval" value={publishReadinessResult.metadata.manualApprovalStatus} />
+                </div>
+                <PublishReadinessSummary result={publishReadinessResult} />
+                <PublishReadinessTable checks={publishReadinessResult.checks} />
+                <div className="notice">publish/scheduled publish는 수행하지 않습니다. readiness 결과도 DB에 저장하지 않습니다.</div>
+              </>
+            ) : (
+              <div className="notice">Publish Readiness Check를 실행하면 발행 준비 gate 결과가 화면에만 생성됩니다.</div>
+            )}
           </section>
 
           <section className="admin-section">
@@ -1353,6 +1442,71 @@ function QualityGroupTable({ title, checks }: { title: string; checks: HtmlQuali
   return (
     <div className="read-block">
       <h3>{title}</h3>
+      <div className="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Check</th>
+              <th>Status</th>
+              <th>Severity</th>
+              <th>Message</th>
+            </tr>
+          </thead>
+          <tbody>
+            {checks.map((check) => (
+              <tr key={check.key}>
+                <td>{check.label}</td>
+                <td>{check.status}</td>
+                <td>{check.severity}</td>
+                <td>{check.message}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function PublishReadinessSummary({ result }: { result: PublishReadinessResult }) {
+  return (
+    <>
+      <div className={result.blockingIssues.length > 0 ? "notice error" : "notice"}>
+        <strong>Blocking Issues</strong>
+        {result.blockingIssues.length === 0 ? (
+          <p>blocking issue가 없습니다.</p>
+        ) : (
+          <ul>
+            {result.blockingIssues.map((issue) => (
+              <li key={issue.key}>
+                {issue.label}: {issue.message}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+      <div className={result.warnings.length > 0 ? "notice warning" : "notice"}>
+        <strong>Warnings</strong>
+        {result.warnings.length === 0 ? (
+          <p>warning이 없습니다.</p>
+        ) : (
+          <ul>
+            {result.warnings.map((warning) => (
+              <li key={warning.key}>
+                {warning.label}: {warning.message}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </>
+  );
+}
+
+function PublishReadinessTable({ checks }: { checks: PublishReadinessResult["checks"] }) {
+  return (
+    <div className="read-block">
+      <h3>Readiness Checks</h3>
       <div className="table-wrap">
         <table>
           <thead>
