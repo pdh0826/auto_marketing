@@ -7,6 +7,7 @@ import { validatePlanJson } from "@/lib/content/plan-validation";
 import { createLlmCallLog } from "@/lib/db/llm-call-logs";
 import { prisma } from "@/lib/db/client";
 import type { LlmTaskRouteAdmin } from "@/lib/llm/admin-types";
+import { resolveDraftGenerationStrategy, type DraftGenerationStrategy, type DraftGenerationStrategyResolution } from "@/lib/llm/draft-generation-strategy";
 import { decryptSecret } from "@/lib/llm/secrets";
 import { getOpenAiCompletionTokenParameter } from "@/lib/llm/provider-test";
 import { redactSensitiveText, safeErrorMessage } from "@/lib/llm/redaction";
@@ -41,6 +42,14 @@ export interface GenerateContentDraftResult {
     initialValidationWarningCount: number;
     finalValidationErrorCount: number;
     finalValidationWarningCount: number;
+    strategy: DraftGenerationStrategy;
+    strategyReason: string;
+    isLocalLike: boolean;
+    stepCount: number;
+    plannedStepCount: number;
+    sectionedGenerationImplemented: false;
+    finalPolishImplemented: false;
+    providerSummary: DraftGenerationStrategyResolution["providerSummary"];
   };
 }
 
@@ -112,6 +121,7 @@ export async function generateContentDraft({ contentItemId }: GenerateContentDra
   let usedFallback = false;
   let provider = route.primaryProvider;
   let model = route.primaryModel;
+  let strategyResolution = resolveDraftGenerationStrategy({ provider, model });
   let callResult: ProviderCallResult;
 
   try {
@@ -127,6 +137,7 @@ export async function generateContentDraft({ contentItemId }: GenerateContentDra
         errorMessage: primaryError instanceof Error ? primaryError.message : "Primary provider call failed.",
         metadata: {
           usedFallback: false,
+          ...buildDraftStrategyLogMetadata(strategyResolution),
           apiFormat: route.primaryProvider.apiFormat,
           invocationMode: route.primaryProvider.invocationMode,
           responseSummary: primaryError instanceof ProviderCallError ? primaryError.responseSummary : "provider_call_failed",
@@ -143,6 +154,7 @@ export async function generateContentDraft({ contentItemId }: GenerateContentDra
     usedFallback = true;
     provider = route.fallbackProvider;
     model = route.fallbackModel;
+    strategyResolution = resolveDraftGenerationStrategy({ provider, model });
     try {
       callResult = await callProvider(provider, model.name, dryRun.promptPreview, route.temperature, route.maxTokens, route.timeoutSeconds);
     } catch (fallbackError) {
@@ -155,6 +167,7 @@ export async function generateContentDraft({ contentItemId }: GenerateContentDra
         errorMessage: fallbackError instanceof Error ? fallbackError.message : "Fallback provider call failed.",
         metadata: {
           usedFallback: true,
+          ...buildDraftStrategyLogMetadata(strategyResolution),
           apiFormat: provider.apiFormat,
           invocationMode: provider.invocationMode,
           responseSummary: fallbackError instanceof ProviderCallError ? fallbackError.responseSummary : "fallback_provider_call_failed",
@@ -229,6 +242,7 @@ export async function generateContentDraft({ contentItemId }: GenerateContentDra
     errorMessage: validation.ok ? null : "Generated draftMarkdown did not pass validation.",
     metadata: {
       usedFallback,
+      ...buildDraftStrategyLogMetadata(strategyResolution),
       apiFormat: provider.apiFormat,
       invocationMode: provider.invocationMode,
       responseSummary: repairAttempted ? (repairSucceeded ? "draft_repaired" : "draft_repair_failed") : callResult.responseSummary,
@@ -264,7 +278,8 @@ export async function generateContentDraft({ contentItemId }: GenerateContentDra
       initialValidationErrorCount: initialValidation.errors.length,
       initialValidationWarningCount: initialValidation.warnings.length,
       finalValidationErrorCount: validation.errors.length,
-      finalValidationWarningCount: validation.warnings.length
+      finalValidationWarningCount: validation.warnings.length,
+      ...buildDraftStrategyLogMetadata(strategyResolution)
     }
   };
 }
@@ -481,6 +496,14 @@ async function recordDraftLog(input: {
     finalValidationErrorCount?: number;
     finalValidationWarningCount?: number;
     repairResponseSummary?: string | null;
+    strategy: DraftGenerationStrategy;
+    strategyReason: string;
+    isLocalLike: boolean;
+    stepCount: number;
+    plannedStepCount: number;
+    sectionedGenerationImplemented: false;
+    finalPolishImplemented: false;
+    providerSummary: DraftGenerationStrategyResolution["providerSummary"];
   };
 }) {
   await createLlmCallLog({
@@ -497,6 +520,14 @@ async function recordDraftLog(input: {
     metadata: {
       purpose: "content_draft_generation",
       usedFallback: input.metadata.usedFallback,
+      strategy: input.metadata.strategy,
+      strategyReason: input.metadata.strategyReason,
+      isLocalLike: input.metadata.isLocalLike,
+      stepCount: input.metadata.stepCount,
+      plannedStepCount: input.metadata.plannedStepCount,
+      sectionedGenerationImplemented: input.metadata.sectionedGenerationImplemented,
+      finalPolishImplemented: input.metadata.finalPolishImplemented,
+      providerSummary: input.metadata.providerSummary,
       apiFormat: input.metadata.apiFormat,
       invocationMode: input.metadata.invocationMode,
       responseSummary: input.metadata.responseSummary,
@@ -514,6 +545,19 @@ async function recordDraftLog(input: {
       repairResponseSummary: input.metadata.repairResponseSummary ?? null
     } as Prisma.InputJsonObject
   });
+}
+
+function buildDraftStrategyLogMetadata(resolution: DraftGenerationStrategyResolution) {
+  return {
+    strategy: resolution.strategy,
+    strategyReason: resolution.strategyReason,
+    isLocalLike: resolution.isLocalLike,
+    stepCount: resolution.stepCount,
+    plannedStepCount: resolution.plannedStepCount,
+    sectionedGenerationImplemented: resolution.sectionedGenerationImplemented,
+    finalPolishImplemented: resolution.finalPolishImplemented,
+    providerSummary: resolution.providerSummary
+  };
 }
 
 function getProviderApiKey(provider: ProviderWithSecrets) {

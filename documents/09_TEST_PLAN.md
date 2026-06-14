@@ -509,3 +509,17 @@ npm run build
 - 자동 quality-preview, publish-readiness, blogger-draft-preview 재실행은 수행하지 않는다.
 - 자동 `draftHtml` 저장, repair candidate 자동 apply, Blogger API read/write, draft save, publish, scheduled publish, token refresh는 발생하지 않는다.
 - `llm_call_logs`는 생성되지 않는다.
+
+## Patch 9E-4C-1 provider-aware draft strategy foundation 검증
+
+- `src/lib/llm/draft-generation-strategy.ts`가 provider/model safe metadata만으로 draft strategy를 판별한다.
+- remote/commercial provider는 `one_shot_full_draft`로 판별되고 기존 one-shot generation 경로를 유지한다.
+- `local`, `local_http`, `cli`, `ollama_compatible`, `custom_cli` 계열은 `local_sectioned_multi_pass` 전략 후보로 표시된다.
+- local strategy에서도 이번 패치의 실제 LLM 호출은 기존 one-shot fallback 1회 경로를 사용한다.
+- 응답 metadata와 `llm_call_logs.metadata`에는 `strategy`, `strategyReason`, provider/model summary, `isLocalLike`, `stepCount`, `plannedStepCount`, `sectionedGenerationImplemented=false`, `finalPolishImplemented=false`가 포함된다.
+- Content detail UI는 route 기준 전략 안내와 생성 결과 기준 전략 metadata를 표시한다.
+- `TaskRoute` schema/DB migration은 변경하지 않는다.
+- skeleton generation, section generation, final polish generation, automatic `draftMarkdown`/`draftHtml` save는 구현하지 않는다.
+- prompt 전문, raw response body, 후보 Markdown 전문, secret, token, encrypted value는 metadata/log/UI에 출력하지 않는다.
+- Blogger API read/write, draft save, publish, scheduled publish, token refresh는 발생하지 않는다.
+- 검증 명령은 `git diff --check`, `npm run lint`, `npm run typecheck`, `npm run build`를 우선 사용한다.

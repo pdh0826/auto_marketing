@@ -112,3 +112,15 @@ Patch 8D도 LLM prompt를 사용하지 않는다. HTML 후보 편집, 재검증,
 - `/api/content-assets/{assetId}/file` 참조는 현재 content item의 attached asset일 때만 허용한다.
 - `<article>`, H1, H2/H3, media caption/alt, 외부 URL은 warning으로 검토한다.
 - prompt 전문, raw LLM response, secret, API Key, provider header는 생성하거나 로그에 저장하지 않는다.
+
+## Patch 9E-4C-1 provider-aware draft generation strategy foundation
+
+Patch 9E-4C-1은 `content_draft` 생성을 위한 전략 판별 기반만 추가한다.
+
+- commercial/high-performance remote provider는 기존 one-shot full draft 생성을 기본값으로 유지한다.
+- `local`, `local_http`, `cli`, `ollama_compatible`, `custom_cli` 계열은 local/small-model-like provider로 판별해 skeleton-first + sectioned multi-pass + final polish 전략 후보로 표시한다.
+- 이번 패치에서 실제 skeleton 생성, section별 LLM 호출, final polish LLM 호출은 구현하지 않는다.
+- local/small-model-like route도 실제 생성은 기존 one-shot fallback 경로를 계속 사용한다.
+- 생성 응답과 `llm_call_logs.metadata`에는 safe strategy metadata만 남긴다: `strategy`, `strategyReason`, provider/model summary, `isLocalLike`, `stepCount`, `plannedStepCount`, `sectionedGenerationImplemented=false`, `finalPolishImplemented=false`.
+- prompt 전문, raw response 전문, 후보 Markdown 전문은 계속 저장하지 않는다.
+- `TaskRoute` schema에 strategy field를 추가하지 않는다.

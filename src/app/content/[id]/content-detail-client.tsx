@@ -17,6 +17,13 @@ import type { PublishReadinessResult } from "@/lib/content/publish-readiness";
 import { ApiResult, requestJson } from "@/lib/form-utils";
 import type { LlmTaskRouteAdmin } from "@/lib/llm/admin-types";
 import { getApiFormatLabel, getInvocationModeLabel } from "@/lib/llm/constants";
+import {
+  getDraftGenerationStrategyLabel,
+  getDraftGenerationStrategyNotice,
+  resolveDraftGenerationStrategy,
+  type DraftGenerationStrategy,
+  type DraftGenerationStrategyResolution
+} from "@/lib/llm/draft-generation-strategy";
 
 interface ContentDetailClientProps {
   contentItemId: string;
@@ -58,6 +65,14 @@ interface GeneratedDraftResult {
     initialValidationWarningCount: number;
     finalValidationErrorCount: number;
     finalValidationWarningCount: number;
+    strategy: DraftGenerationStrategy;
+    strategyReason: string;
+    isLocalLike: boolean;
+    stepCount: number;
+    plannedStepCount: number;
+    sectionedGenerationImplemented: false;
+    finalPolishImplemented: false;
+    providerSummary: DraftGenerationStrategyResolution["providerSummary"];
   };
 }
 
@@ -168,6 +183,14 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
       bloggerDraftPreviewResult.approvalSummary.approvalMatchesCurrentPreview &&
       !bloggerDraftPreviewResult.draftSaveSummary.draftSaved &&
       !savingBloggerDraft
+  );
+  const draftStrategyResolution = useMemo(
+    () =>
+      resolveDraftGenerationStrategy({
+        provider: contentDraftRoute?.primaryProvider,
+        model: contentDraftRoute?.primaryModel
+      }),
+    [contentDraftRoute?.primaryProvider, contentDraftRoute?.primaryModel]
   );
 
   const loadContentItem = useCallback(async () => {
@@ -1269,6 +1292,12 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
               <DetailItem label="Primary Model" value={formatModelName(contentDraftRoute?.primaryModel)} />
               <DetailItem label="Fallback Provider" value={formatProviderName(contentDraftRoute?.fallbackProvider)} />
               <DetailItem label="Fallback Model" value={formatModelName(contentDraftRoute?.fallbackModel)} />
+              <DetailItem label="Draft Strategy" value={getDraftGenerationStrategyLabel(draftStrategyResolution.strategy)} />
+              <DetailItem label="Strategy Reason" value={draftStrategyResolution.strategyReason} />
+            </div>
+
+            <div className={draftStrategyResolution.strategy === "local_sectioned_multi_pass" ? "notice warning" : "notice"}>
+              {getDraftGenerationStrategyNotice(draftStrategyResolution)}
             </div>
 
             {contentDraftRoute?.primaryProvider ? <ProviderTestSummary title="Draft Primary Provider Test" provider={contentDraftRoute.primaryProvider} /> : null}
@@ -1344,6 +1373,30 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
                     repair: {generatedDraft.metadata.repairAttempted ? "attempted" : "not attempted"} / result:{" "}
                     {generatedDraft.metadata.repairSucceeded ? "success" : generatedDraft.metadata.repairAttempted ? "not passed" : "-"}
                   </p>
+                  <p>
+                    strategy: {getDraftGenerationStrategyLabel(generatedDraft.metadata.strategy)} / reason: {generatedDraft.metadata.strategyReason} / local-like:{" "}
+                    {generatedDraft.metadata.isLocalLike ? "yes" : "no"}
+                  </p>
+                  <p>
+                    executed steps: {generatedDraft.metadata.stepCount} / planned steps: {generatedDraft.metadata.plannedStepCount} / sectioned generation:{" "}
+                    {generatedDraft.metadata.sectionedGenerationImplemented ? "implemented" : "not implemented"} / final polish:{" "}
+                    {generatedDraft.metadata.finalPolishImplemented ? "implemented" : "not implemented"}
+                  </p>
+                </div>
+                {generatedDraft.metadata.strategy === "local_sectioned_multi_pass" ? (
+                  <div className="notice warning">
+                    Local/small-model 전략이 선택되었지만 이번 패치에서는 전략 metadata만 표시합니다. 실제 skeleton-first sectioned generation과 final polish는
+                    Patch 9E-4C-2에서 구현 예정이며, 현재 후보 생성은 기존 one-shot fallback 경로를 사용했습니다.
+                  </div>
+                ) : (
+                  <div className="notice">Remote/commercial route는 기존 one-shot full draft 생성을 유지합니다.</div>
+                )}
+                <div className="detail-grid">
+                  <DetailItem label="Strategy Provider" value={generatedDraft.metadata.providerSummary.providerName ?? "-"} />
+                  <DetailItem label="Provider Type" value={generatedDraft.metadata.providerSummary.providerType ?? "-"} />
+                  <DetailItem label="Invocation Mode" value={generatedDraft.metadata.providerSummary.invocationMode ?? "-"} />
+                  <DetailItem label="API Format" value={generatedDraft.metadata.providerSummary.apiFormat ?? "-"} />
+                  <DetailItem label="Strategy Model" value={generatedDraft.metadata.providerSummary.modelName ?? "-"} />
                 </div>
                 {generatedDraft.metadata.repairAttempted ? (
                   generatedDraft.metadata.repairSucceeded ? (

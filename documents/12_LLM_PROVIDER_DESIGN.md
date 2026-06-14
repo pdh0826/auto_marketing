@@ -372,3 +372,23 @@ Patch 9E-4B는 UI-only handoff polish이며 LLM Provider를 사용하지 않는�
 - `apply-html` 성공 후 stale preview 결과를 clear하고 재실행 안내만 표시한다.
 - OpenAI/Ollama/Local LLM 호출은 없고 `llm_call_logs`도 생성하지 않는다.
 - Blogger API read/write, draft save, publish, scheduled publish, token refresh도 수행하지 않는다.
+
+## Patch 9E-4C-1 draft strategy foundation and LLM boundary
+
+Patch 9E-4C-1은 `content_draft` route의 provider/model metadata를 기준으로 draft generation strategy를 판별하는 기반만 추가한다.
+
+- remote/commercial provider는 기존 `one_shot_full_draft`를 기본 전략으로 유지한다.
+- `local`, `local_http`, `cli`, `ollama_compatible`, `custom_cli`는 local/small-model-like provider로 보고 `local_sectioned_multi_pass` 전략 후보를 표시한다.
+- 실제 multi-pass LLM orchestration은 아직 없다. local strategy도 이번 패치에서는 기존 one-shot generation fallback을 사용한다.
+- `TaskRoute`에는 strategy field를 추가하지 않는다. strategy는 현재 provider/model 설정에서 파생되는 UI/response/log metadata다.
+- `content_draft` call log metadata에는 safe summary만 저장한다:
+  - `strategy`
+  - `strategyReason`
+  - `isLocalLike`
+  - `stepCount`
+  - `plannedStepCount`
+  - `sectionedGenerationImplemented=false`
+  - `finalPolishImplemented=false`
+  - provider/model safe summary
+- prompt 전문, raw response 전문, candidate Markdown 전문, API key, secret, token, encrypted value는 저장하지 않는다.
+- Blogger API read/write, draft save, publish, scheduled publish, token refresh와는 무관하다.

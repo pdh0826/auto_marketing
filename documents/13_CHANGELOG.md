@@ -397,3 +397,24 @@ Policy:
 - No automatic quality/readiness/Blogger draft preview rerun.
 - No DB/schema change.
 - No LLM call, `llm_call_logs`, Blogger API read/write, draft save, publish, scheduled publish, token refresh, `posts.insert`, or `posts.update`.
+
+## Patch 9E-4C-1 Provider-Aware Draft Generation Strategy Foundation
+
+Implemented after Patch 9E-4B:
+
+- Added a provider-aware draft generation strategy resolver.
+- Remote/commercial routes remain on the existing `one_shot_full_draft` default.
+- Local/small-model-like routes are identified as `local_sectioned_multi_pass` strategy candidates.
+- Added draft generation response metadata for strategy, reason, local-like status, executed/planned steps, implementation flags, and provider/model safe summary.
+- Added the same safe strategy metadata to `content_draft` LLM call logs.
+- Added content detail UI guidance for route-level strategy and generated candidate strategy metadata.
+- Documented that actual skeleton-first, sectioned multi-pass generation and final polish are deferred to Patch 9E-4C-2.
+
+Policy:
+
+- Existing one-shot draft generation behavior is preserved.
+- Local strategy still executes the current one-shot fallback path in this patch.
+- No `TaskRoute` schema or DB migration.
+- No automatic `draftMarkdown` or `draftHtml` save.
+- No prompt full text, raw response, candidate Markdown, secret, token, or encrypted value logging.
+- No Blogger API read/write, draft save, publish, scheduled publish, token refresh, `posts.insert`, or `posts.update`.
