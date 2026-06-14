@@ -148,6 +148,38 @@ export interface BloggerBlogSelectionResult {
   tokenRefreshImplemented: false;
 }
 
+export type BloggerDraftApprovalStatus = "approved" | "revoked" | "superseded";
+export type BloggerDraftManualApprovalStatus = "missing" | "approved" | "stale" | "revoked" | "not_ready";
+
+export interface BloggerDraftApprovalAdmin {
+  id: string;
+  contentItemId: string;
+  status: BloggerDraftApprovalStatus;
+  snapshotHashPrefix: string;
+  draftHtmlHashPrefix: string;
+  titleCandidate: string;
+  targetBloggerBlogId: string;
+  targetBloggerBlogName: string | null;
+  targetBloggerBlogUrl: string | null;
+  targetBloggerBlogVerifiedAt: string;
+  approvedAt: string;
+  approvedBy: string | null;
+  revokedAt: string | null;
+  revokedReason: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface BloggerDraftApprovalSummary {
+  approvalStatus: BloggerDraftManualApprovalStatus;
+  approval: BloggerDraftApprovalAdmin | null;
+  approvalMatchesCurrentPreview: boolean;
+  currentSnapshotHashPrefix: string | null;
+  currentDraftHtmlHashPrefix: string | null;
+  manualApprovalImplemented: true;
+  draftSaveImplemented: false;
+}
+
 export interface BloggerDraftPayloadPreview {
   contentItemId: string;
   targetBlog: {
@@ -174,6 +206,7 @@ export interface BloggerDraftPayloadPreview {
   draftPayloadReady: boolean;
   blockingIssues: string[];
   warnings: string[];
+  approvalSummary: BloggerDraftApprovalSummary;
   bloggerApiWriteImplemented: false;
   bloggerApiReadImplemented: false;
   draftSaveImplemented: false;

@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
+import { buildBloggerDraftApprovalSnapshotHashes, buildBloggerDraftApprovalSummary } from "@/lib/blogger/draft-approval";
 import { buildBloggerDraftPayloadPreview } from "@/lib/blogger/draft-payload-preview";
 import type { ContentAssetAdmin } from "@/lib/content/asset-types";
 import type { ContentItemAdmin } from "@/lib/content/admin-types";
+import { getActiveBloggerDraftApproval, getLatestBloggerDraftApproval, toBloggerDraftApprovalAdmin } from "@/lib/db/blogger-draft-approvals";
 import { listBloggerConnectionsForBlog } from "@/lib/db/blogger-connections";
 import { prisma } from "@/lib/db/client";
 import { safeErrorMessage } from "@/lib/llm/redaction";
@@ -37,8 +39,18 @@ export async function POST(_request: Request, { params }: RouteContext) {
       contentItem.assets as unknown as ContentAssetAdmin[],
       bloggerConnections
     );
+    const currentHashes = buildBloggerDraftApprovalSnapshotHashes(result, contentItem.draftHtml);
+    const activeApproval = await getActiveBloggerDraftApproval(contentItem.id);
+    const latestApproval = activeApproval ?? (await getLatestBloggerDraftApproval(contentItem.id));
+    const approvalSummary = buildBloggerDraftApprovalSummary({
+      approval: latestApproval ? toBloggerDraftApprovalAdmin(latestApproval) : null,
+      approvalSnapshotHash: latestApproval?.snapshotHash ?? null,
+      currentSnapshotHash: currentHashes?.snapshotHash ?? null,
+      currentDraftHtmlHash: currentHashes?.draftHtmlHash ?? null,
+      currentPreviewReady: result.draftPayloadReady
+    });
 
-    return NextResponse.json({ data: result });
+    return NextResponse.json({ data: { ...result, approvalSummary } });
   } catch (error) {
     return NextResponse.json({ error: safeErrorMessage(error instanceof Error ? error.message : "Blogger draft payload preview failed.", 500) }, { status: 400 });
   }

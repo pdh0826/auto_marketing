@@ -24,14 +24,15 @@
 20. Patch 9D-1 - Blogger blog list read-only 조회: 완료
 21. Patch 9D-2 - 조회된 Blogger blog를 connection에 수동 반영: 완료
 22. Patch 9E-0 - Blogger draft save readiness / draft payload preview: 완료
-23. Patch 9E-1 이후 - Blogger API draft save guard/actual implementation
-24. 예약 발행
-25. 운영 대시보드
-26. 키워드 연구소
-27. 상위글 구조 분석
-28. 서비스 홍보 엔진 고도화
-29. 이미지/썸네일
-30. 성과 분석과 리라이트
+23. Patch 9E-1 - Blogger draft save final guard / manual approval gate: 완료
+24. Patch 9E-2 이후 - Blogger API actual draft save
+25. 예약 발행
+26. 운영 대시보드
+27. 키워드 연구소
+28. 상위글 구조 분석
+29. 서비스 홍보 엔진 고도화
+30. 이미지/썸네일
+31. 성과 분석과 리라이트
 
 ## Patch 8C 완료 기준
 
@@ -85,10 +86,22 @@ Patch 9E-0 완료:
 - Blogger API read/write, DB mutation, token refresh, draft save, publish는 구현하지 않음
 - publish readiness의 `publishReady=false`, top-level `ready=false` 유지
 
+Patch 9E-1 완료:
+
+- `blogger_draft_approvals` 테이블과 `BloggerDraftApprovalStatus` enum 추가
+- server-side draft payload preview 재계산 결과로만 approval 생성
+- approval snapshot은 canonical JSON + SHA-256으로 계산
+- full `draftHtml`은 저장하지 않고 `draftHtmlHash`, `snapshotHash`, target blog safe metadata, title, readiness summary만 저장
+- `POST /api/content-items/[id]/blogger-draft-approval`와 `DELETE /api/content-items/[id]/blogger-draft-approval` 추가
+- preview API 응답에 approval status/match/hash prefix summary 추가
+- publish readiness manual approval check가 current preview snapshot과 active approval이 일치하면 pass 가능
+- `publishReady=false`, top-level `ready=false` 유지
+- Blogger API read/write, token refresh, draft save, publish는 구현하지 않음
+
 다음 패치 후보:
 
-- Patch 9E-1: Blogger draft save 구현 전 최종 승인/guard 또는 actual draft save
-- Blogger publish/scheduled publish는 Patch 9E-1 이후 별도 패치
+- Patch 9E-2: approved snapshot guard를 통과한 actual Blogger draft save
+- Blogger publish/scheduled publish는 Patch 9E-2 이후 별도 패치
 
 먼저 하지 말 것:
 

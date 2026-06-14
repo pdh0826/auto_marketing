@@ -424,3 +424,15 @@ Patch 9E-0은 새 테이블이나 컬럼을 추가하지 않는다.
 - `qualityScore`, `status`, `publishedAt`, `scheduledAt`은 변경하지 않는다.
 - Blogger API read/write, token refresh, draft save, publish는 수행하지 않는다.
 - raw Blogger response, token, client secret, encrypted value는 저장하거나 반환하지 않는다.
+
+## Patch 9E-1 Blogger draft approval data policy
+
+Patch 9E-1은 `blogger_draft_approvals` 테이블을 추가한다.
+
+- status는 `approved`, `revoked`, `superseded` 중 하나다.
+- active approval은 앱 로직에서 `status=approved` 및 `revokedAt=null`로 관리한다.
+- approval은 server-side draft payload preview 재계산 결과가 `draftPayloadReady=true`일 때만 생성한다.
+- 저장 필드는 `snapshotHash`, `draftHtmlHash`, title candidate, target Blogger blog safe metadata, readiness summary다.
+- full `draftHtml`, `htmlSnippet`, token, encrypted value, raw Blogger response/error body는 저장하지 않는다.
+- content item status, `qualityScore`, `publishedAt`, `scheduledAt`은 변경하지 않는다.
+- publish readiness는 manual approval match를 표시하지만 `publishReady=false`를 유지한다.

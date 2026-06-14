@@ -2,6 +2,7 @@ import type { BloggerDraftPayloadPreview } from "@/lib/blogger/admin-types";
 import type { SafeBloggerConnection } from "@/lib/db/blogger-connections";
 import type { ContentAssetAdmin } from "@/lib/content/asset-types";
 import type { ContentItemAdmin } from "@/lib/content/admin-types";
+import { buildBloggerDraftApprovalSummary } from "@/lib/blogger/draft-approval";
 import { buildPublishReadiness } from "@/lib/content/publish-readiness";
 import { validateHtmlCandidate } from "@/lib/content/html-preview";
 
@@ -79,6 +80,12 @@ export function buildBloggerDraftPayloadPreview(
     draftPayloadReady,
     blockingIssues,
     warnings,
+    approvalSummary: buildBloggerDraftApprovalSummary({
+      approval: null,
+      currentSnapshotHash: null,
+      currentDraftHtmlHash: null,
+      currentPreviewReady: draftPayloadReady
+    }),
     bloggerApiWriteImplemented: false,
     bloggerApiReadImplemented: false,
     draftSaveImplemented: false,

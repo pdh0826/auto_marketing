@@ -418,3 +418,18 @@ npm run build
 - Blogger API read/write, token refresh, draft save, publish, scheduled publish는 발생하지 않는다.
 - content item status, `qualityScore`, `publishedAt`, `scheduledAt`은 변경되지 않는다.
 - `llm_call_logs`는 생성되지 않는다.
+
+## Patch 9E-1 수동 검증
+
+- `POST /api/content-items/[id]/blogger-draft-approval`은 request body의 title/blogId/hash를 신뢰하지 않는다.
+- approval API는 서버에서 content item, assets, Blogger connection을 다시 읽고 draft payload preview를 재계산한다.
+- `draftPayloadReady=false`이면 400 `blogger_draft_payload_not_ready` safe error를 반환한다.
+- ready preview 승인 시 기존 active approval은 `superseded` 처리하고 새 `approved` approval을 생성한다.
+- `DELETE /api/content-items/[id]/blogger-draft-approval`은 active approval을 `revoked`로 soft revoke한다.
+- approval DB에는 full `draftHtml`이나 `htmlSnippet`을 저장하지 않고 `draftHtmlHash`, `snapshotHash`, safe target blog metadata, title, readiness summary만 저장한다.
+- preview API 응답에는 approval status, current hash prefix, approval hash prefix, snapshot match 여부가 포함된다.
+- publish readiness의 manual approval check는 current preview snapshot과 active approval이 일치하면 pass할 수 있다.
+- publish readiness는 그래도 `publishReady=false`, top-level `ready=false`를 유지한다.
+- Blogger API read/write, token refresh, draft save, publish, scheduled publish는 발생하지 않는다.
+- content item status, `qualityScore`, `publishedAt`, `scheduledAt`은 변경되지 않는다.
+- `llm_call_logs`는 생성되지 않는다.

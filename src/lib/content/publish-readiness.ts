@@ -1,6 +1,6 @@
 import type { ContentAssetAdmin } from "@/lib/content/asset-types";
 import type { ContentItemAdmin } from "@/lib/content/admin-types";
-import type { BloggerConnectionStatus } from "@/lib/blogger/admin-types";
+import type { BloggerConnectionStatus, BloggerDraftManualApprovalStatus } from "@/lib/blogger/admin-types";
 import { validateHtmlCandidate } from "@/lib/content/html-preview";
 import { buildHtmlQualityPreview } from "@/lib/content/html-quality-preview";
 import { hasUsablePlanJson } from "@/lib/content/plan-template";
@@ -51,7 +51,10 @@ export interface PublishReadinessResult {
     bloggerBlogId: string | null;
     bloggerBlogName: string | null;
     bloggerBlogVerifiedAt: string | null;
-    manualApprovalStatus: "not_configured";
+    manualApprovalStatus: BloggerDraftManualApprovalStatus;
+    bloggerDraftApprovalSnapshotHash: string | null;
+    bloggerDraftApprovalMatchesCurrentPreview: boolean;
+    bloggerDraftApprovedAt: string | null;
   };
 }
 
@@ -62,10 +65,18 @@ export interface PublishReadinessBloggerConnectionSummary {
   bloggerBlogVerifiedAt: Date | string | null;
 }
 
+export interface PublishReadinessManualApprovalSummary {
+  status: BloggerDraftManualApprovalStatus;
+  snapshotHashPrefix: string | null;
+  matchesCurrentPreview: boolean;
+  approvedAt: Date | string | null;
+}
+
 export function buildPublishReadiness(
   contentItem: ContentItemAdmin,
   assets: ContentAssetAdmin[],
-  bloggerConnection?: PublishReadinessBloggerConnectionSummary | null
+  bloggerConnection?: PublishReadinessBloggerConnectionSummary | null,
+  manualApproval?: PublishReadinessManualApprovalSummary | null
 ): PublishReadinessResult {
   const htmlValidation = validateHtmlCandidate(contentItem.draftHtml ?? "", assets);
   const qualityPreview = buildHtmlQualityPreview(contentItem, assets);
@@ -76,6 +87,9 @@ export function buildPublishReadiness(
   const hasPlan = hasUsablePlanJson(contentItem.planJson);
   const hasDraftMarkdown = Boolean(contentItem.draftMarkdown?.trim());
   const hasDraftHtml = Boolean(contentItem.draftHtml?.trim());
+  const manualApprovalStatus = manualApproval?.status ?? "missing";
+  const bloggerDraftApprovedAt =
+    manualApproval?.approvedAt instanceof Date ? manualApproval.approvedAt.toISOString() : manualApproval?.approvedAt ?? null;
   const qualityRequiredFailCount = qualityPreview.checks.filter((check) => check.status === "fail" && check.severity === "required").length;
   const checks = buildChecks(
     contentItem,
@@ -87,7 +101,9 @@ export function buildPublishReadiness(
     qualityRequiredFailCount,
     bloggerConnectionStatus,
     hasSelectedBloggerBlog,
-    bloggerConnection?.bloggerBlogName ?? null
+    bloggerConnection?.bloggerBlogName ?? null,
+    manualApprovalStatus,
+    Boolean(manualApproval?.matchesCurrentPreview)
   );
   const contentReady =
     hasPlan &&
@@ -107,7 +123,8 @@ export function buildPublishReadiness(
     qualityPreview.grade,
     qualityRequiredFailCount,
     bloggerConnectionStatus,
-    hasSelectedBloggerBlog
+    hasSelectedBloggerBlog,
+    manualApprovalStatus
   );
   const blockingIssues = checks.filter((check) => check.status === "fail" && check.severity === "required");
   const warnings = checks.filter((check) => check.status === "warn");
@@ -136,7 +153,10 @@ export function buildPublishReadiness(
       bloggerBlogId: bloggerConnection?.bloggerBlogId ?? null,
       bloggerBlogName: bloggerConnection?.bloggerBlogName ?? null,
       bloggerBlogVerifiedAt,
-      manualApprovalStatus: "not_configured"
+      manualApprovalStatus,
+      bloggerDraftApprovalSnapshotHash: manualApproval?.snapshotHashPrefix ?? null,
+      bloggerDraftApprovalMatchesCurrentPreview: Boolean(manualApproval?.matchesCurrentPreview),
+      bloggerDraftApprovedAt
     }
   };
 }
@@ -151,7 +171,9 @@ function buildChecks(
   qualityRequiredFailCount: number,
   bloggerConnectionStatus: BloggerConnectionStatus,
   hasSelectedBloggerBlog: boolean,
-  bloggerBlogName: string | null
+  bloggerBlogName: string | null,
+  manualApprovalStatus: BloggerDraftManualApprovalStatus,
+  manualApprovalMatchesCurrentPreview: boolean
 ): PublishReadinessCheck[] {
   const investmentContext = isInvestmentContext(contentItem);
   const hasDisclaimer = Boolean(contentItem.brandProfile?.riskDisclaimer?.trim()) || /참고|투자 판단|사용자.*책임|손실|리스크|보장하지|정보 제공/i.test(contentItem.draftHtml ?? "");
@@ -247,7 +269,7 @@ function buildChecks(
     ),
     makeBloggerConnectionCheck(bloggerConnectionStatus),
     makeBloggerBlogSelectionCheck(bloggerConnectionStatus, hasSelectedBloggerBlog, bloggerBlogName),
-    makeCheck("manual_approval", "Manual approval", "fail", "required", "사용자 최종 승인 저장은 후속 패치에서 연결 예정입니다.")
+    makeManualApprovalCheck(manualApprovalStatus, manualApprovalMatchesCurrentPreview)
   ];
 }
 
@@ -260,7 +282,8 @@ function determineStage(
   qualityGrade: "pass" | "warn" | "fail",
   qualityRequiredFailCount: number,
   bloggerConnectionStatus: BloggerConnectionStatus,
-  hasSelectedBloggerBlog: boolean
+  hasSelectedBloggerBlog: boolean,
+  manualApprovalStatus: BloggerDraftManualApprovalStatus
 ): PublishReadinessStage {
   if (!hasPlan) {
     return "missing_plan";
@@ -282,6 +305,9 @@ function determineStage(
   }
   if (bloggerConnectionStatus === "connected" && !hasSelectedBloggerBlog) {
     return "blogger_blog_not_selected";
+  }
+  if (bloggerConnectionStatus === "connected" && hasSelectedBloggerBlog && manualApprovalStatus === "approved") {
+    return "ready_preview_only";
   }
   if (bloggerConnectionStatus === "connected") {
     return "manual_approval_required";
@@ -319,7 +345,7 @@ function summarizeStage(stage: PublishReadinessStage, contentReady: boolean) {
   if (stage === "manual_approval_required") {
     return "사용자 최종 승인 기능이 아직 연결되지 않았습니다.";
   }
-  return "콘텐츠 기준은 통과했지만 실제 발행은 후속 패치에서만 가능합니다.";
+  return "manual approval은 되었지만 Blogger draft save는 아직 구현되지 않았습니다.";
 }
 
 function makeCheck(
@@ -365,6 +391,22 @@ function makeBloggerBlogSelectionCheck(status: BloggerConnectionStatus, hasSelec
     );
   }
   return makeCheck("blogger_blog_selection", "Blogger blog selection", "fail", "required", "Blogger blog list에서 blog를 선택하고 서버 재검증 저장이 필요합니다.");
+}
+
+function makeManualApprovalCheck(status: BloggerDraftManualApprovalStatus, matchesCurrentPreview: boolean): PublishReadinessCheck {
+  if (status === "approved" && matchesCurrentPreview) {
+    return makeCheck("manual_approval", "Manual approval", "pass", "required", "현재 Blogger draft payload preview snapshot에 대한 manual approval이 저장되어 있습니다.");
+  }
+  if (status === "stale") {
+    return makeCheck("manual_approval", "Manual approval", "fail", "required", "저장된 approval snapshot이 현재 draftHtml/title/target blog/readiness와 일치하지 않습니다.");
+  }
+  if (status === "revoked") {
+    return makeCheck("manual_approval", "Manual approval", "fail", "required", "Blogger draft payload approval이 취소되었습니다.");
+  }
+  if (status === "not_ready") {
+    return makeCheck("manual_approval", "Manual approval", "fail", "required", "Blogger draft payload preview가 ready 상태가 아니어서 approval을 저장할 수 없습니다.");
+  }
+  return makeCheck("manual_approval", "Manual approval", "fail", "required", "Blogger draft payload approval이 필요합니다.");
 }
 
 function isInvestmentContext(contentItem: ContentItemAdmin) {

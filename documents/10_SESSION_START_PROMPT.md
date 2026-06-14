@@ -46,7 +46,7 @@ branch: master
 - draftMarkdown은 자동 저장되지 않고 사용자가 반영했을 때만 DB에 저장됨
 
 다음 세션 1순위 작업:
-Patch 9E-1 후보: Blogger draft save 구현 전 최종 승인/guard 또는 actual draft save
+Patch 9E-2 후보: approved snapshot guard를 통과한 actual Blogger draft save
 
 현재 Blogger 상태:
 - Patch 9A에서 `/settings/blogger` placeholder UI와 Blogger connection safe CRUD/status API가 추가됨
@@ -63,10 +63,11 @@ Patch 9E-1 후보: Blogger draft save 구현 전 최종 승인/guard 또는 actu
 - Patch 9D-2에서 검증된 Blogger blog 선택 저장이 추가됨
 - Patch 9E-0에서 Blogger draft payload preview/readiness API와 content detail UI가 추가됨
 - Patch 9E-0은 Blogger API read/write와 DB mutation 없이 저장된 verified metadata와 draftHtml만 사용함
+- Patch 9E-1에서 Blogger draft approval guard와 snapshot hash 저장이 추가됨
 - Blogger draft save, publish는 아직 구현하지 않음
 
-Patch 9E-1 목표:
-- Patch 9E-0 preview 결과를 기준으로 actual Blogger draft save를 시작할지 최종 guard를 먼저 둘지 검토한다.
+Patch 9E-2 목표:
+- Patch 9E-1 approval snapshot match를 actual Blogger draft save의 필수 guard로 사용할지 설계한다.
 - token refresh, publish, scheduled publish는 아직 구현하지 않는다.
 - 실제 Blogger publish/scheduled publish는 아직 구현하지 않는다.
 
@@ -80,7 +81,7 @@ Patch 9E-1 목표:
 - git add . 또는 git add -A 금지
 - .env.local 읽기/출력/수정 금지
 
-첫 작업으로 Patch 9E-1 작업계획을 제안해줘. 아직 구현하지 말고 계획만 작성해줘.
+첫 작업으로 Patch 9E-2 작업계획을 제안해줘. 아직 구현하지 말고 계획만 작성해줘.
 ```
 
 ## 첫 점검 명령어

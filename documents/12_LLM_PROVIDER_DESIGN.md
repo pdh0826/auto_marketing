@@ -319,3 +319,13 @@ Patch 9E-0의 Blogger draft payload preview는 LLM Provider를 사용하지 않�
 - OpenAI/Ollama/Local LLM 호출은 없다.
 - `llm_call_logs`는 생성하지 않는다.
 - Blogger API read/write 호출도 없으므로 token 원문이나 raw Blogger response/error body를 다루지 않는다.
+
+## Patch 9E-1 Blogger draft approval guard and LLM boundary
+
+Patch 9E-1의 Blogger draft approval guard는 LLM Provider를 사용하지 않는다.
+
+- `/api/content-items/[id]/blogger-draft-approval`은 provider/model/task route를 조회하지 않는다.
+- approval snapshot은 saved `draftHtml` hash, verified Blogger blog metadata, title candidate, readiness summary로만 만든다.
+- OpenAI/Ollama/Local LLM 호출은 없다.
+- `llm_call_logs`는 생성하지 않는다.
+- Blogger API read/write 호출도 없으므로 token 원문이나 raw Blogger response/error body를 다루지 않는다.

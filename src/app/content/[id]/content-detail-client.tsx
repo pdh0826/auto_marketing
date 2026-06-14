@@ -102,6 +102,8 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
   const [runningQualityPreview, setRunningQualityPreview] = useState(false);
   const [runningPublishReadiness, setRunningPublishReadiness] = useState(false);
   const [runningBloggerDraftPreview, setRunningBloggerDraftPreview] = useState(false);
+  const [approvingBloggerDraft, setApprovingBloggerDraft] = useState(false);
+  const [revokingBloggerDraftApproval, setRevokingBloggerDraftApproval] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [assetsError, setAssetsError] = useState<string | null>(null);
   const [routeError, setRouteError] = useState<string | null>(null);
@@ -125,6 +127,10 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
   const canRunQualityPreview = Boolean(contentItem?.draftHtml && !runningQualityPreview);
   const canRunPublishReadiness = Boolean(!runningPublishReadiness);
   const canRunBloggerDraftPreview = Boolean(!runningBloggerDraftPreview);
+  const canApproveBloggerDraftPayload = Boolean(
+    bloggerDraftPreviewResult?.draftPayloadReady && bloggerDraftPreviewResult.approvalSummary.approvalStatus !== "approved" && !approvingBloggerDraft
+  );
+  const canRevokeBloggerDraftApproval = Boolean(bloggerDraftPreviewResult?.approvalSummary.approval?.status === "approved" && !revokingBloggerDraftApproval);
 
   const loadContentItem = useCallback(async () => {
     setLoading(true);
@@ -489,6 +495,58 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
     }
   }
 
+  async function approveBloggerDraftPayload() {
+    setNotice(null);
+    setBloggerDraftPreviewError(null);
+    setApprovingBloggerDraft(true);
+
+    try {
+      const result = await requestJson<
+        ApiResult<{
+          approvalSummary: BloggerDraftPayloadPreview["approvalSummary"];
+          draftSaveImplemented: false;
+          publishImplemented: false;
+          tokenRefreshImplemented: false;
+        }>
+      >(`/api/content-items/${contentItemId}/blogger-draft-approval`, {
+        method: "POST",
+        body: JSON.stringify({})
+      });
+      setBloggerDraftPreviewResult((current) => (current ? { ...current, approvalSummary: result.data.approvalSummary } : current));
+      setNotice("현재 Blogger draft payload preview snapshot을 승인했습니다. Blogger draft save는 수행하지 않았습니다.");
+    } catch (caught) {
+      setBloggerDraftPreviewError(caught instanceof Error ? caught.message : "Blogger draft payload approval에 실패했습니다.");
+    } finally {
+      setApprovingBloggerDraft(false);
+    }
+  }
+
+  async function revokeBloggerDraftApproval() {
+    setNotice(null);
+    setBloggerDraftPreviewError(null);
+    setRevokingBloggerDraftApproval(true);
+
+    try {
+      const result = await requestJson<
+        ApiResult<{
+          approvalSummary: BloggerDraftPayloadPreview["approvalSummary"];
+          revoked: true;
+          draftSaveImplemented: false;
+          publishImplemented: false;
+          tokenRefreshImplemented: false;
+        }>
+      >(`/api/content-items/${contentItemId}/blogger-draft-approval`, {
+        method: "DELETE"
+      });
+      setBloggerDraftPreviewResult((current) => (current ? { ...current, approvalSummary: result.data.approvalSummary } : current));
+      setNotice("Blogger draft payload approval을 취소했습니다. Blogger API는 호출하지 않았습니다.");
+    } catch (caught) {
+      setBloggerDraftPreviewError(caught instanceof Error ? caught.message : "Blogger draft payload approval 취소에 실패했습니다.");
+    } finally {
+      setRevokingBloggerDraftApproval(false);
+    }
+  }
+
   async function generatePlanCandidate() {
     setNotice(null);
     setGenerationError(null);
@@ -685,7 +743,7 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
                   <p>
                     stage: {publishReadinessResult.stage} / {publishReadinessResult.summary}
                   </p>
-                  <p>publishReady는 Blogger 연결과 사용자 최종 승인 기능이 구현되기 전까지 false입니다.</p>
+                  <p>publishReady는 Blogger draft save/publish가 구현되기 전까지 false입니다.</p>
                 </div>
                 <div className="detail-grid">
                   <DetailItem label="Has Plan" value={publishReadinessResult.metadata.hasPlan ? "yes" : "no"} />
@@ -696,6 +754,9 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
                   <DetailItem label="Quality Grade" value={publishReadinessResult.metadata.qualityGrade} />
                   <DetailItem label="Blogger Connection" value={publishReadinessResult.metadata.bloggerConnectionStatus} />
                   <DetailItem label="Manual Approval" value={publishReadinessResult.metadata.manualApprovalStatus} />
+                  <DetailItem label="Approval Match" value={publishReadinessResult.metadata.bloggerDraftApprovalMatchesCurrentPreview ? "yes" : "no"} />
+                  <DetailItem label="Approval Snapshot" value={publishReadinessResult.metadata.bloggerDraftApprovalSnapshotHash ?? "-"} />
+                  <DetailItem label="Approved At" value={publishReadinessResult.metadata.bloggerDraftApprovedAt ? formatDate(publishReadinessResult.metadata.bloggerDraftApprovedAt) : "-"} />
                 </div>
                 <PublishReadinessSummary result={publishReadinessResult} />
                 <PublishReadinessTable checks={publishReadinessResult.checks} />
@@ -778,6 +839,44 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
                   items={bloggerDraftPreviewResult.labelsCandidate}
                   emptyText="labels 후보가 없습니다."
                 />
+                <div className={getBloggerDraftApprovalNoticeClass(bloggerDraftPreviewResult.approvalSummary.approvalStatus)}>
+                  <strong>Blogger Draft Manual Approval</strong>
+                  <p>
+                    status: {bloggerDraftPreviewResult.approvalSummary.approvalStatus} / matches current preview:{" "}
+                    {bloggerDraftPreviewResult.approvalSummary.approvalMatchesCurrentPreview ? "yes" : "no"}
+                  </p>
+                  {bloggerDraftPreviewResult.approvalSummary.approvalStatus === "stale" ? (
+                    <p>draftHtml 또는 target blog/readiness가 변경되어 재승인이 필요합니다.</p>
+                  ) : null}
+                  {bloggerDraftPreviewResult.approvalSummary.approvalStatus === "approved" ? (
+                    <p>manual approval은 되었지만 Blogger draft save는 Patch 9E-2에서 연결 예정입니다.</p>
+                  ) : null}
+                </div>
+                <div className="detail-grid">
+                  <DetailItem label="Current Snapshot" value={bloggerDraftPreviewResult.approvalSummary.currentSnapshotHashPrefix ?? "-"} />
+                  <DetailItem label="Current draftHtml Hash" value={bloggerDraftPreviewResult.approvalSummary.currentDraftHtmlHashPrefix ?? "-"} />
+                  <DetailItem label="Approval ID" value={bloggerDraftPreviewResult.approvalSummary.approval?.id ?? "-"} />
+                  <DetailItem label="Approval Snapshot" value={bloggerDraftPreviewResult.approvalSummary.approval?.snapshotHashPrefix ?? "-"} />
+                  <DetailItem label="Approval draftHtml Hash" value={bloggerDraftPreviewResult.approvalSummary.approval?.draftHtmlHashPrefix ?? "-"} />
+                  <DetailItem
+                    label="Approved At"
+                    value={bloggerDraftPreviewResult.approvalSummary.approval?.approvedAt ? formatDate(bloggerDraftPreviewResult.approvalSummary.approval.approvedAt) : "-"}
+                  />
+                  <DetailItem label="Approved By" value={bloggerDraftPreviewResult.approvalSummary.approval?.approvedBy ?? "-"} />
+                  <DetailItem label="Revoked At" value={bloggerDraftPreviewResult.approvalSummary.approval?.revokedAt ? formatDate(bloggerDraftPreviewResult.approvalSummary.approval.revokedAt) : "-"} />
+                  <DetailItem label="Revoked Reason" value={bloggerDraftPreviewResult.approvalSummary.approval?.revokedReason ?? "-"} />
+                </div>
+                <div className="form-actions">
+                  <button className="button" type="button" disabled={!canApproveBloggerDraftPayload} onClick={() => void approveBloggerDraftPayload()}>
+                    {approvingBloggerDraft ? "승인 저장 중" : "이 payload 승인"}
+                  </button>
+                  <button className="button secondary" type="button" disabled={!canRevokeBloggerDraftApproval} onClick={() => void revokeBloggerDraftApproval()}>
+                    {revokingBloggerDraftApproval ? "승인 취소 중" : "승인 취소"}
+                  </button>
+                  <button className="button secondary" type="button" disabled>
+                    Blogger draft save는 Patch 9E-2에서 연결 예정
+                  </button>
+                </div>
                 <div className="read-block">
                   <h3>HTML Snippet</h3>
                   <pre>{bloggerDraftPreviewResult.htmlSnippet ?? "저장된 draftHtml snippet이 없습니다."}</pre>
@@ -1704,6 +1803,16 @@ function formatReadinessStatus(status: ReadinessStatus) {
     return "warning";
   }
   return "fail";
+}
+
+function getBloggerDraftApprovalNoticeClass(status: BloggerDraftPayloadPreview["approvalSummary"]["approvalStatus"]) {
+  if (status === "approved") {
+    return "notice";
+  }
+  if (status === "missing" || status === "stale") {
+    return "notice warning";
+  }
+  return "notice error";
 }
 
 function AssetPreview({ asset }: { asset: ContentAssetAdmin }) {

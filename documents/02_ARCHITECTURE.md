@@ -241,3 +241,23 @@ Patch 9E-0은 실제 Blogger draft save 전에 payload 후보와 readiness를 pr
 - saved `draftHtml`만 payload 후보 HTML source로 사용하며 `draftMarkdown` 즉시 변환은 하지 않는다.
 - Blogger API read/write, token refresh, DB mutation, draft save, publish는 수행하지 않는다.
 - publish readiness의 `publishReady=false`와 top-level `ready=false`는 유지한다.
+
+## Patch 9E-1 Blogger Draft Approval Guard
+
+Patch 9E-1은 실제 Blogger draft save 전에 현재 draft payload preview snapshot에 대한 manual approval을 저장한다.
+
+```text
+/content/[id]
+→ Draft Payload Preview
+→ 이 payload 승인
+→ POST /api/content-items/[id]/blogger-draft-approval
+→ 서버에서 preview 재계산
+→ snapshot hash 저장
+```
+
+- approval API는 request body의 title/blogId/hash를 신뢰하지 않는다.
+- full `draftHtml`은 저장하지 않고 `draftHtmlHash`만 저장한다.
+- snapshot hash는 canonical JSON + SHA-256으로 계산한다.
+- draftHtml/title/target blog/readiness가 바뀌면 current snapshot과 approval snapshot이 mismatch가 되어 재승인이 필요하다.
+- publish readiness manual approval check는 snapshot match 시 pass할 수 있지만 `publishReady=false`와 top-level `ready=false`는 유지한다.
+- Blogger API read/write, token refresh, draft save, publish는 수행하지 않는다.

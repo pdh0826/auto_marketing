@@ -111,6 +111,12 @@ enum BloggerSecretKind {
   refresh_token
 }
 
+enum BloggerDraftApprovalStatus {
+  approved
+  revoked
+  superseded
+}
+
 model Blog {
   id                     String        @id @default(cuid())
   name                   String
@@ -189,6 +195,7 @@ model ContentItem {
   brandProfile   BrandProfile?  @relation(fields: [brandProfileId], references: [id], onDelete: SetNull)
   llmCallLogs    LlmCallLog[]
   assets         ContentAsset[]
+  bloggerDraftApprovals BloggerDraftApproval[]
 
   @@index([blogId])
   @@index([brandProfileId])
@@ -380,6 +387,34 @@ model BloggerConnection {
   @@index([bloggerBlogId])
   @@index([bloggerBlogVerifiedAt])
   @@map("blogger_connections")
+}
+
+model BloggerDraftApproval {
+  id                          String                     @id @default(cuid())
+  contentItemId               String
+  status                      BloggerDraftApprovalStatus @default(approved)
+  snapshotHash                String
+  draftHtmlHash               String
+  titleCandidate              String
+  targetBloggerBlogId         String
+  targetBloggerBlogName       String?
+  targetBloggerBlogUrl        String?
+  targetBloggerBlogVerifiedAt DateTime
+  readinessSummaryJson        Json
+  approvedAt                  DateTime                   @default(now())
+  approvedBy                  String?
+  revokedAt                   DateTime?
+  revokedReason               String?
+  createdAt                   DateTime                   @default(now())
+  updatedAt                   DateTime                   @updatedAt
+
+  contentItem                 ContentItem                @relation(fields: [contentItemId], references: [id], onDelete: Cascade)
+
+  @@index([contentItemId])
+  @@index([status])
+  @@index([snapshotHash])
+  @@index([approvedAt])
+  @@map("blogger_draft_approvals")
 }
 
 model BloggerConnectionSecret {

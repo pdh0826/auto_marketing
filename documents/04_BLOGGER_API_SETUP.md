@@ -99,3 +99,13 @@ Patch 9E-0은 Blogger posts API를 호출하기 전에 draft payload 후보와 r
 - saved `draftHtml`만 HTML source로 사용하고 `draftMarkdown` 변환은 수행하지 않는다.
 - 응답에는 target blog safe metadata, title candidate, HTML length/snippet, labels candidate, readiness flags, blocking issues, warnings를 포함한다.
 - DB mutation, token refresh, draft save, publish, scheduled publish는 구현하지 않는다.
+
+## Patch 9E-1 Blogger draft approval guard
+
+Patch 9E-1은 Blogger posts API 호출 전 manual approval guard만 추가한다.
+
+- `POST /api/content-items/[id]/blogger-draft-approval`은 서버에서 draft payload preview를 다시 계산한 뒤 approval snapshot을 저장한다.
+- `DELETE /api/content-items/[id]/blogger-draft-approval`은 active approval을 soft revoke한다.
+- approval snapshot은 hash와 safe metadata만 저장하며 full `draftHtml`은 저장하지 않는다.
+- preview API는 approval status와 current snapshot match 여부를 반환한다.
+- Blogger API read/write, token refresh, draft save, publish, scheduled publish는 구현하지 않는다.

@@ -289,3 +289,26 @@ Policy:
 - No Blogger API read/write call.
 - No full `draftHtml` payload preview returned as a large response field.
 - No access token, refresh token, client secret, encrypted value, raw Blogger response/error, LLM call, or `llm_call_logs`.
+
+## Patch 9E-1 Blogger Draft Approval Guard
+
+Implemented after Patch 9E-0:
+
+- Added `BloggerDraftApprovalStatus` and `blogger_draft_approvals`.
+- Added safe manual approval APIs:
+  - `POST /api/content-items/[id]/blogger-draft-approval`
+  - `DELETE /api/content-items/[id]/blogger-draft-approval`
+- Approval creation recalculates the draft payload preview server-side and only accepts `draftPayloadReady=true`.
+- Approval snapshot uses stable canonical JSON and SHA-256 hashes.
+- Stores `draftHtmlHash`, `snapshotHash`, target Blogger blog safe metadata, title candidate, and readiness summary.
+- Does not store full `draftHtml` or `htmlSnippet` in the approval record.
+- Preview API now returns approval status, current hash prefixes, active/latest approval summary, and snapshot match status.
+- Publish readiness manual approval check can pass when the active approval snapshot matches the current preview.
+- Keeps `publishReady=false` and top-level `ready=false`.
+
+Policy:
+
+- No Blogger API read/write call.
+- No Blogger draft save, publish, scheduled publish, or token refresh.
+- No content item status, `qualityScore`, `publishedAt`, or `scheduledAt` mutation.
+- No access token, refresh token, encrypted value, raw Blogger response/error, LLM call, or `llm_call_logs`.
