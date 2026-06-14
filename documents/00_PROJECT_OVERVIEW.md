@@ -20,3 +20,27 @@ Google Blogger 기반 블로그를 여러 개 운영하면서, 블로그별 주�
 - 상위글은 구조와 검색 의도만 분석한다.
 - 모든 발행 전 품질검사와 금지표현 검사를 거친다.
 - OpenAI API와 로컬 LLM을 선택적으로 사용할 수 있어야 한다.
+
+## 2026-06-14 세션 종료 기준 현재 상태
+
+현재 구현은 Google Blogger 발행 전 단계인 콘텐츠 기획과 본문 초안 후보 생성까지 진행되었다.
+
+- PostgreSQL + Prisma 기반 DB 모델과 CRUD API가 구현되어 있다.
+- `/settings/llm`에서 Provider, Model, Task Route, Call Log를 관리한다.
+- OpenAI-compatible Provider와 Ollama-compatible Provider 연결 테스트가 구현되어 있다.
+- `/blogs`, `/brands`, `/content/new`, `/content/[id]` 관리 화면이 DB 기반으로 동작한다.
+- `content_plan` Task Route로 planJson 후보를 실제 LLM 호출로 생성하고, 사용자가 확인 후에만 저장한다.
+- `content_draft` Task Route로 draftMarkdown 후보를 실제 LLM 호출로 생성하고, 사용자가 확인 후에만 저장한다.
+- draftMarkdown 후보는 편집과 rule-based 재검증을 지원한다.
+- draft safety prompt와 validation 실패 시 1회 자동 repair 흐름이 구현되어 있다.
+
+아직 구현하지 않은 범위는 명확히 남아 있다.
+
+- draftHtml 생성과 HTML 변환
+- 품질검사
+- Google OAuth
+- Blogger API 초안 저장
+- 실제 발행과 예약 발행
+- 자동 bulk publishing
+
+다음 세션의 1순위 작업은 Patch 8C: 저장된 `draftMarkdown` 기반 HTML 변환 dry-run/preview다. 다음 세션에서 Blogger publish로 바로 진행하지 않는다.

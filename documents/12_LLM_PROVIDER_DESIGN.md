@@ -220,3 +220,15 @@ Patch 8B-HOTFIX는 `content_draft` 생성 결과가 validation error를 포함�
 - repair 후에도 validation error가 있으면 반영 버튼은 비활성화되며 사용자가 후보 편집 후 재검증해야 한다.
 - `llm_call_logs` metadata에는 `repairAttempted`, `repairSucceeded`, 초기/최종 validation count, `repairResponseSummary` 같은 안전 요약만 저장한다.
 - original/repaired draft 전문, prompt 전문, raw response 전문, request body 전문, API Key, Bearer token, secretRef, encryptedValue, provider headers, media `storagePath`는 로그에 저장하지 않는다.
+
+## 2026-06-14 closeout LLM route state
+
+현재 실제 생성에 사용된 Task Route는 다음 원칙을 따른다.
+
+- `content_plan`은 planJson 후보 생성 전용이다.
+- `content_draft`는 saved planJson 기반 draftMarkdown 후보 생성 전용이다.
+- `content_plan` route를 `content_draft` 대용으로 사용하지 않는다.
+- 최신 확인된 `content_draft` route는 Local Ollama / OpenClaw General Qwen2.5 14B 조합에서 readiness pass 상태였다.
+- 최신 확인된 `content_draft` 로그는 validation 통과, repair 미시도 정상 생성 케이스였다.
+
+다음 세션 Patch 8C에서는 HTML 변환용 route 또는 rule-based 변환 전략을 별도 검토한다. Blogger publish route나 실제 발행 기능으로 바로 진행하지 않는다.

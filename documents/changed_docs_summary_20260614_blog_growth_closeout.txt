@@ -1,0 +1,25 @@
+Blog Growth Agent closeout documentation summary - 2026-06-14
+
+Updated existing documents:
+- 00_PROJECT_OVERVIEW.md: added current implementation state and next-session priority.
+- 01_REQUIREMENTS.md: separated completed and unimplemented MVP requirements.
+- 02_ARCHITECTURE.md: documented actual Next.js Route Handler + Prisma + PostgreSQL architecture and content_plan/content_draft flows.
+- 03_DATA_MODEL.md: added verified content item state and content_draft call log summary.
+- 05_CONTENT_POLICY.md: expanded finance/investment blocked and recommended wording; documented draft validation and repair flow.
+- 06_PROMPT_DESIGN.md: retained Patch 8B and 8B-HOTFIX prompt/repair policy.
+- 07_CODEX_WORKFLOW.md: added Blog Growth Agent ChatGPT design + Codex local implementation workflow and closeout procedure.
+- 08_PHASE_PLAN.md: marked completed phases and set Patch 8C as the next step.
+- 09_TEST_PLAN.md: retained Patch 8B and 8B-HOTFIX validation checklist.
+- 10_SESSION_START_PROMPT.md: replaced with next-session start prompt for Patch 8C planning.
+- 11_SESSION_END_PROMPT.md: replaced with closeout documentation procedure and zip/UTF-8 verification guidance.
+- 12_LLM_PROVIDER_DESIGN.md: retained Provider, call log, content_plan, content_draft, and repair policies.
+
+Added documents:
+- 13_CHANGELOG.md: recorded latest commits, completed session scope, verified DB/log state, unimplemented items, and next patch.
+- 14_NEXT_SESSION_BRIEF.md: concise handoff for the next development session.
+- changed_docs_summary_20260614_blog_growth_closeout.txt: this summary.
+
+Closeout principles applied:
+- Only implemented, verified, and committed scope was documented as complete.
+- Unimplemented Blogger OAuth/API/publish, draftHtml, HTML conversion, and quality checks remain explicitly marked as not implemented.
+- No prompt full text, raw response full text, API Key, Bearer token, secret, or media storagePath was recorded.

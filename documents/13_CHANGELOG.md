@@ -1,0 +1,65 @@
+# 13_CHANGELOG
+
+## 2026-06-14 Closeout
+
+Latest branch: `master`
+
+Latest commits:
+
+- `a53094c` Improve draft safety repair flow
+- `1c89245` Generate draft markdown candidates with LLM
+- `a05c62b` Add draft markdown dry run preview
+- `2e7d5a0` Add editable plan candidate revalidation
+- `78c5385` Return safe LLM call log summaries
+- `af0ce9a` Generate content plan candidates with LLM
+
+Completed in the current documented session:
+
+1. LLM Provider/Model/Task Route 기반 구조 정리
+2. `content_plan` dry-run preview
+3. `content_plan` 실제 LLM 후보 생성
+4. planJson 후보 편집, 재검증, 수동 반영
+5. LLM call logs Safe DTO
+6. `draftMarkdown` dry-run preview
+7. `content_draft` Task Route 기반 draftMarkdown 후보 생성
+8. draftMarkdown 후보 편집, 재검증, 수동 반영
+9. draft safety prompt 강화와 validation 실패 시 자동 repair 1회
+10. 테스트 content item에서 planJson 저장, draftMarkdown 저장, draftHtml 미생성 상태 확인
+
+Verified test content item:
+
+```text
+id = cmqc2xqbr00011y70sxmgl65v
+has_plan = true
+has_draft = true
+has_html = false
+```
+
+Verified latest `content_draft` log summary:
+
+```text
+validationOk = true
+repairAttempted = false
+markdownLength = 1665
+mediaPlaceholderCount = 1
+```
+
+Security/logging policy confirmed for this stage:
+
+- `draftMarkdown` is not automatically saved after LLM generation.
+- DB save occurs only after the user clicks `draftMarkdown에 반영`.
+- `llm_call_logs.metadata` must not store prompt full text, raw LLM response full text, request body full text, candidate Markdown full text, API Key, Bearer token, secretRef, encryptedValue, provider headers, or media storagePath.
+- A grep hit for `draftMarkdown` can be a false positive from the safe historical error message `Generated draftMarkdown did not pass validation.`
+
+Not implemented yet:
+
+- `draftHtml` generation
+- HTML conversion
+- quality checks
+- Google OAuth
+- Blogger API draft save
+- publishing or scheduled publishing
+
+Next recommended patch:
+
+- Patch 8C: saved `draftMarkdown` 기반 HTML 변환 dry-run/preview.

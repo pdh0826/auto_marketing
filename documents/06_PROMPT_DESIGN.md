@@ -84,3 +84,9 @@ Patch 8B-HOTFIX는 draft prompt의 금융/투자/서비스 홍보 안전 문구�
 - draft validation error가 있으면 같은 provider/model에 repair prompt를 1회 보내고, 전체 구조를 유지하면서 문제가 된 문장/문구만 수정하도록 요청한다.
 - repair 결과도 다시 validation하며, error가 남으면 사용자가 후보를 편집하고 재검증해야 한다.
 - repair는 자동 저장을 하지 않으며, 사용자가 `draftMarkdown에 반영`을 눌렀을 때만 저장된다.
+
+## 2026-06-14 closeout note
+
+현재 prompt 구현 상태는 `content_plan`과 `content_draft` 후보 생성까지다. `draftHtml` 생성용 prompt, HTML 변환 prompt, 품질검사 prompt는 아직 구현하지 않았다.
+
+다음 세션 Patch 8C에서는 저장된 `draftMarkdown`을 기반으로 HTML 변환 dry-run/preview prompt 또는 rule-based 변환 정책을 설계한다. 실제 Blogger 연동과 자동 저장은 포함하지 않는다.

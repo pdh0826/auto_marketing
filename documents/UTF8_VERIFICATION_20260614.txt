@@ -1,0 +1,23 @@
+UTF-8 verification for Blog Growth Agent documents
+Date: 2026-06-14
+Checked files: 17
+Result: OK
+All markdown/text documents decode as UTF-8.
+Files:
+- documents/00_PROJECT_OVERVIEW.md
+- documents/01_REQUIREMENTS.md
+- documents/02_ARCHITECTURE.md
+- documents/03_DATA_MODEL.md
+- documents/04_BLOGGER_API_SETUP.md
+- documents/05_CONTENT_POLICY.md
+- documents/06_PROMPT_DESIGN.md
+- documents/07_CODEX_WORKFLOW.md
+- documents/08_PHASE_PLAN.md
+- documents/09_TEST_PLAN.md
+- documents/10_SESSION_START_PROMPT.md
+- documents/11_SESSION_END_PROMPT.md
+- documents/12_LLM_PROVIDER_DESIGN.md
+- documents/13_CHANGELOG.md
+- documents/14_NEXT_SESSION_BRIEF.md
+- documents/UTF8_VERIFICATION_20260614.txt
+- documents/changed_docs_summary_20260614_blog_growth_closeout.txt

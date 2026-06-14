@@ -249,3 +249,18 @@ npm run build
 - repair 후에도 후보는 자동 저장되지 않고, `draftMarkdown에 반영` 클릭 전까지 DB의 `draftMarkdown`은 변경되지 않는다.
 - `llm_call_logs` metadata에는 repair 요약 count와 `repairResponseSummary`만 저장하고 original/repaired draft 전문, prompt 전문, raw response 전문, API Key, Bearer token, provider headers, media `storagePath`는 저장하지 않는다.
 - 재검증은 여전히 client-side validation이며 LLM 호출과 `llm_call_logs` 생성을 하지 않는다.
+
+## 2026-06-14 closeout 검증 기록
+
+실제 확인된 상태:
+
+- 최신 커밋은 `a53094c Improve draft safety repair flow`다.
+- 테스트 content item `cmqc2xqbr00011y70sxmgl65v`는 `has_plan = true`, `has_draft = true`, `has_html = false` 상태로 확인되었다.
+- 최신 `content_draft` call log는 `validationOk = true`, `repairAttempted = false`, `markdownLength = 1665`, `mediaPlaceholderCount = 1`인 정상 생성 케이스로 확인되었다.
+- draftMarkdown 후보는 생성 직후 자동 저장되지 않았고, 사용자가 `draftMarkdown에 반영`을 클릭했을 때만 DB에 저장되었다.
+- `draftHtml`은 아직 생성하지 않았다.
+
+다음 세션 검증 시작점:
+
+- Patch 8C는 저장된 `draftMarkdown`을 입력으로 HTML 변환 dry-run/preview를 검증한다.
+- `draftHtml` 자동 저장, Blogger OAuth/API/publish, 품질검사는 여전히 금지한다.

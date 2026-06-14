@@ -188,3 +188,32 @@ Patch 7A는 `/settings/llm`의 Provider 설정을 확장해 external HTTP, local
 - OpenAI-compatible과 Ollama-compatible 연결 테스트를 우선 지원한다.
 - custom HTTP/CLI 테스트 실행은 Patch 7A에서 제한하거나 비활성 안내를 반환한다.
 - 연결 테스트는 content planning, draft generation, quality check와 아직 연결하지 않는다.
+
+## 2026-06-14 세션 종료 기준 콘텐츠 생성 상태
+
+`content_items`는 현재 다음 생성 단계를 실제로 사용한다.
+
+- `planJson`: `content_plan` Task Route로 생성한 후보를 사용자가 확인 후 저장한다.
+- `draftMarkdown`: `content_draft` Task Route로 생성한 후보를 사용자가 확인 후 저장한다.
+- `draftHtml`: 아직 생성하지 않는다.
+- `qualityScore`: 아직 품질검사 전이다.
+
+최종 수동 확인된 테스트 content item:
+
+```text
+id = cmqc2xqbr00011y70sxmgl65v
+has_plan = true
+has_draft = true
+has_html = false
+```
+
+최종 수동 확인된 최신 `content_draft` call log 요약:
+
+```text
+validationOk = true
+repairAttempted = false
+markdownLength = 1665
+mediaPlaceholderCount = 1
+```
+
+`llm_call_logs.metadata`에는 prompt 전문, raw response 전문, request body 전문, 후보 Markdown 전문, API Key, Bearer token, secretRef, encryptedValue, provider headers, media storagePath를 저장하지 않는다. grep 검사에서 `draftMarkdown` 문자열이 잡히는 경우 과거 안전한 errorMessage인 `Generated draftMarkdown did not pass validation.`일 수 있으므로 metadata 원문 저장 여부와 구분해서 확인한다.
