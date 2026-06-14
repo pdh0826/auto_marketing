@@ -144,3 +144,21 @@ saved planJson / draftMarkdown / draftHtml
 - Blogger 연결과 사용자 최종 승인 기능은 아직 없으므로 readiness gate는 preview 전용이다.
 - status, qualityScore, draftHtml, publishedAt, scheduledAt은 변경하지 않는다.
 - Blogger OAuth/API/publish, LLM 호출, `llm_call_logs` 생성은 수행하지 않는다.
+
+## Patch 9A Blogger Connection Placeholder
+
+Patch 9A는 실제 OAuth/API 호출 전에 Blogger 연결 설정을 안전한 placeholder로 관리한다.
+
+```text
+/settings/blogger
+→ Blogger connection placeholder CRUD
+→ safe status summary API
+→ publish readiness Blogger status context
+→ OAuth/API/publish disabled placeholders
+```
+
+- `blogger_connections`는 Blogger 연결 상태와 안전한 메타데이터만 저장한다.
+- access token, refresh token, client secret 원문은 저장하지 않는다.
+- `Blog.bloggerBlogId`는 기존 호환 필드로 유지하되 새 연결 흐름의 source of truth는 `BloggerConnection.bloggerBlogId`다.
+- publish readiness는 Blogger connection status를 반영하지만, 사용자 최종 승인 저장과 실제 OAuth/API가 없으므로 `publishReady`는 계속 false다.
+- Blogger OAuth start/callback, Blogger blog list 조회, draft save, publish는 Patch 9B 이후 범위다.

@@ -1,5 +1,6 @@
 import type { ContentAssetAdmin } from "@/lib/content/asset-types";
 import type { ContentItemAdmin } from "@/lib/content/admin-types";
+import type { BloggerConnectionStatus } from "@/lib/blogger/admin-types";
 import { validateHtmlCandidate } from "@/lib/content/html-preview";
 import { buildHtmlQualityPreview } from "@/lib/content/html-quality-preview";
 import { hasUsablePlanJson } from "@/lib/content/plan-template";
@@ -44,19 +45,30 @@ export interface PublishReadinessResult {
     qualityRequiredFailCount: number;
     mediaReferenceCount: number;
     unmatchedMediaReferenceCount: number;
-    bloggerConnectionStatus: "not_configured";
+    bloggerConnectionStatus: BloggerConnectionStatus;
     manualApprovalStatus: "not_configured";
   };
 }
 
-export function buildPublishReadiness(contentItem: ContentItemAdmin, assets: ContentAssetAdmin[]): PublishReadinessResult {
+export interface PublishReadinessBloggerConnectionSummary {
+  status: BloggerConnectionStatus;
+  bloggerBlogId: string | null;
+  bloggerBlogName: string | null;
+}
+
+export function buildPublishReadiness(
+  contentItem: ContentItemAdmin,
+  assets: ContentAssetAdmin[],
+  bloggerConnection?: PublishReadinessBloggerConnectionSummary | null
+): PublishReadinessResult {
   const htmlValidation = validateHtmlCandidate(contentItem.draftHtml ?? "", assets);
   const qualityPreview = buildHtmlQualityPreview(contentItem, assets);
+  const bloggerConnectionStatus = bloggerConnection?.status ?? "not_configured";
   const hasPlan = hasUsablePlanJson(contentItem.planJson);
   const hasDraftMarkdown = Boolean(contentItem.draftMarkdown?.trim());
   const hasDraftHtml = Boolean(contentItem.draftHtml?.trim());
   const qualityRequiredFailCount = qualityPreview.checks.filter((check) => check.status === "fail" && check.severity === "required").length;
-  const checks = buildChecks(contentItem, hasPlan, hasDraftMarkdown, hasDraftHtml, htmlValidation, qualityPreview, qualityRequiredFailCount);
+  const checks = buildChecks(contentItem, hasPlan, hasDraftMarkdown, hasDraftHtml, htmlValidation, qualityPreview, qualityRequiredFailCount, bloggerConnectionStatus);
   const contentReady =
     hasPlan &&
     hasDraftMarkdown &&
@@ -66,7 +78,7 @@ export function buildPublishReadiness(contentItem: ContentItemAdmin, assets: Con
     qualityRequiredFailCount === 0 &&
     htmlValidation.metadata.unmatchedMediaReferenceCount === 0;
   const publishReady = false;
-  const stage = determineStage(contentItem, hasPlan, hasDraftMarkdown, hasDraftHtml, htmlValidation.validation.ok, qualityPreview.grade, qualityRequiredFailCount);
+  const stage = determineStage(contentItem, hasPlan, hasDraftMarkdown, hasDraftHtml, htmlValidation.validation.ok, qualityPreview.grade, qualityRequiredFailCount, bloggerConnectionStatus);
   const blockingIssues = checks.filter((check) => check.status === "fail" && check.severity === "required");
   const warnings = checks.filter((check) => check.status === "warn");
 
@@ -89,7 +101,7 @@ export function buildPublishReadiness(contentItem: ContentItemAdmin, assets: Con
       qualityRequiredFailCount,
       mediaReferenceCount: htmlValidation.metadata.mediaReferenceCount,
       unmatchedMediaReferenceCount: htmlValidation.metadata.unmatchedMediaReferenceCount,
-      bloggerConnectionStatus: "not_configured",
+      bloggerConnectionStatus,
       manualApprovalStatus: "not_configured"
     }
   };
@@ -102,7 +114,8 @@ function buildChecks(
   hasDraftHtml: boolean,
   htmlValidation: ReturnType<typeof validateHtmlCandidate>,
   qualityPreview: ReturnType<typeof buildHtmlQualityPreview>,
-  qualityRequiredFailCount: number
+  qualityRequiredFailCount: number,
+  bloggerConnectionStatus: BloggerConnectionStatus
 ): PublishReadinessCheck[] {
   const investmentContext = isInvestmentContext(contentItem);
   const hasDisclaimer = Boolean(contentItem.brandProfile?.riskDisclaimer?.trim()) || /참고|투자 판단|사용자.*책임|손실|리스크|보장하지|정보 제공/i.test(contentItem.draftHtml ?? "");
@@ -196,7 +209,7 @@ function buildChecks(
           ? "투자 참고/책임/리스크 관련 안내가 있습니다."
           : "투자 참고/책임/리스크 관련 안내가 부족합니다."
     ),
-    makeCheck("blogger_connection", "Blogger connection", "fail", "required", "Blogger 연결은 Patch 9A에서 설정 예정입니다."),
+    makeBloggerConnectionCheck(bloggerConnectionStatus),
     makeCheck("manual_approval", "Manual approval", "fail", "required", "사용자 최종 승인 저장은 후속 패치에서 연결 예정입니다.")
   ];
 }
@@ -208,7 +221,8 @@ function determineStage(
   hasDraftHtml: boolean,
   htmlValidationOk: boolean,
   qualityGrade: "pass" | "warn" | "fail",
-  qualityRequiredFailCount: number
+  qualityRequiredFailCount: number,
+  bloggerConnectionStatus: BloggerConnectionStatus
 ): PublishReadinessStage {
   if (!hasPlan) {
     return "missing_plan";
@@ -227,6 +241,9 @@ function determineStage(
   }
   if (!contentItem.blog) {
     return "blog_profile_missing";
+  }
+  if (bloggerConnectionStatus === "connected") {
+    return "manual_approval_required";
   }
   return "blogger_not_configured";
 }
@@ -269,6 +286,25 @@ function makeCheck(
   message: string
 ): PublishReadinessCheck {
   return { key, label, status, severity, message };
+}
+
+function makeBloggerConnectionCheck(status: BloggerConnectionStatus): PublishReadinessCheck {
+  if (status === "connected") {
+    return makeCheck("blogger_connection", "Blogger connection", "pass", "required", "Blogger connection placeholder status는 connected입니다. 실제 Blogger API 호출은 아직 구현되지 않았습니다.");
+  }
+  if (status === "configured") {
+    return makeCheck("blogger_connection", "Blogger connection", "fail", "required", "Blogger connection 설정은 있지만 OAuth 연결이 아직 필요합니다.");
+  }
+  if (status === "oauth_required") {
+    return makeCheck("blogger_connection", "Blogger connection", "fail", "required", "Blogger OAuth 연결이 필요합니다.");
+  }
+  if (status === "expired") {
+    return makeCheck("blogger_connection", "Blogger connection", "fail", "required", "Blogger token placeholder 상태가 만료로 표시되어 있습니다.");
+  }
+  if (status === "error") {
+    return makeCheck("blogger_connection", "Blogger connection", "fail", "required", "Blogger connection placeholder가 error 상태입니다.");
+  }
+  return makeCheck("blogger_connection", "Blogger connection", "fail", "required", "Blogger connection placeholder가 설정되지 않았습니다.");
 }
 
 function isInvestmentContext(contentItem: ContentItemAdmin) {

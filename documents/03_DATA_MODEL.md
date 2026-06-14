@@ -260,3 +260,47 @@ Patch 8F도 새 DB 모델이나 migration을 추가하지 않는다.
 - status, qualityScore, draftHtml, publishedAt, scheduledAt은 변경하지 않는다.
 - `publish_jobs` 테이블은 아직 구현하지 않는다.
 - Blogger OAuth token, Blogger blog list, publish job은 생성하지 않는다.
+
+## Patch 9A Blogger connection placeholder
+
+Patch 9A는 `blogger_connections`를 추가한다.
+
+```text
+id
+blogId
+name
+status
+bloggerBlogId
+bloggerBlogName
+connectedEmail
+scopes
+clientSecretRef
+hasClientSecret
+hasAccessToken
+hasRefreshToken
+tokenLast4
+lastTestedAt
+lastError
+createdAt
+updatedAt
+```
+
+`BloggerConnectionStatus`:
+
+```text
+not_configured
+configured
+oauth_required
+connected
+expired
+error
+```
+
+정책:
+
+- access token, refresh token, client secret 원문 저장 필드는 만들지 않는다.
+- `clientSecretRef`, `hasClientSecret`, `hasAccessToken`, `hasRefreshToken`, `tokenLast4`는 placeholder 메타데이터다.
+- 실제 encrypted token/secret 저장은 Patch 9B 이후 별도 설계로 분리한다.
+- `Blog.bloggerBlogId`는 기존 호환 필드로 유지한다.
+- 새 연결 흐름에서 Blogger blog ID의 source of truth는 `BloggerConnection.bloggerBlogId`다.
+- Blogger OAuth callback, token 발급, Blogger API 호출, Blogger blog list 조회, publish job 생성은 Patch 9A 범위가 아니다.

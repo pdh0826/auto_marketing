@@ -17,15 +17,16 @@
 13. HTML 후보 편집, 재검증, draftHtml 수동 반영: 완료
 14. Patch 8E - saved draftHtml 기반 품질검사 dry-run/preview: 완료
 15. Patch 8F - publish readiness gate: 완료
-16. Patch 9A - Blogger 연결 설정 설계: 다음 패치 후보
-17. Patch 9B 이후 - Blogger OAuth/API/draft/publish
-18. 예약 발행
-19. 운영 대시보드
-20. 키워드 연구소
-21. 상위글 구조 분석
-22. 서비스 홍보 엔진 고도화
-23. 이미지/썸네일
-24. 성과 분석과 리라이트
+16. Patch 9A - Blogger 연결 설정 설계 + placeholder scaffold: 완료
+17. Patch 9B - Blogger OAuth start/callback 설계 또는 OAuth dry-run: 다음 패치 후보
+18. Patch 9C 이후 - Blogger API blog list/draft/publish
+19. 예약 발행
+20. 운영 대시보드
+21. 키워드 연구소
+22. 상위글 구조 분석
+23. 서비스 홍보 엔진 고도화
+24. 이미지/썸네일
+25. 성과 분석과 리라이트
 
 ## Patch 8C 완료 기준
 
@@ -44,11 +45,18 @@ Patch 8D 완료:
 - `apply-html` 서버 재검증 후 `draftHtml` 수동 저장 API
 - HTML sanitization/security/media reference validation
 
+Patch 9A 완료:
+
+- `blogger_connections` placeholder 모델과 migration 추가
+- `/settings/blogger` placeholder UI 추가
+- Blogger settings safe CRUD/status API 추가
+- publish readiness에 Blogger connection status context 반영
+- 실제 Blogger OAuth/API/publish는 아직 미구현
+
 다음 패치 후보:
 
-- Patch 9A: Blogger 연결 설정 설계
-- OAuth/API 호출 전 설정 UI, 연결 상태 placeholder, 필요한 DB/secret 정책 설계
-- 실제 Blogger OAuth/API/publish는 Patch 9B 이후
+- Patch 9B: Blogger OAuth start/callback 설계 또는 OAuth dry-run
+- 실제 Blogger draft save/publish는 Patch 9C 이후
 
 먼저 하지 말 것:
 

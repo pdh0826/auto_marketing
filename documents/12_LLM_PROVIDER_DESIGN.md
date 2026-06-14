@@ -272,3 +272,13 @@ Patch 8F의 publish readiness gate는 LLM Provider를 사용하지 않는다.
 - `llm_call_logs`는 생성하지 않는다.
 - readiness 결과는 DB에 저장하지 않는다.
 - Blogger OAuth/API/publish도 수행하지 않는다.
+
+## Patch 9A Blogger connection placeholder and LLM boundary
+
+Patch 9A의 Blogger connection placeholder는 LLM Provider를 사용하지 않는다.
+
+- `/settings/blogger`는 Blogger OAuth/API 이전의 설정 placeholder만 관리한다.
+- Blogger settings API는 provider/model/task route를 조회하지 않는다.
+- OpenAI/Ollama/Local LLM 호출은 없다.
+- `llm_call_logs`는 생성하지 않는다.
+- Blogger token/secret 원문은 LLM Provider secret 구조와 별도로 후속 패치에서 설계한다.

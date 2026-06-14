@@ -146,3 +146,23 @@ Policy:
 - `publishReady` remains false until Blogger connection and manual approval storage exist.
 - status, qualityScore, draftHtml, publishedAt, and scheduledAt are not changed.
 - No LLM calls, no `llm_call_logs`, no Blogger OAuth/API/publish.
+
+## Patch 9A Blogger Connection Placeholder
+
+Implemented after Patch 8F:
+
+- Added `BloggerConnectionStatus` enum.
+- Added `blogger_connections` placeholder model and migration.
+- Added `/api/settings/blogger` safe list/create API.
+- Added `/api/settings/blogger/[id]` safe get/update API.
+- Added `/api/settings/blogger/[id]/status` stored-status preview API.
+- Added `/settings/blogger` placeholder UI.
+- Wired publish readiness to stored Blogger connection status while keeping `publishReady=false`.
+
+Policy:
+
+- No Google OAuth start/callback.
+- No access token or refresh token issuance.
+- No token/client secret plaintext storage.
+- No Blogger API calls, blog list reads, draft saves, publish, or scheduled publish.
+- No LLM calls or `llm_call_logs`.

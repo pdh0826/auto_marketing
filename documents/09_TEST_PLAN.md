@@ -313,3 +313,17 @@ npm run build
 - publish-readiness 호출만으로 `llm_call_logs`가 생성되지 않는다.
 - 응답과 UI에는 원본 content item/assets 객체, `storagePath`, local upload path, API Key, secret, token, provider headers, request template이 포함되지 않는다.
 - Blogger OAuth/API/draft/publish, scheduled publish는 발생하지 않는다.
+
+## Patch 9A 수동 검증
+
+- `/settings/blogger` 페이지가 표시된다.
+- `GET /api/settings/blogger`는 Blogger connection placeholder 목록을 반환한다.
+- `POST /api/settings/blogger`는 placeholder connection을 생성하지만 OAuth/API 호출을 하지 않는다.
+- `PATCH /api/settings/blogger/[id]`는 안전한 설정 필드만 수정한다.
+- `GET /api/settings/blogger/[id]/status`는 DB에 저장된 상태만 반환한다.
+- API 응답에는 access token, refresh token, client secret 원문, encryptedValue, Bearer token, API Key가 포함되지 않는다.
+- `accessToken`, `refreshToken`, `clientSecret`, `encryptedValue` 같은 민감 필드를 요청에 넣으면 저장이 거부된다.
+- `/settings/blogger`의 OAuth 시작과 Blogger 연결 테스트 버튼은 disabled placeholder다.
+- publish readiness는 Blogger connection status를 반영하지만 `publishReady`와 top-level `ready`는 false를 유지한다.
+- Blogger OAuth start/callback, Blogger blog list 조회, draft save, publish, scheduled publish는 발생하지 않는다.
+- `llm_call_logs`는 생성되지 않는다.

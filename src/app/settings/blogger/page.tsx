@@ -1,4 +1,4 @@
-import { ContentRequestClient } from "./content-request-client";
+import { BloggerSettingsClient } from "./blogger-settings-client";
 
 export default function Page() {
   return (
@@ -11,7 +11,7 @@ export default function Page() {
         <a href="/settings/llm">LLM 설정</a>
         <a href="/settings/blogger">Blogger 설정</a>
       </nav>
-      <ContentRequestClient />
+      <BloggerSettingsClient />
     </main>
   );
 }

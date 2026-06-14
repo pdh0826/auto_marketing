@@ -15,6 +15,7 @@ export default function Page({ params }: PageProps) {
         <a href="/brands">서비스 프로필</a>
         <a href="/content/new">글 생성</a>
         <a href="/settings/llm">LLM 설정</a>
+        <a href="/settings/blogger">Blogger 설정</a>
       </nav>
       <ContentDetailClient contentItemId={params.id} />
     </main>

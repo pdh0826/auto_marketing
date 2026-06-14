@@ -46,15 +46,22 @@ branch: master
 - draftMarkdown은 자동 저장되지 않고 사용자가 반영했을 때만 DB에 저장됨
 
 다음 세션 1순위 작업:
-Patch 9A 후보: Blogger 연결 설정 설계
+Patch 9B 후보: Blogger OAuth start/callback 설계 또는 OAuth dry-run
 
-Patch 9A 목표:
-- Blogger 연결 설정을 위한 DB/API/UI 설계를 검토한다.
-- OAuth/API 호출 전 필요한 설정값, 연결 상태 placeholder, secret/token 저장 정책을 설계한다.
-- 실제 Blogger OAuth/API/publish는 아직 구현하지 않는다.
+현재 Blogger 상태:
+- Patch 9A에서 `/settings/blogger` placeholder UI와 Blogger connection safe CRUD/status API가 추가됨
+- `blogger_connections`는 연결 상태와 안전한 메타데이터만 저장함
+- access token, refresh token, client secret 원문은 저장하지 않음
+- publish readiness는 Blogger connection status를 반영하지만 `publishReady=false`를 유지함
+
+Patch 9B 목표:
+- Google OAuth start/callback 설계를 검토한다.
+- OAuth state/redirect URI/token 저장 정책을 확정한다.
+- 가능하면 OAuth dry-run 또는 start URL 생성까지만 구현한다.
+- 실제 Blogger draft save/publish는 아직 구현하지 않는다.
 
 금지 사항:
-- Blogger OAuth/API/publish 구현부터 시작 금지
+- Blogger draft/publish 구현부터 시작 금지
 - publish/scheduled publish 구현 금지
 - 품질검사와 발행을 한 번에 구현 금지
 - API Key나 secret 출력 금지
@@ -63,7 +70,7 @@ Patch 9A 목표:
 - git add . 또는 git add -A 금지
 - .env.local 읽기/출력/수정 금지
 
-첫 작업으로 Patch 9A 작업계획을 제안해줘. 아직 구현하지 말고 계획만 작성해줘.
+첫 작업으로 Patch 9B 작업계획을 제안해줘. 아직 구현하지 말고 계획만 작성해줘.
 ```
 
 ## 첫 점검 명령어

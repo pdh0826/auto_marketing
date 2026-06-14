@@ -2,7 +2,8 @@ const links = [
   ["블로그", "/blogs"],
   ["서비스 프로필", "/brands"],
   ["글 생성", "/content/new"],
-  ["LLM 설정", "/settings/llm"]
+  ["LLM 설정", "/settings/llm"],
+  ["Blogger 설정", "/settings/blogger"]
 ];
 
 export default function DashboardPage() {

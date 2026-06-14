@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { ContentAssetAdmin } from "@/lib/content/asset-types";
 import type { ContentItemAdmin } from "@/lib/content/admin-types";
 import { buildPublishReadiness } from "@/lib/content/publish-readiness";
+import { getBloggerConnectionForBlog } from "@/lib/db/blogger-connections";
 import { prisma } from "@/lib/db/client";
 import { safeErrorMessage } from "@/lib/llm/redaction";
 
@@ -30,7 +31,8 @@ export async function POST(_request: Request, { params }: RouteContext) {
       return NextResponse.json({ error: "Content item not found." }, { status: 404 });
     }
 
-    const result = buildPublishReadiness(contentItem as unknown as ContentItemAdmin, contentItem.assets as unknown as ContentAssetAdmin[]);
+    const bloggerConnection = contentItem.blogId ? await getBloggerConnectionForBlog(contentItem.blogId) : null;
+    const result = buildPublishReadiness(contentItem as unknown as ContentItemAdmin, contentItem.assets as unknown as ContentAssetAdmin[], bloggerConnection);
     return NextResponse.json({ data: result });
   } catch (error) {
     return NextResponse.json({ error: safeErrorMessage(error instanceof Error ? error.message : "Publish readiness check failed.", 500) }, { status: 400 });

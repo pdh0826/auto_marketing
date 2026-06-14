@@ -96,6 +96,15 @@ enum LlmCallStatus {
   failed
 }
 
+enum BloggerConnectionStatus {
+  not_configured
+  configured
+  oauth_required
+  connected
+  expired
+  error
+}
+
 model Blog {
   id                     String        @id @default(cuid())
   name                   String
@@ -120,6 +129,7 @@ model Blog {
   updatedAt              DateTime      @updatedAt
 
   contentItems           ContentItem[]
+  bloggerConnections     BloggerConnection[]
 
   @@index([status])
   @@map("blogs")
@@ -331,4 +341,31 @@ model LlmCallLog {
   @@index([createdAt])
   @@index([contentItemId])
   @@map("llm_call_logs")
+}
+
+model BloggerConnection {
+  id                 String                  @id @default(cuid())
+  blogId             String?
+  name               String
+  status             BloggerConnectionStatus @default(not_configured)
+  bloggerBlogId      String?
+  bloggerBlogName    String?
+  connectedEmail     String?
+  scopes             String[]                @default([])
+  clientSecretRef    String?
+  hasClientSecret    Boolean                 @default(false)
+  hasAccessToken     Boolean                 @default(false)
+  hasRefreshToken    Boolean                 @default(false)
+  tokenLast4         String?
+  lastTestedAt       DateTime?
+  lastError          String?
+  createdAt          DateTime                @default(now())
+  updatedAt          DateTime                @updatedAt
+
+  blog               Blog?                   @relation(fields: [blogId], references: [id], onDelete: SetNull)
+
+  @@index([blogId])
+  @@index([status])
+  @@index([bloggerBlogId])
+  @@map("blogger_connections")
 }
