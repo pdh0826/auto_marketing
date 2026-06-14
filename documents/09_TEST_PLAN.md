@@ -359,3 +359,22 @@ npm run build
 - Blogger API 호출, Blogger blog list 조회, draft save, publish, scheduled publish는 발생하지 않는다.
 - publish readiness는 계속 `publishReady=false`를 유지한다.
 - `llm_call_logs`는 생성되지 않는다.
+
+## Patch 9C-2 수동 검증
+
+- `GET /api/settings/blogger/oauth/callback`은 state 검증 후 authorization code token exchange를 수행한다.
+- token exchange 직전에 state는 consumed 처리되며 실패 후 같은 state는 재사용할 수 없다.
+- `BLOGGER_SECRET_ENCRYPTION_KEY`가 없으면 callback은 safe error를 반환하고 connection status는 `error`가 된다.
+- `clientSecretRef`가 없거나 서버 env에서 resolve되지 않으면 callback은 safe error를 반환하고 connection status는 `error`가 된다.
+- invalid/reused/expired state는 400으로 거부된다.
+- Google token endpoint 실패 시 raw error body 전문은 응답, DB, UI에 저장하지 않는다.
+- `invalid_grant`는 `oauth_required` 상태로 처리한다.
+- 성공 시 access token은 `blogger_connection_secrets.secretKind = access_token`으로 암호화 저장된다.
+- 새 refresh token이 있으면 `secretKind = refresh_token`으로 암호화 저장된다.
+- 새 refresh token이 없고 기존 refresh token이 있으면 기존 refresh token을 유지한다.
+- 새 refresh token도 기존 refresh token도 없으면 status는 `oauth_required`로 둔다.
+- callback 응답에는 authorization code, access token, refresh token, client secret, `encryptedValue`, raw token response가 포함되지 않는다.
+- `secret-status` 응답에는 safe metadata만 표시된다.
+- Blogger API 호출, Blogger blog list 조회, draft save, publish, scheduled publish는 발생하지 않는다.
+- publish readiness는 Blogger status가 `connected`이면 connection check만 pass할 수 있지만 `publishReady=false`를 유지한다.
+- `llm_call_logs`는 생성되지 않는다.

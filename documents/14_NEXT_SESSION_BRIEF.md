@@ -68,7 +68,7 @@ mediaPlaceholderCount = 1
 
 ## Next Patch
 
-Patch 9C-2 후보: OAuth callback token exchange.
+Patch 9D 후보: Blogger blog list read-only 또는 connection test.
 
 Current Blogger state:
 
@@ -78,16 +78,18 @@ Current Blogger state:
 - No access token, refresh token, or client secret plaintext is stored.
 - Publish readiness can read Blogger connection status but `publishReady` remains false.
 - Patch 9B added OAuth state storage and authorization URL dry-run.
-- OAuth callback dry-run validates and consumes state but does not exchange tokens.
 - Patch 9C-1 added `blogger_connection_secrets`, Blogger token encryption helper, safe secret metadata helper, secret-status API, and secret self-test API.
 - `/settings/blogger` can show Token Storage Security metadata and encryption self-test results.
 - `encryptedValue`, token plaintext, client secret plaintext, and authorization code plaintext are not returned by API/UI.
+- Patch 9C-2 added OAuth callback token exchange.
+- Access/refresh tokens are stored only as encrypted values and safe metadata.
+- Blogger blog list, draft save, publish, scheduled publish, and token refresh are not implemented yet.
 
 Target:
 
-- Add OAuth callback token exchange using the Patch 9C-1 encrypted storage foundation.
-- Store access/refresh tokens only as encrypted values and safe metadata.
-- Keep raw authorization code, raw token response, token plaintext, and client secret plaintext out of API/UI/logs.
+- Decide whether Patch 9D should implement Blogger blog list read-only or a narrower connection test first.
+- Reuse encrypted access token storage without exposing token plaintext.
+- Keep Blogger draft save/publish for a later patch.
 - Actual Blogger draft save/publish remains later.
 
 ## Do Not Start With
@@ -105,11 +107,11 @@ Target:
 ```text
 AGENTS.md와 documents/ 폴더의 관련 문서를 먼저 읽어줘.
 
-현재 프로젝트 상태를 점검하고 Patch 9C 작업계획을 제안해줘.
+현재 프로젝트 상태를 점검하고 Patch 9D 작업계획을 제안해줘.
 
 목표:
-- OAuth token exchange와 token storage security 정책을 검토한다.
-- refresh token 저장/회전/만료/redaction 정책을 확정한다.
+- Blogger blog list read-only 또는 connection test 범위를 검토한다.
+- token refresh, Blogger draft save, publish는 구현하지 않는다.
 - 실제 Blogger draft save/publish는 구현하지 않는다.
 
 아직 구현하지 말고 계획만 작성해줘.

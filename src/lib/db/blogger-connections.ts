@@ -69,10 +69,18 @@ export function updateBloggerConnection(id: string, data: Prisma.BloggerConnecti
   });
 }
 
+export function updateBloggerConnectionOAuthStatus(id: string, data: Pick<Prisma.BloggerConnectionUncheckedUpdateInput, "status" | "lastError" | "lastTestedAt" | "scopes">) {
+  return prisma.bloggerConnection.update({
+    where: { id },
+    data,
+    select: safeSelect
+  });
+}
+
 export function toBloggerConnectionStatusSummary(connection: SafeBloggerConnection) {
   return {
     ...connection,
-    oauthImplemented: false as const,
+    oauthImplemented: true as const,
     bloggerApiImplemented: false as const,
     publishImplemented: false as const
   };

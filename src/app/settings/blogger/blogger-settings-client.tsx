@@ -183,7 +183,7 @@ export function BloggerSettingsClient() {
     try {
       const result = await requestJson<ApiResult<BloggerOAuthStartDryRun>>(`/api/settings/blogger/${connection.id}/oauth/start`, { method: "POST" });
       setOauthDryRun(result.data);
-      setNotice("OAuth authorization URL dry-run을 생성했습니다. Token exchange와 Blogger API 호출은 수행하지 않았습니다.");
+      setNotice("OAuth authorization URL을 생성했습니다. Callback에서는 token exchange를 수행하지만 Blogger API 호출은 수행하지 않습니다.");
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "OAuth dry-run URL 생성에 실패했습니다.");
     }
@@ -199,7 +199,7 @@ export function BloggerSettingsClient() {
         </p>
         <div className="button-row">
           <button className="button secondary" type="button" disabled>
-            OAuth token exchange는 후속 패치
+            OAuth callback token exchange 연결됨
           </button>
           <button className="button secondary" type="button" disabled>
             Blogger 연결 테스트 비활성
@@ -417,7 +417,7 @@ export function BloggerSettingsClient() {
           <div className="section-heading">
             <div>
               <h2>Token Storage Security</h2>
-              <p className="muted">Patch 9C-1은 token 저장 기반만 확인합니다. Token exchange와 Blogger API 호출은 아직 수행하지 않습니다.</p>
+              <p className="muted">Token exchange 결과는 encrypted metadata로만 확인합니다. Blogger API 호출은 아직 수행하지 않습니다.</p>
             </div>
           </div>
           {secretStatus ? (
@@ -476,7 +476,7 @@ export function BloggerSettingsClient() {
           <div className="section-heading">
             <div>
               <h2>OAuth Dry Run</h2>
-              <p className="muted">Authorization URL만 생성합니다. Token exchange, Blogger blog list 조회, draft save, publish는 수행하지 않습니다.</p>
+              <p className="muted">Authorization URL을 생성합니다. Callback에서는 token exchange를 수행하지만 Blogger blog list 조회, draft save, publish는 수행하지 않습니다.</p>
             </div>
           </div>
           <div className="detail-grid">
@@ -491,7 +491,7 @@ export function BloggerSettingsClient() {
             <textarea readOnly value={oauthDryRun.authorizationUrl} />
           </label>
           <div className="notice">
-            URL에는 OAuth state가 포함되지만 stateHash는 응답하지 않습니다. Callback dry-run은 state 검증까지만 수행하고 code/token을 저장하지 않습니다.
+            URL에는 OAuth state가 포함되지만 stateHash는 응답하지 않습니다. Callback은 authorization code를 token으로 교환하며 code/token 원문을 저장하거나 표시하지 않습니다.
           </div>
         </section>
       ) : null}

@@ -208,3 +208,24 @@ Policy:
 - No Google token endpoint call.
 - No Blogger API calls, blog list reads, draft saves, publish, or scheduled publish.
 - No LLM calls or `llm_call_logs`.
+
+## Patch 9C-2 Blogger OAuth Callback Token Exchange
+
+Implemented after Patch 9C-1:
+
+- Added Google OAuth token exchange helper for Blogger callback.
+- Switched `/api/settings/blogger/oauth/callback` from dry-run validation to token exchange.
+- Resolve `clientSecretRef` only as a server environment key name.
+- Store access token as encrypted `BloggerConnectionSecret`.
+- Store refresh token as encrypted `BloggerConnectionSecret` when Google returns one.
+- Reuse existing refresh token metadata when Google does not return a new refresh token.
+- Update Blogger connection status to `connected`, `oauth_required`, or `error` based on token exchange result.
+- Keep publish readiness `publishReady=false`.
+
+Policy:
+
+- No authorization code plaintext persistence or response.
+- No access token, refresh token, client secret, encrypted value, or raw token response returned by API/UI.
+- No token refresh implementation.
+- No Blogger API calls, blog list reads, draft saves, publish, or scheduled publish.
+- No LLM calls or `llm_call_logs`.

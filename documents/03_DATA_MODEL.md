@@ -365,3 +365,25 @@ refresh_token
 - 암호화 key는 `BLOGGER_SECRET_ENCRYPTION_KEY`를 사용하도록 설계한다.
 - Patch 9C-1은 token exchange, token refresh, Blogger API 호출, blog list 조회, draft save, publish를 구현하지 않는다.
 - token storage model이 생겨도 publish readiness의 `publishReady`는 false를 유지한다.
+
+## Patch 9C-2 OAuth callback token exchange
+
+Patch 9C-2는 새 DB 모델을 추가하지 않고 Patch 9C-1의 `blogger_connection_secrets`를 사용한다.
+
+저장 정책:
+
+- access token은 `secretKind = access_token`으로 암호화 저장한다.
+- refresh token은 새 값이 내려온 경우 `secretKind = refresh_token`으로 암호화 저장한다.
+- refresh token이 내려오지 않고 기존 refresh token이 있으면 기존 값을 유지한다.
+- refresh token이 내려오지 않고 기존 refresh token도 없으면 `BloggerConnection.status = oauth_required`로 둔다.
+- `expiresAt`은 access token의 `expires_in`을 기준으로 계산한다.
+- `tokenType`, `scopes`, `last4`는 safe metadata로 저장한다.
+- `BloggerConnection.hasAccessToken`, `hasRefreshToken`, `tokenLast4`, `status`, `lastError`, `lastTestedAt`, `scopes`를 token exchange 결과에 맞춰 갱신한다.
+
+미저장/미노출:
+
+- authorization code 원문은 저장하지 않는다.
+- access token, refresh token, client secret 원문 컬럼은 없다.
+- Google raw token response body는 저장하지 않는다.
+- `encryptedValue`는 API/UI 응답에 반환하지 않는다.
+- Blogger blog list, draft save, publish job 생성은 Patch 9C-2 범위가 아니다.

@@ -23,7 +23,7 @@ export async function POST(_request: Request, { params }: RouteContext) {
       data: {
         ...result,
         secretMaterialReturned: false as const,
-        tokenExchangeImplemented: false as const,
+        tokenExchangeImplemented: true,
         bloggerApiImplemented: false as const
       }
     });
@@ -37,7 +37,7 @@ export async function POST(_request: Request, { params }: RouteContext) {
           keyVersion: "v1",
           message: "Blogger token encryption self-test failed.",
           secretMaterialReturned: false,
-          tokenExchangeImplemented: false,
+          tokenExchangeImplemented: true,
           bloggerApiImplemented: false
         }
       },

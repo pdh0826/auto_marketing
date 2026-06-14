@@ -21,7 +21,7 @@ export async function GET(_request: Request, { params }: RouteContext) {
   return NextResponse.json({
     data: {
       ...status,
-      tokenExchangeImplemented: false as const,
+      tokenExchangeImplemented: true,
       bloggerApiImplemented: false as const
     }
   });

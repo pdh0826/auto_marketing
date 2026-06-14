@@ -163,21 +163,23 @@ Patch 9A는 실제 OAuth/API 호출 전에 Blogger 연결 설정을 안전한 pl
 - publish readiness는 Blogger connection status를 반영하지만, 사용자 최종 승인 저장과 실제 OAuth/API가 없으므로 `publishReady`는 계속 false다.
 - Blogger OAuth start/callback, Blogger blog list 조회, draft save, publish는 Patch 9B 이후 범위다.
 
-## Patch 9B/9C-1 Blogger OAuth and Token Storage Foundation
+## Patch 9B/9C Blogger OAuth and Token Storage Foundation
 
-Patch 9B와 9C-1은 실제 Blogger API 호출 전 보안 경계를 먼저 만든다.
+Patch 9B, 9C-1, 9C-2는 실제 Blogger API 호출 전 OAuth/token 보안 경계를 먼저 만든다.
 
 ```text
 /settings/blogger
 → OAuth authorization URL dry-run
-→ callback state validation dry-run
+→ callback state validation and token exchange
 → encrypted token storage metadata status
 → encryption self-test
 ```
 
 - OAuth state 원문은 저장하지 않고 `stateHash`만 저장한다.
-- callback dry-run은 authorization code 원문을 저장하거나 반환하지 않는다.
+- callback은 authorization code 원문을 저장하거나 반환하지 않는다.
 - Patch 9C-1의 `blogger_connection_secrets`는 encrypted secret value와 safe metadata만 저장한다.
+- Patch 9C-2는 access token과 refresh token을 encrypted secret value로만 저장한다.
+- `clientSecretRef`는 서버 내부 env key name으로만 해석한다.
 - secret status API와 UI는 `encryptedValue`, access token, refresh token, client secret 원문을 반환하지 않는다.
 - secret self-test는 서버 내부 dummy string만 사용하며 plaintext/ciphertext/encryptedValue를 반환하지 않는다.
-- token exchange, token refresh, Blogger blog list 조회, draft save, publish는 아직 구현하지 않는다.
+- token refresh, Blogger blog list 조회, draft save, publish는 아직 구현하지 않는다.

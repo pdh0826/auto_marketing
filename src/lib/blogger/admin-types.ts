@@ -42,7 +42,7 @@ export interface BloggerConnectionStatusSummary {
   lastTestedAt: string | null;
   lastError: string | null;
   blog: BloggerConnectionBlogSummary | null;
-  oauthImplemented: false;
+  oauthImplemented: boolean;
   bloggerApiImplemented: false;
   publishImplemented: false;
 }
@@ -53,16 +53,25 @@ export interface BloggerOAuthStartDryRun {
   redirectUri: string;
   scopes: string[];
   oauthDryRun: true;
-  tokenExchangeImplemented: false;
+  tokenExchangeImplemented: boolean;
   bloggerApiImplemented: false;
 }
 
-export interface BloggerOAuthCallbackDryRun {
-  status: "callback_dry_run_received";
+export interface BloggerOAuthCallbackResult {
+  status: "callback_dry_run_received" | "token_exchange_completed";
   connectionId: string;
   stateValid: true;
-  tokenExchangeImplemented: false;
+  tokenExchangeImplemented: boolean;
   bloggerApiImplemented: false;
+  hasAccessToken?: boolean;
+  hasRefreshToken?: boolean;
+  tokenLast4?: string | null;
+  accessTokenExpiresAt?: string | null;
+  refreshTokenStored?: boolean;
+  refreshTokenReused?: boolean;
+  connectionStatus?: BloggerConnectionStatus;
+  message?: string;
+  secretMaterialReturned?: false;
 }
 
 export type BloggerSecretKind = "oauth_client_secret" | "access_token" | "refresh_token";
@@ -91,7 +100,7 @@ export interface BloggerConnectionSecretStatus {
   scopes: string[];
   secrets: BloggerConnectionSecretAdmin[];
   secretMaterialReturned: false;
-  tokenExchangeImplemented: false;
+  tokenExchangeImplemented: boolean;
   bloggerApiImplemented: false;
 }
 
@@ -101,6 +110,6 @@ export interface BloggerSecretSelfTestResult {
   keyVersion: string;
   message: string;
   secretMaterialReturned: false;
-  tokenExchangeImplemented: false;
+  tokenExchangeImplemented: boolean;
   bloggerApiImplemented: false;
 }

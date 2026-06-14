@@ -49,3 +49,20 @@ Patch 9C-1은 실제 token exchange 전에 encrypted token storage 기반만 구
 - 암호화 key는 `BLOGGER_SECRET_ENCRYPTION_KEY`를 사용한다.
 - key가 없으면 self-test는 safe failure를 반환하며 token exchange는 계속 비활성 상태다.
 - token exchange, token refresh, Blogger API 호출, Blogger blog list 조회, draft save, publish는 아직 구현하지 않는다.
+
+## Patch 9C-2 OAuth callback token exchange
+
+Patch 9C-2는 OAuth callback에서 authorization code를 Google token endpoint로 교환한다.
+
+- `/api/settings/blogger/oauth/callback`은 state를 검증한 뒤 token exchange 직전에 state를 consumed 처리한다.
+- token exchange 실패 후 같은 state는 재사용하지 않는다.
+- Google token endpoint는 `https://oauth2.googleapis.com/token`만 호출한다.
+- `oauthClientIdRef`는 Google token endpoint의 `client_id`로 사용한다.
+- `clientSecretRef`는 서버 내부 `process.env[clientSecretRef]` key name으로만 해석한다.
+- `.env.local` 내용은 읽거나 출력하지 않는다.
+- `BLOGGER_SECRET_ENCRYPTION_KEY`가 없으면 token exchange를 중단하고 safe error를 반환한다.
+- access token과 refresh token은 `blogger_connection_secrets.encryptedValue`에만 저장한다.
+- refresh token이 새로 내려오지 않으면 기존 refresh token을 유지한다.
+- 새 refresh token도 기존 refresh token도 없으면 connection status는 `oauth_required`로 둔다.
+- API/UI/log에는 authorization code, access token, refresh token, client secret, encryptedValue, raw token response를 반환하거나 저장하지 않는다.
+- token refresh, Blogger API 호출, Blogger blog list 조회, draft save, publish는 아직 구현하지 않는다.

@@ -45,7 +45,7 @@ export async function createBloggerOAuthStartDryRun({ connection, requestUrl }: 
     redirectUri,
     scopes,
     oauthDryRun: true as const,
-    tokenExchangeImplemented: false as const,
+    tokenExchangeImplemented: true,
     bloggerApiImplemented: false as const
   };
 }
