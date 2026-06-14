@@ -343,3 +343,19 @@ npm run build
 - Blogger API 호출, Blogger blog list 조회, draft save, publish, scheduled publish는 발생하지 않는다.
 - publish readiness는 계속 `publishReady=false`를 유지한다.
 - `llm_call_logs`는 생성되지 않는다.
+
+## Patch 9C-1 수동 검증
+
+- Prisma schema에 `BloggerSecretKind`와 `BloggerConnectionSecret`이 추가되어 있다.
+- `blogger_connection_secrets`에는 `encryptedValue`와 safe metadata만 있으며 access token, refresh token, client secret 원문 컬럼은 없다.
+- `GET /api/settings/blogger/[id]/secret-status`는 secret metadata만 반환한다.
+- secret status 응답에는 `encryptedValue`, access token 원문, refresh token 원문, client secret 원문, authorization code 원문이 포함되지 않는다.
+- `POST /api/settings/blogger/[id]/secret-self-test`는 서버 내부 dummy string만 사용한다.
+- secret self-test 응답에는 plaintext, ciphertext, `encryptedValue`가 포함되지 않는다.
+- `BLOGGER_SECRET_ENCRYPTION_KEY`가 없으면 self-test는 safe failure를 반환하고 token exchange는 계속 비활성 상태다.
+- `/settings/blogger`에는 Token Storage Security 섹션이 표시되며 token/client secret 원문 입력창은 없다.
+- OAuth callback token exchange는 여전히 미구현이다.
+- `https://oauth2.googleapis.com/token` 호출 코드는 아직 없다.
+- Blogger API 호출, Blogger blog list 조회, draft save, publish, scheduled publish는 발생하지 않는다.
+- publish readiness는 계속 `publishReady=false`를 유지한다.
+- `llm_call_logs`는 생성되지 않는다.

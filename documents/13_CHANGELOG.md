@@ -185,3 +185,26 @@ Policy:
 - No access token or refresh token issuance/storage.
 - No Blogger API calls, blog list reads, draft saves, publish, or scheduled publish.
 - No LLM calls or `llm_call_logs`.
+
+## Patch 9C-1 Blogger Token Storage Security Foundation
+
+Implemented after Patch 9B:
+
+- Added `BloggerSecretKind` enum.
+- Added `blogger_connection_secrets` encrypted secret metadata model and migration.
+- Added Blogger token encryption helper using `BLOGGER_SECRET_ENCRYPTION_KEY`.
+- Added Blogger token redaction/safe error helpers.
+- Added safe Blogger connection secret DB helper.
+- Added `GET /api/settings/blogger/[id]/secret-status`.
+- Added `POST /api/settings/blogger/[id]/secret-self-test`.
+- Added Token Storage Security section to `/settings/blogger`.
+
+Policy:
+
+- No raw access token, refresh token, client secret, or authorization code columns.
+- `encryptedValue` is never returned by API/UI.
+- Self-test uses a server-internal dummy string and does not return plaintext/ciphertext/encryptedValue.
+- Token exchange remains unimplemented.
+- No Google token endpoint call.
+- No Blogger API calls, blog list reads, draft saves, publish, or scheduled publish.
+- No LLM calls or `llm_call_logs`.

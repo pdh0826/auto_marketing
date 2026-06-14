@@ -1,7 +1,14 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
-import type { BloggerConnectionAdmin, BloggerConnectionStatus, BloggerConnectionStatusSummary, BloggerOAuthStartDryRun } from "@/lib/blogger/admin-types";
+import type {
+  BloggerConnectionAdmin,
+  BloggerConnectionSecretStatus,
+  BloggerConnectionStatus,
+  BloggerConnectionStatusSummary,
+  BloggerOAuthStartDryRun,
+  BloggerSecretSelfTestResult
+} from "@/lib/blogger/admin-types";
 import type { BlogAdmin } from "@/lib/blogs/admin-types";
 import { ApiResult, formatListInput, optionalString, parseListInput, requestJson } from "@/lib/form-utils";
 
@@ -47,6 +54,8 @@ export function BloggerSettingsClient() {
   const [blogs, setBlogs] = useState<BlogAdmin[]>([]);
   const [form, setForm] = useState<BloggerConnectionForm>(emptyConnectionForm);
   const [statusPreview, setStatusPreview] = useState<BloggerConnectionStatusSummary | null>(null);
+  const [secretStatus, setSecretStatus] = useState<BloggerConnectionSecretStatus | null>(null);
+  const [secretSelfTest, setSecretSelfTest] = useState<BloggerSecretSelfTestResult | null>(null);
   const [oauthDryRun, setOauthDryRun] = useState<BloggerOAuthStartDryRun | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -116,6 +125,8 @@ export function BloggerSettingsClient() {
       });
       setForm(emptyConnectionForm);
       setStatusPreview(null);
+      setSecretStatus(null);
+      setSecretSelfTest(null);
       setOauthDryRun(null);
       setNotice("Blogger connection placeholder를 저장했습니다. OAuth/API 호출은 수행하지 않았습니다.");
       await loadData();
@@ -136,6 +147,32 @@ export function BloggerSettingsClient() {
       setNotice("저장된 Blogger connection 상태만 조회했습니다. Blogger API는 호출하지 않았습니다.");
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Blogger connection status 조회에 실패했습니다.");
+    }
+  }
+
+  async function loadSecretStatus(connection: BloggerConnectionAdmin) {
+    setError(null);
+    setNotice(null);
+
+    try {
+      const result = await requestJson<ApiResult<BloggerConnectionSecretStatus>>(`/api/settings/blogger/${connection.id}/secret-status`);
+      setSecretStatus(result.data);
+      setNotice("Blogger secret metadata만 조회했습니다. token/client secret 원문은 반환하지 않았습니다.");
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Blogger secret status 조회에 실패했습니다.");
+    }
+  }
+
+  async function runSecretSelfTest(connection: BloggerConnectionAdmin) {
+    setError(null);
+    setNotice(null);
+
+    try {
+      const result = await requestJson<ApiResult<BloggerSecretSelfTestResult>>(`/api/settings/blogger/${connection.id}/secret-self-test`, { method: "POST" });
+      setSecretSelfTest(result.data);
+      setNotice(result.data.message);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Blogger token encryption self-test에 실패했습니다.");
     }
   }
 
@@ -263,6 +300,9 @@ export function BloggerSettingsClient() {
                 onClick={() => {
                   setForm(emptyConnectionForm);
                   setStatusPreview(null);
+                  setSecretStatus(null);
+                  setSecretSelfTest(null);
+                  setOauthDryRun(null);
                 }}
               >
                 새 Connection
@@ -330,6 +370,12 @@ export function BloggerSettingsClient() {
                       <button className="button secondary" type="button" onClick={() => void loadStatus(connection)}>
                         상태
                       </button>
+                      <button className="button secondary" type="button" onClick={() => void loadSecretStatus(connection)}>
+                        Secret 상태
+                      </button>
+                      <button className="button secondary" type="button" onClick={() => void runSecretSelfTest(connection)}>
+                        암호화 Self-test
+                      </button>
                       <button className="button secondary" type="button" onClick={() => void createOAuthDryRun(connection)}>
                         OAuth URL 생성
                       </button>
@@ -363,6 +409,65 @@ export function BloggerSettingsClient() {
             <DetailItem label="Publish Implemented" value={statusPreview.publishImplemented ? "yes" : "no"} />
           </div>
           {statusPreview.lastError ? <div className="notice error">{statusPreview.lastError}</div> : null}
+        </section>
+      ) : null}
+
+      {secretStatus || secretSelfTest ? (
+        <section className="admin-section">
+          <div className="section-heading">
+            <div>
+              <h2>Token Storage Security</h2>
+              <p className="muted">Patch 9C-1은 token 저장 기반만 확인합니다. Token exchange와 Blogger API 호출은 아직 수행하지 않습니다.</p>
+            </div>
+          </div>
+          {secretStatus ? (
+            <>
+              <div className="detail-grid">
+                <DetailItem label="Connection ID" value={secretStatus.connectionId} />
+                <DetailItem label="Client Secret" value={secretStatus.hasClientSecret ? "encrypted metadata exists" : "not stored"} />
+                <DetailItem label="Access Token" value={secretStatus.hasAccessToken ? `encrypted metadata exists (${secretStatus.tokenLast4 ?? "last4 unknown"})` : "not stored"} />
+                <DetailItem label="Refresh Token" value={secretStatus.hasRefreshToken ? "encrypted metadata exists" : "not stored"} />
+                <DetailItem label="Access Token Expires" value={secretStatus.accessTokenExpiresAt ? new Date(secretStatus.accessTokenExpiresAt).toLocaleString() : "-"} />
+                <DetailItem label="Secret Material Returned" value={secretStatus.secretMaterialReturned ? "yes" : "no"} />
+                <DetailItem label="Token Exchange" value={secretStatus.tokenExchangeImplemented ? "implemented" : "not implemented"} />
+                <DetailItem label="Blogger API" value={secretStatus.bloggerApiImplemented ? "implemented" : "not implemented"} />
+              </div>
+              {secretStatus.secrets.length > 0 ? (
+                <table className="admin-table">
+                  <thead>
+                    <tr>
+                      <th>Kind</th>
+                      <th>Key Version</th>
+                      <th>Last 4</th>
+                      <th>Token Type</th>
+                      <th>Expires</th>
+                      <th>Scopes</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {secretStatus.secrets.map((secret) => (
+                      <tr key={secret.id}>
+                        <td>{secret.secretKind}</td>
+                        <td>{secret.keyVersion}</td>
+                        <td>{secret.last4 ?? "-"}</td>
+                        <td>{secret.tokenType ?? "-"}</td>
+                        <td>{secret.expiresAt ? new Date(secret.expiresAt).toLocaleString() : "-"}</td>
+                        <td>{secret.scopes.length > 0 ? secret.scopes.join(", ") : "-"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : (
+                <div className="notice">저장된 Blogger encrypted secret metadata가 없습니다.</div>
+              )}
+              <div className="notice">이 응답은 token, client secret, 암호문 원문을 반환하지 않습니다.</div>
+            </>
+          ) : null}
+          {secretSelfTest ? (
+            <div className={secretSelfTest.selfTestPassed ? "notice success" : "notice"}>
+              {secretSelfTest.message} Secret material returned: {secretSelfTest.secretMaterialReturned ? "yes" : "no"}.
+            </div>
+          ) : null}
         </section>
       ) : null}
 

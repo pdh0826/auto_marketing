@@ -300,7 +300,7 @@ error
 
 - access token, refresh token, client secret 원문 저장 필드는 만들지 않는다.
 - `clientSecretRef`, `hasClientSecret`, `hasAccessToken`, `hasRefreshToken`, `tokenLast4`는 placeholder 메타데이터다.
-- 실제 encrypted token/secret 저장은 Patch 9B 이후 별도 설계로 분리한다.
+- 실제 encrypted token/secret 저장 기반은 Patch 9C-1에서 별도 모델로 추가한다.
 - `Blog.bloggerBlogId`는 기존 호환 필드로 유지한다.
 - 새 연결 흐름에서 Blogger blog ID의 source of truth는 `BloggerConnection.bloggerBlogId`다.
 - Blogger OAuth callback, token 발급, Blogger API 호출, Blogger blog list 조회, publish job 생성은 Patch 9A 범위가 아니다.
@@ -328,3 +328,40 @@ createdAt
 - `BloggerConnection.oauthClientIdRef`는 authorization URL dry-run의 `client_id` 입력값으로 사용한다.
 - OAuth state는 만료 시간과 consumedAt으로 재사용을 막는다.
 - token exchange, Blogger API 호출, Blogger blog list 조회, draft save, publish job 생성은 Patch 9B 범위가 아니다.
+
+## Patch 9C-1 Blogger token storage foundation
+
+Patch 9C-1은 OAuth token exchange 전에 필요한 encrypted token storage 기반만 추가한다.
+
+`blogger_connection_secrets`:
+
+```text
+id
+connectionId
+secretKind
+encryptedValue
+keyVersion
+last4
+tokenType
+scopes
+expiresAt
+createdAt
+updatedAt
+```
+
+`BloggerSecretKind`:
+
+```text
+oauth_client_secret
+access_token
+refresh_token
+```
+
+정책:
+
+- access token, refresh token, client secret 원문 컬럼은 만들지 않는다.
+- `encryptedValue`는 DB 내부 저장값이며 API/UI 응답에 반환하지 않는다.
+- `last4`, `hasAccessToken`, `hasRefreshToken`, `hasClientSecret`, `expiresAt`, `scopes` 같은 safe metadata만 운영 화면에서 확인한다.
+- 암호화 key는 `BLOGGER_SECRET_ENCRYPTION_KEY`를 사용하도록 설계한다.
+- Patch 9C-1은 token exchange, token refresh, Blogger API 호출, blog list 조회, draft save, publish를 구현하지 않는다.
+- token storage model이 생겨도 publish readiness의 `publishReady`는 false를 유지한다.

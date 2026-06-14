@@ -46,7 +46,7 @@ branch: master
 - draftMarkdown은 자동 저장되지 않고 사용자가 반영했을 때만 DB에 저장됨
 
 다음 세션 1순위 작업:
-Patch 9C 후보: OAuth token exchange 설계 또는 token storage security review
+Patch 9C-2 후보: OAuth callback token exchange
 
 현재 Blogger 상태:
 - Patch 9A에서 `/settings/blogger` placeholder UI와 Blogger connection safe CRUD/status API가 추가됨
@@ -55,11 +55,14 @@ Patch 9C 후보: OAuth token exchange 설계 또는 token storage security revie
 - publish readiness는 Blogger connection status를 반영하지만 `publishReady=false`를 유지함
 - Patch 9B에서 OAuth state 저장과 authorization URL dry-run이 추가됨
 - callback dry-run은 state 검증과 consumed 처리까지만 수행하고 token exchange는 하지 않음
+- Patch 9C-1에서 `blogger_connection_secrets` encrypted secret metadata 모델, Blogger token encryption helper, secret-status/self-test API가 추가됨
+- `/settings/blogger`에서 Token Storage Security 상태를 확인할 수 있음
+- `encryptedValue`, token 원문, client secret 원문은 API/UI에 반환하지 않음
 
-Patch 9C 목표:
-- OAuth token exchange와 token storage security 정책을 검토한다.
-- refresh token 저장/회전/만료/redaction 정책을 확정한다.
-- 가능하면 token exchange 구현 범위를 별도 승인 가능한 작은 패치로 분리한다.
+Patch 9C-2 목표:
+- OAuth callback에서 Google token exchange를 붙일지 최종 확인한다.
+- `BLOGGER_SECRET_ENCRYPTION_KEY` 기반 encrypted token 저장 흐름을 사용한다.
+- access token, refresh token, client secret, authorization code 원문은 API/UI/log에 노출하지 않는다.
 - 실제 Blogger draft save/publish는 아직 구현하지 않는다.
 
 금지 사항:
@@ -72,7 +75,7 @@ Patch 9C 목표:
 - git add . 또는 git add -A 금지
 - .env.local 읽기/출력/수정 금지
 
-첫 작업으로 Patch 9C 작업계획을 제안해줘. 아직 구현하지 말고 계획만 작성해줘.
+첫 작업으로 Patch 9C-2 작업계획을 제안해줘. 아직 구현하지 말고 계획만 작성해줘.
 ```
 
 ## 첫 점검 명령어

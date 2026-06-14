@@ -36,3 +36,16 @@ Patch 9B는 OAuth state 저장과 authorization URL 생성 dry-run만 구현한�
 - `/api/settings/blogger/oauth/callback`은 state/code/error query를 받아 state 검증까지만 수행한다.
 - callback dry-run은 authorization code 원문을 DB/API/UI/log에 저장하지 않는다.
 - token exchange, access token 저장, refresh token 저장, Blogger blog list 조회, draft save, publish는 아직 구현하지 않는다.
+
+## Patch 9C-1 token storage security foundation
+
+Patch 9C-1은 실제 token exchange 전에 encrypted token storage 기반만 구현한다.
+
+- `blogger_connection_secrets`는 encrypted secret value와 safe metadata만 저장한다.
+- access token, refresh token, client secret 원문 컬럼은 만들지 않는다.
+- API와 UI는 `encryptedValue`를 반환하지 않는다.
+- `/api/settings/blogger/[id]/secret-status`는 저장된 secret metadata만 반환한다.
+- `/api/settings/blogger/[id]/secret-self-test`는 서버 내부 dummy string으로 암복호화 helper만 검증하며 plaintext/ciphertext/encryptedValue를 반환하지 않는다.
+- 암호화 key는 `BLOGGER_SECRET_ENCRYPTION_KEY`를 사용한다.
+- key가 없으면 self-test는 safe failure를 반환하며 token exchange는 계속 비활성 상태다.
+- token exchange, token refresh, Blogger API 호출, Blogger blog list 조회, draft save, publish는 아직 구현하지 않는다.

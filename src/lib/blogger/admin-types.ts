@@ -64,3 +64,43 @@ export interface BloggerOAuthCallbackDryRun {
   tokenExchangeImplemented: false;
   bloggerApiImplemented: false;
 }
+
+export type BloggerSecretKind = "oauth_client_secret" | "access_token" | "refresh_token";
+
+export interface BloggerConnectionSecretAdmin {
+  id: string;
+  connectionId: string;
+  secretKind: BloggerSecretKind;
+  keyVersion: string;
+  last4: string | null;
+  tokenType: string | null;
+  scopes: string[];
+  expiresAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface BloggerConnectionSecretStatus {
+  connectionId: string;
+  hasClientSecret: boolean;
+  hasAccessToken: boolean;
+  hasRefreshToken: boolean;
+  tokenLast4: string | null;
+  accessTokenExpiresAt: string | null;
+  refreshTokenExpiresAt: string | null;
+  scopes: string[];
+  secrets: BloggerConnectionSecretAdmin[];
+  secretMaterialReturned: false;
+  tokenExchangeImplemented: false;
+  bloggerApiImplemented: false;
+}
+
+export interface BloggerSecretSelfTestResult {
+  keyConfigured: boolean;
+  selfTestPassed: boolean;
+  keyVersion: string;
+  message: string;
+  secretMaterialReturned: false;
+  tokenExchangeImplemented: false;
+  bloggerApiImplemented: false;
+}

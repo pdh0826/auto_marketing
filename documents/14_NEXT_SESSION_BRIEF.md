@@ -42,6 +42,9 @@ af0ce9a Generate content plan candidates with LLM
 - HTML candidate editing, revalidation, and manual draftHtml apply
 - Saved draftHtml based Quality Dry Run preview
 - Publish Readiness Gate preview
+- Blogger connection placeholder settings
+- Blogger OAuth state and authorization URL dry-run
+- Blogger token storage security foundation
 
 ## Verified Runtime State
 
@@ -65,7 +68,7 @@ mediaPlaceholderCount = 1
 
 ## Next Patch
 
-Patch 9C 후보: OAuth token exchange 설계 또는 token storage security review.
+Patch 9C-2 후보: OAuth callback token exchange.
 
 Current Blogger state:
 
@@ -76,12 +79,15 @@ Current Blogger state:
 - Publish readiness can read Blogger connection status but `publishReady` remains false.
 - Patch 9B added OAuth state storage and authorization URL dry-run.
 - OAuth callback dry-run validates and consumes state but does not exchange tokens.
+- Patch 9C-1 added `blogger_connection_secrets`, Blogger token encryption helper, safe secret metadata helper, secret-status API, and secret self-test API.
+- `/settings/blogger` can show Token Storage Security metadata and encryption self-test results.
+- `encryptedValue`, token plaintext, client secret plaintext, and authorization code plaintext are not returned by API/UI.
 
 Target:
 
-- Token exchange boundary and encrypted token storage policy.
-- Refresh token handling, rotation, expiry, and redaction policy.
-- Decide whether to implement token exchange in Patch 9C or keep it as security review.
+- Add OAuth callback token exchange using the Patch 9C-1 encrypted storage foundation.
+- Store access/refresh tokens only as encrypted values and safe metadata.
+- Keep raw authorization code, raw token response, token plaintext, and client secret plaintext out of API/UI/logs.
 - Actual Blogger draft save/publish remains later.
 
 ## Do Not Start With

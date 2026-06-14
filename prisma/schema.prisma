@@ -105,6 +105,12 @@ enum BloggerConnectionStatus {
   error
 }
 
+enum BloggerSecretKind {
+  oauth_client_secret
+  access_token
+  refresh_token
+}
+
 model Blog {
   id                     String        @id @default(cuid())
   name                   String
@@ -365,11 +371,34 @@ model BloggerConnection {
 
   blog               Blog?                   @relation(fields: [blogId], references: [id], onDelete: SetNull)
   oauthStates        BloggerOAuthState[]
+  secrets            BloggerConnectionSecret[]
 
   @@index([blogId])
   @@index([status])
   @@index([bloggerBlogId])
   @@map("blogger_connections")
+}
+
+model BloggerConnectionSecret {
+  id             String            @id @default(cuid())
+  connectionId   String
+  secretKind     BloggerSecretKind
+  encryptedValue String
+  keyVersion     String            @default("v1")
+  last4          String?
+  tokenType      String?
+  scopes         String[]          @default([])
+  expiresAt      DateTime?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  connection     BloggerConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+
+  @@unique([connectionId, secretKind])
+  @@index([connectionId])
+  @@index([secretKind])
+  @@index([expiresAt])
+  @@map("blogger_connection_secrets")
 }
 
 model BloggerOAuthState {
