@@ -128,7 +128,7 @@ export function buildBloggerDraftApprovalSummary(input: {
     currentSnapshotHashPrefix: input.currentSnapshotHash ? hashPrefix(input.currentSnapshotHash) : null,
     currentDraftHtmlHashPrefix: input.currentDraftHtmlHash ? hashPrefix(input.currentDraftHtmlHash) : null,
     manualApprovalImplemented: true,
-    draftSaveImplemented: false
+    draftSaveImplemented: true
   };
 }
 

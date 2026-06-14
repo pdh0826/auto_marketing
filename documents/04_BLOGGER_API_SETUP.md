@@ -109,3 +109,16 @@ Patch 9E-1은 Blogger posts API 호출 전 manual approval guard만 추가한다
 - approval snapshot은 hash와 safe metadata만 저장하며 full `draftHtml`은 저장하지 않는다.
 - preview API는 approval status와 current snapshot match 여부를 반환한다.
 - Blogger API read/write, token refresh, draft save, publish, scheduled publish는 구현하지 않는다.
+
+## Patch 9E-2 Blogger draft save
+
+Patch 9E-2는 승인된 payload snapshot에 한해서 Blogger draft save를 수행한다.
+
+- `POST /api/content-items/[id]/blogger-draft-save`는 서버에서 draft payload preview와 approval hash를 다시 검증한다.
+- 검증 통과 후 Blogger API `posts.insert`를 `isDraft=true`로 호출한다.
+- request body의 blog id, title, HTML, hash는 신뢰하지 않는다.
+- access token은 서버 내부에서만 복호화해 Authorization header에 사용한다.
+- token refresh는 구현하지 않는다. expired/401/403은 safe error와 reconnect 안내로 처리한다.
+- raw Blogger response/error body, token, encrypted value는 저장하거나 반환하지 않는다.
+- 성공/실패 결과는 safe draft save metadata로만 저장한다.
+- `posts.update`, publish, scheduled publish는 구현하지 않는다.

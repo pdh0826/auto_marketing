@@ -5,107 +5,60 @@
 ```text
 repo: ~/blog-growth-agent
 branch: master
-latest commit: d0168ff Add Blogger blog list read-only check
-```
-
-Recent commits:
-
-```text
-a53094c Improve draft safety repair flow
-1c89245 Generate draft markdown candidates with LLM
-a05c62b Add draft markdown dry run preview
-2e7d5a0 Add editable plan candidate revalidation
-78c5385 Return safe LLM call log summaries
-af0ce9a Generate content plan candidates with LLM
+latest commit before Patch 9E-2 work: 64762c2 Add Blogger draft approval guard
 ```
 
 ## Implemented Scope
 
 - PostgreSQL + Prisma CRUD API
 - LLM Provider/Model/Task Route/Call Log management
-- Provider invocation and connection test
-- Safe call log DTO
 - Blog and brand profile CRUD UI
 - Content request CRUD UI
 - Content asset upload and metadata management
-- Rule-based media metadata suggestions
-- `/content/[id]` detail screen
-- Manual planJson editing and planned status transition
-- `content_plan` dry-run preview
-- `content_plan` LLM candidate generation
-- Generated plan candidate editing and revalidation
-- `content_draft` dry-run preview
-- `content_draft` LLM candidate generation
-- Generated draft candidate editing and revalidation
-- Draft safety prompt hardening and one-time repair on validation failure
-- Saved draftMarkdown based HTML Conversion Dry Run
-- HTML candidate editing, revalidation, and manual draftHtml apply
-- Saved draftHtml based Quality Dry Run preview
+- Content plan/draft generation with user review before DB save
+- Saved draftMarkdown to HTML preview/apply
+- Saved draftHtml quality preview
 - Publish Readiness Gate preview
 - Blogger connection placeholder settings
-- Blogger OAuth state and authorization URL dry-run
-- Blogger token storage security foundation
-- Blogger OAuth callback token exchange
+- Blogger OAuth state, callback token exchange, and encrypted token metadata
 - Blogger blog list read-only lookup
-- Blogger blog selection save with server revalidation
+- Verified Blogger blog selection save with server revalidation
+- Blogger draft payload preview
+- Blogger draft manual approval guard with snapshot hashes
+- Blogger draft save via `posts.insert?isDraft=true` guarded by active approval snapshot match
 
-## Verified Runtime State
+## Current Blogger State
 
-Test content item:
+- `blogger_connections` stores safe connection and selected blog metadata.
+- `blogger_connection_secrets` stores encrypted token/client-secret metadata only.
+- `blogger_draft_approvals` stores approval snapshot hashes and safe target blog metadata.
+- `blogger_draft_saves` stores safe draft save success/failure metadata.
+- Actual draft save is limited to Blogger `posts.insert` with `isDraft=true`.
+- Duplicate successful saves for the same approval snapshot are blocked.
+- `posts.update`, publish, scheduled publish, token refresh, and bulk publishing are not implemented.
+- Content item status, `qualityScore`, `publishedAt`, and `scheduledAt` are not mutated by Blogger draft save.
+- Publish readiness can show selected blog, manual approval, and draft saved checks, but `publishReady=false` and top-level `ready=false` remain.
 
-```text
-id = cmqc2xqbr00011y70sxmgl65v
-has_plan = true
-has_draft = true
-has_html = false
-```
+## Next Patch Candidate
 
-Latest verified `content_draft` call log:
+Patch 9E-3 후보: Blogger draft update/retry policy 또는 draft save 이후 publish handoff readiness.
 
-```text
-validationOk = true
-repairAttempted = false
-markdownLength = 1665
-mediaPlaceholderCount = 1
-```
+Recommended scope:
 
-## Next Patch
-
-Patch 9E-2 후보: approved snapshot guard를 통과한 actual Blogger draft save.
-
-Current Blogger state:
-
-- Patch 9A added `blogger_connections` placeholder model and migration.
-- `/settings/blogger` can manage safe connection metadata.
-- Blogger settings APIs return safe DTOs only.
-- No access token, refresh token, or client secret plaintext is stored.
-- Publish readiness can read Blogger connection status but `publishReady` remains false.
-- Patch 9B added OAuth state storage and authorization URL dry-run.
-- Patch 9C-1 added `blogger_connection_secrets`, Blogger token encryption helper, safe secret metadata helper, secret-status API, and secret self-test API.
-- `/settings/blogger` can show Token Storage Security metadata and encryption self-test results.
-- `encryptedValue`, token plaintext, client secret plaintext, and authorization code plaintext are not returned by API/UI.
-- Patch 9C-2 added OAuth callback token exchange.
-- Access/refresh tokens are stored only as encrypted values and safe metadata.
-- Patch 9D-1 added read-only Blogger blog list lookup.
-- Patch 9D-2 added verified Blogger blog selection save.
-- Patch 9E-0 added Blogger draft payload preview/readiness without Blogger API calls or DB mutation.
-- Patch 9E-1 added Blogger draft manual approval guard with snapshot hashes.
-- Blogger draft save, publish, scheduled publish, and token refresh are not implemented yet.
-
-Target:
-
-- Implement actual Blogger draft save only if the current preview snapshot matches an active approval.
-- Keep token plaintext hidden and avoid storing raw Blogger responses.
-- Keep publish/scheduled publish for a later patch unless explicitly approved.
+- Decide whether existing successful draft posts can be updated in a later patch or whether each new approval should create a new draft.
+- Design retry policy for failed draft saves without token refresh.
+- Keep publish/scheduled publish out of scope unless a separate plan is approved.
+- Keep token refresh out of scope unless explicitly selected as the patch target.
 
 ## Do Not Start With
 
-- Blogger draft/publish
+- Blogger publish/scheduled publish implementation
+- Token refresh implementation
+- `posts.update` without first designing update/retry semantics
 - qualityScore automatic save
-- HTML quality check and Blogger publishing in one patch
+- content item status automatic transition
 - API Key or secret output
 - prompt full text or raw LLM response logging
-- using `content_plan` route as a `content_draft` substitute
 - `git add .` or `git add -A`
 
 ## First Prompt For Next Session
@@ -113,12 +66,12 @@ Target:
 ```text
 AGENTS.md와 documents/ 폴더의 관련 문서를 먼저 읽어줘.
 
-현재 프로젝트 상태를 점검하고 Patch 9E-2 작업계획을 제안해줘.
+현재 프로젝트 상태를 점검하고 Patch 9E-3 작업계획을 제안해줘.
 
 목표:
-- Patch 9E-1의 Blogger draft approval guard 구현 상태를 확인한다.
-- Patch 9E-2에서 active approval snapshot match를 guard로 actual Blogger draft save를 설계한다.
-- token refresh, publish, scheduled publish는 구현하지 않는다.
+- Patch 9E-2의 Blogger draft save 구현 상태를 확인한다.
+- draft update/retry policy 또는 publish handoff readiness 중 다음 최소 패치를 설계한다.
+- publish/scheduled publish와 token refresh는 명시적으로 범위를 정하기 전까지 구현하지 않는다.
 
 아직 구현하지 말고 계획만 작성해줘.
 ```

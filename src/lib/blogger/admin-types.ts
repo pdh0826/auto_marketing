@@ -150,6 +150,7 @@ export interface BloggerBlogSelectionResult {
 
 export type BloggerDraftApprovalStatus = "approved" | "revoked" | "superseded";
 export type BloggerDraftManualApprovalStatus = "missing" | "approved" | "stale" | "revoked" | "not_ready";
+export type BloggerDraftSaveStatus = "success" | "failed";
 
 export interface BloggerDraftApprovalAdmin {
   id: string;
@@ -177,7 +178,42 @@ export interface BloggerDraftApprovalSummary {
   currentSnapshotHashPrefix: string | null;
   currentDraftHtmlHashPrefix: string | null;
   manualApprovalImplemented: true;
-  draftSaveImplemented: false;
+  draftSaveImplemented: boolean;
+}
+
+export interface BloggerDraftSaveAdmin {
+  id: string;
+  contentItemId: string;
+  approvalId: string;
+  bloggerConnectionId: string;
+  status: BloggerDraftSaveStatus;
+  snapshotHashPrefix: string;
+  draftHtmlHashPrefix: string;
+  targetBloggerBlogId: string;
+  targetBloggerBlogName: string | null;
+  targetBloggerBlogUrl: string | null;
+  titleCandidate: string;
+  bloggerPostId: string | null;
+  bloggerPostUrl: string | null;
+  bloggerPostPublishedAt: string | null;
+  bloggerPostUpdatedAt: string | null;
+  errorCode: string | null;
+  errorMessage: string | null;
+  retryable: boolean;
+  savedAt: string | null;
+  failedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface BloggerDraftSaveSummary {
+  latestSuccessfulDraftSave: BloggerDraftSaveAdmin | null;
+  latestDraftSave: BloggerDraftSaveAdmin | null;
+  draftSaved: boolean;
+  draftSaveImplemented: true;
+  publishImplemented: false;
+  scheduledPublishImplemented: false;
+  tokenRefreshImplemented: false;
 }
 
 export interface BloggerDraftPayloadPreview {
@@ -207,9 +243,10 @@ export interface BloggerDraftPayloadPreview {
   blockingIssues: string[];
   warnings: string[];
   approvalSummary: BloggerDraftApprovalSummary;
-  bloggerApiWriteImplemented: false;
+  draftSaveSummary: BloggerDraftSaveSummary;
+  bloggerApiWriteImplemented: boolean;
   bloggerApiReadImplemented: false;
-  draftSaveImplemented: false;
+  draftSaveImplemented: boolean;
   publishImplemented: false;
   tokenRefreshImplemented: false;
 }

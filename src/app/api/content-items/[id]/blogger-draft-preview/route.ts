@@ -4,6 +4,7 @@ import { buildBloggerDraftPayloadPreview } from "@/lib/blogger/draft-payload-pre
 import type { ContentAssetAdmin } from "@/lib/content/asset-types";
 import type { ContentItemAdmin } from "@/lib/content/admin-types";
 import { getActiveBloggerDraftApproval, getLatestBloggerDraftApproval, toBloggerDraftApprovalAdmin } from "@/lib/db/blogger-draft-approvals";
+import { getLatestBloggerDraftSave, getLatestSuccessfulBloggerDraftSave, toBloggerDraftSaveAdmin } from "@/lib/db/blogger-draft-saves";
 import { listBloggerConnectionsForBlog } from "@/lib/db/blogger-connections";
 import { prisma } from "@/lib/db/client";
 import { safeErrorMessage } from "@/lib/llm/redaction";
@@ -42,6 +43,8 @@ export async function POST(_request: Request, { params }: RouteContext) {
     const currentHashes = buildBloggerDraftApprovalSnapshotHashes(result, contentItem.draftHtml);
     const activeApproval = await getActiveBloggerDraftApproval(contentItem.id);
     const latestApproval = activeApproval ?? (await getLatestBloggerDraftApproval(contentItem.id));
+    const latestDraftSave = await getLatestBloggerDraftSave(contentItem.id);
+    const latestSuccessfulDraftSave = await getLatestSuccessfulBloggerDraftSave(contentItem.id);
     const approvalSummary = buildBloggerDraftApprovalSummary({
       approval: latestApproval ? toBloggerDraftApprovalAdmin(latestApproval) : null,
       approvalSnapshotHash: latestApproval?.snapshotHash ?? null,
@@ -49,8 +52,17 @@ export async function POST(_request: Request, { params }: RouteContext) {
       currentDraftHtmlHash: currentHashes?.draftHtmlHash ?? null,
       currentPreviewReady: result.draftPayloadReady
     });
+    const draftSaveSummary = {
+      latestSuccessfulDraftSave: latestSuccessfulDraftSave ? toBloggerDraftSaveAdmin(latestSuccessfulDraftSave) : null,
+      latestDraftSave: latestDraftSave ? toBloggerDraftSaveAdmin(latestDraftSave) : null,
+      draftSaved: Boolean(latestSuccessfulDraftSave),
+      draftSaveImplemented: true,
+      publishImplemented: false,
+      scheduledPublishImplemented: false,
+      tokenRefreshImplemented: false
+    };
 
-    return NextResponse.json({ data: { ...result, approvalSummary } });
+    return NextResponse.json({ data: { ...result, approvalSummary, draftSaveSummary } });
   } catch (error) {
     return NextResponse.json({ error: safeErrorMessage(error instanceof Error ? error.message : "Blogger draft payload preview failed.", 500) }, { status: 400 });
   }

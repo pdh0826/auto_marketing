@@ -34,7 +34,7 @@ export async function POST(_request: Request, { params }: RouteContext) {
           message: "Blogger draft payload preview is not ready for manual approval.",
           data: {
             preview: context.preview,
-            draftSaveImplemented: false,
+            draftSaveImplemented: true,
             publishImplemented: false,
             tokenRefreshImplemented: false
           }
@@ -63,7 +63,7 @@ export async function POST(_request: Request, { params }: RouteContext) {
       data: {
         approval: approvalAdmin,
         approvalSummary,
-        draftSaveImplemented: false,
+        draftSaveImplemented: true,
         publishImplemented: false,
         tokenRefreshImplemented: false
       }
@@ -100,7 +100,7 @@ export async function DELETE(_request: Request, { params }: RouteContext) {
         approval: revokedApprovalAdmin,
         approvalSummary,
         revoked: true,
-        draftSaveImplemented: false,
+        draftSaveImplemented: true,
         publishImplemented: false,
         tokenRefreshImplemented: false
       }

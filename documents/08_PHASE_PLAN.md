@@ -25,14 +25,15 @@
 21. Patch 9D-2 - 조회된 Blogger blog를 connection에 수동 반영: 완료
 22. Patch 9E-0 - Blogger draft save readiness / draft payload preview: 완료
 23. Patch 9E-1 - Blogger draft save final guard / manual approval gate: 완료
-24. Patch 9E-2 이후 - Blogger API actual draft save
-25. 예약 발행
-26. 운영 대시보드
-27. 키워드 연구소
-28. 상위글 구조 분석
-29. 서비스 홍보 엔진 고도화
-30. 이미지/썸네일
-31. 성과 분석과 리라이트
+24. Patch 9E-2 - approved snapshot guard 기반 Blogger API actual draft save: 완료
+25. Patch 9E-3 이후 - draft update/retry policy 또는 publish handoff readiness
+26. 예약 발행
+27. 운영 대시보드
+28. 키워드 연구소
+29. 상위글 구조 분석
+30. 서비스 홍보 엔진 고도화
+31. 이미지/썸네일
+32. 성과 분석과 리라이트
 
 ## Patch 8C 완료 기준
 
@@ -98,14 +99,26 @@ Patch 9E-1 완료:
 - `publishReady=false`, top-level `ready=false` 유지
 - Blogger API read/write, token refresh, draft save, publish는 구현하지 않음
 
+Patch 9E-2 완료:
+
+- `blogger_draft_saves` 테이블과 `BloggerDraftSaveStatus` enum 추가
+- `POST /api/content-items/[id]/blogger-draft-save` 추가
+- actual Blogger write는 `posts.insert?isDraft=true`만 사용
+- current preview snapshot과 active approval snapshot/hash가 일치해야 draft save 허용
+- same approval snapshot에 successful draft save가 이미 있으면 중복 insert 차단
+- success/failure는 safe metadata만 저장하고 raw Blogger response/error body는 저장하지 않음
+- token refresh, `posts.update`, publish, scheduled publish는 구현하지 않음
+- content item status, `qualityScore`, `publishedAt`, `scheduledAt`은 변경하지 않음
+- publish readiness에 draft saved check/metadata 추가, `publishReady=false`, top-level `ready=false` 유지
+
 다음 패치 후보:
 
-- Patch 9E-2: approved snapshot guard를 통과한 actual Blogger draft save
-- Blogger publish/scheduled publish는 Patch 9E-2 이후 별도 패치
+- Patch 9E-3: Blogger draft update/retry policy 또는 draft save 이후 publish handoff readiness
+- Blogger publish/scheduled publish는 별도 패치
 
 먼저 하지 말 것:
 
-- Blogger draft save/publish 구현
+- Blogger publish/scheduled publish 구현
 - HTML 변환과 발행을 한 번에 구현
 - `draftHtml` 자동 저장
 - API Key나 secret 출력

@@ -117,6 +117,11 @@ enum BloggerDraftApprovalStatus {
   superseded
 }
 
+enum BloggerDraftSaveStatus {
+  success
+  failed
+}
+
 model Blog {
   id                     String        @id @default(cuid())
   name                   String
@@ -196,6 +201,7 @@ model ContentItem {
   llmCallLogs    LlmCallLog[]
   assets         ContentAsset[]
   bloggerDraftApprovals BloggerDraftApproval[]
+  bloggerDraftSaves BloggerDraftSave[]
 
   @@index([blogId])
   @@index([brandProfileId])
@@ -409,12 +415,48 @@ model BloggerDraftApproval {
   updatedAt                   DateTime                   @updatedAt
 
   contentItem                 ContentItem                @relation(fields: [contentItemId], references: [id], onDelete: Cascade)
+  draftSaves                  BloggerDraftSave[]
 
   @@index([contentItemId])
   @@index([status])
   @@index([snapshotHash])
   @@index([approvedAt])
   @@map("blogger_draft_approvals")
+}
+
+model BloggerDraftSave {
+  id                         String                 @id @default(cuid())
+  contentItemId              String
+  approvalId                 String
+  bloggerConnectionId        String
+  status                     BloggerDraftSaveStatus
+  snapshotHash               String
+  draftHtmlHash              String
+  targetBloggerBlogId        String
+  targetBloggerBlogName      String?
+  targetBloggerBlogUrl       String?
+  titleCandidate             String
+  bloggerPostId              String?
+  bloggerPostUrl             String?
+  bloggerPostPublishedAt     DateTime?
+  bloggerPostUpdatedAt       DateTime?
+  errorCode                  String?
+  errorMessage               String?
+  retryable                  Boolean                @default(false)
+  savedAt                    DateTime?
+  failedAt                   DateTime?
+  createdAt                  DateTime               @default(now())
+  updatedAt                  DateTime               @updatedAt
+
+  contentItem                ContentItem            @relation(fields: [contentItemId], references: [id], onDelete: Cascade)
+  approval                   BloggerDraftApproval   @relation(fields: [approvalId], references: [id], onDelete: Restrict)
+
+  @@index([contentItemId])
+  @@index([approvalId])
+  @@index([status])
+  @@index([snapshotHash])
+  @@index([savedAt])
+  @@map("blogger_draft_saves")
 }
 
 model BloggerConnectionSecret {

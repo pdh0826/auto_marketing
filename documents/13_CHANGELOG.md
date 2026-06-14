@@ -312,3 +312,22 @@ Policy:
 - No Blogger draft save, publish, scheduled publish, or token refresh.
 - No content item status, `qualityScore`, `publishedAt`, or `scheduledAt` mutation.
 - No access token, refresh token, encrypted value, raw Blogger response/error, LLM call, or `llm_call_logs`.
+
+## Patch 9E-2 Blogger Draft Save
+
+Implemented after Patch 9E-1:
+
+- Added `BloggerDraftSaveStatus` and `blogger_draft_saves`.
+- Added `POST /api/content-items/[id]/blogger-draft-save`.
+- Draft save route recalculates the current Blogger draft payload preview server-side.
+- Active approval `snapshotHash` and `draftHtmlHash` must match the current preview before any Blogger write call.
+- Calls Blogger `posts.insert` with `isDraft=true` only.
+- Blocks duplicate successful draft saves for the same approval snapshot.
+- Stores safe success/failure metadata and exposes safe DTOs in preview/readiness UI.
+- Publish readiness now includes `blogger_draft_saved` check and draft save metadata while keeping `publishReady=false`.
+
+Policy:
+
+- No `posts.update`, publish, scheduled publish, token refresh, or bulk publishing.
+- No content item status, `qualityScore`, `publishedAt`, or `scheduledAt` mutation.
+- No full `draftHtml`, raw Blogger response/error body, access token, refresh token, encrypted value, LLM call, or `llm_call_logs`.

@@ -261,3 +261,27 @@ Patch 9E-1은 실제 Blogger draft save 전에 현재 draft payload preview snap
 - draftHtml/title/target blog/readiness가 바뀌면 current snapshot과 approval snapshot이 mismatch가 되어 재승인이 필요하다.
 - publish readiness manual approval check는 snapshot match 시 pass할 수 있지만 `publishReady=false`와 top-level `ready=false`는 유지한다.
 - Blogger API read/write, token refresh, draft save, publish는 수행하지 않는다.
+
+## Patch 9E-2 Blogger Draft Save
+
+Patch 9E-2는 active approval snapshot이 현재 draft payload preview와 일치할 때만 Blogger draft post를 저장한다.
+
+```text
+/content/[id]
+→ Draft Payload Preview
+→ 이 payload 승인
+→ Blogger Draft 저장
+→ POST /api/content-items/[id]/blogger-draft-save
+→ 서버에서 preview/hash/approval 재검증
+→ Blogger posts.insert?isDraft=true
+→ safe draft save metadata 저장
+```
+
+- draft save API는 request body의 blog/title/html/hash를 신뢰하지 않고 서버에서 현재 content item 기준 preview를 다시 계산한다.
+- active approval의 `snapshotHash`와 `draftHtmlHash`가 current preview hash와 일치해야 한다.
+- Blogger API write는 `posts.insert` + `isDraft=true`만 사용한다. `posts.update`, publish, scheduled publish는 수행하지 않는다.
+- 성공/실패 결과는 `blogger_draft_saves`에 safe metadata로 저장한다.
+- raw Blogger response/error body, token, encrypted value, full `draftHtml`은 저장하거나 반환하지 않는다.
+- token refresh는 구현하지 않는다. 401/403/expired token은 safe error와 reconnect guidance로 처리한다.
+- content item status, `qualityScore`, `publishedAt`, `scheduledAt`은 변경하지 않는다.
+- publish readiness는 draft saved check를 표시할 수 있지만 `publishReady=false`와 top-level `ready=false`는 유지한다.

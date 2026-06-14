@@ -433,3 +433,21 @@ npm run build
 - Blogger API read/write, token refresh, draft save, publish, scheduled publish는 발생하지 않는다.
 - content item status, `qualityScore`, `publishedAt`, `scheduledAt`은 변경되지 않는다.
 - `llm_call_logs`는 생성되지 않는다.
+
+## Patch 9E-2 수동 검증
+
+- `POST /api/content-items/[id]/blogger-draft-save`는 request body의 blog id/title/html/hash를 신뢰하지 않는다.
+- route는 서버에서 content item, assets, Blogger connection, draft payload preview, approval snapshot hash를 다시 계산한다.
+- active approval이 없으면 400 `blogger_draft_approval_missing` safe error를 반환하고 Blogger API를 호출하지 않는다.
+- active approval의 `snapshotHash` 또는 `draftHtmlHash`가 current preview와 다르면 400 `blogger_draft_approval_stale` safe error를 반환한다.
+- `draftPayloadReady=false`이면 400 `blogger_draft_payload_not_ready` safe error를 반환한다.
+- 같은 approval에 successful draft save가 이미 있으면 400 `blogger_draft_already_saved_for_approval`을 반환하고 중복 `posts.insert`를 실행하지 않는다.
+- guard 통과 후 access token 없음/만료/복호화 실패/401/403은 safe error를 반환하고 raw token/raw Blogger body를 반환하지 않는다.
+- 성공 시 Blogger API는 `posts.insert` + `isDraft=true`만 호출한다.
+- 성공/실패 record에는 safe draft save metadata만 저장하고 full `draftHtml`, token, encrypted value, raw Blogger response/error body는 저장하지 않는다.
+- content detail UI에는 승인된 snapshot일 때만 “Blogger Draft 저장” 버튼이 활성화된다.
+- publish readiness는 `blogger_draft_saved` check와 draft save metadata를 표시할 수 있지만 `publishReady=false`, top-level `ready=false`를 유지한다.
+- `posts.update`, publish, scheduled publish, token refresh는 발생하지 않는다.
+- content item status, `qualityScore`, `publishedAt`, `scheduledAt`은 변경되지 않는다.
+- live Blogger test blog에 실제 draft post가 생성되는 검증은 사용자 명시 승인 없이는 수행하지 않는다.
+- `llm_call_logs`는 생성되지 않는다.

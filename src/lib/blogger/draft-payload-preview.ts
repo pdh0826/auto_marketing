@@ -86,9 +86,18 @@ export function buildBloggerDraftPayloadPreview(
       currentDraftHtmlHash: null,
       currentPreviewReady: draftPayloadReady
     }),
-    bloggerApiWriteImplemented: false,
+    draftSaveSummary: {
+      latestSuccessfulDraftSave: null,
+      latestDraftSave: null,
+      draftSaved: false,
+      draftSaveImplemented: true,
+      publishImplemented: false,
+      scheduledPublishImplemented: false,
+      tokenRefreshImplemented: false
+    },
+    bloggerApiWriteImplemented: true,
     bloggerApiReadImplemented: false,
-    draftSaveImplemented: false,
+    draftSaveImplemented: true,
     publishImplemented: false,
     tokenRefreshImplemented: false
   };

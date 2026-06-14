@@ -329,3 +329,14 @@ Patch 9E-1의 Blogger draft approval guard는 LLM Provider를 사용하지 않�
 - OpenAI/Ollama/Local LLM 호출은 없다.
 - `llm_call_logs`는 생성하지 않는다.
 - Blogger API read/write 호출도 없으므로 token 원문이나 raw Blogger response/error body를 다루지 않는다.
+
+## Patch 9E-2 Blogger draft save and LLM boundary
+
+Patch 9E-2의 Blogger draft save는 LLM Provider를 사용하지 않는다.
+
+- `/api/content-items/[id]/blogger-draft-save`는 provider/model/task route를 조회하지 않는다.
+- draft payload는 이미 저장된 `draftHtml`과 current approval snapshot에서만 나온다.
+- OpenAI/Ollama/Local LLM 호출은 없다.
+- `llm_call_logs`는 생성하지 않는다.
+- Blogger API write는 approval guard 통과 후 `posts.insert?isDraft=true`만 수행한다.
+- Blogger API raw response/error body, token 원문, encrypted value는 LLM 로그나 일반 응답에 남기지 않는다.

@@ -436,3 +436,16 @@ Patch 9E-1은 `blogger_draft_approvals` 테이블을 추가한다.
 - full `draftHtml`, `htmlSnippet`, token, encrypted value, raw Blogger response/error body는 저장하지 않는다.
 - content item status, `qualityScore`, `publishedAt`, `scheduledAt`은 변경하지 않는다.
 - publish readiness는 manual approval match를 표시하지만 `publishReady=false`를 유지한다.
+
+## Patch 9E-2 Blogger draft save data policy
+
+Patch 9E-2는 `blogger_draft_saves` 테이블과 `BloggerDraftSaveStatus` enum을 추가한다.
+
+- status는 `success`, `failed` 중 하나다.
+- 각 save record는 content item, approval, Blogger connection을 참조한다.
+- 저장 필드는 approval snapshot hash, draftHtml hash, target Blogger blog safe metadata, title candidate, Blogger post id/url/timestamps, safe error code/message, retryable flag다.
+- full `draftHtml`, raw Blogger response body, raw Blogger error body, access token, refresh token, encrypted value는 저장하지 않는다.
+- 같은 approval snapshot에 성공 save가 이미 있으면 새 `posts.insert`를 실행하지 않는다.
+- 실패 record는 approval guard를 통과한 뒤 token/API 단계에서 실패한 경우에만 저장한다.
+- content item status, `qualityScore`, `publishedAt`, `scheduledAt`은 변경하지 않는다.
+- publish readiness는 latest successful draft save를 metadata/check에 반영하지만 `publishReady=false`를 유지한다.
