@@ -221,3 +221,19 @@ npm run build
 - prompt preview와 media mapping에는 API Key, secret, provider headers, request template, media `storagePath`가 포함되지 않는다.
 - Draft Dry Run만으로 `draftMarkdown`, `draftHtml`, `llm_call_logs`가 변경되지 않는다.
 - 실제 OpenAI/Ollama/Local LLM 호출, HTML 변환, 품질검사, Blogger API 호출은 발생하지 않는다.
+
+## Patch 8B 수동 검증
+
+- `/content/[id]`에서 Draft Dry Run readiness가 pass이면 `본문 초안 생성` 버튼을 사용할 수 있다.
+- `POST /api/content-items/[id]/generate-draft`는 저장된 `planJson`과 `content_draft` Task Route만 사용한다.
+- 저장된 `planJson`이 없거나 validation error가 있으면 draft generation을 수행하지 않고 JSON error를 반환한다.
+- `content_draft` route가 준비되지 않았거나 primary provider/model readiness가 fail이면 draft generation을 수행하지 않는다.
+- Local Ollama 또는 OpenAI-compatible Provider 호출 성공 시 `candidateDraftMarkdown`, validation, route summary, latency, markdown length가 응답된다.
+- 후보 생성 직후 DB의 `draftMarkdown`은 자동 저장되지 않는다.
+- 후보 textarea는 기본 read-only이며, `후보 편집` 후에는 재검증 전 `draftMarkdown에 반영` 버튼이 비활성화된다.
+- 재검증은 client-side rule-based validation으로 수행하며 LLM 호출과 `llm_call_logs` 생성을 하지 않는다.
+- 위험 표현이 있으면 validation error가 표시되고 `draftMarkdown에 반영`이 비활성화된다.
+- warning만 있으면 안내를 표시하되 사용자가 검토 후 `draftMarkdown에 반영`할 수 있다.
+- `draftMarkdown에 반영` 클릭 시 기존 content item PATCH 흐름으로 `draftMarkdown`만 저장하고 `draftHtml`은 생성하지 않는다.
+- 실제 LLM 호출 결과는 `llm_call_logs`에 taskType `content_draft`로 기록하되 prompt 전문, raw response 전문, 후보 Markdown 전문, request body 전문, API Key, Bearer token, secretRef, encryptedValue, provider headers, media `storagePath`는 저장하지 않는다.
+- call logs API 응답에도 후보 Markdown 전문과 민감 필드가 노출되지 않는지 확인한다.

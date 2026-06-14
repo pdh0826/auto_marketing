@@ -59,3 +59,17 @@ Patch 8A는 저장된 `planJson`을 기반으로 본문 초안 생성을 준비�
 - system prompt는 helpful, original, people-first article writer 역할과 Markdown 초안 작성 원칙을 포함한다.
 - 투자/금융 콘텐츠는 정보 제공/참고 도구로만 표현하고, 수익 보장, 매수/매도 추천, 성공 사례, 수익률 예시, 안전하게 매수 같은 표현을 금지한다.
 - output format은 Markdown only, H1/H2/H3 구조, intro/body/conclusion, FAQ, CTA, risk/disclaimer, media placeholder 사용 원칙을 포함한다.
+
+## Patch 8B content_draft generation
+
+Patch 8B는 저장된 `planJson`과 `content_draft` Task Route를 사용해 실제 LLM 호출로 `draftMarkdown` 후보를 생성한다.
+
+- `content_plan` route는 draft generation에 사용하지 않는다.
+- Generated Plan Candidate에만 있고 아직 저장되지 않은 후보는 draft generation 입력으로 사용하지 않는다.
+- 생성 후보는 자동 저장하지 않고, 사용자가 검토 후 `draftMarkdown에 반영`을 눌렀을 때만 저장한다.
+- `draftHtml` 생성, HTML 변환, 품질검사, Blogger 연동은 수행하지 않는다.
+- OpenAI-compatible Provider는 chat completions 형식과 모델별 max token parameter를 사용한다.
+- Ollama-compatible Provider는 `/api/generate`, `stream: false`, `options.temperature`, `options.num_predict`를 사용한다.
+- custom HTTP/CLI Provider는 Patch 8B의 실제 draft generation 대상에서 제외한다.
+- LLM 응답 후보는 Markdown 문자열로 취급하며 길이, H1, 섹션 구조, media placeholder, FAQ, risk/disclaimer, 금융/투자 위험 표현을 rule-based validation으로 검사한다.
+- prompt 전문, raw response 전문, 후보 Markdown 전문은 `llm_call_logs`에 저장하지 않는다.

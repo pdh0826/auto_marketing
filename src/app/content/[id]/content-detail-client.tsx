@@ -7,6 +7,7 @@ import type { ContentItemAdmin } from "@/lib/content/admin-types";
 import { buildContentPlanDryRun, type ContentPlanDryRunResult, type ReadinessStatus } from "@/lib/content/content-plan-preview";
 import { getContentModeLabel } from "@/lib/content/constants";
 import { buildDraftMarkdownDryRun, type DraftMarkdownDryRunResult } from "@/lib/content/draft-preview";
+import { validateDraftMarkdown, type DraftValidationResult } from "@/lib/content/draft-validation";
 import { formatPlanJson, hasUsablePlanJson } from "@/lib/content/plan-template";
 import { ApiResult, requestJson } from "@/lib/form-utils";
 import type { LlmTaskRouteAdmin } from "@/lib/llm/admin-types";
@@ -34,6 +35,21 @@ interface GeneratedPlanResult {
   };
 }
 
+interface GeneratedDraftResult {
+  candidateDraftMarkdown: string;
+  validation: DraftValidationResult;
+  route: {
+    providerName: string;
+    modelName: string;
+    usedFallback: boolean;
+  };
+  metadata: {
+    latencyMs: number;
+    responseSummary: string;
+    markdownLength: number;
+  };
+}
+
 export function ContentDetailClient({ contentItemId }: ContentDetailClientProps) {
   const [contentItem, setContentItem] = useState<ContentItemAdmin | null>(null);
   const [assets, setAssets] = useState<ContentAssetAdmin[]>([]);
@@ -42,10 +58,14 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
   const [dryRunResult, setDryRunResult] = useState<ContentPlanDryRunResult | null>(null);
   const [draftDryRunResult, setDraftDryRunResult] = useState<DraftMarkdownDryRunResult | null>(null);
   const [generatedPlan, setGeneratedPlan] = useState<GeneratedPlanResult | null>(null);
+  const [generatedDraft, setGeneratedDraft] = useState<GeneratedDraftResult | null>(null);
   const [candidateText, setCandidateText] = useState("");
   const [candidateEditMode, setCandidateEditMode] = useState(false);
   const [candidateDirty, setCandidateDirty] = useState(false);
   const [candidateParseError, setCandidateParseError] = useState<string | null>(null);
+  const [draftCandidateText, setDraftCandidateText] = useState("");
+  const [draftEditMode, setDraftEditMode] = useState(false);
+  const [draftDirty, setDraftDirty] = useState(false);
   const [planText, setPlanText] = useState("");
   const [loading, setLoading] = useState(true);
   const [assetsLoading, setAssetsLoading] = useState(true);
@@ -53,18 +73,24 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
   const [savingPlan, setSavingPlan] = useState(false);
   const [changingStatus, setChangingStatus] = useState(false);
   const [generatingPlan, setGeneratingPlan] = useState(false);
+  const [generatingDraft, setGeneratingDraft] = useState(false);
   const [applyingPlan, setApplyingPlan] = useState(false);
+  const [applyingDraft, setApplyingDraft] = useState(false);
   const [revalidatingPlan, setRevalidatingPlan] = useState(false);
+  const [revalidatingDraft, setRevalidatingDraft] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [assetsError, setAssetsError] = useState<string | null>(null);
   const [routeError, setRouteError] = useState<string | null>(null);
   const [generationError, setGenerationError] = useState<string | null>(null);
+  const [draftGenerationError, setDraftGenerationError] = useState<string | null>(null);
   const [planError, setPlanError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
   const parsedPlan = useMemo(() => parsePlan(planText), [planText]);
   const canMarkPlanned = parsedPlan.ok && hasUsablePlanJson(parsedPlan.value);
   const canApplyGeneratedPlan = Boolean(generatedPlan?.validation.ok && !candidateDirty && !candidateParseError && !applyingPlan);
+  const canGenerateDraft = Boolean(contentItem?.planJson && draftDryRunResult?.ready && !generatingDraft);
+  const canApplyGeneratedDraft = Boolean(generatedDraft?.validation.ok && !draftDirty && !applyingDraft);
 
   const loadContentItem = useCallback(async () => {
     setLoading(true);
@@ -185,12 +211,93 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
 
   function runDraftMarkdownDryRun() {
     setNotice(null);
-    setGenerationError(null);
+    setDraftGenerationError(null);
     if (!contentItem) {
       setRouteError("글 생성 요청 상세 정보를 먼저 불러와야 합니다.");
       return;
     }
     setDraftDryRunResult(buildDraftMarkdownDryRun(contentItem, assets, contentDraftRoute));
+  }
+
+  async function generateDraftCandidate() {
+    setNotice(null);
+    setDraftGenerationError(null);
+    setGeneratedDraft(null);
+    setDraftCandidateText("");
+    setDraftEditMode(false);
+    setDraftDirty(false);
+    setGeneratingDraft(true);
+
+    try {
+      const result = await requestJson<ApiResult<GeneratedDraftResult>>(`/api/content-items/${contentItemId}/generate-draft`, {
+        method: "POST",
+        body: JSON.stringify({})
+      });
+      setGeneratedDraft(result.data);
+      setDraftCandidateText(result.data.candidateDraftMarkdown);
+      setNotice("본문 초안 후보를 생성했습니다. 아직 DB에 저장되지 않았습니다.");
+    } catch (caught) {
+      setDraftGenerationError(caught instanceof Error ? caught.message : "본문 초안 후보 생성에 실패했습니다.");
+    } finally {
+      setGeneratingDraft(false);
+    }
+  }
+
+  async function revalidateDraftCandidate() {
+    if (!generatedDraft || !contentItem) {
+      return;
+    }
+
+    setDraftGenerationError(null);
+    setNotice(null);
+    setRevalidatingDraft(true);
+    try {
+      const validation = validateDraftMarkdown(draftCandidateText, {
+        contentItem,
+        assets
+      });
+      setGeneratedDraft({
+        ...generatedDraft,
+        candidateDraftMarkdown: draftCandidateText,
+        validation,
+        metadata: {
+          ...generatedDraft.metadata,
+          markdownLength: draftCandidateText.length
+        }
+      });
+      setDraftDirty(false);
+      setNotice("초안 후보를 재검증했습니다. 아직 DB에 저장되지 않았습니다.");
+    } finally {
+      setRevalidatingDraft(false);
+    }
+  }
+
+  async function applyGeneratedDraft() {
+    if (!generatedDraft?.validation.ok) {
+      setDraftGenerationError("validation을 통과한 후보만 draftMarkdown에 반영할 수 있습니다.");
+      return;
+    }
+    if (draftDirty) {
+      setDraftGenerationError("편집된 초안 후보는 재검증 후 반영할 수 있습니다.");
+      return;
+    }
+
+    setApplyingDraft(true);
+    setDraftGenerationError(null);
+    setNotice(null);
+
+    try {
+      const result = await requestJson<ApiResult<ContentItemAdmin>>(`/api/content-items/${contentItemId}`, {
+        method: "PATCH",
+        body: JSON.stringify({ draftMarkdown: generatedDraft.candidateDraftMarkdown })
+      });
+      setContentItem(result.data);
+      setNotice("생성 후보를 draftMarkdown에 반영했습니다. draftHtml은 생성하지 않았습니다.");
+    } catch (caught) {
+      setDraftGenerationError(caught instanceof Error ? caught.message : "생성 후보를 draftMarkdown에 반영하지 못했습니다.");
+    } finally {
+      setApplyingDraft(false);
+    }
   }
 
   async function generatePlanCandidate() {
@@ -304,7 +411,7 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
             기획서 자동 생성은 후속 패치에서 연결 예정
           </button>
           <button className="button secondary" type="button" disabled>
-            본문 생성은 후속 패치에서 연결 예정
+            본문 초안 생성은 아래 섹션에서 실행
           </button>
           <button className="button secondary" type="button" disabled>
             HTML 변환은 후속 패치에서 연결 예정
@@ -516,11 +623,11 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
               <div>
                 <h2>Draft Markdown Dry Run</h2>
                 <p className="muted">
-                  저장된 planJson을 기반으로 본문 초안 생성 준비 상태와 prompt preview만 확인합니다. 실제 LLM 호출과 draftMarkdown 저장은 하지 않습니다.
+                  저장된 planJson을 기반으로 본문 초안 생성 준비 상태와 prompt preview를 확인하고, content_draft route로 초안 후보를 생성합니다.
                 </p>
               </div>
               <button className="button secondary" type="button" disabled>
-                본문 초안 생성은 후속 패치에서 연결 예정
+                HTML 변환은 후속 패치에서 연결 예정
               </button>
             </div>
 
@@ -542,13 +649,19 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
               <button className="button" type="button" disabled={routesLoading || loading || assetsLoading} onClick={runDraftMarkdownDryRun}>
                 Draft Dry Run
               </button>
+              <button className="button secondary" type="button" disabled={!canGenerateDraft} onClick={() => void generateDraftCandidate()}>
+                {generatingDraft ? "본문 초안 생성 중" : "본문 초안 생성"}
+              </button>
             </div>
+
+            {draftGenerationError ? <div className="notice error">{draftGenerationError}</div> : null}
+            {draftDryRunResult && !draftDryRunResult.ready ? <div className="notice error">Readiness fail 항목이 있어 본문 초안 생성 버튼을 비활성화했습니다.</div> : null}
 
             {draftDryRunResult ? (
               <>
                 <div className={draftDryRunResult.ready ? "notice" : "notice error"}>
                   {draftDryRunResult.ready
-                    ? "Draft dry-run 준비 상태가 통과되었습니다. 실제 LLM 호출은 수행하지 않았습니다."
+                    ? "Draft dry-run 준비 상태가 통과되었습니다. 본문 초안 생성 버튼으로 후보를 생성할 수 있습니다."
                     : "Draft dry-run 준비 상태에 실패 항목이 있습니다. 실제 LLM 호출은 수행하지 않았습니다."}
                 </div>
                 <div className="table-wrap">
@@ -580,6 +693,67 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
               <div className="notice">
                 Draft Dry Run을 실행하면 저장된 planJson, content_draft route, 첨부 미디어와 mediaPlan의 연결 상태가 화면에만 생성됩니다.
               </div>
+            )}
+
+            {generatedDraft ? (
+              <div className="read-block">
+                <div className={generatedDraft.validation.ok ? "notice" : "notice error"}>
+                  <strong>Generated Draft Candidate</strong>
+                  <p>
+                    validation: {generatedDraft.validation.ok ? "pass" : "fail"} / errors: {generatedDraft.validation.errors.length} / warnings:{" "}
+                    {generatedDraft.validation.warnings.length}
+                  </p>
+                  <p>
+                    provider: {generatedDraft.route.providerName} / model: {generatedDraft.route.modelName} / fallback:{" "}
+                    {generatedDraft.route.usedFallback ? "yes" : "no"}
+                  </p>
+                  <p>
+                    latency: {generatedDraft.metadata.latencyMs}ms / length: {generatedDraft.metadata.markdownLength} / summary:{" "}
+                    {generatedDraft.metadata.responseSummary}
+                  </p>
+                </div>
+                {draftDirty ? (
+                  <div className="notice warning">편집된 초안 후보는 재검증 후 반영할 수 있습니다.</div>
+                ) : !generatedDraft.validation.ok ? (
+                  <div className="notice error">이 초안 후보는 validation error가 있어 draftMarkdown에 반영할 수 없습니다.</div>
+                ) : generatedDraft.validation.warnings.length > 0 ? (
+                  <div className="notice">warning이 있습니다. 내용을 검토한 뒤 draftMarkdown에 반영할 수 있습니다.</div>
+                ) : (
+                  <div className="notice">validation을 통과했습니다. 내용을 검토한 뒤 draftMarkdown에 반영할 수 있습니다.</div>
+                )}
+                <ValidationList title="Draft Validation Errors" items={generatedDraft.validation.errors} emptyText="draft validation error가 없습니다." isError />
+                <ValidationList
+                  title="Draft Validation Warnings"
+                  items={generatedDraft.validation.warnings}
+                  emptyText="draft validation warning이 없습니다."
+                  isWarning
+                />
+                <label className="plan-editor read-block">
+                  Candidate draftMarkdown
+                  <textarea
+                    value={draftCandidateText}
+                    readOnly={!draftEditMode}
+                    onChange={(event) => {
+                      setDraftCandidateText(event.target.value);
+                      setDraftDirty(true);
+                    }}
+                    spellCheck={false}
+                  />
+                </label>
+                <div className="form-actions">
+                  <button className="button secondary" type="button" onClick={() => setDraftEditMode((current) => !current)}>
+                    {draftEditMode ? "읽기 모드" : "후보 편집"}
+                  </button>
+                  <button className="button secondary" type="button" disabled={revalidatingDraft || !draftDirty} onClick={() => void revalidateDraftCandidate()}>
+                    {revalidatingDraft ? "재검증 중" : "재검증"}
+                  </button>
+                  <button className="button" type="button" disabled={!canApplyGeneratedDraft} onClick={() => void applyGeneratedDraft()}>
+                    draftMarkdown에 반영
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="notice">본문 초안 후보가 아직 없습니다.</div>
             )}
           </section>
 

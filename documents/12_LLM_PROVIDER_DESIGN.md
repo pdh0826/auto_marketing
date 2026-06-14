@@ -190,3 +190,19 @@ Patch 8A는 저장된 `planJson`을 기반으로 본문 초안 생성 준비 상
 - Draft prompt preview는 saved `planJson`, content item, blog profile, brand profile, attached media metadata를 기반으로 만든다.
 - Prompt preview에는 API Key, secret, provider headers, request template, media `storagePath`를 포함하지 않는다.
 - Media mapping preview는 `planJson.mediaPlan`과 attached media metadata가 본문 placeholder에 어떻게 연결될지 보여준다.
+
+## Patch 8B Content Draft Generation
+
+Patch 8B는 `content_draft` Task Route를 사용해 저장된 `planJson` 기반 `draftMarkdown` 후보를 실제 LLM 호출로 생성한다.
+
+- `content_plan` Task Route는 draft generation에 사용하지 않는다.
+- 생성 후보는 자동 저장하지 않으며, 사용자가 `/content/[id]`에서 검토 후 `draftMarkdown에 반영`을 눌렀을 때만 저장한다.
+- `draftHtml`, HTML 변환, 품질검사, Blogger upload/publish는 수행하지 않는다.
+- OpenAI-compatible Provider는 chat completions endpoint와 모델별 max token parameter를 사용한다.
+- Ollama-compatible Provider는 `/api/generate`, `stream: false`, `options.temperature`, `options.num_predict`를 사용한다.
+- primary provider call 실패 시에만 fallback provider/model을 1회 시도한다.
+- draft validation 실패는 fallback 대상이 아니다.
+- custom HTTP/CLI Provider는 Patch 8B 실제 draft generation 대상에서 제외하고 안전한 오류를 반환한다.
+- `llm_call_logs`에는 taskType `content_draft`, provider/model/contentItem, status, latency, 가능한 token count, 제한된 metadata만 저장한다.
+- metadata에는 `purpose`, `usedFallback`, `apiFormat`, `invocationMode`, `responseSummary`, validation count, `markdownLength`, `mediaPlaceholderCount`만 저장한다.
+- prompt 전문, raw response 전문, request body 전문, 후보 Markdown 전문, API Key, Bearer token, secretRef, encryptedValue, provider headers, request template, media `storagePath`는 로그와 응답 summary에 저장하지 않는다.
