@@ -232,3 +232,13 @@ Patch 8B-HOTFIX는 `content_draft` 생성 결과가 validation error를 포함�
 - 최신 확인된 `content_draft` 로그는 validation 통과, repair 미시도 정상 생성 케이스였다.
 
 다음 세션 Patch 8C에서는 HTML 변환용 route 또는 rule-based 변환 전략을 별도 검토한다. Blogger publish route나 실제 발행 기능으로 바로 진행하지 않는다.
+
+## Patch 8C HTML preview and LLM boundary
+
+Patch 8C의 HTML 변환 dry-run/preview는 LLM Provider를 사용하지 않는다.
+
+- `content_plan` route와 `content_draft` route를 사용하지 않는다.
+- OpenAI-compatible, Ollama-compatible, Local HTTP, CLI Provider 호출은 발생하지 않는다.
+- `llm_call_logs`를 생성하지 않는다.
+- previewHtml은 rule-based Markdown conversion 결과이며 DB에 저장하지 않는다.
+- HTML 변환 후보 생성 또는 Blogger publish 연동이 필요하면 후속 패치에서 별도 Task Route와 저장 정책을 먼저 설계한다.

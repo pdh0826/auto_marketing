@@ -264,3 +264,15 @@ npm run build
 
 - Patch 8C는 저장된 `draftMarkdown`을 입력으로 HTML 변환 dry-run/preview를 검증한다.
 - `draftHtml` 자동 저장, Blogger OAuth/API/publish, 품질검사는 여전히 금지한다.
+
+## Patch 8C 수동 검증
+
+- `/content/[id]`에 `HTML Conversion Dry Run` 섹션이 표시된다.
+- 저장된 `draftMarkdown`이 없으면 dry-run을 실행할 수 없고 안내가 표시된다.
+- `POST /api/content-items/[id]/html-preview`는 content item, blog, brand, attached assets를 read-only로 조회한다.
+- HTML Dry Run 실행 시 previewHtml, readiness checks, draft validation, media placeholder mapping, sanitization/security checks가 표시된다.
+- previewHtml은 화면에만 표시되고 `content_items.draftHtml`에는 저장되지 않는다.
+- 테스트 content item `cmqc2xqbr00011y70sxmgl65v`는 HTML Dry Run 후에도 `has_plan = true`, `has_draft = true`, `has_html = false` 상태를 유지해야 한다.
+- media placeholder가 attached asset과 매칭되면 preview에서는 내부 file API URL만 사용하고 `storagePath`를 표시하지 않는다.
+- raw HTML은 escape되고, script/iframe/form/style, `javascript:`, event handler 속성 패턴은 security readiness fail로 표시된다.
+- LLM 호출, `llm_call_logs` 생성, Blogger API 호출은 발생하지 않는다.

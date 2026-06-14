@@ -293,6 +293,14 @@ th {
   resize: vertical;
 }
 
+.html-preview-frame {
+  width: 100%;
+  min-height: 420px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
 @media (max-width: 720px) {
   .section-heading {
     display: block;

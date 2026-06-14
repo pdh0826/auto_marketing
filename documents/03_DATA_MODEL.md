@@ -217,3 +217,13 @@ mediaPlaceholderCount = 1
 ```
 
 `llm_call_logs.metadata`에는 prompt 전문, raw response 전문, request body 전문, 후보 Markdown 전문, API Key, Bearer token, secretRef, encryptedValue, provider headers, media storagePath를 저장하지 않는다. grep 검사에서 `draftMarkdown` 문자열이 잡히는 경우 과거 안전한 errorMessage인 `Generated draftMarkdown did not pass validation.`일 수 있으므로 metadata 원문 저장 여부와 구분해서 확인한다.
+
+## Patch 8C HTML preview data policy
+
+Patch 8C는 새 DB 모델이나 migration을 추가하지 않는다.
+
+- `content_items.draftMarkdown`은 read-only 입력으로만 사용한다.
+- `content_items.draftHtml`은 변경하지 않는다.
+- attached `content_assets`는 placeholder mapping과 preview media URL 생성에만 사용한다.
+- `storagePath`는 API 응답, 화면, previewHtml에 포함하지 않는다.
+- `llm_call_logs`는 생성하지 않는다.

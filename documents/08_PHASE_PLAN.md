@@ -13,8 +13,8 @@
 9. 본문 초안 dry-run과 실제 후보 생성: 완료
 10. draftMarkdown 후보 편집/재검증/반영: 완료
 11. draft safety prompt와 자동 repair: 완료
-12. HTML 변환 dry-run/preview: 다음 세션 Patch 8C
-13. HTML 변환 후보 생성과 수동 반영
+12. HTML 변환 dry-run/preview: 완료
+13. HTML 변환 후보 생성과 수동 반영: 다음 패치 후보
 14. 품질검사
 15. Blogger OAuth 연결
 16. Blogger 초안 저장
@@ -26,15 +26,21 @@
 22. 이미지/썸네일
 23. 성과 분석과 리라이트
 
-## 다음 세션 1순위: Patch 8C
+## Patch 8C 완료 기준
 
-목표:
+완료:
 
 - 저장된 `draftMarkdown` 기반 HTML 변환 준비 상태 확인
 - media placeholder 변환 preview
 - HTML sanitization/security policy 검토
 - 실제 Blogger 연동 없음
 - `draftHtml` 자동 저장 없음
+
+다음 패치 후보:
+
+- previewHtml 후보 편집/재검증
+- `draftHtml` 수동 반영 저장 정책
+- HTML sanitization 강화
 
 먼저 하지 말 것:
 

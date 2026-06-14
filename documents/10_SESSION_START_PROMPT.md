@@ -11,6 +11,7 @@ repo: ~/blog-growth-agent
 branch: master
 
 최신 커밋:
+- 5c8f9c6 Document Blog Growth Agent session closeout
 - a53094c Improve draft safety repair flow
 - 1c89245 Generate draft markdown candidates with LLM
 - a05c62b Add draft markdown dry run preview
@@ -33,6 +34,7 @@ branch: master
 - content_draft 실제 LLM 후보 생성
 - draftMarkdown 후보 편집/재검증/반영
 - draft safety prompt 강화와 validation 실패 시 자동 repair 1회
+- saved draftMarkdown 기반 HTML 변환 dry-run/preview
 
 현재 DB/LLM 상태:
 - 테스트 content item id: cmqc2xqbr00011y70sxmgl65v
@@ -44,12 +46,12 @@ branch: master
 - draftMarkdown은 자동 저장되지 않고 사용자가 반영했을 때만 DB에 저장됨
 
 다음 세션 1순위 작업:
-Patch 8C: 저장된 draftMarkdown 기반 HTML 변환 dry-run/preview
+Patch 8D 후보: HTML preview 후보 편집/재검증과 draftHtml 수동 반영 저장 정책
 
-Patch 8C 목표:
-- saved draftMarkdown을 기반으로 HTML 변환 준비 상태 확인
-- media placeholder 변환 preview
-- sanitization/security policy 검토
+Patch 8D 목표:
+- previewHtml 후보를 사용자가 검토하고 편집할 수 있게 한다.
+- HTML sanitization/security validation을 재실행한다.
+- validation error가 없을 때만 사용자가 draftHtml에 수동 반영한다.
 - 실제 Blogger 연동은 아직 하지 않음
 - draftHtml 자동 저장 없음
 
@@ -63,7 +65,7 @@ Patch 8C 목표:
 - git add . 또는 git add -A 금지
 - .env.local 읽기/출력/수정 금지
 
-첫 작업으로 Patch 8C 작업계획을 제안해줘. 아직 구현하지 말고 계획만 작성해줘.
+첫 작업으로 Patch 8D 작업계획을 제안해줘. 아직 구현하지 말고 계획만 작성해줘.
 ```
 
 ## 첫 점검 명령어

@@ -33,14 +33,16 @@ Google Blogger 기반 블로그를 여러 개 운영하면서, 블로그별 주�
 - `content_draft` Task Route로 draftMarkdown 후보를 실제 LLM 호출로 생성하고, 사용자가 확인 후에만 저장한다.
 - draftMarkdown 후보는 편집과 rule-based 재검증을 지원한다.
 - draft safety prompt와 validation 실패 시 1회 자동 repair 흐름이 구현되어 있다.
+- 저장된 draftMarkdown 기반 HTML 변환 dry-run/preview가 구현되어 있다.
+- HTML preview는 media placeholder mapping과 sanitization/security readiness를 표시하며 DB에 저장하지 않는다.
 
 아직 구현하지 않은 범위는 명확히 남아 있다.
 
-- draftHtml 생성과 HTML 변환
+- draftHtml 후보 편집/수동 반영 저장
 - 품질검사
 - Google OAuth
 - Blogger API 초안 저장
 - 실제 발행과 예약 발행
 - 자동 bulk publishing
 
-다음 세션의 1순위 작업은 Patch 8C: 저장된 `draftMarkdown` 기반 HTML 변환 dry-run/preview다. 다음 세션에서 Blogger publish로 바로 진행하지 않는다.
+다음 세션의 1순위 후보 작업은 Patch 8D: HTML preview 후보 편집/재검증과 `draftHtml` 수동 반영 저장 정책이다. 다음 세션에서 Blogger publish로 바로 진행하지 않는다.

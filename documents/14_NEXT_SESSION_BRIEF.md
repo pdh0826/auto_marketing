@@ -61,13 +61,13 @@ mediaPlaceholderCount = 1
 
 ## Next Patch
 
-Patch 8C: saved `draftMarkdown` 기반 HTML 변환 dry-run/preview.
+Patch 8D 후보: HTML preview 후보 편집/재검증과 `draftHtml` 수동 반영 저장 정책.
 
 Target:
 
-- saved draftMarkdown을 기반으로 HTML 변환 readiness 확인
-- media placeholder 변환 preview
-- sanitization/security policy 검토
+- Patch 8C의 previewHtml을 기반으로 사용자가 HTML 후보를 검토하고 편집할 수 있게 한다.
+- HTML sanitization/security validation을 재실행한다.
+- validation error가 없을 때만 사용자가 `draftHtml에 반영`을 눌러 저장한다.
 - 실제 Blogger 연동 없음
 - draftHtml 자동 저장 없음
 
@@ -86,12 +86,11 @@ Target:
 ```text
 AGENTS.md와 documents/ 폴더의 관련 문서를 먼저 읽어줘.
 
-현재 프로젝트 상태를 점검하고 Patch 8C 작업계획을 제안해줘.
+현재 프로젝트 상태를 점검하고 Patch 8D 작업계획을 제안해줘.
 
 목표:
-- 저장된 draftMarkdown 기반 HTML 변환 dry-run/preview를 추가한다.
-- media placeholder 변환 preview를 설계한다.
-- sanitization/security policy를 검토한다.
+- Patch 8C에서 생성한 previewHtml 후보를 사용자가 편집/재검증할 수 있게 한다.
+- validation error가 없을 때만 draftHtml에 수동 반영할 수 있게 한다.
 - 실제 Blogger OAuth/API/publish는 구현하지 않는다.
 - draftHtml 자동 저장은 하지 않는다.
 

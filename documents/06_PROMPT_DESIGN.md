@@ -90,3 +90,14 @@ Patch 8B-HOTFIX는 draft prompt의 금융/투자/서비스 홍보 안전 문구�
 현재 prompt 구현 상태는 `content_plan`과 `content_draft` 후보 생성까지다. `draftHtml` 생성용 prompt, HTML 변환 prompt, 품질검사 prompt는 아직 구현하지 않았다.
 
 다음 세션 Patch 8C에서는 저장된 `draftMarkdown`을 기반으로 HTML 변환 dry-run/preview prompt 또는 rule-based 변환 정책을 설계한다. 실제 Blogger 연동과 자동 저장은 포함하지 않는다.
+
+## Patch 8C HTML dry-run conversion
+
+Patch 8C는 LLM prompt를 사용하지 않는다. 저장된 `draftMarkdown`을 rule-based로 escaped HTML preview로 변환한다.
+
+- Markdown heading, paragraph, list, blockquote, code fence, basic inline formatting을 제한적으로 변환한다.
+- raw HTML 입력은 preview에서 escape한다.
+- script/iframe/form/style 계열 raw HTML, `javascript:` URL, event handler 속성 패턴은 security readiness fail로 표시한다.
+- media placeholder는 attached asset과 매칭해 preview용 figure markup으로 변환한다.
+- previewHtml은 화면 표시용이며 DB에 저장하지 않는다.
+- Blogger embed/upload/publish용 prompt 또는 API 호출은 포함하지 않는다.

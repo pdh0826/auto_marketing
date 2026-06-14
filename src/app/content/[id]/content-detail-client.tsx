@@ -8,6 +8,7 @@ import { buildContentPlanDryRun, type ContentPlanDryRunResult, type ReadinessSta
 import { getContentModeLabel } from "@/lib/content/constants";
 import { buildDraftMarkdownDryRun, type DraftMarkdownDryRunResult } from "@/lib/content/draft-preview";
 import { validateDraftMarkdown, type DraftValidationResult } from "@/lib/content/draft-validation";
+import type { HtmlPreviewDryRunResult } from "@/lib/content/html-preview";
 import { formatPlanJson, hasUsablePlanJson } from "@/lib/content/plan-template";
 import { ApiResult, requestJson } from "@/lib/form-utils";
 import type { LlmTaskRouteAdmin } from "@/lib/llm/admin-types";
@@ -63,6 +64,7 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
   const [contentDraftRoute, setContentDraftRoute] = useState<LlmTaskRouteAdmin | null>(null);
   const [dryRunResult, setDryRunResult] = useState<ContentPlanDryRunResult | null>(null);
   const [draftDryRunResult, setDraftDryRunResult] = useState<DraftMarkdownDryRunResult | null>(null);
+  const [htmlPreviewResult, setHtmlPreviewResult] = useState<HtmlPreviewDryRunResult | null>(null);
   const [generatedPlan, setGeneratedPlan] = useState<GeneratedPlanResult | null>(null);
   const [generatedDraft, setGeneratedDraft] = useState<GeneratedDraftResult | null>(null);
   const [candidateText, setCandidateText] = useState("");
@@ -80,6 +82,7 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
   const [changingStatus, setChangingStatus] = useState(false);
   const [generatingPlan, setGeneratingPlan] = useState(false);
   const [generatingDraft, setGeneratingDraft] = useState(false);
+  const [runningHtmlPreview, setRunningHtmlPreview] = useState(false);
   const [applyingPlan, setApplyingPlan] = useState(false);
   const [applyingDraft, setApplyingDraft] = useState(false);
   const [revalidatingPlan, setRevalidatingPlan] = useState(false);
@@ -89,6 +92,7 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
   const [routeError, setRouteError] = useState<string | null>(null);
   const [generationError, setGenerationError] = useState<string | null>(null);
   const [draftGenerationError, setDraftGenerationError] = useState<string | null>(null);
+  const [htmlPreviewError, setHtmlPreviewError] = useState<string | null>(null);
   const [planError, setPlanError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -97,6 +101,7 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
   const canApplyGeneratedPlan = Boolean(generatedPlan?.validation.ok && !candidateDirty && !candidateParseError && !applyingPlan);
   const canGenerateDraft = Boolean(contentItem?.planJson && draftDryRunResult?.ready && !generatingDraft);
   const canApplyGeneratedDraft = Boolean(generatedDraft?.validation.ok && !draftDirty && !applyingDraft);
+  const canRunHtmlPreview = Boolean(contentItem?.draftMarkdown && !runningHtmlPreview);
 
   const loadContentItem = useCallback(async () => {
     setLoading(true);
@@ -306,6 +311,25 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
     }
   }
 
+  async function runHtmlPreviewDryRun() {
+    setNotice(null);
+    setHtmlPreviewError(null);
+    setRunningHtmlPreview(true);
+
+    try {
+      const result = await requestJson<ApiResult<HtmlPreviewDryRunResult>>(`/api/content-items/${contentItemId}/html-preview`, {
+        method: "POST",
+        body: JSON.stringify({})
+      });
+      setHtmlPreviewResult(result.data);
+      setNotice("HTML 변환 dry-run preview를 생성했습니다. DB에는 저장하지 않았습니다.");
+    } catch (caught) {
+      setHtmlPreviewError(caught instanceof Error ? caught.message : "HTML 변환 dry-run preview에 실패했습니다.");
+    } finally {
+      setRunningHtmlPreview(false);
+    }
+  }
+
   async function generatePlanCandidate() {
     setNotice(null);
     setGenerationError(null);
@@ -420,7 +444,7 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
             본문 초안 생성은 아래 섹션에서 실행
           </button>
           <button className="button secondary" type="button" disabled>
-            HTML 변환은 후속 패치에서 연결 예정
+            HTML 변환은 아래 dry-run에서 preview
           </button>
           <button className="button secondary" type="button" disabled>
             품질검사는 후속 패치에서 연결 예정
@@ -819,6 +843,75 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
           <section className="admin-section">
             <div className="section-heading">
               <div>
+                <h2>HTML Conversion Dry Run</h2>
+                <p className="muted">
+                  저장된 draftMarkdown을 HTML preview로 변환하고 media placeholder 매핑과 sanitization readiness를 확인합니다. DB에는 저장하지 않습니다.
+                </p>
+              </div>
+              <button className="button secondary" type="button" disabled>
+                Blogger 연동은 후속 패치에서 연결 예정
+              </button>
+            </div>
+
+            {!contentItem.draftMarkdown ? <div className="notice error">저장된 draftMarkdown이 없습니다. 먼저 draftMarkdown에 반영하세요.</div> : null}
+            {htmlPreviewError ? <div className="notice error">{htmlPreviewError}</div> : null}
+
+            <div className="form-actions">
+              <button className="button" type="button" disabled={!canRunHtmlPreview} onClick={() => void runHtmlPreviewDryRun()}>
+                {runningHtmlPreview ? "HTML Dry Run 실행 중" : "HTML Dry Run"}
+              </button>
+              <button className="button secondary" type="button" disabled>
+                draftHtml 저장은 후속 패치에서 연결 예정
+              </button>
+            </div>
+
+            {htmlPreviewResult ? (
+              <>
+                <div className={htmlPreviewResult.ready ? "notice" : "notice error"}>
+                  {htmlPreviewResult.ready
+                    ? "HTML dry-run readiness가 통과되었습니다. previewHtml은 화면 표시용이며 DB에 저장하지 않았습니다."
+                    : "HTML dry-run readiness에 실패 항목이 있습니다. previewHtml은 화면 표시용이며 DB에 저장하지 않았습니다."}
+                </div>
+                <div className="detail-grid">
+                  <DetailItem label="Markdown Length" value={String(htmlPreviewResult.metadata.draftMarkdownLength)} />
+                  <DetailItem label="Preview HTML Length" value={String(htmlPreviewResult.metadata.previewHtmlLength)} />
+                  <DetailItem label="Placeholders" value={String(htmlPreviewResult.metadata.placeholderCount)} />
+                  <DetailItem label="Matched Placeholders" value={String(htmlPreviewResult.metadata.matchedPlaceholderCount)} />
+                  <DetailItem label="Unmatched Placeholders" value={String(htmlPreviewResult.metadata.unmatchedPlaceholderCount)} />
+                  <DetailItem label="Assets Without Placeholder" value={String(htmlPreviewResult.metadata.assetWithoutPlaceholderCount)} />
+                </div>
+                <ReadinessTable checks={htmlPreviewResult.checks} />
+                <ValidationList title="Markdown Validation Errors" items={htmlPreviewResult.draftValidation.errors} emptyText="draft validation error가 없습니다." isError />
+                <ValidationList
+                  title="Markdown Validation Warnings"
+                  items={htmlPreviewResult.draftValidation.warnings}
+                  emptyText="draft validation warning이 없습니다."
+                  isWarning
+                />
+                <SecurityCheckList checks={htmlPreviewResult.securityChecks} />
+                <HtmlMediaMappingTable mappings={htmlPreviewResult.mediaMappings} />
+                <div className="read-block">
+                  <h3>HTML Preview</h3>
+                  <iframe
+                    className="html-preview-frame"
+                    sandbox=""
+                    srcDoc={htmlPreviewResult.previewHtml}
+                    title="HTML conversion dry-run preview"
+                  />
+                </div>
+                <label className="plan-editor read-block">
+                  previewHtml
+                  <textarea value={htmlPreviewResult.previewHtml} readOnly spellCheck={false} />
+                </label>
+              </>
+            ) : (
+              <div className="notice">HTML Dry Run을 실행하면 저장된 draftMarkdown 기반 previewHtml, media mapping, security readiness가 생성됩니다.</div>
+            )}
+          </section>
+
+          <section className="admin-section">
+            <div className="section-heading">
+              <div>
                 <h2>Draft And Quality</h2>
                 <p className="muted">아직 자동 생성, HTML 변환, 품질검사는 연결하지 않았습니다.</p>
               </div>
@@ -897,6 +990,99 @@ function ValidationList({
             <li key={item}>{item}</li>
           ))}
         </ul>
+      )}
+    </div>
+  );
+}
+
+function ReadinessTable({ checks }: { checks: Array<{ key: string; label: string; status: ReadinessStatus; message: string }> }) {
+  return (
+    <div className="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Check</th>
+            <th>Status</th>
+            <th>Message</th>
+          </tr>
+        </thead>
+        <tbody>
+          {checks.map((check) => (
+            <tr key={check.key}>
+              <td>{check.label}</td>
+              <td>{formatReadinessStatus(check.status)}</td>
+              <td>{check.message}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function SecurityCheckList({ checks }: { checks: HtmlPreviewDryRunResult["securityChecks"] }) {
+  return (
+    <div className="read-block">
+      <h3>Sanitization / Security Readiness</h3>
+      <div className="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Check</th>
+              <th>Status</th>
+              <th>Message</th>
+            </tr>
+          </thead>
+          <tbody>
+            {checks.map((check) => (
+              <tr key={check.key}>
+                <td>{check.key}</td>
+                <td>{formatReadinessStatus(check.status)}</td>
+                <td>{check.message}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function HtmlMediaMappingTable({ mappings }: { mappings: HtmlPreviewDryRunResult["mediaMappings"] }) {
+  return (
+    <div className="read-block">
+      <h3>HTML Media Placeholder Mapping</h3>
+      {mappings.length === 0 ? (
+        <div className="notice">draftMarkdown에 media placeholder가 없습니다.</div>
+      ) : (
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Placeholder</th>
+                <th>Asset</th>
+                <th>Type</th>
+                <th>Placement</th>
+                <th>Caption</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {mappings.map((mapping) => (
+                <tr key={`${mapping.placeholder}-${mapping.assetId ?? "missing"}`}>
+                  <td>
+                    <code>{mapping.placeholder}</code>
+                  </td>
+                  <td>{mapping.originalName ?? mapping.assetId ?? "-"}</td>
+                  <td>{mapping.assetType ?? "-"}</td>
+                  <td>{mapping.placement ?? "-"}</td>
+                  <td>{mapping.caption || "-"}</td>
+                  <td>{mapping.matched ? "matched" : mapping.message}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
   );

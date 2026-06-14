@@ -63,3 +63,35 @@ Not implemented yet:
 Next recommended patch:
 
 - Patch 8C: saved `draftMarkdown` 기반 HTML 변환 dry-run/preview.
+
+## Patch 8C HTML Dry Run
+
+Implemented after closeout:
+
+- Added `POST /api/content-items/[id]/html-preview`.
+- Added rule-based saved `draftMarkdown` to escaped previewHtml conversion.
+- Added media placeholder mapping preview for attached assets.
+- Added sanitization/security readiness checks for raw HTML, script-like tags, `javascript:` URLs, and event handler attributes.
+- Added `/content/[id]` HTML Conversion Dry Run UI.
+
+Verified test content item:
+
+```text
+id = cmqc2xqbr00011y70sxmgl65v
+has_plan = true
+has_draft = true
+has_html = false
+```
+
+Verified dry-run behavior:
+
+```text
+ready = true
+placeholderCount = 1
+matchedPlaceholderCount = 1
+unmatchedPlaceholderCount = 0
+llm_call_logs count before = 8
+llm_call_logs count after = 8
+```
+
+Patch 8C does not call LLM providers, does not create `llm_call_logs`, does not save `draftHtml`, and does not call Blogger APIs.
