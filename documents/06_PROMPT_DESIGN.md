@@ -139,3 +139,15 @@ Patch 9E-4C-2는 local/small-model-like `content_draft` route에서 실제 skele
 - API 응답에는 candidate Markdown preview가 포함될 수 있지만 DB/log에는 prompt 전문, raw response 전문, skeleton 전문, section fragment 전문, final polish 입력/출력 전문, candidate 전문을 저장하지 않는다.
 - `llm_call_logs.metadata`에는 step/section key, prompt/response hash, duration, status, validation summary 같은 safe metadata만 저장한다.
 - HTML template/theme rendering은 Patch 9E-4D로 분리한다.
+
+## Patch 9E-4C-2-hotfix Local FAQ preservation
+
+Patch 9E-4C-2-hotfix는 saved `planJson.faq`가 있는 local sectioned draft에서 FAQ 구조가 사라지지 않도록 보강한다.
+
+- skeleton prompt는 FAQ가 있으면 dedicated `conclusion_cta_faq` 또는 `faq` section을 포함하도록 지시한다.
+- FAQ section prompt는 `## FAQ` heading과 `### 질문` 구조를 만들도록 지시한다.
+- final polish prompt는 `## FAQ`와 `### 질문` 구조를 삭제하거나 일반 문단으로 합치지 말라고 명시한다.
+- final polish 이후에도 FAQ-like section이 없으면 deterministic fallback으로 최대 5개 FAQ를 append한다.
+- FAQ fallback은 `planJson.faq`의 question/answer를 사용하되 HTML tag를 제거하고 Markdown line/paragraph로 정규화한다.
+- metadata에는 `faqRequired`, `faqSectionDetected`, `faqFallbackAppended`, `faqCount` 같은 safe summary만 저장한다.
+- FAQ 질문/답변 전문, prompt 전문, raw response 전문, candidate 전문, section fragment 전문은 로그에 저장하지 않는다.

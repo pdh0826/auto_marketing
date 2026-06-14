@@ -439,3 +439,23 @@ Policy:
 - No content item status, `qualityScore`, `publishedAt`, or `scheduledAt` mutation.
 - No Blogger API read/write, draft save, publish, scheduled publish, token refresh, `posts.insert`, or `posts.update`.
 - Blog post HTML template/theme rendering is deferred to Patch 9E-4D.
+
+## Patch 9E-4C-2 Hotfix: Local FAQ Preservation
+
+Implemented after Patch 9E-4C-2 smoke:
+
+- Strengthened local sectioned skeleton/section prompts to preserve saved `planJson.faq`.
+- Strengthened final polish prompt so FAQ headings and question structure are not removed or merged into general prose.
+- Added deterministic post-polish FAQ guard.
+- When saved FAQ exists and the candidate has no FAQ-like section, the guard appends a safe `## FAQ` section with `###` question headings.
+- Added safe FAQ metadata: `faqRequired`, `faqSectionDetected`, `faqFallbackAppended`, and `faqCount`.
+- Updated content detail UI to show FAQ preservation metadata.
+
+Policy:
+
+- Remote/commercial one-shot draft path is unchanged.
+- No automatic `draftMarkdown` or `draftHtml` save.
+- No DB/schema or TaskRoute schema change.
+- No FAQ question/answer full-text metadata or logs.
+- No prompt full text, raw response, candidate Markdown, section fragment, final polish input/output, secret, token, or encrypted value logging.
+- No Blogger API read/write, draft save, publish, scheduled publish, token refresh, `posts.insert`, or `posts.update`.

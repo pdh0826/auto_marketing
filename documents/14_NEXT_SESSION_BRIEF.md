@@ -5,7 +5,7 @@
 ```text
 repo: ~/blog-growth-agent
 branch: master
-latest commit before Patch 9E-4C-2 work: 0aacc63 Add provider-aware draft strategy metadata
+latest commit before Patch 9E-4C-2-hotfix work: 5a18e09 Add local sectioned draft generation preview
 ```
 
 ## Implemented Scope
@@ -31,6 +31,7 @@ latest commit before Patch 9E-4C-2 work: 0aacc63 Add provider-aware draft strate
 - Repair candidate apply UX polish with explicit validate/apply handoff
 - Provider-aware draft generation strategy foundation for `content_draft`
 - Local LLM sectioned draft generation preview for `content_draft`
+- Local sectioned draft FAQ preservation hotfix
 
 ## Current Blogger State
 
@@ -55,6 +56,8 @@ latest commit before Patch 9E-4C-2 work: 0aacc63 Add provider-aware draft strate
 - Draft generation responses and `content_draft` call logs now include safe strategy metadata only.
 - Patch 9E-4C-2 implements local sectioned draft preview behind the existing `generate-draft` endpoint.
 - Local sectioned draft generation runs skeleton, section generation, deterministic assembly, and final polish/fallback.
+- Patch 9E-4C-2-hotfix preserves saved `planJson.faq` in local sectioned drafts.
+- If final polish removes the FAQ structure, deterministic fallback appends a safe `## FAQ` section and records safe FAQ metadata.
 - Generated candidate Markdown still requires manual `draftMarkdown에 반영`; `draftHtml` generation/apply and quality checks remain separate.
 - Remote/commercial routes still use the existing one-shot full draft path.
 
@@ -84,6 +87,7 @@ Recommended scope:
 - prompt full text or raw LLM response logging
 - candidate Markdown full text logging
 - skeleton/section/final polish full text logging
+- FAQ question/answer full text logging
 - Blogger post HTML theme auto-save
 - `git add .` or `git add -A`
 
@@ -98,6 +102,7 @@ AGENTS.md와 documents/ 폴더의 관련 문서를 먼저 읽어줘.
 - Patch 9E-4B의 repair candidate apply UX polish 구현 상태를 확인한다.
 - Patch 9E-4C-1의 provider-aware draft generation strategy foundation 구현 상태를 확인한다.
 - Patch 9E-4C-2의 Local LLM sectioned draft generation preview 구현 상태를 확인한다.
+- Patch 9E-4C-2-hotfix의 Local FAQ preservation 구현 상태를 확인한다.
 - Blog post template renderer / publish-ready HTML theme 또는 Blogger OAuth/test blog readiness 중 다음 최소 패치를 설계한다.
 - remote/commercial provider의 기존 one-shot draft generation은 유지한다.
 - 자동 draftHtml 저장, Blogger API 호출, publish/scheduled publish는 명시적으로 범위를 정하기 전까지 구현하지 않는다.

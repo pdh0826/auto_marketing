@@ -33,6 +33,10 @@ export interface LocalSectionedDraftMetadata {
   fallbackUsed: boolean;
   fallbackReasons: string[];
   stepSummaries: LocalSectionedDraftStepSummary[];
+  faqRequired: boolean;
+  faqSectionDetected: boolean;
+  faqFallbackAppended: boolean;
+  faqCount: number;
 }
 
 export interface LocalSectionedDraftResult {
@@ -71,6 +75,11 @@ interface SkeletonPlan {
   sections: SkeletonSection[];
 }
 
+interface FaqItem {
+  question: string;
+  answer: string;
+}
+
 const FINAL_POLISH_MAX_INPUT_CHARS = 8500;
 
 export async function generateLocalSectionedDraftCandidate(input: LocalSectionedDraftInput): Promise<LocalSectionedDraftResult> {
@@ -79,6 +88,7 @@ export async function generateLocalSectionedDraftCandidate(input: LocalSectioned
   let totalLatencyMs = 0;
   let totalInputTokens: number | null = null;
   let totalOutputTokens: number | null = null;
+  const faqItems = getFaqItems(input.planJson);
 
   const skeletonPrompt = buildSkeletonPrompt(input);
   const skeletonCall = await runStepCall({
@@ -94,7 +104,7 @@ export async function generateLocalSectionedDraftCandidate(input: LocalSectioned
   totalInputTokens = sumNullableTokens(totalInputTokens, skeletonCall.inputTokens);
   totalOutputTokens = sumNullableTokens(totalOutputTokens, skeletonCall.outputTokens);
 
-  const skeleton = parseSkeletonPlan(skeletonCall.text, input);
+  const skeleton = ensureFaqSkeletonSection(parseSkeletonPlan(skeletonCall.text, input), faqItems);
   const previousSectionSummaries: string[] = [];
   const sectionFragments: string[] = [];
 
@@ -166,6 +176,23 @@ export async function generateLocalSectionedDraftCandidate(input: LocalSectioned
     }
   }
 
+  const faqGuardResult = ensureFaqSection(candidateDraftMarkdown, faqItems);
+  candidateDraftMarkdown = faqGuardResult.markdown;
+  if (faqGuardResult.fallbackAppended) {
+    fallbackReasons.push("faq_fallback_appended");
+    stepSummaries.push({
+      stepKey: "faq_fallback_append",
+      sectionKey: "faq",
+      status: "fallback",
+      durationMs: 0,
+      promptHash: null,
+      responseHash: hashText(faqGuardResult.appendedMarkdown ?? ""),
+      responseLength: faqGuardResult.appendedMarkdown?.length ?? 0,
+      retryCount: 0,
+      errorMessage: null
+    });
+  }
+
   return {
     candidateDraftMarkdown,
     latencyMs: totalLatencyMs,
@@ -180,7 +207,11 @@ export async function generateLocalSectionedDraftCandidate(input: LocalSectioned
       finalPolishFallbackReason,
       fallbackUsed: fallbackReasons.length > 0,
       fallbackReasons,
-      stepSummaries
+      stepSummaries,
+      faqRequired: faqItems.length > 0,
+      faqSectionDetected: faqGuardResult.detectedAfter,
+      faqFallbackAppended: faqGuardResult.fallbackAppended,
+      faqCount: faqItems.length
     }
   };
 }
@@ -290,6 +321,7 @@ async function runStepCall(input: {
 }
 
 function buildSkeletonPrompt(input: LocalSectionedDraftInput): DraftPromptPreview {
+  const faqItems = getFaqItems(input.planJson);
   return {
     system: [
       "You are a careful Korean long-form article architect for Blog Growth Agent.",
@@ -297,13 +329,14 @@ function buildSkeletonPrompt(input: LocalSectionedDraftInput): DraftPromptPrevie
       "Use helpful, original, people-first structure. Do not copy competitor articles.",
       "For investment or finance content, keep services framed as informational/reference tools only.",
       "Do not include buy/sell recommendations, guaranteed profit, return examples, success stories, or risk-free wording.",
-      "Never create duplicate H1 headings."
+      "Never create duplicate H1 headings.",
+      faqItems.length > 0 ? "The saved planJson has FAQ items. Include a dedicated conclusion_cta_faq or faq section in the skeleton." : "Include FAQ structure only when the saved plan asks for it."
     ].join("\n"),
     user: JSON.stringify(buildPromptContext(input), null, 2),
     outputFormat: [
       "Return JSON only.",
       'Shape: {"title":"...","sections":[{"key":"intro","heading":"...","goal":"..."},{"key":"body_1","heading":"...","goal":"..."},{"key":"body_2","heading":"...","goal":"..."},{"key":"conclusion_cta_faq","heading":"...","goal":"..."}]}',
-      "Use 4 sections unless a risk_disclaimer section is clearly needed.",
+      faqItems.length > 0 ? "Use a conclusion_cta_faq section that explicitly preserves a dedicated FAQ block." : "Use 4 sections unless a risk_disclaimer section is clearly needed.",
       "Section keys must be lowercase snake_case. Do not include body prose."
     ].join("\n")
   };
@@ -316,6 +349,8 @@ function buildSectionPrompt(
   previousSectionSummaries: string[],
   isRetry = false
 ): DraftPromptPreview {
+  const faqItems = getFaqItems(input.planJson);
+  const sectionNeedsFaq = faqItems.length > 0 && isFaqSectionKey(section.key);
   return {
     system: [
       "You are a careful Korean Markdown section writer.",
@@ -323,6 +358,9 @@ function buildSectionPrompt(
       "Do not write an H1. Use H2/H3 and paragraphs only.",
       "Do not include aggressive CTA wording or investment recommendations.",
       "Preserve or include media placeholders only when relevant.",
+      sectionNeedsFaq
+        ? "The saved planJson has FAQ items. Create a separate ## FAQ section and write each question as a ### heading. Do not merge FAQ into CTA or conclusion paragraphs."
+        : "Do not invent an FAQ section unless this requested section goal asks for it.",
       isRetry ? "This is a retry. Keep the section shorter, safer, and more direct." : "Keep the section focused and substantial."
     ].join("\n"),
     user: JSON.stringify(
@@ -333,7 +371,14 @@ function buildSectionPrompt(
           sections: skeleton.sections
         },
         requestedSection: section,
-        previousSectionSummaries
+        previousSectionSummaries,
+        faqInstruction: sectionNeedsFaq
+          ? {
+              required: true,
+              count: faqItems.length,
+              format: "Use ## FAQ, then ### question headings with natural answers based on savedPlanJson.faq."
+            }
+          : { required: false }
       },
       null,
       2
@@ -341,6 +386,7 @@ function buildSectionPrompt(
     outputFormat: [
       "Return Markdown only.",
       "Start with one H2 for this section.",
+      sectionNeedsFaq ? "Include a dedicated ## FAQ heading and ### question headings for saved FAQ items." : "Do not add FAQ unless requested.",
       "Do not include H1.",
       "Do not wrap in code fences.",
       "Do not include commentary outside the Markdown fragment."
@@ -349,12 +395,14 @@ function buildSectionPrompt(
 }
 
 function buildFinalPolishPrompt(input: LocalSectionedDraftInput, assembledDraft: string): DraftPromptPreview {
+  const faqItems = getFaqItems(input.planJson);
   return {
     system: [
       "You are a careful Korean Markdown final editor.",
       "Polish the assembled draft for tone, transitions, logical flow, repetition, CTA balance, and disclaimer clarity.",
       "Do not add unsupported claims, investment recommendations, guaranteed outcomes, or aggressive sign-up language.",
       "Do not delete media placeholders.",
+      faqItems.length > 0 ? "Preserve the ## FAQ heading and ### question structure. Do not delete FAQ items or merge them into general paragraphs." : "Do not invent FAQ items.",
       "Return one complete Markdown draft with exactly one H1."
     ].join("\n"),
     user: JSON.stringify(
@@ -370,6 +418,7 @@ function buildFinalPolishPrompt(input: LocalSectionedDraftInput, assembledDraft:
       "Keep exactly one H1 at the top.",
       "Keep H2/H3 structure.",
       "Keep media placeholders.",
+      faqItems.length > 0 ? "Keep a dedicated FAQ-like section when FAQ exists in savedPlanJson." : "Do not add an FAQ section unless already present.",
       "Do not wrap in code fences.",
       "Do not include commentary before or after the Markdown."
     ].join("\n")
@@ -452,6 +501,23 @@ function parseSkeletonPlan(value: string, input: LocalSectionedDraftInput): Skel
   };
 }
 
+function ensureFaqSkeletonSection(skeleton: SkeletonPlan, faqItems: FaqItem[]): SkeletonPlan {
+  if (faqItems.length === 0 || skeleton.sections.some((section) => isFaqSectionKey(section.key) || isFaqHeading(section.heading))) {
+    return skeleton;
+  }
+  return {
+    ...skeleton,
+    sections: [
+      ...skeleton.sections.slice(0, 4),
+      {
+        key: "conclusion_cta_faq",
+        heading: "정리와 FAQ",
+        goal: "핵심 내용을 정리하고 정보성 CTA 뒤에 별도 FAQ section을 포함합니다."
+      }
+    ].slice(0, 5)
+  };
+}
+
 function parseJsonObject(value: string): Record<string, unknown> {
   const trimmed = value.trim();
   try {
@@ -510,6 +576,45 @@ function normalizeFinalMarkdown(value: string, title: string, mediaMapping: Draf
   const withoutExtraH1 = normalizeH1(withoutFences, title);
   const withMedia = ensureMediaPlaceholder(withoutExtraH1, mediaMapping);
   return normalizeMarkdown(withMedia);
+}
+
+function ensureFaqSection(markdown: string, faqItems: FaqItem[]) {
+  const detectedBefore = hasFaqLikeSection(markdown);
+  if (faqItems.length === 0 || detectedBefore) {
+    return {
+      markdown,
+      detectedAfter: detectedBefore,
+      fallbackAppended: false,
+      appendedMarkdown: null as string | null
+    };
+  }
+
+  const fallback = buildFaqFallbackMarkdown(markdown, faqItems);
+  const withFallback = normalizeMarkdown(`${markdown}\n\n${fallback}`);
+  return {
+    markdown: withFallback,
+    detectedAfter: hasFaqLikeSection(withFallback),
+    fallbackAppended: true,
+    appendedMarkdown: fallback
+  };
+}
+
+function buildFaqFallbackMarkdown(markdown: string, faqItems: FaqItem[]) {
+  const normalizedMarkdown = normalizeComparableText(markdown);
+  const selected = faqItems
+    .filter((item) => !normalizedMarkdown.includes(normalizeComparableText(item.question).slice(0, 28)))
+    .slice(0, 5);
+  const items = selected.length > 0 ? selected : faqItems.slice(0, 5);
+  return [
+    "## FAQ",
+    "",
+    ...items.flatMap((item) => [
+      `### ${sanitizeMarkdownLine(item.question)}`,
+      "",
+      sanitizeMarkdownParagraph(item.answer),
+      ""
+    ])
+  ].join("\n").trim();
 }
 
 function normalizeSectionMarkdown(value: string) {
@@ -578,6 +683,58 @@ function buildFallbackSection(section: SkeletonSection, contentItem: ContentItem
   ].join("\n");
 }
 
+function getFaqItems(planJson: Record<string, unknown>): FaqItem[] {
+  if (!Array.isArray(planJson.faq)) {
+    return [];
+  }
+  return planJson.faq
+    .map((item) => normalizeFaqItem(item))
+    .filter((item): item is FaqItem => Boolean(item))
+    .slice(0, 5);
+}
+
+function normalizeFaqItem(item: unknown): FaqItem | null {
+  if (typeof item === "string") {
+    const question = sanitizeMarkdownLine(item);
+    return question ? { question, answer: "이 질문은 본문에서 다룬 기준을 바탕으로 상황에 맞게 차분히 확인하는 것이 좋습니다." } : null;
+  }
+  if (!item || typeof item !== "object") {
+    return null;
+  }
+  const record = item as Record<string, unknown>;
+  const question = firstStringValue(record, ["question", "q", "title", "heading"]);
+  const answer = firstStringValue(record, ["answer", "a", "response", "description"]);
+  if (!question) {
+    return null;
+  }
+  return {
+    question: sanitizeMarkdownLine(question),
+    answer: sanitizeMarkdownParagraph(answer || "본문의 핵심 기준을 참고해 자신의 상황에 맞게 판단하는 것이 좋습니다.")
+  };
+}
+
+function firstStringValue(record: Record<string, unknown>, keys: string[]) {
+  for (const key of keys) {
+    const value = record[key];
+    if (typeof value === "string" && value.trim()) {
+      return value;
+    }
+  }
+  return null;
+}
+
+function hasFaqLikeSection(value: string) {
+  return /(^|\n)#{2,3}\s*(faq|자주 묻|질문)/i.test(value) || /(^|\n)###\s+.+\?/m.test(value);
+}
+
+function isFaqSectionKey(value: string) {
+  return /faq|question|qa|conclusion_cta_faq/i.test(value);
+}
+
+function isFaqHeading(value: string) {
+  return /faq|자주 묻|질문/i.test(value);
+}
+
 function summarizeSectionForNextPrompt(key: string, markdown: string) {
   const text = markdown
     .replace(/<!--[\s\S]*?-->/g, "")
@@ -617,6 +774,29 @@ function toSafeKey(value: string) {
 
 function stripMarkdownHeading(value: string) {
   return value.replace(/^#{1,6}\s+/, "");
+}
+
+function sanitizeMarkdownLine(value: string) {
+  return stripHtml(value)
+    .replace(/^#{1,6}\s+/, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 120);
+}
+
+function sanitizeMarkdownParagraph(value: string) {
+  return stripHtml(value)
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 500);
+}
+
+function stripHtml(value: string) {
+  return value.replace(/<[^>]*>/g, "");
+}
+
+function normalizeComparableText(value: string) {
+  return stripHtml(value).toLowerCase().replace(/\s+/g, " ").trim();
 }
 
 function stripCodeFences(value: string) {

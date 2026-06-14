@@ -63,6 +63,10 @@ export interface GenerateContentDraftResult {
     fallbackUsed: boolean;
     fallbackReasons: string[];
     stepSummaries: LocalSectionedDraftMetadata["stepSummaries"];
+    faqRequired: boolean;
+    faqSectionDetected: boolean;
+    faqFallbackAppended: boolean;
+    faqCount: number;
   };
 }
 
@@ -587,6 +591,10 @@ async function recordDraftLog(input: {
     fallbackUsed: boolean;
     fallbackReasons: string[];
     stepSummaries: LocalSectionedDraftMetadata["stepSummaries"];
+    faqRequired: boolean;
+    faqSectionDetected: boolean;
+    faqFallbackAppended: boolean;
+    faqCount: number;
   };
 }) {
   await createLlmCallLog({
@@ -619,6 +627,10 @@ async function recordDraftLog(input: {
       fallbackUsed: input.metadata.fallbackUsed,
       fallbackReasons: input.metadata.fallbackReasons,
       stepSummaries: input.metadata.stepSummaries,
+      faqRequired: input.metadata.faqRequired,
+      faqSectionDetected: input.metadata.faqSectionDetected,
+      faqFallbackAppended: input.metadata.faqFallbackAppended,
+      faqCount: input.metadata.faqCount,
       apiFormat: input.metadata.apiFormat,
       invocationMode: input.metadata.invocationMode,
       responseSummary: input.metadata.responseSummary,
@@ -655,7 +667,11 @@ function buildDraftStrategyLogMetadata(resolution: DraftGenerationStrategyResolu
     finalPolishFallbackReason: sectionedMetadata?.finalPolishFallbackReason ?? null,
     fallbackUsed: sectionedMetadata?.fallbackUsed ?? false,
     fallbackReasons: sectionedMetadata?.fallbackReasons ?? [],
-    stepSummaries: sectionedMetadata?.stepSummaries ?? []
+    stepSummaries: sectionedMetadata?.stepSummaries ?? [],
+    faqRequired: sectionedMetadata?.faqRequired ?? false,
+    faqSectionDetected: sectionedMetadata?.faqSectionDetected ?? false,
+    faqFallbackAppended: sectionedMetadata?.faqFallbackAppended ?? false,
+    faqCount: sectionedMetadata?.faqCount ?? 0
   };
 }
 

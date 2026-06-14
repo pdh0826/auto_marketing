@@ -539,3 +539,16 @@ npm run build
 - call logs API sanitizer는 원문 prompt/response는 숨기되 `promptHash`와 `responseHash` 같은 safe hash metadata는 허용한다.
 - Blogger API read/write, draft save, publish, scheduled publish, token refresh는 발생하지 않는다.
 - HTML template/theme rendering은 Patch 9E-4D 범위다.
+
+## Patch 9E-4C-2-hotfix Local FAQ preservation 검증
+
+- saved `planJson.faq`가 있으면 local sectioned draft candidate에 FAQ-like section이 포함되어야 한다.
+- section prompt는 `conclusion_cta_faq`/`faq` section에서 `## FAQ`와 `### 질문` 구조를 요구한다.
+- final polish prompt는 FAQ heading/question structure를 삭제하거나 일반 문단으로 병합하지 않도록 요구한다.
+- final polish 이후 FAQ-like section이 없으면 deterministic `## FAQ` fallback이 append된다.
+- FAQ fallback은 최대 5개 항목만 사용하고 HTML tag를 제거한 safe Markdown line/paragraph로 구성한다.
+- 이미 FAQ-like section이 있으면 fallback을 중복 append하지 않는다.
+- 응답/log metadata에는 `faqRequired`, `faqSectionDetected`, `faqFallbackAppended`, `faqCount`가 포함된다.
+- FAQ 질문/답변 전문은 metadata/log에 저장하지 않는다.
+- hotfix 후 local smoke에서 기존 `planJson.faq exists, but the draft does not appear to include an FAQ-like section.` warning이 사라지는지 확인한다.
+- 자동 `draftMarkdown`/`draftHtml` 저장, status/qualityScore/publishedAt/scheduledAt 변경, Blogger API/draft save/publish/token refresh는 발생하지 않는다.

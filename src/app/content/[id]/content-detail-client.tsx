@@ -80,6 +80,10 @@ interface GeneratedDraftResult {
     finalPolishFallbackReason: string | null;
     fallbackUsed: boolean;
     fallbackReasons: string[];
+    faqRequired: boolean;
+    faqSectionDetected: boolean;
+    faqFallbackAppended: boolean;
+    faqCount: number;
     stepSummaries: Array<{
       stepKey: string;
       sectionKey: string | null;
@@ -1420,6 +1424,10 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
                   <DetailItem label="Final Polish Applied" value={generatedDraft.metadata.finalPolishApplied ? "yes" : "no"} />
                   <DetailItem label="Final Polish Too Long" value={generatedDraft.metadata.finalPolishInputTooLong ? "yes" : "no"} />
                   <DetailItem label="Fallback Used" value={generatedDraft.metadata.fallbackUsed ? "yes" : "no"} />
+                  <DetailItem label="FAQ Required" value={generatedDraft.metadata.faqRequired ? "yes" : "no"} />
+                  <DetailItem label="FAQ Detected" value={generatedDraft.metadata.faqSectionDetected ? "yes" : "no"} />
+                  <DetailItem label="FAQ Fallback" value={generatedDraft.metadata.faqFallbackAppended ? "appended" : "not appended"} />
+                  <DetailItem label="FAQ Count" value={String(generatedDraft.metadata.faqCount)} />
                 </div>
                 {generatedDraft.metadata.finalPolishFallbackReason ? (
                   <div className="notice warning">Final polish fallback: {generatedDraft.metadata.finalPolishFallbackReason}</div>

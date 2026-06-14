@@ -412,3 +412,18 @@ Patch 9E-4C-2는 `local_sectioned_multi_pass` 전략에서 실제 local sectione
 - prompt 전문, raw response 전문, candidate Markdown 전문, skeleton 전문, section fragment 전문, final polish 입력/출력 전문, API key, token, secret, encrypted value는 저장하지 않는다.
 - `promptHash`와 `responseHash`는 원문이 아니라 safe hash metadata로 취급한다.
 - Blogger API, draft save, publish, scheduled publish, token refresh와는 무관하다.
+
+## Patch 9E-4C-2-hotfix FAQ preservation and LLM boundary
+
+Patch 9E-4C-2-hotfix는 local sectioned draft에서 saved FAQ가 final candidate에 보존되도록 한다.
+
+- `planJson.faq`가 있으면 skeleton/section/final polish prompt가 dedicated FAQ section preservation을 요구한다.
+- final polish 이후 FAQ-like section이 없으면 deterministic fallback이 `## FAQ`와 `### 질문` 형태로 append된다.
+- fallback 여부는 safe metadata로만 기록한다:
+  - `faqRequired`
+  - `faqSectionDetected`
+  - `faqFallbackAppended`
+  - `faqCount`
+- FAQ 질문/답변 전문은 metadata/log에 저장하지 않는다.
+- prompt 전문, raw response 전문, candidate Markdown 전문, section fragment 전문, final polish 입력/출력 전문, API key, token, secret, encrypted value는 저장하지 않는다.
+- remote/commercial one-shot path는 변경하지 않는다.
