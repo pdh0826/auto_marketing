@@ -449,3 +449,14 @@ Patch 9E-2는 `blogger_draft_saves` 테이블과 `BloggerDraftSaveStatus` enum�
 - 실패 record는 approval guard를 통과한 뒤 token/API 단계에서 실패한 경우에만 저장한다.
 - content item status, `qualityScore`, `publishedAt`, `scheduledAt`은 변경하지 않는다.
 - publish readiness는 latest successful draft save를 metadata/check에 반영하지만 `publishReady=false`를 유지한다.
+
+## Patch 9E-3 Blogger draft save retry/update data policy
+
+Patch 9E-3은 schema를 변경하지 않는다.
+
+- `blogger_draft_saves.retryable=true`는 재시도 후보 표시용 safe metadata다.
+- guard failure는 `blogger_draft_saves` record를 만들지 않으므로 retry 대상이 아니다.
+- same approval에 success record가 있으면 추가 save 요청은 중복 방지로 차단한다.
+- 새 approval에 대한 새 draft insert는 허용 가능하지만 Blogger draft가 누적될 수 있다.
+- 기존 draft update를 구현하려면 `bloggerPostId` 기반 update/retry semantics를 별도 Patch에서 설계해야 한다.
+- `posts.update`, `posts.delete`, publish, scheduled publish, token refresh 관련 schema는 Patch 9E-3에서 추가하지 않는다.

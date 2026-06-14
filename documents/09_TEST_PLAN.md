@@ -451,3 +451,30 @@ npm run build
 - content item status, `qualityScore`, `publishedAt`, `scheduledAt`은 변경되지 않는다.
 - live Blogger test blog에 실제 draft post가 생성되는 검증은 사용자 명시 승인 없이는 수행하지 않는다.
 - `llm_call_logs`는 생성되지 않는다.
+
+## Patch 9E-3 live verification runbook 검증
+
+- Patch 9E-3 자체 검증에서는 실제 Blogger live draft save를 실행하지 않는다.
+- live verification prerequisite를 문서에서 확인한다:
+  - connected OAuth token
+  - verified Blogger blog selection
+  - saved `draftHtml`
+  - `draftPayloadReady=true`
+  - active approval snapshot match
+  - same approval에 successful draft save 없음
+  - target blog가 test blog인지 사용자 확인
+- live write 전 고정 승인 문구가 문서와 UI에 반영되어 있어야 한다:
+
+```text
+실제 Blogger test blog에 draft post가 생성됩니다. 실행해도 됩니까?
+```
+
+- 승인 후 실행은 1회만 허용하는 운영 절차로 문서화되어 있어야 한다.
+- 성공 확인 항목은 `bloggerPostId`, `bloggerPostUrl`, `savedAt`, Blogger UI draft 상태다.
+- cleanup은 앱에서 `posts.delete`를 구현하지 않고 Blogger UI 수동 삭제로 안내한다.
+- retry policy는 guard failure를 제외하고 `retryable=true` failure만 재시도 후보로 설명한다.
+- same approval success가 있으면 중복 `posts.insert` 차단 정책을 유지한다.
+- `posts.update`는 구현하지 않고 Patch 9E-4 이후 별도 설계 대상으로 남긴다.
+- publish readiness는 draft saved check가 pass 가능해도 `publishReady=false`, top-level `ready=false`를 유지한다.
+- 검증 명령은 `git diff --check`, Prisma validate/generate, lint, typecheck, build, static `rg` 확인으로 제한한다.
+- `llm_call_logs`는 생성되지 않는다.

@@ -331,3 +331,31 @@ Policy:
 - No `posts.update`, publish, scheduled publish, token refresh, or bulk publishing.
 - No content item status, `qualityScore`, `publishedAt`, or `scheduledAt` mutation.
 - No full `draftHtml`, raw Blogger response/error body, access token, refresh token, encrypted value, LLM call, or `llm_call_logs`.
+
+## Patch 9E-3 Blogger Draft Save Live Verification Runbook
+
+Implemented after Patch 9E-2:
+
+- Documented the live Blogger test blog draft save verification runbook.
+- Added the fixed pre-live-write approval wording:
+  - `실제 Blogger test blog에 draft post가 생성됩니다. 실행해도 됩니까?`
+- Documented live verification prerequisites:
+  - connected OAuth token
+  - verified Blogger blog selection
+  - saved `draftHtml`
+  - `draftPayloadReady=true`
+  - active approval snapshot match
+  - no previous successful draft save for the same approval
+  - user confirmation that the target blog is a test blog
+- Documented retry policy for `retryable=true` failures and non-retryable OAuth/permission failures.
+- Documented duplicate draft prevention for same approval success records.
+- Documented that new approvals can create new drafts and may accumulate Blogger drafts.
+- Kept `posts.update` as a separate Patch 9E-4 policy/design topic.
+- Polished content detail UI confirmation, success, duplicate, retryable failure, and non-retryable failure wording.
+
+Policy:
+
+- No live Blogger draft save was executed during Patch 9E-3.
+- No `posts.update`, `posts.delete`, publish, scheduled publish, token refresh, or bulk publishing.
+- No content item status, `qualityScore`, `publishedAt`, or `scheduledAt` mutation.
+- No access token, refresh token, encrypted value, raw Blogger response/error, LLM call, or `llm_call_logs`.

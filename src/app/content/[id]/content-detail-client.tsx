@@ -69,6 +69,12 @@ interface BloggerDraftSaveApiResult {
   tokenRefreshImplemented: false;
 }
 
+interface ApiErrorWithData extends Error {
+  data?: {
+    draftSave?: BloggerDraftSaveAdmin | null;
+  };
+}
+
 export function ContentDetailClient({ contentItemId }: ContentDetailClientProps) {
   const [contentItem, setContentItem] = useState<ContentItemAdmin | null>(null);
   const [assets, setAssets] = useState<ContentAssetAdmin[]>([]);
@@ -573,7 +579,7 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
     setBloggerDraftPreviewError(null);
     setBloggerDraftSaveError(null);
 
-    const confirmed = window.confirm("Blogger에 draft로 저장합니다. publish는 수행하지 않습니다.");
+    const confirmed = window.confirm("실제 Blogger test blog에 draft post가 생성됩니다. publish는 수행하지 않습니다. 계속할까요?");
     if (!confirmed) {
       return;
     }
@@ -598,9 +604,25 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
           }
         };
       });
-      setNotice("Blogger draft를 저장했습니다. publish/scheduled publish는 수행하지 않았습니다.");
+      setNotice("Blogger draft가 생성되었습니다. publish/scheduled publish는 수행하지 않았습니다.");
     } catch (caught) {
-      setBloggerDraftSaveError(caught instanceof Error ? caught.message : "Blogger draft 저장에 실패했습니다.");
+      const apiError = caught instanceof Error ? (caught as ApiErrorWithData) : null;
+      const draftSave = apiError?.data?.draftSave ?? null;
+      setBloggerDraftSaveError(buildBloggerDraftSaveErrorMessage(apiError?.message ?? "Blogger draft 저장에 실패했습니다.", draftSave));
+      if (draftSave) {
+        setBloggerDraftPreviewResult((current) => {
+          if (!current) {
+            return current;
+          }
+          return {
+            ...current,
+            draftSaveSummary: {
+              ...current.draftSaveSummary,
+              latestDraftSave: draftSave
+            }
+          };
+        });
+      }
     } finally {
       setSavingBloggerDraft(false);
     }
@@ -918,6 +940,11 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
                       {bloggerDraftPreviewResult.draftSaveSummary.latestDraftSave.retryable ? "yes" : "no"}
                     </p>
                     <p>{bloggerDraftPreviewResult.draftSaveSummary.latestDraftSave.errorMessage ?? "safe error detail이 없습니다."}</p>
+                    <p>
+                      {bloggerDraftPreviewResult.draftSaveSummary.latestDraftSave.retryable
+                        ? "일시적 실패일 수 있습니다. 같은 approval snapshot으로 재시도할 수 있습니다."
+                        : "OAuth 재연결 또는 Blogger blog selection 재확인이 필요합니다."}
+                    </p>
                   </div>
                 ) : null}
                 <ValidationList
@@ -1805,6 +1832,32 @@ function PublishReadinessSummary({ result }: { result: PublishReadinessResult })
       </div>
     </>
   );
+}
+
+function buildBloggerDraftSaveErrorMessage(message: string, draftSave: BloggerDraftSaveAdmin | null) {
+  if (message === "blogger_draft_already_saved_for_approval") {
+    return "이 approval snapshot은 이미 Blogger draft로 저장되었습니다.";
+  }
+  if (draftSave?.status === "failed") {
+    return draftSave.retryable
+      ? `${message} 일시적 실패일 수 있습니다. 같은 approval snapshot으로 재시도할 수 있습니다.`
+      : `${message} OAuth 재연결 또는 Blogger blog selection 재확인이 필요합니다.`;
+  }
+  if (
+    message === "blogger_api_request_failed" ||
+    message === "blogger_api_response_missing_post_id"
+  ) {
+    return `${message} 일시적 실패일 수 있습니다. 같은 approval snapshot으로 재시도할 수 있습니다.`;
+  }
+  if (
+    message === "access_token_missing" ||
+    message === "access_token_expired" ||
+    message === "blogger_token_expired_or_rejected" ||
+    message === "blogger_api_forbidden"
+  ) {
+    return `${message} OAuth 재연결 또는 Blogger blog selection 재확인이 필요합니다.`;
+  }
+  return message;
 }
 
 function PublishReadinessTable({ checks }: { checks: PublishReadinessResult["checks"] }) {

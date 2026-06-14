@@ -340,3 +340,14 @@ Patch 9E-2의 Blogger draft save는 LLM Provider를 사용하지 않는다.
 - `llm_call_logs`는 생성하지 않는다.
 - Blogger API write는 approval guard 통과 후 `posts.insert?isDraft=true`만 수행한다.
 - Blogger API raw response/error body, token 원문, encrypted value는 LLM 로그나 일반 응답에 남기지 않는다.
+
+## Patch 9E-3 live verification runbook and LLM boundary
+
+Patch 9E-3의 live verification runbook, retry/update policy documentation, UI guard wording polish는 LLM Provider를 사용하지 않는다.
+
+- provider/model/task route를 조회하지 않는다.
+- OpenAI/Ollama/Local LLM 호출은 없다.
+- `llm_call_logs`는 생성하지 않는다.
+- 실제 Blogger live draft save도 Patch 9E-3 검증 중에는 실행하지 않는다.
+- `posts.update`, `posts.delete`, publish, scheduled publish, token refresh는 구현하지 않는다.
+- token 원문, encrypted value, raw Blogger response/error body는 문서, UI, 로그에 남기지 않는다.

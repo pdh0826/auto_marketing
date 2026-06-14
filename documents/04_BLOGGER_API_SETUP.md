@@ -122,3 +122,47 @@ Patch 9E-2는 승인된 payload snapshot에 한해서 Blogger draft save를 수�
 - raw Blogger response/error body, token, encrypted value는 저장하거나 반환하지 않는다.
 - 성공/실패 결과는 safe draft save metadata로만 저장한다.
 - `posts.update`, publish, scheduled publish는 구현하지 않는다.
+
+## Patch 9E-3 Blogger draft save live verification runbook
+
+Patch 9E-3은 실제 Blogger draft save 기능을 추가로 확장하지 않고, live test blog 검증 절차와 retry/update 정책을 문서화한다.
+
+Live verification prerequisite:
+
+- connected OAuth access token이 있어야 한다.
+- verified Blogger blog selection이 있어야 한다.
+- saved `draftHtml`이 있어야 한다.
+- `draftPayloadReady=true`여야 한다.
+- active approval snapshot이 current preview snapshot과 match해야 한다.
+- same approval에 successful draft save record가 없어야 한다.
+- target Blogger blog가 test blog인지 사용자가 확인해야 한다.
+
+Live write 전 고정 승인 문구:
+
+```text
+실제 Blogger test blog에 draft post가 생성됩니다. 실행해도 됩니까?
+```
+
+승인 후 운영 절차:
+
+- 승인 후 1회만 `POST /api/content-items/[id]/blogger-draft-save`를 실행한다.
+- 성공 시 safe DTO의 `bloggerPostId`, `bloggerPostUrl`, `savedAt`을 확인한다.
+- 사용자가 Blogger UI에서 draft 상태로 생성되었는지 확인한다.
+- 앱은 cleanup용 `posts.delete`를 구현하지 않는다.
+- 테스트 draft 삭제가 필요하면 사용자가 Blogger UI에서 수동 삭제한다.
+
+Retry/update policy:
+
+- guard failure는 retry 대상이 아니다.
+- `retryable=true` failure만 같은 approval snapshot에서 재시도 후보로 본다.
+- same approval에 success record가 있으면 추가 `posts.insert`를 계속 차단한다.
+- token expired/permission 문제는 OAuth reconnect 또는 Blogger blog selection 재확인 후 재시도한다.
+- 새 approval이 생성되면 새 draft insert는 가능하지만 Blogger draft가 누적될 수 있다.
+- `posts.update`는 Patch 9E-3에서 구현하지 않는다.
+- 기존 draft update 정책은 별도 Patch 9E-4에서 update/retry semantics를 설계한 뒤 검토한다.
+
+Publish readiness:
+
+- successful draft save가 있으면 draft saved check는 pass할 수 있다.
+- `publishReady=false`, top-level `ready=false`는 유지한다.
+- publish/scheduled publish는 후속 패치 범위다.

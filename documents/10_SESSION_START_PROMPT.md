@@ -28,17 +28,21 @@ branch: master
 - Blogger draft payload preview
 - Blogger draft manual approval guard
 - Blogger draft save via posts.insert?isDraft=true
+- Blogger draft live verification runbook and retry/update policy documentation
 
 현재 Blogger 상태:
 - Blogger draft save는 active approval snapshot과 current preview snapshot/hash가 일치할 때만 허용됨
 - draft save 결과는 safe metadata로 blogger_draft_saves에 저장됨
+- live write 전에는 “실제 Blogger test blog에 draft post가 생성됩니다. 실행해도 됩니까?” 승인 문구를 사용함
+- same approval success record가 있으면 중복 posts.insert를 차단함
+- retryable=true failure만 같은 approval snapshot에서 재시도 후보로 봄
 - raw Blogger response/error body, token, encryptedValue, full draftHtml은 API/UI에 반환하지 않음
 - posts.update, publish, scheduled publish, token refresh는 아직 구현하지 않음
 - content item status, qualityScore, publishedAt, scheduledAt은 자동 변경하지 않음
 - publish readiness는 selected blog/manual approval/draft saved check를 표시할 수 있지만 publishReady=false를 유지함
 
 다음 세션 1순위 작업:
-Patch 9E-3 후보: Blogger draft update/retry policy 또는 draft save 이후 publish handoff readiness
+Patch 9E-4 후보: Blogger draft update/retry semantics 또는 draft save 이후 publish handoff readiness
 
 금지 사항:
 - publish/scheduled publish 구현 금지
@@ -50,7 +54,7 @@ Patch 9E-3 후보: Blogger draft update/retry policy 또는 draft save 이후 pu
 - git add . 또는 git add -A 금지
 - .env.local 읽기/출력/수정 금지
 
-첫 작업으로 Patch 9E-3 작업계획을 제안해줘. 아직 구현하지 말고 계획만 작성해줘.
+첫 작업으로 Patch 9E-4 작업계획을 제안해줘. 아직 구현하지 말고 계획만 작성해줘.
 ```
 
 ## 첫 점검 명령어

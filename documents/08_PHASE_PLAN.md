@@ -26,14 +26,15 @@
 22. Patch 9E-0 - Blogger draft save readiness / draft payload preview: 완료
 23. Patch 9E-1 - Blogger draft save final guard / manual approval gate: 완료
 24. Patch 9E-2 - approved snapshot guard 기반 Blogger API actual draft save: 완료
-25. Patch 9E-3 이후 - draft update/retry policy 또는 publish handoff readiness
-26. 예약 발행
-27. 운영 대시보드
-28. 키워드 연구소
-29. 상위글 구조 분석
-30. 서비스 홍보 엔진 고도화
-31. 이미지/썸네일
-32. 성과 분석과 리라이트
+25. Patch 9E-3 - Blogger draft save live verification runbook + retry/update policy documentation: 완료
+26. Patch 9E-4 이후 - draft update/retry semantics 또는 publish handoff readiness
+27. 예약 발행
+28. 운영 대시보드
+29. 키워드 연구소
+30. 상위글 구조 분석
+31. 서비스 홍보 엔진 고도화
+32. 이미지/썸네일
+33. 성과 분석과 리라이트
 
 ## Patch 8C 완료 기준
 
@@ -111,9 +112,22 @@ Patch 9E-2 완료:
 - content item status, `qualityScore`, `publishedAt`, `scheduledAt`은 변경하지 않음
 - publish readiness에 draft saved check/metadata 추가, `publishReady=false`, top-level `ready=false` 유지
 
+Patch 9E-3 완료:
+
+- 실제 Blogger live draft save 검증 runbook 문서화
+- live write 전 고정 사용자 승인 문구 명시
+- connected token, verified blog, saved `draftHtml`, `draftPayloadReady=true`, active approval match, no prior success 조건 명시
+- retryable failure만 재시도 후보로 보고 guard failure는 retry 대상에서 제외
+- same approval success record가 있으면 중복 `posts.insert` 차단 유지
+- 새 approval은 새 draft insert가 가능하지만 Blogger draft 누적 위험을 문서화
+- `posts.update`는 Patch 9E-4에서 update/retry semantics 설계 후 검토하는 정책으로 분리
+- content detail UI draft save 확인/성공/실패 문구 보강
+- live Blogger draft save 검증은 실행하지 않음
+- publish readiness의 `publishReady=false`, top-level `ready=false` 유지
+
 다음 패치 후보:
 
-- Patch 9E-3: Blogger draft update/retry policy 또는 draft save 이후 publish handoff readiness
+- Patch 9E-4: Blogger draft update/retry semantics 또는 draft save 이후 publish handoff readiness
 - Blogger publish/scheduled publish는 별도 패치
 
 먼저 하지 말 것:

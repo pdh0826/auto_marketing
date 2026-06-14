@@ -285,3 +285,16 @@ Patch 9E-2는 active approval snapshot이 현재 draft payload preview와 일치
 - token refresh는 구현하지 않는다. 401/403/expired token은 safe error와 reconnect guidance로 처리한다.
 - content item status, `qualityScore`, `publishedAt`, `scheduledAt`은 변경하지 않는다.
 - publish readiness는 draft saved check를 표시할 수 있지만 `publishReady=false`와 top-level `ready=false`는 유지한다.
+
+## Patch 9E-3 Blogger Draft Save Live Verification Policy
+
+Patch 9E-3은 draft save 구현을 확장하지 않고 live verification runbook과 retry/update 정책을 고정한다.
+
+- 실제 live draft save 검증은 사용자 별도 승인 전까지 실행하지 않는다.
+- live write 전 승인 문구는 `실제 Blogger test blog에 draft post가 생성됩니다. 실행해도 됩니까?`로 고정한다.
+- live verification은 connected token, verified test blog selection, saved `draftHtml`, `draftPayloadReady=true`, active approval snapshot match, no prior success 조건을 모두 만족해야 한다.
+- same approval success record가 있으면 추가 `posts.insert`를 계속 차단한다.
+- guard failure는 retry 대상이 아니며, `retryable=true` failure만 재시도 후보로 본다.
+- 새 approval은 새 draft insert가 가능하지만 Blogger draft가 누적될 수 있다.
+- `posts.update`와 `posts.delete`는 구현하지 않고 update/retry semantics는 별도 Patch 9E-4에서 검토한다.
+- publish readiness는 `publishReady=false`와 top-level `ready=false`를 유지한다.
