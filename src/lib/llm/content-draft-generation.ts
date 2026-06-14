@@ -35,6 +35,12 @@ export interface GenerateContentDraftResult {
     latencyMs: number;
     responseSummary: string;
     markdownLength: number;
+    repairAttempted: boolean;
+    repairSucceeded: boolean;
+    initialValidationErrorCount: number;
+    initialValidationWarningCount: number;
+    finalValidationErrorCount: number;
+    finalValidationWarningCount: number;
   };
 }
 
@@ -163,11 +169,52 @@ export async function generateContentDraft({ contentItemId }: GenerateContentDra
     }
   }
 
-  const candidateDraftMarkdown = callResult.text.trim();
-  const validation = validateDraftMarkdown(candidateDraftMarkdown, {
+  const initialCandidateDraftMarkdown = callResult.text.trim();
+  const initialValidation = validateDraftMarkdown(initialCandidateDraftMarkdown, {
     contentItem: contentItemForValidation,
     assets
   });
+  let candidateDraftMarkdown = initialCandidateDraftMarkdown;
+  let validation = initialValidation;
+  let repairAttempted = false;
+  let repairSucceeded = false;
+  let repairResponseSummary: string | null = null;
+  let totalLatencyMs = callResult.latencyMs;
+  let totalInputTokens = callResult.inputTokens;
+  let totalOutputTokens = callResult.outputTokens;
+
+  if (!initialValidation.ok) {
+    repairAttempted = true;
+    try {
+      const repairResult = await repairDraftCandidate({
+        provider,
+        model: model.name,
+        originalDraftMarkdown: initialCandidateDraftMarkdown,
+        validation: initialValidation,
+        temperature: route.temperature,
+        maxTokens: route.maxTokens,
+        timeoutSeconds: route.timeoutSeconds
+      });
+      const repairedDraftMarkdown = repairResult.text.trim();
+      const repairedValidation = validateDraftMarkdown(repairedDraftMarkdown, {
+        contentItem: contentItemForValidation,
+        assets
+      });
+      repairResponseSummary = repairResult.responseSummary;
+      totalLatencyMs += repairResult.latencyMs;
+      totalInputTokens = sumNullableTokens(totalInputTokens, repairResult.inputTokens);
+      totalOutputTokens = sumNullableTokens(totalOutputTokens, repairResult.outputTokens);
+
+      if (isRepairCandidateAtLeastAsSafe(repairedValidation, initialValidation)) {
+        candidateDraftMarkdown = repairedDraftMarkdown;
+        validation = repairedValidation;
+      }
+      repairSucceeded = validation.ok;
+    } catch {
+      repairResponseSummary = "repair_provider_call_failed";
+    }
+  }
+
   const markdownLength = candidateDraftMarkdown.length;
   const mediaPlaceholderCount = countMediaPlaceholders(candidateDraftMarkdown);
 
@@ -176,20 +223,27 @@ export async function generateContentDraft({ contentItemId }: GenerateContentDra
     providerId: provider.id,
     modelId: model.id,
     status: validation.ok ? "success" : "failed",
-    latencyMs: callResult.latencyMs,
-    inputTokens: callResult.inputTokens,
-    outputTokens: callResult.outputTokens,
+    latencyMs: totalLatencyMs,
+    inputTokens: totalInputTokens,
+    outputTokens: totalOutputTokens,
     errorMessage: validation.ok ? null : "Generated draftMarkdown did not pass validation.",
     metadata: {
       usedFallback,
       apiFormat: provider.apiFormat,
       invocationMode: provider.invocationMode,
-      responseSummary: callResult.responseSummary,
+      responseSummary: repairAttempted ? (repairSucceeded ? "draft_repaired" : "draft_repair_failed") : callResult.responseSummary,
       validationOk: validation.ok,
       validationWarningCount: validation.warnings.length,
       validationErrorCount: validation.errors.length,
       markdownLength,
-      mediaPlaceholderCount
+      mediaPlaceholderCount,
+      repairAttempted,
+      repairSucceeded,
+      initialValidationErrorCount: initialValidation.errors.length,
+      initialValidationWarningCount: initialValidation.warnings.length,
+      finalValidationErrorCount: validation.errors.length,
+      finalValidationWarningCount: validation.warnings.length,
+      repairResponseSummary
     }
   });
 
@@ -202,9 +256,15 @@ export async function generateContentDraft({ contentItemId }: GenerateContentDra
       usedFallback
     },
     metadata: {
-      latencyMs: callResult.latencyMs,
-      responseSummary: callResult.responseSummary,
-      markdownLength
+      latencyMs: totalLatencyMs,
+      responseSummary: repairAttempted ? (repairSucceeded ? "draft_repaired" : "draft_repair_failed") : callResult.responseSummary,
+      markdownLength,
+      repairAttempted,
+      repairSucceeded,
+      initialValidationErrorCount: initialValidation.errors.length,
+      initialValidationWarningCount: initialValidation.warnings.length,
+      finalValidationErrorCount: validation.errors.length,
+      finalValidationWarningCount: validation.warnings.length
     }
   };
 }
@@ -313,6 +373,88 @@ async function callOllamaCompatible(
   };
 }
 
+async function repairDraftCandidate(input: {
+  provider: ProviderWithSecrets;
+  model: string;
+  originalDraftMarkdown: string;
+  validation: DraftValidationResult;
+  temperature: number | null;
+  maxTokens: number | null;
+  timeoutSeconds: number | null;
+}) {
+  return callProvider(
+    input.provider,
+    input.model,
+    {
+      system: buildDraftRepairSystemPrompt(),
+      user: buildDraftRepairUserPrompt(input.originalDraftMarkdown, input.validation),
+      outputFormat: buildDraftRepairOutputFormat()
+    },
+    Math.min(input.temperature ?? 0.2, 0.2),
+    input.maxTokens,
+    input.timeoutSeconds
+  );
+}
+
+function buildDraftRepairSystemPrompt() {
+  return [
+    "You are a careful Markdown safety editor.",
+    "Revise only the problematic sentences or phrases flagged by validation.",
+    "Keep the article structure, headings, media placeholders, and main meaning as much as possible.",
+    "Return the full corrected Markdown draft only.",
+    "Do not add new claims, promotions, guarantees, success claims, buy/sell recommendations, or investment timing advice.",
+    "Never include these phrases or close variants: 무료 체험, 지금 시작, 더 유리합니다, 신뢰할 수 있는 투자, 매수 타이밍을 잡다, 수익률, 성공 사례, 성공, 수익 보장, 원금 보장, 손실 없음, 리스크 없음, 안전하게 매수, 안전한 투자, 매수 추천, 매도 추천, 확실한 수익.",
+    "Use neutral alternatives where needed: 기능 살펴보기, 공식 페이지에서 확인하기, 서비스 기능 확인하기, 관심 종목 정보를 한 화면에서 참고하기, 투자 판단을 돕는 참고 정보로 활용하기, 최종 투자 판단은 사용자가 직접 해야 합니다.",
+    "CTA wording must be informational and review-oriented."
+  ].join("\n");
+}
+
+function buildDraftRepairUserPrompt(originalDraftMarkdown: string, validation: DraftValidationResult) {
+  return [
+    "Repair this Markdown draft by changing only the phrases or sentences related to the validation issues.",
+    "Validation errors:",
+    validation.errors.length > 0 ? validation.errors.map((item) => `- ${item}`).join("\n") : "- none",
+    "Validation warnings:",
+    validation.warnings.length > 0 ? validation.warnings.map((item) => `- ${item}`).join("\n") : "- none",
+    "Forbidden/caution phrases to remove or neutralize:",
+    "- 무료 체험",
+    "- 지금 시작",
+    "- 더 유리합니다",
+    "- 신뢰할 수 있는 투자",
+    "- 매수 타이밍을 잡다",
+    "- 수익률",
+    "- 성공 사례",
+    "- 성공",
+    "- 수익 보장",
+    "- 원금 보장",
+    "- 손실 없음",
+    "- 리스크 없음",
+    "- 안전하게 매수",
+    "- 안전한 투자",
+    "- 매수 추천",
+    "- 매도 추천",
+    "- 확실한 수익",
+    "Neutral alternatives:",
+    "- 기능 살펴보기",
+    "- 공식 페이지에서 확인하기",
+    "- 서비스 기능 확인하기",
+    "- 관심 종목 정보를 한 화면에서 참고하기",
+    "- 투자 판단을 돕는 참고 정보로 활용하기",
+    "- 최종 투자 판단은 사용자가 직접 해야 합니다",
+    "Original Markdown draft:",
+    originalDraftMarkdown
+  ].join("\n");
+}
+
+function buildDraftRepairOutputFormat() {
+  return [
+    "Return Markdown only.",
+    "Return the full corrected draft, not a diff.",
+    "Do not wrap the output in code fences.",
+    "Do not include commentary before or after the Markdown."
+  ].join("\n");
+}
+
 async function recordDraftLog(input: {
   contentItemId: string;
   providerId: string | null;
@@ -332,6 +474,13 @@ async function recordDraftLog(input: {
     validationErrorCount: number;
     markdownLength: number;
     mediaPlaceholderCount: number;
+    repairAttempted?: boolean;
+    repairSucceeded?: boolean;
+    initialValidationErrorCount?: number;
+    initialValidationWarningCount?: number;
+    finalValidationErrorCount?: number;
+    finalValidationWarningCount?: number;
+    repairResponseSummary?: string | null;
   };
 }) {
   await createLlmCallLog({
@@ -355,7 +504,14 @@ async function recordDraftLog(input: {
       validationWarningCount: input.metadata.validationWarningCount,
       validationErrorCount: input.metadata.validationErrorCount,
       markdownLength: input.metadata.markdownLength,
-      mediaPlaceholderCount: input.metadata.mediaPlaceholderCount
+      mediaPlaceholderCount: input.metadata.mediaPlaceholderCount,
+      repairAttempted: input.metadata.repairAttempted ?? false,
+      repairSucceeded: input.metadata.repairSucceeded ?? false,
+      initialValidationErrorCount: input.metadata.initialValidationErrorCount ?? input.metadata.validationErrorCount,
+      initialValidationWarningCount: input.metadata.initialValidationWarningCount ?? input.metadata.validationWarningCount,
+      finalValidationErrorCount: input.metadata.finalValidationErrorCount ?? input.metadata.validationErrorCount,
+      finalValidationWarningCount: input.metadata.finalValidationWarningCount ?? input.metadata.validationWarningCount,
+      repairResponseSummary: input.metadata.repairResponseSummary ?? null
     } as Prisma.InputJsonObject
   });
 }
@@ -420,6 +576,23 @@ function extractUsageToken(body: unknown, key: "prompt_tokens" | "completion_tok
 
 function countMediaPlaceholders(markdown: string) {
   return markdown.match(/<!--\s*media:/gi)?.length ?? 0;
+}
+
+function isRepairCandidateAtLeastAsSafe(repaired: DraftValidationResult, initial: DraftValidationResult) {
+  if (repaired.errors.length < initial.errors.length) {
+    return true;
+  }
+  if (repaired.errors.length > initial.errors.length) {
+    return false;
+  }
+  return repaired.warnings.length <= initial.warnings.length;
+}
+
+function sumNullableTokens(left: number | null, right: number | null) {
+  if (left === null && right === null) {
+    return null;
+  }
+  return (left ?? 0) + (right ?? 0);
 }
 
 function requireBaseUrl(value: string | null) {

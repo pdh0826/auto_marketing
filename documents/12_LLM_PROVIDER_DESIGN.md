@@ -206,3 +206,17 @@ Patch 8B는 `content_draft` Task Route를 사용해 저장된 `planJson` 기반 
 - `llm_call_logs`에는 taskType `content_draft`, provider/model/contentItem, status, latency, 가능한 token count, 제한된 metadata만 저장한다.
 - metadata에는 `purpose`, `usedFallback`, `apiFormat`, `invocationMode`, `responseSummary`, validation count, `markdownLength`, `mediaPlaceholderCount`만 저장한다.
 - prompt 전문, raw response 전문, request body 전문, 후보 Markdown 전문, API Key, Bearer token, secretRef, encryptedValue, provider headers, request template, media `storagePath`는 로그와 응답 summary에 저장하지 않는다.
+
+## Patch 8B-HOTFIX Draft Repair
+
+Patch 8B-HOTFIX는 `content_draft` 생성 결과가 validation error를 포함할 때 같은 Provider/Model로 1회 자동 repair를 수행한다.
+
+- repair는 provider call 성공 후 validation error가 있을 때만 수행한다.
+- repair는 fallback 대상이 아니며, 이미 선택된 primary 또는 fallback Provider/Model을 그대로 사용한다.
+- repair prompt에는 기존 후보 Markdown, validation errors/warnings, 금지/주의 문구 목록, 중립 대체 표현 가이드만 포함한다.
+- repair prompt에는 API Key, secret, provider headers, request template, media `storagePath`를 포함하지 않는다.
+- repair 결과를 다시 `validateDraftMarkdown()`으로 검사한다.
+- repair 성공 시 repair된 후보를 API 응답과 UI에 표시하지만 자동 저장하지 않는다.
+- repair 후에도 validation error가 있으면 반영 버튼은 비활성화되며 사용자가 후보 편집 후 재검증해야 한다.
+- `llm_call_logs` metadata에는 `repairAttempted`, `repairSucceeded`, 초기/최종 validation count, `repairResponseSummary` 같은 안전 요약만 저장한다.
+- original/repaired draft 전문, prompt 전문, raw response 전문, request body 전문, API Key, Bearer token, secretRef, encryptedValue, provider headers, media `storagePath`는 로그에 저장하지 않는다.

@@ -47,6 +47,12 @@ interface GeneratedDraftResult {
     latencyMs: number;
     responseSummary: string;
     markdownLength: number;
+    repairAttempted: boolean;
+    repairSucceeded: boolean;
+    initialValidationErrorCount: number;
+    initialValidationWarningCount: number;
+    finalValidationErrorCount: number;
+    finalValidationWarningCount: number;
   };
 }
 
@@ -711,16 +717,35 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
                     latency: {generatedDraft.metadata.latencyMs}ms / length: {generatedDraft.metadata.markdownLength} / summary:{" "}
                     {generatedDraft.metadata.responseSummary}
                   </p>
+                  <p>
+                    repair: {generatedDraft.metadata.repairAttempted ? "attempted" : "not attempted"} / result:{" "}
+                    {generatedDraft.metadata.repairSucceeded ? "success" : generatedDraft.metadata.repairAttempted ? "not passed" : "-"}
+                  </p>
                 </div>
+                {generatedDraft.metadata.repairAttempted ? (
+                  generatedDraft.metadata.repairSucceeded ? (
+                    <div className="notice">초안 후보에서 위험 문구가 감지되어 자동 수정 1회를 수행했고, 자동 수정 후 validation을 통과했습니다.</div>
+                  ) : (
+                    <div className="notice warning">초안 후보에서 위험 문구가 감지되어 자동 수정 1회를 수행했습니다.</div>
+                  )
+                ) : null}
                 {draftDirty ? (
                   <div className="notice warning">편집된 초안 후보는 재검증 후 반영할 수 있습니다.</div>
                 ) : !generatedDraft.validation.ok ? (
-                  <div className="notice error">이 초안 후보는 validation error가 있어 draftMarkdown에 반영할 수 없습니다.</div>
+                  <div className="notice error">자동 수정 후에도 validation error가 남아 있습니다. 후보 편집 후 재검증하세요.</div>
                 ) : generatedDraft.validation.warnings.length > 0 ? (
                   <div className="notice">warning이 있습니다. 내용을 검토한 뒤 draftMarkdown에 반영할 수 있습니다.</div>
                 ) : (
                   <div className="notice">validation을 통과했습니다. 내용을 검토한 뒤 draftMarkdown에 반영할 수 있습니다.</div>
                 )}
+                {generatedDraft.metadata.repairAttempted ? (
+                  <div className="detail-grid">
+                    <DetailItem label="Initial Errors" value={String(generatedDraft.metadata.initialValidationErrorCount)} />
+                    <DetailItem label="Initial Warnings" value={String(generatedDraft.metadata.initialValidationWarningCount)} />
+                    <DetailItem label="Final Errors" value={String(generatedDraft.metadata.finalValidationErrorCount)} />
+                    <DetailItem label="Final Warnings" value={String(generatedDraft.metadata.finalValidationWarningCount)} />
+                  </div>
+                ) : null}
                 <ValidationList title="Draft Validation Errors" items={generatedDraft.validation.errors} emptyText="draft validation error가 없습니다." isError />
                 <ValidationList
                   title="Draft Validation Warnings"

@@ -250,6 +250,9 @@ export function buildDraftSystemPromptPreview() {
     "Avoid keyword stuffing, exaggerated advertising, unsupported claims, and manipulative SEO tactics.",
     "For investment or finance content, describe services as information/reference tools only.",
     "Do not include guaranteed profit, buy/sell recommendations, success stories, return examples, risk-free wording, or wording like 안전하게 매수.",
+    "Never generate these Korean phrases or close variants: 무료 체험, 지금 시작, 더 유리합니다, 신뢰할 수 있는 투자, 매수 타이밍을 잡다, 수익률, 성공 사례, 성공, 수익 보장, 원금 보장, 손실 없음, 리스크 없음, 안전하게 매수, 안전한 투자, 매수 추천, 매도 추천, 확실한 수익.",
+    "Use neutral alternatives where appropriate: 기능 살펴보기, 공식 페이지에서 확인하기, 서비스 기능 확인하기, 관심 종목 정보를 한 화면에서 참고하기, 투자 판단을 돕는 참고 정보로 활용하기, 최종 투자 판단은 사용자가 직접 해야 합니다.",
+    "CTA wording must be informational and review-oriented, not aggressive, urgent, or sign-up driven.",
     "Use attached media caption, altText, userNote, placementHint, and sortOrder for placement planning, but never use storagePath.",
     "Return Markdown only."
   ].join("\n");
@@ -341,7 +344,9 @@ export function buildDraftOutputFormatPreview() {
     "Use one H1, then H2/H3 sections for intro, body, and conclusion.",
     "Follow the saved planJson outline and coreMessage.",
     "Include FAQ sections when faq items exist.",
-    "Include CTA only when appropriate and keep it moderate.",
+    "Include CTA only when appropriate and keep it moderate, informational, and review-oriented.",
+    "Avoid aggressive conversion wording and avoid these phrases: 무료 체험, 지금 시작, 더 유리합니다, 신뢰할 수 있는 투자, 매수 타이밍을 잡다, 수익률, 성공 사례, 성공, 수익 보장, 원금 보장, 손실 없음, 리스크 없음, 안전하게 매수, 안전한 투자, 매수 추천, 매도 추천, 확실한 수익.",
+    "Prefer neutral wording such as 기능 살펴보기, 공식 페이지에서 확인하기, 서비스 기능 확인하기, 관심 종목 정보를 한 화면에서 참고하기, 투자 판단을 돕는 참고 정보로 활용하기, 최종 투자 판단은 사용자가 직접 해야 합니다.",
     "Include risk/disclaimer wording when the topic is investment-related or brand riskDisclaimer exists.",
     'Use media placeholders where relevant, for example: <!-- media:assetId placement:middle caption:"..." -->',
     "Do not upload, embed, or publish to Blogger."

@@ -73,3 +73,14 @@ Patch 8B는 저장된 `planJson`과 `content_draft` Task Route를 사용해 실�
 - custom HTTP/CLI Provider는 Patch 8B의 실제 draft generation 대상에서 제외한다.
 - LLM 응답 후보는 Markdown 문자열로 취급하며 길이, H1, 섹션 구조, media placeholder, FAQ, risk/disclaimer, 금융/투자 위험 표현을 rule-based validation으로 검사한다.
 - prompt 전문, raw response 전문, 후보 Markdown 전문은 `llm_call_logs`에 저장하지 않는다.
+
+## Patch 8B-HOTFIX draft safety prompt and repair
+
+Patch 8B-HOTFIX는 draft prompt의 금융/투자/서비스 홍보 안전 문구를 강화하고, draft validation error가 발생한 후보에 대해 1회 자동 repair를 수행한다.
+
+- draft system/output prompt는 `무료 체험`, `지금 시작`, `더 유리합니다`, `신뢰할 수 있는 투자`, `매수 타이밍을 잡다`, `수익률`, `성공 사례`, `성공`, `수익 보장`, `원금 보장`, `손실 없음`, `리스크 없음`, `안전하게 매수`, `안전한 투자`, `매수 추천`, `매도 추천`, `확실한 수익`을 생성하지 말라고 명시한다.
+- 중립 대체 표현으로 `기능 살펴보기`, `공식 페이지에서 확인하기`, `서비스 기능 확인하기`, `관심 종목 정보를 한 화면에서 참고하기`, `투자 판단을 돕는 참고 정보로 활용하기`, `최종 투자 판단은 사용자가 직접 해야 합니다`를 제시한다.
+- CTA는 가입 유도형이나 긴급한 표현이 아니라 정보성/검토형으로 작성한다.
+- draft validation error가 있으면 같은 provider/model에 repair prompt를 1회 보내고, 전체 구조를 유지하면서 문제가 된 문장/문구만 수정하도록 요청한다.
+- repair 결과도 다시 validation하며, error가 남으면 사용자가 후보를 편집하고 재검증해야 한다.
+- repair는 자동 저장을 하지 않으며, 사용자가 `draftMarkdown에 반영`을 눌렀을 때만 저장된다.
