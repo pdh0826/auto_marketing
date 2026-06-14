@@ -359,3 +359,22 @@ Policy:
 - No `posts.update`, `posts.delete`, publish, scheduled publish, token refresh, or bulk publishing.
 - No content item status, `qualityScore`, `publishedAt`, or `scheduledAt` mutation.
 - No access token, refresh token, encrypted value, raw Blogger response/error, LLM call, or `llm_call_logs`.
+
+## Patch 9E-4A Manual HTML Quality Repair Preview
+
+Implemented after Patch 9E-3:
+
+- Added a rule-based HTML quality repair preview helper.
+- Added `POST /api/content-items/[id]/quality-repair-preview`.
+- The preview uses saved `draftMarkdown` to rebuild a longer HTML candidate when current `draftHtml` is short or placeholder-like.
+- The fallback path appends rule-based structure, CTA, and finance disclaimer sections to current `draftHtml`.
+- Added a Quality Repair Preview section to the content detail page.
+- The UI shows before/after length, grade, required fail count, CTA/disclaimer flags, source, validation, and editable candidate HTML.
+- The candidate can be copied into the existing HTML candidate editor and then saved only through the existing manual `apply-html` flow.
+
+Policy:
+
+- No automatic `draftHtml` save.
+- No `qualityScore`, status, `publishedAt`, or `scheduledAt` mutation.
+- No LLM call or `llm_call_logs`.
+- No Blogger API read/write, draft save, publish, scheduled publish, token refresh, `posts.insert`, or `posts.update`.

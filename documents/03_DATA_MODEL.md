@@ -460,3 +460,14 @@ Patch 9E-3은 schema를 변경하지 않는다.
 - 새 approval에 대한 새 draft insert는 허용 가능하지만 Blogger draft가 누적될 수 있다.
 - 기존 draft update를 구현하려면 `bloggerPostId` 기반 update/retry semantics를 별도 Patch에서 설계해야 한다.
 - `posts.update`, `posts.delete`, publish, scheduled publish, token refresh 관련 schema는 Patch 9E-3에서 추가하지 않는다.
+
+## Patch 9E-4A HTML quality repair preview data policy
+
+Patch 9E-4A는 schema를 변경하지 않는다.
+
+- `quality-repair-preview`는 saved `draftMarkdown`과 `draftHtml`을 read-only 입력으로 사용한다.
+- repair candidate, before/after quality, validation summary는 API 응답과 UI에만 표시한다.
+- `content_items.draftHtml`은 자동 저장하지 않는다.
+- `content_items.qualityScore`, status, `publishedAt`, `scheduledAt`은 변경하지 않는다.
+- `llm_call_logs`, `quality_checks`, Blogger draft save 관련 테이블은 변경하지 않는다.
+- 사용자가 기존 `apply-html`을 명시적으로 실행할 때만 `draftHtml` 저장이 가능하다.

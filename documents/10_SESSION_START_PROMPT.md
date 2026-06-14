@@ -29,6 +29,7 @@ branch: master
 - Blogger draft manual approval guard
 - Blogger draft save via posts.insert?isDraft=true
 - Blogger draft live verification runbook and retry/update policy documentation
+- manual HTML quality repair preview
 
 현재 Blogger 상태:
 - Blogger draft save는 active approval snapshot과 current preview snapshot/hash가 일치할 때만 허용됨
@@ -40,21 +41,29 @@ branch: master
 - posts.update, publish, scheduled publish, token refresh는 아직 구현하지 않음
 - content item status, qualityScore, publishedAt, scheduledAt은 자동 변경하지 않음
 - publish readiness는 selected blog/manual approval/draft saved check를 표시할 수 있지만 publishReady=false를 유지함
+- Patch 9E-4A에서 짧거나 placeholder에 가까운 draftHtml을 보강하는 rule-based quality repair preview가 추가됨
+- repair candidate는 자동 저장되지 않고 기존 apply-html 수동 flow를 통해서만 draftHtml에 반영 가능함
 
 다음 세션 1순위 작업:
-Patch 9E-4 후보: Blogger draft update/retry semantics 또는 draft save 이후 publish handoff readiness
+Patch 9E-4B 후보: repair candidate apply UX polish
+
+대체 후보:
+- Patch 9E-4C: Local LLM sectioned multi-pass long-form generation
+- Patch 9E-5: Blogger OAuth/test blog readiness 재점검
 
 금지 사항:
 - publish/scheduled publish 구현 금지
 - token refresh 구현 금지
 - posts.update는 policy 설계 없이 구현 금지
+- draftHtml 자동 저장 금지
+- LLM 호출은 별도 Patch로 선택하기 전까지 금지
 - 품질검사와 발행을 한 번에 구현 금지
 - API Key나 secret 출력 금지
 - raw LLM response나 prompt 전문 로그 저장 금지
 - git add . 또는 git add -A 금지
 - .env.local 읽기/출력/수정 금지
 
-첫 작업으로 Patch 9E-4 작업계획을 제안해줘. 아직 구현하지 말고 계획만 작성해줘.
+첫 작업으로 Patch 9E-4B 작업계획을 제안해줘. 아직 구현하지 말고 계획만 작성해줘.
 ```
 
 ## 첫 점검 명령어

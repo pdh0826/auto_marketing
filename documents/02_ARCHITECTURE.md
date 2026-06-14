@@ -298,3 +298,22 @@ Patch 9E-3은 draft save 구현을 확장하지 않고 live verification runbook
 - 새 approval은 새 draft insert가 가능하지만 Blogger draft가 누적될 수 있다.
 - `posts.update`와 `posts.delete`는 구현하지 않고 update/retry semantics는 별도 Patch 9E-4에서 검토한다.
 - publish readiness는 `publishReady=false`와 top-level `ready=false`를 유지한다.
+
+## Patch 9E-4A Manual HTML Quality Repair Preview
+
+Patch 9E-4A는 Blogger live draft save 전에 saved `draftHtml` 품질 fail을 줄이기 위한 preview-only repair path를 추가한다.
+
+```text
+saved draftMarkdown / draftHtml
+→ POST /api/content-items/[id]/quality-repair-preview
+→ rule-based HTML repair candidate
+→ validate-html / apply-html 수동 흐름 재사용
+```
+
+- repair preview는 saved `draftMarkdown` 기반 rule-based HTML rebuild를 우선 사용한다.
+- `draftMarkdown`이 없거나 너무 짧으면 현재 `draftHtml`에 section/CTA/disclaimer를 append하는 fallback candidate를 만든다.
+- API는 candidate와 before/after quality/validation summary만 반환한다.
+- `draftHtml`, `qualityScore`, status, `publishedAt`, `scheduledAt`은 자동 변경하지 않는다.
+- 저장은 기존 `apply-html` 수동 반영 flow에서만 가능하다.
+- LLM Provider와 Blogger API는 호출하지 않고 `llm_call_logs`도 생성하지 않는다.
+- `draftHtml`을 수동 반영하면 기존 Blogger approval snapshot은 stale이 될 수 있다.

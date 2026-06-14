@@ -351,3 +351,14 @@ Patch 9E-3의 live verification runbook, retry/update policy documentation, UI g
 - 실제 Blogger live draft save도 Patch 9E-3 검증 중에는 실행하지 않는다.
 - `posts.update`, `posts.delete`, publish, scheduled publish, token refresh는 구현하지 않는다.
 - token 원문, encrypted value, raw Blogger response/error body는 문서, UI, 로그에 남기지 않는다.
+
+## Patch 9E-4A HTML quality repair preview and LLM boundary
+
+Patch 9E-4A의 manual HTML quality repair preview는 LLM Provider를 사용하지 않는다.
+
+- `/api/content-items/[id]/quality-repair-preview`는 provider/model/task route를 조회하지 않는다.
+- repair candidate는 saved `draftMarkdown` 또는 `draftHtml`을 rule-based 변환/append 방식으로 만든다.
+- OpenAI/Ollama/Local LLM 호출은 없다.
+- `llm_call_logs`는 생성하지 않는다.
+- candidate는 자동 저장하지 않으며 사용자가 기존 `apply-html` flow를 실행해야만 `draftHtml`에 반영된다.
+- Blogger API read/write, draft save, publish, scheduled publish, token refresh도 수행하지 않는다.

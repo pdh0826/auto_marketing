@@ -478,3 +478,19 @@ npm run build
 - publish readiness는 draft saved check가 pass 가능해도 `publishReady=false`, top-level `ready=false`를 유지한다.
 - 검증 명령은 `git diff --check`, Prisma validate/generate, lint, typecheck, build, static `rg` 확인으로 제한한다.
 - `llm_call_logs`는 생성되지 않는다.
+
+## Patch 9E-4A manual HTML quality repair preview 검증
+
+- `POST /api/content-items/[id]/quality-repair-preview`는 saved `draftMarkdown`과 `draftHtml`을 read-only로 조회한다.
+- 현재 `draftHtml`이 짧거나 placeholder에 가까우면 `draft_markdown_rule_based_rebuild` source를 사용한다.
+- `draftMarkdown`이 없거나 너무 짧으면 `draft_html_plus_rule_based_repair` fallback source를 사용할 수 있다.
+- 응답에는 `candidateHtml`, source, before/after quality, after validation, repair summary가 포함된다.
+- candidate는 H1/H2/H3/p/ul/ol/strong/code/section/article 중심의 안전한 HTML이어야 한다.
+- candidate에는 `<script>`, iframe, inline event handler, external tracking code를 넣지 않는다.
+- candidate는 CTA signal과 투자/주식 맥락의 참고/책임/disclaimer 문구를 포함할 수 있다.
+- API 호출 전후 `draftHtml`, `qualityScore`, status, `publishedAt`, `scheduledAt`은 변경되지 않는다.
+- API 호출만으로 `llm_call_logs`는 생성되지 않는다.
+- Blogger API read/write, draft save, publish, scheduled publish, token refresh는 발생하지 않는다.
+- UI는 Quality Repair Preview candidate textarea, 재검증, HTML 후보 편집기로 복사 버튼을 제공한다.
+- 실제 저장은 기존 `apply-html` 수동 반영 flow에서만 가능하다.
+- `draftHtml`을 수동 반영하면 기존 Blogger approval snapshot이 stale 될 수 있음을 안내한다.

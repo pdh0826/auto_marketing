@@ -27,14 +27,16 @@
 23. Patch 9E-1 - Blogger draft save final guard / manual approval gate: 완료
 24. Patch 9E-2 - approved snapshot guard 기반 Blogger API actual draft save: 완료
 25. Patch 9E-3 - Blogger draft save live verification runbook + retry/update policy documentation: 완료
-26. Patch 9E-4 이후 - draft update/retry semantics 또는 publish handoff readiness
-27. 예약 발행
-28. 운영 대시보드
-29. 키워드 연구소
-30. 상위글 구조 분석
-31. 서비스 홍보 엔진 고도화
-32. 이미지/썸네일
-33. 성과 분석과 리라이트
+26. Patch 9E-4A - manual HTML quality repair preview: 완료
+27. Patch 9E-4B/9E-4C 이후 - repair apply UX polish 또는 Local LLM long-form generation
+28. Patch 9E-5 이후 - Blogger OAuth/test blog readiness 재점검
+29. 예약 발행
+30. 운영 대시보드
+31. 키워드 연구소
+32. 상위글 구조 분석
+33. 서비스 홍보 엔진 고도화
+34. 이미지/썸네일
+35. 성과 분석과 리라이트
 
 ## Patch 8C 완료 기준
 
@@ -125,9 +127,22 @@ Patch 9E-3 완료:
 - live Blogger draft save 검증은 실행하지 않음
 - publish readiness의 `publishReady=false`, top-level `ready=false` 유지
 
+Patch 9E-4A 완료:
+
+- saved `draftMarkdown` 기반 rule-based HTML quality repair preview helper 추가
+- `POST /api/content-items/[id]/quality-repair-preview` 추가
+- current `draftHtml`이 짧거나 placeholder에 가까우면 draftMarkdown rebuild candidate를 우선 생성
+- fallback으로 current `draftHtml`에 section/CTA/disclaimer를 append하는 candidate 지원
+- content detail UI에 Quality Repair Preview 섹션 추가
+- candidate textarea, 재검증, 기존 HTML 후보 편집기로 복사 flow 추가
+- 자동 `draftHtml` 저장, `qualityScore` 저장, status 변경 없음
+- LLM 호출, `llm_call_logs` 생성, Blogger API 호출 없음
+
 다음 패치 후보:
 
-- Patch 9E-4: Blogger draft update/retry semantics 또는 draft save 이후 publish handoff readiness
+- Patch 9E-4B: repair candidate apply UX polish
+- Patch 9E-4C: Local LLM sectioned multi-pass long-form generation
+- Patch 9E-5: Blogger OAuth/test blog readiness 재점검
 - Blogger publish/scheduled publish는 별도 패치
 
 먼저 하지 말 것:

@@ -10,6 +10,7 @@ import { getContentModeLabel } from "@/lib/content/constants";
 import { buildDraftMarkdownDryRun, type DraftMarkdownDryRunResult } from "@/lib/content/draft-preview";
 import { validateDraftMarkdown, type DraftValidationResult } from "@/lib/content/draft-validation";
 import type { HtmlQualityPreviewResult } from "@/lib/content/html-quality-preview";
+import type { HtmlQualityRepairPreviewResult } from "@/lib/content/html-quality-repair-preview";
 import type { HtmlCandidateValidationResult, HtmlPreviewDryRunResult } from "@/lib/content/html-preview";
 import { formatPlanJson, hasUsablePlanJson } from "@/lib/content/plan-template";
 import type { PublishReadinessResult } from "@/lib/content/publish-readiness";
@@ -84,6 +85,7 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
   const [draftDryRunResult, setDraftDryRunResult] = useState<DraftMarkdownDryRunResult | null>(null);
   const [htmlPreviewResult, setHtmlPreviewResult] = useState<HtmlPreviewDryRunResult | null>(null);
   const [qualityPreviewResult, setQualityPreviewResult] = useState<HtmlQualityPreviewResult | null>(null);
+  const [qualityRepairPreviewResult, setQualityRepairPreviewResult] = useState<HtmlQualityRepairPreviewResult | null>(null);
   const [publishReadinessResult, setPublishReadinessResult] = useState<PublishReadinessResult | null>(null);
   const [bloggerDraftPreviewResult, setBloggerDraftPreviewResult] = useState<BloggerDraftPayloadPreview | null>(null);
   const [generatedPlan, setGeneratedPlan] = useState<GeneratedPlanResult | null>(null);
@@ -99,6 +101,10 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
   const [htmlEditMode, setHtmlEditMode] = useState(false);
   const [htmlDirty, setHtmlDirty] = useState(false);
   const [htmlCandidateValidation, setHtmlCandidateValidation] = useState<HtmlCandidateValidationResult | null>(null);
+  const [qualityRepairCandidateText, setQualityRepairCandidateText] = useState("");
+  const [qualityRepairEditMode, setQualityRepairEditMode] = useState(false);
+  const [qualityRepairDirty, setQualityRepairDirty] = useState(false);
+  const [qualityRepairCandidateValidation, setQualityRepairCandidateValidation] = useState<HtmlCandidateValidationResult | null>(null);
   const [planText, setPlanText] = useState("");
   const [loading, setLoading] = useState(true);
   const [assetsLoading, setAssetsLoading] = useState(true);
@@ -115,6 +121,8 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
   const [validatingHtml, setValidatingHtml] = useState(false);
   const [applyingHtml, setApplyingHtml] = useState(false);
   const [runningQualityPreview, setRunningQualityPreview] = useState(false);
+  const [runningQualityRepairPreview, setRunningQualityRepairPreview] = useState(false);
+  const [validatingQualityRepairCandidate, setValidatingQualityRepairCandidate] = useState(false);
   const [runningPublishReadiness, setRunningPublishReadiness] = useState(false);
   const [runningBloggerDraftPreview, setRunningBloggerDraftPreview] = useState(false);
   const [approvingBloggerDraft, setApprovingBloggerDraft] = useState(false);
@@ -128,6 +136,7 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
   const [htmlPreviewError, setHtmlPreviewError] = useState<string | null>(null);
   const [htmlApplyError, setHtmlApplyError] = useState<string | null>(null);
   const [qualityPreviewError, setQualityPreviewError] = useState<string | null>(null);
+  const [qualityRepairPreviewError, setQualityRepairPreviewError] = useState<string | null>(null);
   const [publishReadinessError, setPublishReadinessError] = useState<string | null>(null);
   const [bloggerDraftPreviewError, setBloggerDraftPreviewError] = useState<string | null>(null);
   const [bloggerDraftSaveError, setBloggerDraftSaveError] = useState<string | null>(null);
@@ -142,6 +151,7 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
   const canRunHtmlPreview = Boolean(contentItem?.draftMarkdown && !runningHtmlPreview);
   const canApplyHtmlCandidate = Boolean(htmlCandidateText && htmlCandidateValidation?.validation.ok && !htmlDirty && !applyingHtml);
   const canRunQualityPreview = Boolean(contentItem?.draftHtml && !runningQualityPreview);
+  const canRunQualityRepairPreview = Boolean((contentItem?.draftMarkdown || contentItem?.draftHtml) && !runningQualityRepairPreview);
   const canRunPublishReadiness = Boolean(!runningPublishReadiness);
   const canRunBloggerDraftPreview = Boolean(!runningBloggerDraftPreview);
   const canApproveBloggerDraftPayload = Boolean(
@@ -479,6 +489,54 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
     } finally {
       setRunningQualityPreview(false);
     }
+  }
+
+  async function runQualityRepairPreview() {
+    setNotice(null);
+    setQualityRepairPreviewError(null);
+    setRunningQualityRepairPreview(true);
+
+    try {
+      const result = await requestJson<ApiResult<HtmlQualityRepairPreviewResult>>(`/api/content-items/${contentItemId}/quality-repair-preview`, {
+        method: "POST",
+        body: JSON.stringify({})
+      });
+      setQualityRepairPreviewResult(result.data);
+      setQualityRepairCandidateText(result.data.candidateHtml);
+      setQualityRepairCandidateValidation(result.data.afterValidation);
+      setQualityRepairEditMode(false);
+      setQualityRepairDirty(false);
+      setNotice("Quality repair candidate preview를 생성했습니다. draftHtml은 자동 저장하지 않았고 LLM/Blogger API를 호출하지 않았습니다.");
+    } catch (caught) {
+      setQualityRepairPreviewError(caught instanceof Error ? caught.message : "Quality repair preview에 실패했습니다.");
+    } finally {
+      setRunningQualityRepairPreview(false);
+    }
+  }
+
+  async function revalidateQualityRepairCandidate() {
+    setQualityRepairPreviewError(null);
+    setNotice(null);
+    setValidatingQualityRepairCandidate(true);
+
+    try {
+      const validation = await validateHtmlCandidateOnServer(qualityRepairCandidateText);
+      setQualityRepairCandidateValidation(validation);
+      setQualityRepairDirty(false);
+      setNotice("Quality repair 후보를 재검증했습니다. 아직 draftHtml에 저장하지 않았습니다.");
+    } catch (caught) {
+      setQualityRepairPreviewError(caught instanceof Error ? caught.message : "Quality repair 후보 재검증에 실패했습니다.");
+    } finally {
+      setValidatingQualityRepairCandidate(false);
+    }
+  }
+
+  function copyQualityRepairToHtmlCandidate() {
+    setHtmlCandidateText(qualityRepairCandidateText);
+    setHtmlCandidateValidation(qualityRepairCandidateValidation);
+    setHtmlEditMode(false);
+    setHtmlDirty(false);
+    setNotice("Quality repair 후보를 기존 HTML 후보 편집기로 복사했습니다. 저장하려면 draftHtml에 반영 버튼을 직접 실행하세요.");
   }
 
   async function runPublishReadiness() {
@@ -1566,6 +1624,132 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
           <section className="admin-section">
             <div className="section-heading">
               <div>
+                <h2>Quality Repair Preview</h2>
+                <p className="muted">
+                  저장된 draftMarkdown을 우선 사용해 더 긴 HTML 품질 보강 후보를 생성합니다. 후보만 생성하며 draftHtml은 자동 저장하지 않습니다.
+                </p>
+              </div>
+              <button className="button secondary" type="button" disabled>
+                LLM, Blogger API, publish는 수행하지 않음
+              </button>
+            </div>
+
+            {!contentItem.draftMarkdown && !contentItem.draftHtml ? (
+              <div className="notice error">repair 후보를 만들 draftMarkdown 또는 draftHtml이 없습니다.</div>
+            ) : null}
+            {qualityRepairPreviewError ? <div className="notice error">{qualityRepairPreviewError}</div> : null}
+
+            <div className="form-actions">
+              <button className="button" type="button" disabled={!canRunQualityRepairPreview} onClick={() => void runQualityRepairPreview()}>
+                {runningQualityRepairPreview ? "Quality Repair Preview 실행 중" : "Quality Repair Preview"}
+              </button>
+              <button className="button secondary" type="button" disabled={!qualityRepairCandidateText || validatingQualityRepairCandidate} onClick={() => void revalidateQualityRepairCandidate()}>
+                {validatingQualityRepairCandidate ? "재검증 중" : "Repair 후보 재검증"}
+              </button>
+              <button className="button secondary" type="button" disabled={!qualityRepairCandidateText || qualityRepairDirty || !qualityRepairCandidateValidation?.validation.ok} onClick={copyQualityRepairToHtmlCandidate}>
+                HTML 후보 편집기로 복사
+              </button>
+            </div>
+
+            {qualityRepairPreviewResult ? (
+              <>
+                <div
+                  className={
+                    qualityRepairPreviewResult.afterQuality.grade === "fail"
+                      ? "notice error"
+                      : qualityRepairPreviewResult.afterQuality.grade === "warn"
+                        ? "notice warning"
+                        : "notice"
+                  }
+                >
+                  <strong>Quality Repair Candidate</strong>
+                  <p>
+                    source: {qualityRepairPreviewResult.source} / before length: {qualityRepairPreviewResult.repairSummary.beforeLength} / after length:{" "}
+                    {qualityRepairPreviewResult.repairSummary.afterLength}
+                  </p>
+                  <p>
+                    before grade: {qualityRepairPreviewResult.beforeQuality.grade} / after grade: {qualityRepairPreviewResult.afterQuality.grade} / before required fails:{" "}
+                    {countRequiredQualityFails(qualityRepairPreviewResult.beforeQuality)} / after required fails:{" "}
+                    {countRequiredQualityFails(qualityRepairPreviewResult.afterQuality)}
+                  </p>
+                  <p>
+                    CTA added: {qualityRepairPreviewResult.repairSummary.ctaAdded ? "yes" : "no"} / disclaimer added:{" "}
+                    {qualityRepairPreviewResult.repairSummary.disclaimerAdded ? "yes" : "no"} / mutation:{" "}
+                    {qualityRepairPreviewResult.repairSummary.mutationPerformed ? "yes" : "no"}
+                  </p>
+                  <p>draftHtml을 반영하면 기존 Blogger approval snapshot은 stale이 될 수 있습니다.</p>
+                </div>
+                <div className="detail-grid">
+                  <DetailItem label="Target Min Length" value={String(qualityRepairPreviewResult.repairSummary.targetMinLength)} />
+                  <DetailItem label="Before Score" value={String(qualityRepairPreviewResult.beforeQuality.scorePreview)} />
+                  <DetailItem label="After Score" value={String(qualityRepairPreviewResult.afterQuality.scorePreview)} />
+                  <DetailItem label="After Validation" value={qualityRepairPreviewResult.afterValidation.validation.ok ? "pass" : "fail"} />
+                  <DetailItem label="After HTML Length" value={String(qualityRepairPreviewResult.afterQuality.metadata.draftHtmlLength)} />
+                  <DetailItem label="After CTA Signals" value={String(qualityRepairPreviewResult.afterQuality.metadata.ctaSignalCount)} />
+                </div>
+                <ValidationList
+                  title="Added Repair Sections"
+                  items={qualityRepairPreviewResult.repairSummary.addedSections}
+                  emptyText="추가된 repair section이 없습니다."
+                />
+                {qualityRepairCandidateValidation ? (
+                  <>
+                    <div className={qualityRepairCandidateValidation.validation.ok ? "notice" : "notice error"}>
+                      <strong>Repair Candidate Validation</strong>
+                      <p>
+                        validation: {qualityRepairCandidateValidation.validation.ok ? "pass" : "fail"} / errors:{" "}
+                        {qualityRepairCandidateValidation.validation.errors.length} / warnings:{" "}
+                        {qualityRepairCandidateValidation.validation.warnings.length}
+                      </p>
+                    </div>
+                    <ValidationList
+                      title="Repair Candidate Validation Errors"
+                      items={qualityRepairCandidateValidation.validation.errors}
+                      emptyText="HTML validation/security error가 없습니다."
+                      isError
+                    />
+                    <ValidationList
+                      title="Repair Candidate Validation Warnings"
+                      items={qualityRepairCandidateValidation.validation.warnings}
+                      emptyText="HTML validation warning이 없습니다."
+                      isWarning
+                    />
+                  </>
+                ) : null}
+                {qualityRepairDirty ? <div className="notice warning">편집된 repair 후보는 재검증 후 HTML 후보 편집기로 복사할 수 있습니다.</div> : null}
+                <label className="plan-editor read-block">
+                  Quality Repair Candidate
+                  <textarea
+                    value={qualityRepairCandidateText}
+                    readOnly={!qualityRepairEditMode}
+                    onChange={(event) => {
+                      setQualityRepairCandidateText(event.target.value);
+                      setQualityRepairDirty(true);
+                    }}
+                    spellCheck={false}
+                  />
+                </label>
+                <div className="form-actions">
+                  <button className="button secondary" type="button" onClick={() => setQualityRepairEditMode((current) => !current)}>
+                    {qualityRepairEditMode ? "읽기 모드" : "Repair 후보 편집"}
+                  </button>
+                  <button className="button secondary" type="button" disabled={!qualityRepairCandidateText || validatingQualityRepairCandidate} onClick={() => void revalidateQualityRepairCandidate()}>
+                    {validatingQualityRepairCandidate ? "재검증 중" : "재검증"}
+                  </button>
+                  <button className="button" type="button" disabled={!qualityRepairCandidateText || qualityRepairDirty || !qualityRepairCandidateValidation?.validation.ok} onClick={copyQualityRepairToHtmlCandidate}>
+                    HTML 후보 편집기로 복사
+                  </button>
+                </div>
+                <div className="notice">후보만 생성합니다. 저장은 기존 HTML 후보 편집기의 draftHtml에 반영 버튼을 사용해야 합니다.</div>
+              </>
+            ) : (
+              <div className="notice">Quality Repair Preview를 실행하면 rule-based HTML 보강 후보가 화면에만 생성됩니다.</div>
+            )}
+          </section>
+
+          <section className="admin-section">
+            <div className="section-heading">
+              <div>
                 <h2>Draft And Quality</h2>
                 <p className="muted">아직 자동 생성, HTML 변환, 품질검사는 연결하지 않았습니다.</p>
               </div>
@@ -1767,6 +1951,10 @@ function QualitySummary({ checks }: { checks: HtmlQualityPreviewResult["checks"]
       )}
     </div>
   );
+}
+
+function countRequiredQualityFails(result: HtmlQualityPreviewResult) {
+  return result.checks.filter((check) => check.status === "fail" && check.severity === "required").length;
 }
 
 function QualityGroupTable({ title, checks }: { title: string; checks: HtmlQualityPreviewResult["checks"] }) {

@@ -27,6 +27,7 @@ latest commit before Patch 9E-3 work: 260c28d Add guarded Blogger draft save
 - Blogger draft manual approval guard with snapshot hashes
 - Blogger draft save via `posts.insert?isDraft=true` guarded by active approval snapshot match
 - Blogger draft save live verification runbook and retry/update policy documentation
+- Manual HTML quality repair preview for short/placeholder `draftHtml`
 
 ## Current Blogger State
 
@@ -42,17 +43,24 @@ latest commit before Patch 9E-3 work: 260c28d Add guarded Blogger draft save
 - `posts.update`, publish, scheduled publish, token refresh, and bulk publishing are not implemented.
 - Content item status, `qualityScore`, `publishedAt`, and `scheduledAt` are not mutated by Blogger draft save.
 - Publish readiness can show selected blog, manual approval, and draft saved checks, but `publishReady=false` and top-level `ready=false` remain.
+- Patch 9E-4A adds `quality-repair-preview` to generate a rule-based HTML candidate without DB mutation, LLM calls, or Blogger API calls.
+- Saving a repair candidate still requires the existing manual `apply-html` flow.
 
 ## Next Patch Candidate
 
-Patch 9E-4 후보: Blogger draft update/retry semantics 또는 draft save 이후 publish handoff readiness.
+Patch 9E-4B 후보: repair candidate apply UX polish.
+
+Alternative candidates:
+
+- Patch 9E-4C: Local LLM sectioned multi-pass long-form generation.
+- Patch 9E-5: Blogger OAuth/test blog readiness 재점검.
 
 Recommended scope:
 
-- Decide whether existing successful draft posts can be updated or whether each new approval should continue creating a new draft.
-- Convert the 9E-3 retry policy into implementation if needed, while keeping token refresh out of scope.
-- Keep publish/scheduled publish out of scope unless a separate plan is approved.
-- Keep token refresh out of scope unless explicitly selected as the patch target.
+- Decide whether the repair candidate should have a more direct but still manual apply UX.
+- Keep automatic `draftHtml` save out of scope.
+- Keep LLM long-form generation separate unless Patch 9E-4C is selected.
+- Keep Blogger OAuth/live draft save out of scope unless Patch 9E-5 is selected.
 
 ## Do Not Start With
 
@@ -70,12 +78,12 @@ Recommended scope:
 ```text
 AGENTS.md와 documents/ 폴더의 관련 문서를 먼저 읽어줘.
 
-현재 프로젝트 상태를 점검하고 Patch 9E-4 작업계획을 제안해줘.
+현재 프로젝트 상태를 점검하고 Patch 9E-4B 작업계획을 제안해줘.
 
 목표:
-- Patch 9E-3의 live verification runbook과 retry/update policy 문서화 상태를 확인한다.
-- draft update/retry semantics 또는 publish handoff readiness 중 다음 최소 패치를 설계한다.
-- publish/scheduled publish와 token refresh는 명시적으로 범위를 정하기 전까지 구현하지 않는다.
+- Patch 9E-4A의 manual HTML quality repair preview 구현 상태를 확인한다.
+- repair candidate apply UX polish를 설계한다.
+- 자동 draftHtml 저장, LLM 호출, Blogger API 호출은 명시적으로 범위를 정하기 전까지 구현하지 않는다.
 
 아직 구현하지 말고 계획만 작성해줘.
 ```
