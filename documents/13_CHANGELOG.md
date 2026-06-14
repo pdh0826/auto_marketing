@@ -113,3 +113,20 @@ Policy:
 - Warnings can be reviewed by the user before manual save.
 - `draftHtml` is local preview/validation HTML, not Blogger final publish HTML.
 - No LLM calls, no `llm_call_logs`, no Blogger OAuth/API/publish.
+
+## Patch 8E Quality Dry Run
+
+Implemented after Patch 8D:
+
+- Added `POST /api/content-items/[id]/quality-preview`.
+- Added saved `draftHtml` based quality dry-run rules.
+- Added score preview and grade calculation.
+- Added structure, SEO, media, safety, and Blogger compatibility check groups.
+- Added `/content/[id]` Quality Dry Run UI.
+
+Policy:
+
+- `quality-preview` does not mutate DB.
+- `qualityScore`, status, draftHtml, publishedAt, and scheduledAt are not changed.
+- The API does not return raw content item or raw asset objects.
+- No LLM calls, no `llm_call_logs`, no Blogger OAuth/API/publish.

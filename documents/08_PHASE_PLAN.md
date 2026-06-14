@@ -15,8 +15,8 @@
 11. draft safety prompt와 자동 repair: 완료
 12. HTML 변환 dry-run/preview: 완료
 13. HTML 후보 편집, 재검증, draftHtml 수동 반영: 완료
-14. Patch 8E - saved draftHtml 기반 품질검사 dry-run/preview: 다음 패치 후보
-15. Patch 8F - publish readiness gate
+14. Patch 8E - saved draftHtml 기반 품질검사 dry-run/preview: 완료
+15. Patch 8F - publish readiness gate: 다음 패치 후보
 16. Patch 9A - Blogger 연결 설정 설계
 17. Patch 9B 이후 - Blogger OAuth/API/draft/publish
 18. 예약 발행
@@ -46,8 +46,8 @@ Patch 8D 완료:
 
 다음 패치 후보:
 
-- Patch 8E: 저장된 `draftHtml` 기반 품질검사 dry-run/preview
-- HTML 구조, 링크, CTA, 금융/투자 안전문구, media reference 검사
+- Patch 8F: publish readiness gate
+- quality preview 결과, draftHtml 존재 여부, Blogger 연결 전제 조건, 수동 승인 상태를 종합한 발행 준비 게이트
 - 실제 Blogger OAuth/API/publish 없음
 
 먼저 하지 말 것:

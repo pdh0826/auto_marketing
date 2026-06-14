@@ -8,6 +8,7 @@ import { buildContentPlanDryRun, type ContentPlanDryRunResult, type ReadinessSta
 import { getContentModeLabel } from "@/lib/content/constants";
 import { buildDraftMarkdownDryRun, type DraftMarkdownDryRunResult } from "@/lib/content/draft-preview";
 import { validateDraftMarkdown, type DraftValidationResult } from "@/lib/content/draft-validation";
+import type { HtmlQualityPreviewResult } from "@/lib/content/html-quality-preview";
 import type { HtmlCandidateValidationResult, HtmlPreviewDryRunResult } from "@/lib/content/html-preview";
 import { formatPlanJson, hasUsablePlanJson } from "@/lib/content/plan-template";
 import { ApiResult, requestJson } from "@/lib/form-utils";
@@ -65,6 +66,7 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
   const [dryRunResult, setDryRunResult] = useState<ContentPlanDryRunResult | null>(null);
   const [draftDryRunResult, setDraftDryRunResult] = useState<DraftMarkdownDryRunResult | null>(null);
   const [htmlPreviewResult, setHtmlPreviewResult] = useState<HtmlPreviewDryRunResult | null>(null);
+  const [qualityPreviewResult, setQualityPreviewResult] = useState<HtmlQualityPreviewResult | null>(null);
   const [generatedPlan, setGeneratedPlan] = useState<GeneratedPlanResult | null>(null);
   const [generatedDraft, setGeneratedDraft] = useState<GeneratedDraftResult | null>(null);
   const [candidateText, setCandidateText] = useState("");
@@ -93,6 +95,7 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
   const [revalidatingDraft, setRevalidatingDraft] = useState(false);
   const [validatingHtml, setValidatingHtml] = useState(false);
   const [applyingHtml, setApplyingHtml] = useState(false);
+  const [runningQualityPreview, setRunningQualityPreview] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [assetsError, setAssetsError] = useState<string | null>(null);
   const [routeError, setRouteError] = useState<string | null>(null);
@@ -100,6 +103,7 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
   const [draftGenerationError, setDraftGenerationError] = useState<string | null>(null);
   const [htmlPreviewError, setHtmlPreviewError] = useState<string | null>(null);
   const [htmlApplyError, setHtmlApplyError] = useState<string | null>(null);
+  const [qualityPreviewError, setQualityPreviewError] = useState<string | null>(null);
   const [planError, setPlanError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -110,6 +114,7 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
   const canApplyGeneratedDraft = Boolean(generatedDraft?.validation.ok && !draftDirty && !applyingDraft);
   const canRunHtmlPreview = Boolean(contentItem?.draftMarkdown && !runningHtmlPreview);
   const canApplyHtmlCandidate = Boolean(htmlCandidateText && htmlCandidateValidation?.validation.ok && !htmlDirty && !applyingHtml);
+  const canRunQualityPreview = Boolean(contentItem?.draftHtml && !runningQualityPreview);
 
   const loadContentItem = useCallback(async () => {
     setLoading(true);
@@ -414,6 +419,25 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
       setHtmlApplyError(caught instanceof Error ? caught.message : "HTML 후보를 draftHtml에 반영하지 못했습니다.");
     } finally {
       setApplyingHtml(false);
+    }
+  }
+
+  async function runQualityPreview() {
+    setNotice(null);
+    setQualityPreviewError(null);
+    setRunningQualityPreview(true);
+
+    try {
+      const result = await requestJson<ApiResult<HtmlQualityPreviewResult>>(`/api/content-items/${contentItemId}/quality-preview`, {
+        method: "POST",
+        body: JSON.stringify({})
+      });
+      setQualityPreviewResult(result.data);
+      setNotice("품질검사 dry-run preview를 생성했습니다. DB에는 저장하지 않았습니다.");
+    } catch (caught) {
+      setQualityPreviewError(caught instanceof Error ? caught.message : "품질검사 dry-run preview에 실패했습니다.");
+    } finally {
+      setRunningQualityPreview(false);
     }
   }
 
@@ -1065,6 +1089,63 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
           <section className="admin-section">
             <div className="section-heading">
               <div>
+                <h2>Quality Dry Run</h2>
+                <p className="muted">
+                  저장된 draftHtml을 기반으로 구조, SEO, 미디어, 안전성, Blogger 호환성 품질을 preview로 검사합니다. DB에는 저장하지 않습니다.
+                </p>
+              </div>
+              <button className="button secondary" type="button" disabled>
+                qualityScore 저장은 후속 패치에서 연결 예정
+              </button>
+            </div>
+
+            {!contentItem.draftHtml ? <div className="notice error">저장된 draftHtml이 없습니다. 먼저 HTML 후보를 draftHtml에 반영하세요.</div> : null}
+            {qualityPreviewError ? <div className="notice error">{qualityPreviewError}</div> : null}
+
+            <div className="form-actions">
+              <button className="button" type="button" disabled={!canRunQualityPreview} onClick={() => void runQualityPreview()}>
+                {runningQualityPreview ? "Quality Dry Run 실행 중" : "Quality Dry Run"}
+              </button>
+              <button className="button secondary" type="button" disabled>
+                Blogger 발행은 수행하지 않음
+              </button>
+            </div>
+
+            {qualityPreviewResult ? (
+              <>
+                <div className={qualityPreviewResult.grade === "fail" ? "notice error" : qualityPreviewResult.grade === "warn" ? "notice warning" : "notice"}>
+                  <strong>Quality Preview</strong>
+                  <p>
+                    ready: {qualityPreviewResult.ready ? "yes" : "no"} / grade: {qualityPreviewResult.grade} / score preview:{" "}
+                    {qualityPreviewResult.scorePreview}
+                  </p>
+                  <p>품질검사는 preview이며 DB에 저장하지 않습니다. qualityScore 저장은 후속 패치에서 연결 예정입니다.</p>
+                </div>
+                <div className="detail-grid">
+                  <DetailItem label="HTML Length" value={String(qualityPreviewResult.metadata.draftHtmlLength)} />
+                  <DetailItem label="Headings" value={String(qualityPreviewResult.metadata.headingCount)} />
+                  <DetailItem label="H1" value={String(qualityPreviewResult.metadata.h1Count)} />
+                  <DetailItem label="H2/H3" value={String(qualityPreviewResult.metadata.h2h3Count)} />
+                  <DetailItem label="Paragraphs" value={String(qualityPreviewResult.metadata.paragraphCount)} />
+                  <DetailItem label="Media Refs" value={String(qualityPreviewResult.metadata.mediaReferenceCount)} />
+                  <DetailItem label="Matched Media" value={String(qualityPreviewResult.metadata.matchedMediaReferenceCount)} />
+                  <DetailItem label="External Links" value={String(qualityPreviewResult.metadata.externalLinkCount)} />
+                </div>
+                <QualitySummary checks={qualityPreviewResult.checks} />
+                <QualityGroupTable title="Structure" checks={qualityPreviewResult.groups.structure} />
+                <QualityGroupTable title="SEO" checks={qualityPreviewResult.groups.seo} />
+                <QualityGroupTable title="Media" checks={qualityPreviewResult.groups.media} />
+                <QualityGroupTable title="Safety" checks={qualityPreviewResult.groups.safety} />
+                <QualityGroupTable title="Blogger Compatibility" checks={qualityPreviewResult.groups.bloggerCompatibility} />
+              </>
+            ) : (
+              <div className="notice">Quality Dry Run을 실행하면 저장된 draftHtml 기반 품질검사 결과가 화면에만 생성됩니다.</div>
+            )}
+          </section>
+
+          <section className="admin-section">
+            <div className="section-heading">
+              <div>
                 <h2>Draft And Quality</h2>
                 <p className="muted">아직 자동 생성, HTML 변환, 품질검사는 연결하지 않았습니다.</p>
               </div>
@@ -1237,6 +1318,63 @@ function HtmlMediaMappingTable({ mappings }: { mappings: HtmlPreviewDryRunResult
           </table>
         </div>
       )}
+    </div>
+  );
+}
+
+function QualitySummary({ checks }: { checks: HtmlQualityPreviewResult["checks"] }) {
+  const requiredFailCount = checks.filter((check) => check.severity === "required" && check.status === "fail").length;
+  const recommendedIssueCount = checks.filter((check) => check.severity === "recommended" && check.status !== "pass").length;
+  const optionalIssueCount = checks.filter((check) => check.severity === "optional" && check.status !== "pass").length;
+  const priorityIssues = checks.filter((check) => check.status !== "pass");
+
+  return (
+    <div className={requiredFailCount > 0 ? "notice error" : priorityIssues.length > 0 ? "notice warning" : "notice"}>
+      <strong>Quality Issue Summary</strong>
+      <p>
+        required fail: {requiredFailCount} / recommended issues: {recommendedIssueCount} / optional issues: {optionalIssueCount}
+      </p>
+      {priorityIssues.length === 0 ? (
+        <p>실패 또는 경고 항목이 없습니다.</p>
+      ) : (
+        <ul>
+          {priorityIssues.slice(0, 8).map((check) => (
+            <li key={check.key}>
+              [{check.group}] {check.label}: {check.message}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function QualityGroupTable({ title, checks }: { title: string; checks: HtmlQualityPreviewResult["checks"] }) {
+  return (
+    <div className="read-block">
+      <h3>{title}</h3>
+      <div className="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Check</th>
+              <th>Status</th>
+              <th>Severity</th>
+              <th>Message</th>
+            </tr>
+          </thead>
+          <tbody>
+            {checks.map((check) => (
+              <tr key={check.key}>
+                <td>{check.label}</td>
+                <td>{check.status}</td>
+                <td>{check.severity}</td>
+                <td>{check.message}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

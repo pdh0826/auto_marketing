@@ -105,3 +105,22 @@ HTML dry-run preview
 - warning만 있으면 사용자가 검토 후 저장할 수 있다.
 - 저장되는 `draftHtml`은 로컬 preview/검증용 HTML이며 Blogger 최종 발행 HTML이 아니다.
 - Blogger OAuth/API/publish, LLM 호출, `llm_call_logs` 생성은 수행하지 않는다.
+
+## Patch 8E Quality Dry Run
+
+Patch 8E는 저장된 `draftHtml`을 read-only로 조회해 품질검사 preview를 생성한다.
+
+```text
+saved draftHtml
+→ HTML/security/media validation reuse
+→ structure / SEO / media / safety / Blogger compatibility checks
+→ scorePreview and grade
+→ UI preview only
+```
+
+- API는 `POST /api/content-items/[id]/quality-preview`다.
+- content item, blog, brand, attached assets는 내부 검사용으로만 조회한다.
+- 응답에는 원본 content item이나 원본 assets를 그대로 반환하지 않는다.
+- `scorePreview`와 `grade`는 화면 표시용이며 `content_items.qualityScore`에는 저장하지 않는다.
+- status, draftHtml, publishedAt, scheduledAt은 변경하지 않는다.
+- Blogger OAuth/API/publish, LLM 호출, `llm_call_logs` 생성은 수행하지 않는다.

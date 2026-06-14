@@ -288,3 +288,16 @@ npm run build
 - warning만 있는 HTML 후보는 검토 후 `draftHtml에 반영`할 수 있다.
 - `POST /api/content-items/[id]/apply-html`은 서버에서 validation을 다시 수행하고, error가 없을 때만 `content_items.draftHtml`을 업데이트한다.
 - validate/apply 과정에서 LLM 호출, `llm_call_logs` 생성, Blogger OAuth/API/publish는 발생하지 않는다.
+
+## Patch 8E 수동 검증
+
+- `/content/[id]`에 `Quality Dry Run` 섹션이 표시된다.
+- 저장된 `draftHtml`이 없으면 품질검사를 실행할 수 없고 안내가 표시된다.
+- `POST /api/content-items/[id]/quality-preview`는 저장된 `draftHtml`을 read-only로 검사한다.
+- API 응답에는 원본 content item 객체와 원본 assets 객체를 그대로 반환하지 않는다.
+- score preview, grade, metadata, structure/SEO/media/safety/Blogger compatibility 그룹별 check가 표시된다.
+- `qualityScore 저장`은 후속 패치 placeholder이며 Patch 8E에서 저장하지 않는다.
+- quality-preview 호출 전후 `qualityScore`, status, draftHtml, publishedAt, scheduledAt이 변경되지 않는다.
+- quality-preview 호출만으로 `llm_call_logs`가 생성되지 않는다.
+- 응답과 UI에는 `storagePath`, local upload path, API Key, secret, token, provider headers, request template이 포함되지 않는다.
+- H1 없음, H1 2개 이상, H2/H3 부족, paragraph 부족, CTA 없음, FAQ 없음, external link rel 누락, unknown media reference, img alt 누락, 위험 HTML 패턴, 금융 위험 표현과 안전문구 누락이 check로 표시된다.

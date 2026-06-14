@@ -5,7 +5,7 @@
 ```text
 repo: ~/blog-growth-agent
 branch: master
-latest commit: 1f83c77 Add HTML preview dry run for saved drafts
+latest commit: 34b1351 Add manual HTML candidate apply flow
 ```
 
 Recent commits:
@@ -40,6 +40,7 @@ af0ce9a Generate content plan candidates with LLM
 - Draft safety prompt hardening and one-time repair on validation failure
 - Saved draftMarkdown based HTML Conversion Dry Run
 - HTML candidate editing, revalidation, and manual draftHtml apply
+- Saved draftHtml based Quality Dry Run preview
 
 ## Verified Runtime State
 
@@ -63,13 +64,12 @@ mediaPlaceholderCount = 1
 
 ## Next Patch
 
-Patch 8E 후보: saved `draftHtml` 기반 품질검사 dry-run/preview.
+Patch 8F 후보: publish readiness gate.
 
 Target:
 
-- saved `draftHtml`을 기반으로 HTML 구조, 링크, CTA, 금융/투자 안전문구, media reference 품질을 검사한다.
-- 품질검사 결과는 화면 preview로 표시한다.
-- qualityScore 자동 저장은 하지 않거나 별도 수동 반영 정책을 먼저 설계한다.
+- saved draftHtml 존재 여부, quality preview 결과, 수동 승인 상태, Blogger 연결 전제 조건을 종합해 발행 준비 상태를 표시한다.
+- readiness gate는 preview로 시작하고 publish는 실행하지 않는다.
 - 실제 Blogger 연동 없음
 - publish/scheduled publish 없음
 
@@ -88,13 +88,13 @@ Target:
 ```text
 AGENTS.md와 documents/ 폴더의 관련 문서를 먼저 읽어줘.
 
-현재 프로젝트 상태를 점검하고 Patch 8E 작업계획을 제안해줘.
+현재 프로젝트 상태를 점검하고 Patch 8F 작업계획을 제안해줘.
 
 목표:
-- 저장된 draftHtml 기반 품질검사 dry-run/preview를 설계한다.
-- HTML 구조, 링크, CTA, 금융/투자 안전문구, media reference 품질을 점검한다.
+- saved draftHtml과 quality preview 결과를 기반으로 publish readiness gate를 설계한다.
+- Blogger 연결 전제 조건, 수동 승인 상태, 안전성 조건을 점검한다.
 - 실제 Blogger OAuth/API/publish는 구현하지 않는다.
-- qualityScore 자동 저장은 하지 않는다.
+- publish/scheduled publish는 구현하지 않는다.
 
 아직 구현하지 말고 계획만 작성해줘.
 ```

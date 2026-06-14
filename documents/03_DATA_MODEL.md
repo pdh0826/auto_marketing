@@ -238,3 +238,14 @@ Patch 8D도 새 DB 모델이나 migration을 추가하지 않는다.
 - `draftHtml` 저장은 status, qualityScore, publishedAt, scheduledAt을 변경하지 않는다.
 - 저장된 `draftHtml`은 로컬 preview/검증용 HTML이다. Blogger 업로드/발행용 최종 HTML 변환은 후속 패치 범위다.
 - `storagePath`, secret, provider headers, request template은 `draftHtml`에 포함하지 않는다.
+
+## Patch 8E quality preview data policy
+
+Patch 8E도 새 DB 모델이나 migration을 추가하지 않는다.
+
+- `POST /api/content-items/[id]/quality-preview`는 저장된 `content_items.draftHtml`을 read-only 입력으로 사용한다.
+- 품질검사 결과의 `scorePreview`와 `grade`는 응답과 화면에만 표시한다.
+- `content_items.qualityScore`, status, draftHtml, publishedAt, scheduledAt은 변경하지 않는다.
+- `quality_checks` 테이블은 아직 구현하지 않는다.
+- 원본 content item 객체와 원본 assets 객체를 API 응답에 그대로 반환하지 않는다.
+- `storagePath`, local upload path, secret, provider headers, request template은 응답과 UI에 포함하지 않는다.

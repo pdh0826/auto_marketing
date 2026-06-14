@@ -46,17 +46,17 @@ branch: master
 - draftMarkdown은 자동 저장되지 않고 사용자가 반영했을 때만 DB에 저장됨
 
 다음 세션 1순위 작업:
-Patch 8E 후보: saved draftHtml 기반 품질검사 dry-run/preview
+Patch 8F 후보: publish readiness gate
 
-Patch 8E 목표:
-- 저장된 draftHtml 기반 품질검사 dry-run/preview를 설계한다.
-- HTML 구조, 링크, CTA, 금융/투자 안전문구, media reference 품질을 점검한다.
-- qualityScore 자동 저장은 하지 않는다.
+Patch 8F 목표:
+- saved draftHtml과 quality preview 결과를 기반으로 publish readiness gate를 설계한다.
+- Blogger 연결 전제 조건, 수동 승인 상태, 안전성 조건을 점검한다.
+- publish/scheduled publish는 구현하지 않는다.
 - 실제 Blogger 연동은 아직 하지 않음
 
 금지 사항:
 - Blogger OAuth/API/publish 구현부터 시작 금지
-- qualityScore 자동 저장 금지
+- publish/scheduled publish 구현 금지
 - 품질검사와 발행을 한 번에 구현 금지
 - API Key나 secret 출력 금지
 - raw LLM response나 prompt 전문 로그 저장 금지
@@ -64,7 +64,7 @@ Patch 8E 목표:
 - git add . 또는 git add -A 금지
 - .env.local 읽기/출력/수정 금지
 
-첫 작업으로 Patch 8E 작업계획을 제안해줘. 아직 구현하지 말고 계획만 작성해줘.
+첫 작업으로 Patch 8F 작업계획을 제안해줘. 아직 구현하지 말고 계획만 작성해줘.
 ```
 
 ## 첫 점검 명령어

@@ -252,3 +252,13 @@ Patch 8D의 HTML 후보 편집, 재검증, `draftHtml` 수동 반영도 LLM Prov
 - `llm_call_logs`는 생성하지 않는다.
 - prompt 전문, raw response 전문, API Key, Bearer token, secretRef, encryptedValue, provider headers, requestTemplateJson, media storagePath는 응답/로그/문서에 남기지 않는다.
 - 저장되는 `draftHtml`은 로컬 preview/검증용 HTML이다. Blogger 업로드/발행 HTML 변환은 별도 후속 패치에서 다룬다.
+
+## Patch 8E Quality preview and LLM boundary
+
+Patch 8E의 saved `draftHtml` 품질검사 dry-run/preview는 LLM Provider를 사용하지 않는다.
+
+- `quality-preview`는 provider/model/task route를 조회하지 않는다.
+- OpenAI/Ollama/Local LLM 호출은 없다.
+- `llm_call_logs`는 생성하지 않는다.
+- score preview와 grade는 DB에 저장하지 않는다.
+- Blogger OAuth/API/publish도 수행하지 않는다.
