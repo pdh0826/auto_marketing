@@ -8,7 +8,7 @@ import { buildContentPlanDryRun, type ContentPlanDryRunResult, type ReadinessSta
 import { getContentModeLabel } from "@/lib/content/constants";
 import { buildDraftMarkdownDryRun, type DraftMarkdownDryRunResult } from "@/lib/content/draft-preview";
 import { validateDraftMarkdown, type DraftValidationResult } from "@/lib/content/draft-validation";
-import type { HtmlPreviewDryRunResult } from "@/lib/content/html-preview";
+import type { HtmlCandidateValidationResult, HtmlPreviewDryRunResult } from "@/lib/content/html-preview";
 import { formatPlanJson, hasUsablePlanJson } from "@/lib/content/plan-template";
 import { ApiResult, requestJson } from "@/lib/form-utils";
 import type { LlmTaskRouteAdmin } from "@/lib/llm/admin-types";
@@ -74,6 +74,10 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
   const [draftCandidateText, setDraftCandidateText] = useState("");
   const [draftEditMode, setDraftEditMode] = useState(false);
   const [draftDirty, setDraftDirty] = useState(false);
+  const [htmlCandidateText, setHtmlCandidateText] = useState("");
+  const [htmlEditMode, setHtmlEditMode] = useState(false);
+  const [htmlDirty, setHtmlDirty] = useState(false);
+  const [htmlCandidateValidation, setHtmlCandidateValidation] = useState<HtmlCandidateValidationResult | null>(null);
   const [planText, setPlanText] = useState("");
   const [loading, setLoading] = useState(true);
   const [assetsLoading, setAssetsLoading] = useState(true);
@@ -87,12 +91,15 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
   const [applyingDraft, setApplyingDraft] = useState(false);
   const [revalidatingPlan, setRevalidatingPlan] = useState(false);
   const [revalidatingDraft, setRevalidatingDraft] = useState(false);
+  const [validatingHtml, setValidatingHtml] = useState(false);
+  const [applyingHtml, setApplyingHtml] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [assetsError, setAssetsError] = useState<string | null>(null);
   const [routeError, setRouteError] = useState<string | null>(null);
   const [generationError, setGenerationError] = useState<string | null>(null);
   const [draftGenerationError, setDraftGenerationError] = useState<string | null>(null);
   const [htmlPreviewError, setHtmlPreviewError] = useState<string | null>(null);
+  const [htmlApplyError, setHtmlApplyError] = useState<string | null>(null);
   const [planError, setPlanError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -102,6 +109,7 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
   const canGenerateDraft = Boolean(contentItem?.planJson && draftDryRunResult?.ready && !generatingDraft);
   const canApplyGeneratedDraft = Boolean(generatedDraft?.validation.ok && !draftDirty && !applyingDraft);
   const canRunHtmlPreview = Boolean(contentItem?.draftMarkdown && !runningHtmlPreview);
+  const canApplyHtmlCandidate = Boolean(htmlCandidateText && htmlCandidateValidation?.validation.ok && !htmlDirty && !applyingHtml);
 
   const loadContentItem = useCallback(async () => {
     setLoading(true);
@@ -314,6 +322,7 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
   async function runHtmlPreviewDryRun() {
     setNotice(null);
     setHtmlPreviewError(null);
+    setHtmlApplyError(null);
     setRunningHtmlPreview(true);
 
     try {
@@ -322,11 +331,89 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
         body: JSON.stringify({})
       });
       setHtmlPreviewResult(result.data);
+      setHtmlCandidateText(result.data.previewHtml);
+      setHtmlEditMode(false);
+      setHtmlDirty(false);
+      const validation = await validateHtmlCandidateOnServer(result.data.previewHtml);
+      setHtmlCandidateValidation(validation);
       setNotice("HTML 변환 dry-run preview를 생성했습니다. DB에는 저장하지 않았습니다.");
     } catch (caught) {
       setHtmlPreviewError(caught instanceof Error ? caught.message : "HTML 변환 dry-run preview에 실패했습니다.");
     } finally {
       setRunningHtmlPreview(false);
+    }
+  }
+
+  async function validateHtmlCandidateOnServer(candidateHtml: string) {
+    const result = await requestJson<ApiResult<HtmlCandidateValidationResult>>(`/api/content-items/${contentItemId}/validate-html`, {
+      method: "POST",
+      body: JSON.stringify({ candidateHtml })
+    });
+    return result.data;
+  }
+
+  async function revalidateHtmlCandidate() {
+    setHtmlApplyError(null);
+    setHtmlPreviewError(null);
+    setNotice(null);
+    setValidatingHtml(true);
+
+    try {
+      const validation = await validateHtmlCandidateOnServer(htmlCandidateText);
+      setHtmlCandidateValidation(validation);
+      setHtmlDirty(false);
+      setNotice("HTML 후보를 재검증했습니다. 아직 DB에 저장하지 않았습니다.");
+    } catch (caught) {
+      setHtmlApplyError(caught instanceof Error ? caught.message : "HTML 후보 재검증에 실패했습니다.");
+    } finally {
+      setValidatingHtml(false);
+    }
+  }
+
+  async function applyHtmlCandidate() {
+    if (!htmlCandidateValidation?.validation.ok) {
+      setHtmlApplyError("validation/security error가 없는 HTML 후보만 draftHtml에 반영할 수 있습니다.");
+      return;
+    }
+    if (htmlDirty) {
+      setHtmlApplyError("편집된 HTML 후보는 재검증 후 반영할 수 있습니다.");
+      return;
+    }
+    const confirmed = window.confirm("draftHtml에 저장합니다. Blogger 발행은 수행하지 않습니다.");
+    if (!confirmed) {
+      return;
+    }
+
+    setApplyingHtml(true);
+    setHtmlApplyError(null);
+    setNotice(null);
+
+    try {
+      const result = await requestJson<
+        ApiResult<{
+          contentItem: ContentItemAdmin;
+          validation: HtmlCandidateValidationResult["validation"];
+          securityChecks: HtmlCandidateValidationResult["securityChecks"];
+          mediaMappings: HtmlCandidateValidationResult["mediaMappings"];
+          metadata: HtmlCandidateValidationResult["metadata"];
+        }>
+      >(`/api/content-items/${contentItemId}/apply-html`, {
+        method: "POST",
+        body: JSON.stringify({ candidateHtml: htmlCandidateText })
+      });
+      setContentItem(result.data.contentItem);
+      setHtmlCandidateValidation({
+        validation: result.data.validation,
+        securityChecks: result.data.securityChecks,
+        mediaMappings: result.data.mediaMappings,
+        metadata: result.data.metadata
+      });
+      setHtmlDirty(false);
+      setNotice("HTML 후보를 draftHtml에 반영했습니다. Blogger 발행은 수행하지 않았습니다.");
+    } catch (caught) {
+      setHtmlApplyError(caught instanceof Error ? caught.message : "HTML 후보를 draftHtml에 반영하지 못했습니다.");
+    } finally {
+      setApplyingHtml(false);
     }
   }
 
@@ -855,13 +942,17 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
 
             {!contentItem.draftMarkdown ? <div className="notice error">저장된 draftMarkdown이 없습니다. 먼저 draftMarkdown에 반영하세요.</div> : null}
             {htmlPreviewError ? <div className="notice error">{htmlPreviewError}</div> : null}
+            {htmlApplyError ? <div className="notice error">{htmlApplyError}</div> : null}
 
             <div className="form-actions">
               <button className="button" type="button" disabled={!canRunHtmlPreview} onClick={() => void runHtmlPreviewDryRun()}>
                 {runningHtmlPreview ? "HTML Dry Run 실행 중" : "HTML Dry Run"}
               </button>
-              <button className="button secondary" type="button" disabled>
-                draftHtml 저장은 후속 패치에서 연결 예정
+              <button className="button secondary" type="button" disabled={!htmlCandidateText || validatingHtml} onClick={() => void revalidateHtmlCandidate()}>
+                {validatingHtml ? "재검증 중" : "HTML 후보 재검증"}
+              </button>
+              <button className="button" type="button" disabled={!canApplyHtmlCandidate} onClick={() => void applyHtmlCandidate()}>
+                {applyingHtml ? "draftHtml 반영 중" : "draftHtml에 반영"}
               </button>
             </div>
 
@@ -890,19 +981,81 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
                 />
                 <SecurityCheckList checks={htmlPreviewResult.securityChecks} />
                 <HtmlMediaMappingTable mappings={htmlPreviewResult.mediaMappings} />
+                {htmlCandidateValidation ? (
+                  <>
+                    <div className={htmlCandidateValidation.validation.ok ? "notice" : "notice error"}>
+                      <strong>HTML Candidate Validation</strong>
+                      <p>
+                        validation: {htmlCandidateValidation.validation.ok ? "pass" : "fail"} / errors:{" "}
+                        {htmlCandidateValidation.validation.errors.length} / warnings: {htmlCandidateValidation.validation.warnings.length}
+                      </p>
+                      <p>
+                        html length: {htmlCandidateValidation.metadata.htmlLength} / media refs:{" "}
+                        {htmlCandidateValidation.metadata.mediaReferenceCount} / matched:{" "}
+                        {htmlCandidateValidation.metadata.matchedMediaReferenceCount} / unmatched:{" "}
+                        {htmlCandidateValidation.metadata.unmatchedMediaReferenceCount}
+                      </p>
+                    </div>
+                    {htmlDirty ? (
+                      <div className="notice warning">편집된 HTML 후보는 재검증 후 draftHtml에 반영할 수 있습니다.</div>
+                    ) : !htmlCandidateValidation.validation.ok ? (
+                      <div className="notice error">이 HTML 후보는 validation/security error가 있어 draftHtml에 반영할 수 없습니다.</div>
+                    ) : htmlCandidateValidation.validation.warnings.length > 0 ? (
+                      <div className="notice">warning이 있습니다. 내용을 검토한 뒤 draftHtml에 반영할 수 있습니다.</div>
+                    ) : (
+                      <div className="notice">validation/security 검증을 통과했습니다. 내용을 검토한 뒤 draftHtml에 반영할 수 있습니다.</div>
+                    )}
+                    <ValidationList
+                      title="HTML Validation Errors"
+                      items={htmlCandidateValidation.validation.errors}
+                      emptyText="HTML validation/security error가 없습니다."
+                      isError
+                    />
+                    <ValidationList
+                      title="HTML Validation Warnings"
+                      items={htmlCandidateValidation.validation.warnings}
+                      emptyText="HTML validation warning이 없습니다."
+                      isWarning
+                    />
+                    <SecurityCheckList checks={htmlCandidateValidation.securityChecks} />
+                    <HtmlMediaMappingTable mappings={htmlCandidateValidation.mediaMappings} />
+                  </>
+                ) : (
+                  <div className="notice">HTML Dry Run 성공 후 후보 재검증 결과가 표시됩니다.</div>
+                )}
                 <div className="read-block">
-                  <h3>HTML Preview</h3>
+                  <h3>HTML Candidate Preview</h3>
                   <iframe
                     className="html-preview-frame"
                     sandbox=""
-                    srcDoc={htmlPreviewResult.previewHtml}
-                    title="HTML conversion dry-run preview"
+                    srcDoc={htmlCandidateText || htmlPreviewResult.previewHtml}
+                    title="HTML conversion candidate preview"
                   />
                 </div>
                 <label className="plan-editor read-block">
-                  previewHtml
-                  <textarea value={htmlPreviewResult.previewHtml} readOnly spellCheck={false} />
+                  HTML Candidate
+                  <textarea
+                    value={htmlCandidateText}
+                    readOnly={!htmlEditMode}
+                    onChange={(event) => {
+                      setHtmlCandidateText(event.target.value);
+                      setHtmlDirty(true);
+                    }}
+                    spellCheck={false}
+                  />
                 </label>
+                <div className="form-actions">
+                  <button className="button secondary" type="button" onClick={() => setHtmlEditMode((current) => !current)}>
+                    {htmlEditMode ? "읽기 모드" : "HTML 후보 편집"}
+                  </button>
+                  <button className="button secondary" type="button" disabled={!htmlCandidateText || validatingHtml} onClick={() => void revalidateHtmlCandidate()}>
+                    {validatingHtml ? "재검증 중" : "재검증"}
+                  </button>
+                  <button className="button" type="button" disabled={!canApplyHtmlCandidate} onClick={() => void applyHtmlCandidate()}>
+                    {applyingHtml ? "draftHtml 반영 중" : "draftHtml에 반영"}
+                  </button>
+                </div>
+                <div className="notice">draftHtml에 반영해도 Blogger 발행, Blogger draft 저장, LLM 호출, llm_call_logs 생성은 수행하지 않습니다.</div>
               </>
             ) : (
               <div className="notice">HTML Dry Run을 실행하면 저장된 draftMarkdown 기반 previewHtml, media mapping, security readiness가 생성됩니다.</div>

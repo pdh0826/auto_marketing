@@ -14,17 +14,18 @@
 10. draftMarkdown 후보 편집/재검증/반영: 완료
 11. draft safety prompt와 자동 repair: 완료
 12. HTML 변환 dry-run/preview: 완료
-13. HTML 변환 후보 생성과 수동 반영: 다음 패치 후보
-14. 품질검사
-15. Blogger OAuth 연결
-16. Blogger 초안 저장
-17. 예약 발행
-18. 운영 대시보드
-19. 키워드 연구소
-20. 상위글 구조 분석
-21. 서비스 홍보 엔진 고도화
-22. 이미지/썸네일
-23. 성과 분석과 리라이트
+13. HTML 후보 편집, 재검증, draftHtml 수동 반영: 완료
+14. Patch 8E - saved draftHtml 기반 품질검사 dry-run/preview: 다음 패치 후보
+15. Patch 8F - publish readiness gate
+16. Patch 9A - Blogger 연결 설정 설계
+17. Patch 9B 이후 - Blogger OAuth/API/draft/publish
+18. 예약 발행
+19. 운영 대시보드
+20. 키워드 연구소
+21. 상위글 구조 분석
+22. 서비스 홍보 엔진 고도화
+23. 이미지/썸네일
+24. 성과 분석과 리라이트
 
 ## Patch 8C 완료 기준
 
@@ -36,11 +37,18 @@
 - 실제 Blogger 연동 없음
 - `draftHtml` 자동 저장 없음
 
-다음 패치 후보:
+Patch 8D 완료:
 
 - previewHtml 후보 편집/재검증
-- `draftHtml` 수동 반영 저장 정책
-- HTML sanitization 강화
+- `validate-html` read-only 검증 API
+- `apply-html` 서버 재검증 후 `draftHtml` 수동 저장 API
+- HTML sanitization/security/media reference validation
+
+다음 패치 후보:
+
+- Patch 8E: 저장된 `draftHtml` 기반 품질검사 dry-run/preview
+- HTML 구조, 링크, CTA, 금융/투자 안전문구, media reference 검사
+- 실제 Blogger OAuth/API/publish 없음
 
 먼저 하지 말 것:
 

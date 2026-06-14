@@ -242,3 +242,13 @@ Patch 8C의 HTML 변환 dry-run/preview는 LLM Provider를 사용하지 않는�
 - `llm_call_logs`를 생성하지 않는다.
 - previewHtml은 rule-based Markdown conversion 결과이며 DB에 저장하지 않는다.
 - HTML 변환 후보 생성 또는 Blogger publish 연동이 필요하면 후속 패치에서 별도 Task Route와 저장 정책을 먼저 설계한다.
+
+## Patch 8D HTML candidate and LLM boundary
+
+Patch 8D의 HTML 후보 편집, 재검증, `draftHtml` 수동 반영도 LLM Provider를 사용하지 않는다.
+
+- `validate-html`과 `apply-html`은 provider/model/task route를 조회하지 않는다.
+- OpenAI/Ollama/Local LLM 호출은 없다.
+- `llm_call_logs`는 생성하지 않는다.
+- prompt 전문, raw response 전문, API Key, Bearer token, secretRef, encryptedValue, provider headers, requestTemplateJson, media storagePath는 응답/로그/문서에 남기지 않는다.
+- 저장되는 `draftHtml`은 로컬 preview/검증용 HTML이다. Blogger 업로드/발행 HTML 변환은 별도 후속 패치에서 다룬다.

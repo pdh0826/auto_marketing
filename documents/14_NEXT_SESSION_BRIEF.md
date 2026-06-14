@@ -5,7 +5,7 @@
 ```text
 repo: ~/blog-growth-agent
 branch: master
-latest commit: a53094c Improve draft safety repair flow
+latest commit: 1f83c77 Add HTML preview dry run for saved drafts
 ```
 
 Recent commits:
@@ -38,6 +38,8 @@ af0ce9a Generate content plan candidates with LLM
 - `content_draft` LLM candidate generation
 - Generated draft candidate editing and revalidation
 - Draft safety prompt hardening and one-time repair on validation failure
+- Saved draftMarkdown based HTML Conversion Dry Run
+- HTML candidate editing, revalidation, and manual draftHtml apply
 
 ## Verified Runtime State
 
@@ -61,21 +63,21 @@ mediaPlaceholderCount = 1
 
 ## Next Patch
 
-Patch 8D 후보: HTML preview 후보 편집/재검증과 `draftHtml` 수동 반영 저장 정책.
+Patch 8E 후보: saved `draftHtml` 기반 품질검사 dry-run/preview.
 
 Target:
 
-- Patch 8C의 previewHtml을 기반으로 사용자가 HTML 후보를 검토하고 편집할 수 있게 한다.
-- HTML sanitization/security validation을 재실행한다.
-- validation error가 없을 때만 사용자가 `draftHtml에 반영`을 눌러 저장한다.
+- saved `draftHtml`을 기반으로 HTML 구조, 링크, CTA, 금융/투자 안전문구, media reference 품질을 검사한다.
+- 품질검사 결과는 화면 preview로 표시한다.
+- qualityScore 자동 저장은 하지 않거나 별도 수동 반영 정책을 먼저 설계한다.
 - 실제 Blogger 연동 없음
-- draftHtml 자동 저장 없음
+- publish/scheduled publish 없음
 
 ## Do Not Start With
 
 - Blogger OAuth/API/publish
-- draftHtml automatic save
-- HTML conversion and publishing in one patch
+- qualityScore automatic save
+- HTML quality check and Blogger publishing in one patch
 - API Key or secret output
 - prompt full text or raw LLM response logging
 - using `content_plan` route as a `content_draft` substitute
@@ -86,13 +88,13 @@ Target:
 ```text
 AGENTS.md와 documents/ 폴더의 관련 문서를 먼저 읽어줘.
 
-현재 프로젝트 상태를 점검하고 Patch 8D 작업계획을 제안해줘.
+현재 프로젝트 상태를 점검하고 Patch 8E 작업계획을 제안해줘.
 
 목표:
-- Patch 8C에서 생성한 previewHtml 후보를 사용자가 편집/재검증할 수 있게 한다.
-- validation error가 없을 때만 draftHtml에 수동 반영할 수 있게 한다.
+- 저장된 draftHtml 기반 품질검사 dry-run/preview를 설계한다.
+- HTML 구조, 링크, CTA, 금융/투자 안전문구, media reference 품질을 점검한다.
 - 실제 Blogger OAuth/API/publish는 구현하지 않는다.
-- draftHtml 자동 저장은 하지 않는다.
+- qualityScore 자동 저장은 하지 않는다.
 
 아직 구현하지 말고 계획만 작성해줘.
 ```

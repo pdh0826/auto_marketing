@@ -44,6 +44,24 @@ export interface HtmlPreviewDryRunResult {
   };
 }
 
+export interface HtmlCandidateValidationResult {
+  validation: {
+    ok: boolean;
+    errors: string[];
+    warnings: string[];
+  };
+  securityChecks: HtmlSecurityCheck[];
+  mediaMappings: HtmlMediaMapping[];
+  metadata: {
+    htmlLength: number;
+    mediaReferenceCount: number;
+    matchedMediaReferenceCount: number;
+    unmatchedMediaReferenceCount: number;
+    assetWithoutReferenceCount: number;
+    externalUrlCount: number;
+  };
+}
+
 interface PlaceholderToken {
   full: string;
   assetId: string;
@@ -77,6 +95,76 @@ export function buildHtmlPreviewDryRun(contentItem: ContentItemAdmin, assets: Co
       matchedPlaceholderCount,
       unmatchedPlaceholderCount,
       assetWithoutPlaceholderCount
+    }
+  };
+}
+
+export function validateHtmlCandidate(candidateHtml: unknown, assets: ContentAssetAdmin[]): HtmlCandidateValidationResult {
+  const errors: string[] = [];
+  const warnings: string[] = [];
+
+  if (typeof candidateHtml !== "string") {
+    errors.push("candidateHtml은 string이어야 합니다.");
+  }
+
+  const html = typeof candidateHtml === "string" ? candidateHtml : "";
+  const trimmed = html.trim();
+
+  if (typeof candidateHtml === "string" && !trimmed) {
+    errors.push("candidateHtml이 비어 있습니다.");
+  }
+
+  const securityChecks = buildHtmlCandidateSecurityChecks(html);
+  errors.push(...securityChecks.filter((check) => check.status === "fail").map((check) => check.message));
+
+  if (trimmed && !/<\s*article\b/i.test(html)) {
+    warnings.push("<article> wrapper가 없습니다.");
+  }
+  if (trimmed && !/<\s*h1\b/i.test(html)) {
+    warnings.push("H1 제목이 없습니다.");
+  }
+  if (trimmed && !/<\s*h[23]\b/i.test(html)) {
+    warnings.push("H2 또는 H3 섹션이 없습니다.");
+  }
+
+  const mediaReferences = extractHtmlMediaReferences(html);
+  const mediaMappings = buildHtmlReferenceMappings(mediaReferences, assets);
+  const unmatchedMediaReferenceCount = mediaMappings.filter((mapping) => !mapping.matched).length;
+  const matchedMediaReferenceCount = mediaMappings.length - unmatchedMediaReferenceCount;
+  const referencedAssetIds = new Set(mediaMappings.filter((mapping) => mapping.matched && mapping.assetId).map((mapping) => mapping.assetId as string));
+  const assetWithoutReferenceCount = assets.filter((asset) => !referencedAssetIds.has(asset.id)).length;
+
+  if (unmatchedMediaReferenceCount > 0) {
+    errors.push(`현재 content item의 첨부 자산이 아닌 media file API 참조가 있습니다: ${unmatchedMediaReferenceCount}개`);
+  }
+
+  if (assets.length > 0 && mediaReferences.length === 0) {
+    warnings.push("첨부 미디어가 있지만 HTML 후보에 media reference가 없습니다.");
+  }
+
+  const externalUrlCount = countExternalUrls(html);
+  if (externalUrlCount > 0) {
+    warnings.push(`외부 http/https URL이 포함되어 있습니다: ${externalUrlCount}개`);
+  }
+
+  const weakMediaWarnings = buildMediaMarkupWarnings(html);
+  warnings.push(...weakMediaWarnings);
+
+  return {
+    validation: {
+      ok: errors.length === 0,
+      errors,
+      warnings
+    },
+    securityChecks,
+    mediaMappings,
+    metadata: {
+      htmlLength: html.length,
+      mediaReferenceCount: mediaReferences.length,
+      matchedMediaReferenceCount,
+      unmatchedMediaReferenceCount,
+      assetWithoutReferenceCount,
+      externalUrlCount
     }
   };
 }
@@ -178,6 +266,40 @@ function buildSecurityChecks(markdown: string): HtmlSecurityCheck[] {
     message: /\son[a-z]+\s*=/i.test(markdown) ? "HTML event handler 속성 패턴이 감지되었습니다." : "HTML event handler 속성 패턴이 감지되지 않았습니다."
   });
   return checks;
+}
+
+function buildHtmlCandidateSecurityChecks(html: string): HtmlSecurityCheck[] {
+  const blockedTagPattern = /<\s*(script|iframe|object|embed|form|input|button|style|link|meta)\b/i;
+  const javascriptUrlPattern = /javascript\s*:/i;
+  const eventHandlerPattern = /\son[a-z]+\s*=/i;
+  const localStoragePathPattern = /(storagePath|local-data\/|\/uploads\/|file:\/\/|\/Users\/|\/private\/|[A-Za-z]:\\)/i;
+
+  return [
+    {
+      key: "blocked_raw_tags",
+      status: blockedTagPattern.test(html) ? "fail" : "pass",
+      message: blockedTagPattern.test(html)
+        ? "script/iframe/object/embed/form/input/button/style/link/meta 태그는 저장할 수 없습니다."
+        : "차단 대상 raw HTML 태그가 감지되지 않았습니다."
+    },
+    {
+      key: "javascript_url",
+      status: javascriptUrlPattern.test(html) ? "fail" : "pass",
+      message: javascriptUrlPattern.test(html) ? "javascript: URL 패턴이 감지되었습니다." : "javascript: URL 패턴이 감지되지 않았습니다."
+    },
+    {
+      key: "event_handler_attribute",
+      status: eventHandlerPattern.test(html) ? "fail" : "pass",
+      message: eventHandlerPattern.test(html) ? "HTML event handler 속성 패턴이 감지되었습니다." : "HTML event handler 속성 패턴이 감지되지 않았습니다."
+    },
+    {
+      key: "local_storage_path",
+      status: localStoragePathPattern.test(html) ? "fail" : "pass",
+      message: localStoragePathPattern.test(html)
+        ? "storagePath, local-data, uploads, file URL 또는 로컬 절대 경로처럼 보이는 문자열이 감지되었습니다."
+        : "로컬 저장 경로 또는 storagePath 문자열이 감지되지 않았습니다."
+    }
+  ];
 }
 
 function convertMarkdownToHtml(markdown: string, placeholders: PlaceholderToken[], assets: ContentAssetAdmin[]) {
@@ -325,6 +447,72 @@ function extractCaption(value: string) {
 function countAssetsWithoutPlaceholder(assets: ContentAssetAdmin[], placeholders: PlaceholderToken[]) {
   const placeholderAssetIds = new Set(placeholders.map((placeholder) => placeholder.assetId));
   return assets.filter((asset) => !placeholderAssetIds.has(asset.id)).length;
+}
+
+function extractHtmlMediaReferences(html: string) {
+  const references: string[] = [];
+  const regex = /\/api\/content-assets\/([^/"'\s<>]+)\/file/g;
+  let match = regex.exec(html);
+
+  while (match) {
+    references.push(match[1]);
+    match = regex.exec(html);
+  }
+
+  return references;
+}
+
+function buildHtmlReferenceMappings(references: string[], assets: ContentAssetAdmin[]): HtmlMediaMapping[] {
+  return references.map((reference) => {
+    const assetId = safeDecodeURIComponent(reference);
+    const asset = assets.find((item) => item.id === assetId) ?? null;
+
+    return {
+      placeholder: `/api/content-assets/${reference}/file`,
+      assetId,
+      assetType: asset?.assetType ?? null,
+      originalName: asset?.originalName ?? null,
+      placement: asset?.placementHint ?? null,
+      caption: asset?.caption ?? null,
+      matched: Boolean(asset),
+      message: asset ? "첨부 자산과 매칭됩니다." : "현재 content item의 첨부 자산과 매칭되지 않습니다."
+    };
+  });
+}
+
+function countExternalUrls(html: string) {
+  const urls = html.match(/https?:\/\/[^\s"'<>]+/gi) ?? [];
+  return urls.length;
+}
+
+function buildMediaMarkupWarnings(html: string) {
+  const warnings: string[] = [];
+  const imageTags = html.match(/<\s*img\b[^>]*>/gi) ?? [];
+
+  const weakAltCount = imageTags.filter((tag) => {
+    const altMatch = tag.match(/\salt\s*=\s*("([^"]*)"|'([^']*)'|([^\s>]*))/i);
+    const altText = altMatch?.[2] ?? altMatch?.[3] ?? altMatch?.[4] ?? "";
+    return !altMatch || altText.trim().length < 4;
+  }).length;
+
+  if (weakAltCount > 0) {
+    warnings.push(`alt가 없거나 약한 이미지가 있습니다: ${weakAltCount}개`);
+  }
+
+  const mediaTagCount = imageTags.length + (html.match(/<\s*video\b[^>]*>/gi) ?? []).length;
+  if (mediaTagCount > 0 && !/<\s*figcaption\b/i.test(html)) {
+    warnings.push("미디어가 있지만 figcaption이 없습니다.");
+  }
+
+  return warnings;
+}
+
+function safeDecodeURIComponent(value: string) {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
 }
 
 function formatInlineMarkdown(value: string) {

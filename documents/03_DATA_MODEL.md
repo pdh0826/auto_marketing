@@ -227,3 +227,14 @@ Patch 8C는 새 DB 모델이나 migration을 추가하지 않는다.
 - attached `content_assets`는 placeholder mapping과 preview media URL 생성에만 사용한다.
 - `storagePath`는 API 응답, 화면, previewHtml에 포함하지 않는다.
 - `llm_call_logs`는 생성하지 않는다.
+
+## Patch 8D draftHtml manual apply policy
+
+Patch 8D도 새 DB 모델이나 migration을 추가하지 않는다.
+
+- `POST /api/content-items/[id]/validate-html`은 `candidateHtml`을 검증하지만 DB를 변경하지 않는다.
+- `POST /api/content-items/[id]/apply-html`만 `content_items.draftHtml`을 업데이트한다.
+- `apply-html`은 저장 전 서버에서 HTML validation/security/media reference 검사를 다시 수행한다.
+- `draftHtml` 저장은 status, qualityScore, publishedAt, scheduledAt을 변경하지 않는다.
+- 저장된 `draftHtml`은 로컬 preview/검증용 HTML이다. Blogger 업로드/발행용 최종 HTML 변환은 후속 패치 범위다.
+- `storagePath`, secret, provider headers, request template은 `draftHtml`에 포함하지 않는다.

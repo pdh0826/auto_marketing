@@ -85,3 +85,23 @@ saved draftMarkdown
 - LLM 호출과 `llm_call_logs` 생성은 없다.
 - media placeholder는 `/api/content-assets/{assetId}/file` 형태의 내부 file API URL로 preview한다.
 - media `storagePath`, provider headers, request template, API Key, secret은 응답과 화면에 포함하지 않는다.
+
+## Patch 8D HTML Candidate Apply
+
+Patch 8D는 Patch 8C의 `previewHtml`을 편집 가능한 HTML 후보로 다룬다.
+
+```text
+HTML dry-run preview
+→ editable HTML candidate
+→ POST /api/content-items/[id]/validate-html
+→ user review
+→ POST /api/content-items/[id]/apply-html
+→ content_items.draftHtml manual update
+```
+
+- `validate-html`은 read-only 검증만 수행하고 DB를 변경하지 않는다.
+- `apply-html`은 서버에서 동일한 validation/security/media reference 검사를 다시 수행한다.
+- validation error가 있으면 `draftHtml`을 저장하지 않는다.
+- warning만 있으면 사용자가 검토 후 저장할 수 있다.
+- 저장되는 `draftHtml`은 로컬 preview/검증용 HTML이며 Blogger 최종 발행 HTML이 아니다.
+- Blogger OAuth/API/publish, LLM 호출, `llm_call_logs` 생성은 수행하지 않는다.

@@ -11,13 +11,12 @@ repo: ~/blog-growth-agent
 branch: master
 
 최신 커밋:
+- 1f83c77 Add HTML preview dry run for saved drafts
 - 5c8f9c6 Document Blog Growth Agent session closeout
 - a53094c Improve draft safety repair flow
 - 1c89245 Generate draft markdown candidates with LLM
 - a05c62b Add draft markdown dry run preview
 - 2e7d5a0 Add editable plan candidate revalidation
-- 78c5385 Return safe LLM call log summaries
-- af0ce9a Generate content plan candidates with LLM
 
 현재 구현 완료 범위:
 - PostgreSQL + Prisma 기반 CRUD API
@@ -35,37 +34,37 @@ branch: master
 - draftMarkdown 후보 편집/재검증/반영
 - draft safety prompt 강화와 validation 실패 시 자동 repair 1회
 - saved draftMarkdown 기반 HTML 변환 dry-run/preview
+- HTML 후보 편집/재검증과 draftHtml 수동 반영
 
 현재 DB/LLM 상태:
 - 테스트 content item id: cmqc2xqbr00011y70sxmgl65v
 - has_plan = true
 - has_draft = true
-- has_html = false
+- has_html = Patch 8D 수동 반영 여부에 따라 달라질 수 있음
 - content_draft Task Route는 Local Ollama / OpenClaw General Qwen2.5 14B로 readiness pass 상태로 검증됨
 - 최신 content_draft call log는 validationOk=true, repairAttempted=false, markdownLength=1665, mediaPlaceholderCount=1인 정상 생성 케이스가 확인됨
 - draftMarkdown은 자동 저장되지 않고 사용자가 반영했을 때만 DB에 저장됨
 
 다음 세션 1순위 작업:
-Patch 8D 후보: HTML preview 후보 편집/재검증과 draftHtml 수동 반영 저장 정책
+Patch 8E 후보: saved draftHtml 기반 품질검사 dry-run/preview
 
-Patch 8D 목표:
-- previewHtml 후보를 사용자가 검토하고 편집할 수 있게 한다.
-- HTML sanitization/security validation을 재실행한다.
-- validation error가 없을 때만 사용자가 draftHtml에 수동 반영한다.
+Patch 8E 목표:
+- 저장된 draftHtml 기반 품질검사 dry-run/preview를 설계한다.
+- HTML 구조, 링크, CTA, 금융/투자 안전문구, media reference 품질을 점검한다.
+- qualityScore 자동 저장은 하지 않는다.
 - 실제 Blogger 연동은 아직 하지 않음
-- draftHtml 자동 저장 없음
 
 금지 사항:
 - Blogger OAuth/API/publish 구현부터 시작 금지
-- draftHtml 자동 저장 금지
-- HTML 변환과 발행을 한 번에 구현 금지
+- qualityScore 자동 저장 금지
+- 품질검사와 발행을 한 번에 구현 금지
 - API Key나 secret 출력 금지
 - raw LLM response나 prompt 전문 로그 저장 금지
 - content_plan route를 content_draft 대용으로 사용 금지
 - git add . 또는 git add -A 금지
 - .env.local 읽기/출력/수정 금지
 
-첫 작업으로 Patch 8D 작업계획을 제안해줘. 아직 구현하지 말고 계획만 작성해줘.
+첫 작업으로 Patch 8E 작업계획을 제안해줘. 아직 구현하지 말고 계획만 작성해줘.
 ```
 
 ## 첫 점검 명령어

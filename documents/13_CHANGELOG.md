@@ -95,3 +95,21 @@ llm_call_logs count after = 8
 ```
 
 Patch 8C does not call LLM providers, does not create `llm_call_logs`, does not save `draftHtml`, and does not call Blogger APIs.
+
+## Patch 8D HTML Candidate Apply
+
+Implemented after Patch 8C:
+
+- Added `POST /api/content-items/[id]/validate-html`.
+- Added `POST /api/content-items/[id]/apply-html`.
+- Added editable HTML candidate state to `/content/[id]`.
+- Added server-side validation/security/media reference checks before `draftHtml` save.
+- Added manual `draftHtml에 반영` flow.
+
+Policy:
+
+- `validate-html` does not mutate DB.
+- `apply-html` revalidates on the server and only saves when there are no validation errors.
+- Warnings can be reviewed by the user before manual save.
+- `draftHtml` is local preview/validation HTML, not Blogger final publish HTML.
+- No LLM calls, no `llm_call_logs`, no Blogger OAuth/API/publish.

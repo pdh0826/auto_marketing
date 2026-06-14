@@ -101,3 +101,14 @@ Patch 8C는 LLM prompt를 사용하지 않는다. 저장된 `draftMarkdown`을 r
 - media placeholder는 attached asset과 매칭해 preview용 figure markup으로 변환한다.
 - previewHtml은 화면 표시용이며 DB에 저장하지 않는다.
 - Blogger embed/upload/publish용 prompt 또는 API 호출은 포함하지 않는다.
+
+## Patch 8D HTML candidate validation
+
+Patch 8D도 LLM prompt를 사용하지 않는다. HTML 후보 편집, 재검증, `draftHtml` 수동 반영은 모두 rule-based validation으로 처리한다.
+
+- `<script>`, `<iframe>`, `<object>`, `<embed>`, `<form>`, `<input>`, `<button>`, `<style>`, `<link>`, `<meta>` 태그는 error다.
+- `javascript:` URL과 `onload=`, `onclick=`, `onerror=` 같은 event handler 속성은 error다.
+- `storagePath`, `local-data/`, `/uploads/`, 로컬 절대 경로, `file://`은 error다.
+- `/api/content-assets/{assetId}/file` 참조는 현재 content item의 attached asset일 때만 허용한다.
+- `<article>`, H1, H2/H3, media caption/alt, 외부 URL은 warning으로 검토한다.
+- prompt 전문, raw LLM response, secret, API Key, provider header는 생성하거나 로그에 저장하지 않는다.

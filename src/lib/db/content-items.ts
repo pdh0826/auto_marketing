@@ -21,8 +21,7 @@ export function getContentItem(id: string) {
       llmCallLogs: {
         orderBy: { createdAt: "desc" },
         take: 20
-      },
-      assets: true
+      }
     }
   });
 }

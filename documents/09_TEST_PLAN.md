@@ -276,3 +276,15 @@ npm run build
 - media placeholder가 attached asset과 매칭되면 preview에서는 내부 file API URL만 사용하고 `storagePath`를 표시하지 않는다.
 - raw HTML은 escape되고, script/iframe/form/style, `javascript:`, event handler 속성 패턴은 security readiness fail로 표시된다.
 - LLM 호출, `llm_call_logs` 생성, Blogger API 호출은 발생하지 않는다.
+
+## Patch 8D 수동 검증
+
+- HTML Dry Run 성공 후 `previewHtml`이 편집 가능한 HTML 후보로 표시된다.
+- HTML 후보를 편집하면 재검증 전 `draftHtml에 반영` 버튼이 비활성화된다.
+- `POST /api/content-items/[id]/validate-html`은 DB를 변경하지 않는다.
+- `<script>alert(1)</script>`, `javascript:`, `onerror=`가 포함되면 validation error가 표시된다.
+- `local-data/`, `/uploads/`, `storagePath`, 로컬 절대 경로가 포함되면 validation error가 표시된다.
+- `/api/content-assets/unknown/file`처럼 현재 content item의 attached asset이 아닌 media reference는 validation error가 된다.
+- warning만 있는 HTML 후보는 검토 후 `draftHtml에 반영`할 수 있다.
+- `POST /api/content-items/[id]/apply-html`은 서버에서 validation을 다시 수행하고, error가 없을 때만 `content_items.draftHtml`을 업데이트한다.
+- validate/apply 과정에서 LLM 호출, `llm_call_logs` 생성, Blogger OAuth/API/publish는 발생하지 않는다.
