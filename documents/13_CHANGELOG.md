@@ -418,3 +418,24 @@ Policy:
 - No automatic `draftMarkdown` or `draftHtml` save.
 - No prompt full text, raw response, candidate Markdown, secret, token, or encrypted value logging.
 - No Blogger API read/write, draft save, publish, scheduled publish, token refresh, `posts.insert`, or `posts.update`.
+
+## Patch 9E-4C-2 Local LLM Sectioned Draft Generation Preview
+
+Implemented after Patch 9E-4C-1:
+
+- Added local sectioned draft generation service.
+- Kept remote/commercial routes on the existing one-shot full draft path.
+- Local/small-model-like routes now run skeleton generation, section generation, deterministic assembly, and final polish when `content_draft` generation is requested.
+- Reused the existing `POST /api/content-items/[id]/generate-draft` endpoint and manual `draftMarkdown` apply flow.
+- Added local sectioned response metadata for section count, section keys, final polish status, fallback reasons, and safe step summaries.
+- Added safe step metadata to `content_draft` call logs without storing prompts, raw responses, candidate Markdown, skeleton, section fragments, or final polish input/output.
+- Allowed `promptHash` and `responseHash` as safe call-log metadata while continuing to redact prompt/response bodies.
+- Updated content detail UI to show sectioned generation steps and fallback/final polish status.
+
+Policy:
+
+- No automatic `draftMarkdown` or `draftHtml` save.
+- No DB/schema or TaskRoute schema change.
+- No content item status, `qualityScore`, `publishedAt`, or `scheduledAt` mutation.
+- No Blogger API read/write, draft save, publish, scheduled publish, token refresh, `posts.insert`, or `posts.update`.
+- Blog post HTML template/theme rendering is deferred to Patch 9E-4D.

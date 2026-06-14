@@ -523,3 +523,19 @@ npm run build
 - prompt 전문, raw response body, 후보 Markdown 전문, secret, token, encrypted value는 metadata/log/UI에 출력하지 않는다.
 - Blogger API read/write, draft save, publish, scheduled publish, token refresh는 발생하지 않는다.
 - 검증 명령은 `git diff --check`, `npm run lint`, `npm run typecheck`, `npm run build`를 우선 사용한다.
+
+## Patch 9E-4C-2 Local LLM sectioned draft generation 검증
+
+- remote/commercial provider route에서는 기존 `one_shot_full_draft` 경로가 유지된다.
+- local/Ollama/local_http-like route에서는 `local_sectioned_multi_pass` 경로가 skeleton, section generation, deterministic assembly, final polish 순서로 실행된다.
+- `POST /api/content-items/[id]/generate-draft`는 신규 endpoint 없이 strategy에 따라 내부 분기한다.
+- local sectioned response metadata에는 `sectionCount`, `sectionKeys`, `finalPolishApplied`, `finalPolishInputTooLong`, `finalPolishFallbackReason`, `fallbackUsed`, `fallbackReasons`, `stepSummaries`가 포함된다.
+- `stepSummaries`에는 step key, section key, status, retry count, duration, prompt hash, response hash, response length만 포함된다.
+- response의 `candidateDraftMarkdown`은 preview/manual apply 대상이며 자동 저장되지 않는다.
+- `draftHtml`, `qualityScore`, content item status, `publishedAt`, `scheduledAt`은 변경되지 않는다.
+- section generation 실패는 section별 1회 retry 후 fallback paragraph를 사용할 수 있으며 metadata에 표시된다.
+- final polish 실패 또는 입력 길이 초과는 전체 실패가 아니라 assembled draft fallback candidate로 반환될 수 있다.
+- `llm_call_logs`에는 prompt 전문, raw response 전문, candidate Markdown 전문, skeleton 전문, section fragment 전문, final polish 입력/출력 전문, secret, token, encrypted value를 저장하지 않는다.
+- call logs API sanitizer는 원문 prompt/response는 숨기되 `promptHash`와 `responseHash` 같은 safe hash metadata는 허용한다.
+- Blogger API read/write, draft save, publish, scheduled publish, token refresh는 발생하지 않는다.
+- HTML template/theme rendering은 Patch 9E-4D 범위다.

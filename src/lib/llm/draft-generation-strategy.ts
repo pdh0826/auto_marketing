@@ -26,8 +26,8 @@ export interface DraftGenerationStrategyResolution {
   isLocalLike: boolean;
   stepCount: number;
   plannedStepCount: number;
-  sectionedGenerationImplemented: false;
-  finalPolishImplemented: false;
+  sectionedGenerationImplemented: boolean;
+  finalPolishImplemented: boolean;
   providerSummary: {
     providerName: string | null;
     providerType: string | null;
@@ -95,7 +95,7 @@ export function getDraftGenerationStrategyLabel(strategy: DraftGenerationStrateg
 
 export function getDraftGenerationStrategyNotice(resolution: DraftGenerationStrategyResolution) {
   if (resolution.strategy === "local_sectioned_multi_pass") {
-    return "Local/small-model route detected. This patch only exposes the skeleton-first, sectioned multi-pass strategy foundation; generation still uses the existing one-shot fallback until Patch 9E-4C-2.";
+    return "Local/small-model route detected. Draft generation uses skeleton-first sectioned generation with a final polish fallback policy.";
   }
   return "Commercial/high-performance remote route detected. The existing one-shot full draft generation remains the default.";
 }

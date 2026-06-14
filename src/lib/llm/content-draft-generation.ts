@@ -8,6 +8,7 @@ import { createLlmCallLog } from "@/lib/db/llm-call-logs";
 import { prisma } from "@/lib/db/client";
 import type { LlmTaskRouteAdmin } from "@/lib/llm/admin-types";
 import { resolveDraftGenerationStrategy, type DraftGenerationStrategy, type DraftGenerationStrategyResolution } from "@/lib/llm/draft-generation-strategy";
+import { generateLocalSectionedDraftCandidate, type LocalSectionedDraftMetadata } from "@/lib/llm/local-sectioned-draft-generation";
 import { decryptSecret } from "@/lib/llm/secrets";
 import { getOpenAiCompletionTokenParameter } from "@/lib/llm/provider-test";
 import { redactSensitiveText, safeErrorMessage } from "@/lib/llm/redaction";
@@ -22,6 +23,10 @@ interface ProviderCallResult {
   inputTokens: number | null;
   outputTokens: number | null;
   responseSummary: string;
+}
+
+interface DraftCandidateGenerationResult extends ProviderCallResult {
+  sectionedMetadata: LocalSectionedDraftMetadata | null;
 }
 
 export interface GenerateContentDraftResult {
@@ -47,9 +52,17 @@ export interface GenerateContentDraftResult {
     isLocalLike: boolean;
     stepCount: number;
     plannedStepCount: number;
-    sectionedGenerationImplemented: false;
-    finalPolishImplemented: false;
+    sectionedGenerationImplemented: boolean;
+    finalPolishImplemented: boolean;
     providerSummary: DraftGenerationStrategyResolution["providerSummary"];
+    sectionCount: number;
+    sectionKeys: string[];
+    finalPolishApplied: boolean;
+    finalPolishInputTooLong: boolean;
+    finalPolishFallbackReason: string | null;
+    fallbackUsed: boolean;
+    fallbackReasons: string[];
+    stepSummaries: LocalSectionedDraftMetadata["stepSummaries"];
   };
 }
 
@@ -122,10 +135,21 @@ export async function generateContentDraft({ contentItemId }: GenerateContentDra
   let provider = route.primaryProvider;
   let model = route.primaryModel;
   let strategyResolution = resolveDraftGenerationStrategy({ provider, model });
-  let callResult: ProviderCallResult;
+  let callResult: DraftCandidateGenerationResult;
 
   try {
-    callResult = await callProvider(provider, model.name, dryRun.promptPreview, route.temperature, route.maxTokens, route.timeoutSeconds);
+    callResult = await generateDraftCandidateWithProvider({
+      contentItem: contentItemForValidation,
+      assets,
+      planJson: contentItem.planJson as Record<string, unknown>,
+      dryRun,
+      provider,
+      modelName: model.name,
+      strategyResolution,
+      temperature: route.temperature,
+      maxTokens: route.maxTokens,
+      timeoutSeconds: route.timeoutSeconds
+    });
   } catch (primaryError) {
     if (!route.fallbackProvider || !route.fallbackModel || !route.fallbackProvider.isEnabled || !route.fallbackModel.isEnabled) {
       await recordDraftLog({
@@ -156,7 +180,18 @@ export async function generateContentDraft({ contentItemId }: GenerateContentDra
     model = route.fallbackModel;
     strategyResolution = resolveDraftGenerationStrategy({ provider, model });
     try {
-      callResult = await callProvider(provider, model.name, dryRun.promptPreview, route.temperature, route.maxTokens, route.timeoutSeconds);
+      callResult = await generateDraftCandidateWithProvider({
+        contentItem: contentItemForValidation,
+        assets,
+        planJson: contentItem.planJson as Record<string, unknown>,
+        dryRun,
+        provider,
+        modelName: model.name,
+        strategyResolution,
+        temperature: route.temperature,
+        maxTokens: route.maxTokens,
+        timeoutSeconds: route.timeoutSeconds
+      });
     } catch (fallbackError) {
       await recordDraftLog({
         contentItemId,
@@ -242,7 +277,7 @@ export async function generateContentDraft({ contentItemId }: GenerateContentDra
     errorMessage: validation.ok ? null : "Generated draftMarkdown did not pass validation.",
     metadata: {
       usedFallback,
-      ...buildDraftStrategyLogMetadata(strategyResolution),
+      ...buildDraftStrategyLogMetadata(strategyResolution, callResult.sectionedMetadata),
       apiFormat: provider.apiFormat,
       invocationMode: provider.invocationMode,
       responseSummary: repairAttempted ? (repairSucceeded ? "draft_repaired" : "draft_repair_failed") : callResult.responseSummary,
@@ -279,8 +314,48 @@ export async function generateContentDraft({ contentItemId }: GenerateContentDra
       initialValidationWarningCount: initialValidation.warnings.length,
       finalValidationErrorCount: validation.errors.length,
       finalValidationWarningCount: validation.warnings.length,
-      ...buildDraftStrategyLogMetadata(strategyResolution)
+      ...buildDraftStrategyLogMetadata(strategyResolution, callResult.sectionedMetadata)
     }
+  };
+}
+
+async function generateDraftCandidateWithProvider(input: {
+  contentItem: ContentItemAdmin;
+  assets: ContentAssetAdmin[];
+  planJson: Record<string, unknown>;
+  dryRun: ReturnType<typeof buildDraftMarkdownDryRun>;
+  provider: ProviderWithSecrets;
+  modelName: string;
+  strategyResolution: DraftGenerationStrategyResolution;
+  temperature: number | null;
+  maxTokens: number | null;
+  timeoutSeconds: number | null;
+}): Promise<DraftCandidateGenerationResult> {
+  if (input.strategyResolution.strategy !== "local_sectioned_multi_pass") {
+    return {
+      ...(await callProvider(input.provider, input.modelName, input.dryRun.promptPreview, input.temperature, input.maxTokens, input.timeoutSeconds)),
+      sectionedMetadata: null
+    };
+  }
+
+  const result = await generateLocalSectionedDraftCandidate({
+    contentItem: input.contentItem,
+    assets: input.assets,
+    planJson: input.planJson,
+    mediaMapping: input.dryRun.mediaMapping,
+    temperature: input.temperature,
+    maxTokens: input.maxTokens,
+    callProvider: async ({ prompt, temperature, maxTokens }) =>
+      callProvider(input.provider, input.modelName, prompt, temperature, maxTokens, input.timeoutSeconds)
+  });
+
+  return {
+    text: result.candidateDraftMarkdown,
+    latencyMs: result.latencyMs,
+    inputTokens: result.inputTokens,
+    outputTokens: result.outputTokens,
+    responseSummary: result.responseSummary,
+    sectionedMetadata: result.metadata
   };
 }
 
@@ -501,9 +576,17 @@ async function recordDraftLog(input: {
     isLocalLike: boolean;
     stepCount: number;
     plannedStepCount: number;
-    sectionedGenerationImplemented: false;
-    finalPolishImplemented: false;
+    sectionedGenerationImplemented: boolean;
+    finalPolishImplemented: boolean;
     providerSummary: DraftGenerationStrategyResolution["providerSummary"];
+    sectionCount: number;
+    sectionKeys: string[];
+    finalPolishApplied: boolean;
+    finalPolishInputTooLong: boolean;
+    finalPolishFallbackReason: string | null;
+    fallbackUsed: boolean;
+    fallbackReasons: string[];
+    stepSummaries: LocalSectionedDraftMetadata["stepSummaries"];
   };
 }) {
   await createLlmCallLog({
@@ -528,6 +611,14 @@ async function recordDraftLog(input: {
       sectionedGenerationImplemented: input.metadata.sectionedGenerationImplemented,
       finalPolishImplemented: input.metadata.finalPolishImplemented,
       providerSummary: input.metadata.providerSummary,
+      sectionCount: input.metadata.sectionCount,
+      sectionKeys: input.metadata.sectionKeys,
+      finalPolishApplied: input.metadata.finalPolishApplied,
+      finalPolishInputTooLong: input.metadata.finalPolishInputTooLong,
+      finalPolishFallbackReason: input.metadata.finalPolishFallbackReason,
+      fallbackUsed: input.metadata.fallbackUsed,
+      fallbackReasons: input.metadata.fallbackReasons,
+      stepSummaries: input.metadata.stepSummaries,
       apiFormat: input.metadata.apiFormat,
       invocationMode: input.metadata.invocationMode,
       responseSummary: input.metadata.responseSummary,
@@ -543,20 +634,28 @@ async function recordDraftLog(input: {
       finalValidationErrorCount: input.metadata.finalValidationErrorCount ?? input.metadata.validationErrorCount,
       finalValidationWarningCount: input.metadata.finalValidationWarningCount ?? input.metadata.validationWarningCount,
       repairResponseSummary: input.metadata.repairResponseSummary ?? null
-    } as Prisma.InputJsonObject
+    } as unknown as Prisma.InputJsonObject
   });
 }
 
-function buildDraftStrategyLogMetadata(resolution: DraftGenerationStrategyResolution) {
+function buildDraftStrategyLogMetadata(resolution: DraftGenerationStrategyResolution, sectionedMetadata: LocalSectionedDraftMetadata | null = null) {
   return {
     strategy: resolution.strategy,
     strategyReason: resolution.strategyReason,
     isLocalLike: resolution.isLocalLike,
-    stepCount: resolution.stepCount,
+    stepCount: sectionedMetadata?.stepSummaries.length ?? resolution.stepCount,
     plannedStepCount: resolution.plannedStepCount,
-    sectionedGenerationImplemented: resolution.sectionedGenerationImplemented,
-    finalPolishImplemented: resolution.finalPolishImplemented,
-    providerSummary: resolution.providerSummary
+    sectionedGenerationImplemented: resolution.strategy === "local_sectioned_multi_pass",
+    finalPolishImplemented: resolution.strategy === "local_sectioned_multi_pass",
+    providerSummary: resolution.providerSummary,
+    sectionCount: sectionedMetadata?.sectionCount ?? 0,
+    sectionKeys: sectionedMetadata?.sectionKeys ?? [],
+    finalPolishApplied: sectionedMetadata?.finalPolishApplied ?? false,
+    finalPolishInputTooLong: sectionedMetadata?.finalPolishInputTooLong ?? false,
+    finalPolishFallbackReason: sectionedMetadata?.finalPolishFallbackReason ?? null,
+    fallbackUsed: sectionedMetadata?.fallbackUsed ?? false,
+    fallbackReasons: sectionedMetadata?.fallbackReasons ?? [],
+    stepSummaries: sectionedMetadata?.stepSummaries ?? []
   };
 }
 

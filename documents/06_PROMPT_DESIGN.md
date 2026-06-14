@@ -124,3 +124,18 @@ Patch 9E-4C-1은 `content_draft` 생성을 위한 전략 판별 기반만 추가
 - 생성 응답과 `llm_call_logs.metadata`에는 safe strategy metadata만 남긴다: `strategy`, `strategyReason`, provider/model summary, `isLocalLike`, `stepCount`, `plannedStepCount`, `sectionedGenerationImplemented=false`, `finalPolishImplemented=false`.
 - prompt 전문, raw response 전문, 후보 Markdown 전문은 계속 저장하지 않는다.
 - `TaskRoute` schema에 strategy field를 추가하지 않는다.
+
+## Patch 9E-4C-2 Local LLM sectioned draft generation preview
+
+Patch 9E-4C-2는 local/small-model-like `content_draft` route에서 실제 skeleton-first sectioned draft generation preview를 수행한다.
+
+- commercial/high-performance remote provider는 기존 one-shot full draft generation을 계속 사용한다.
+- `local_sectioned_multi_pass` 전략에서만 skeleton generation, section generation, deterministic assembly, final polish를 수행한다.
+- skeleton prompt는 title, section keys, H2/H3 outline, section goals만 요구하고 긴 본문 생성을 금지한다.
+- section generation은 intro/body/conclusion 계열 section fragment만 생성하며 H1 생성을 금지한다.
+- final polish는 assembled draft의 톤, 흐름, 중복, CTA, disclaimer 균형을 다듬지만 새 주장 과다 추가와 투자 추천 표현을 금지한다.
+- final polish 입력이 너무 길거나 final polish가 실패하면 deterministic assembled draft를 candidate로 반환할 수 있다.
+- 최종 candidate는 기존 `validateDraftMarkdown`과 manual apply 흐름을 사용한다.
+- API 응답에는 candidate Markdown preview가 포함될 수 있지만 DB/log에는 prompt 전문, raw response 전문, skeleton 전문, section fragment 전문, final polish 입력/출력 전문, candidate 전문을 저장하지 않는다.
+- `llm_call_logs.metadata`에는 step/section key, prompt/response hash, duration, status, validation summary 같은 safe metadata만 저장한다.
+- HTML template/theme rendering은 Patch 9E-4D로 분리한다.

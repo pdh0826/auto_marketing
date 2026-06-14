@@ -5,7 +5,7 @@
 ```text
 repo: ~/blog-growth-agent
 branch: master
-latest commit before Patch 9E-4C-1 work: 09c535b Polish HTML repair candidate handoff
+latest commit before Patch 9E-4C-2 work: 0aacc63 Add provider-aware draft strategy metadata
 ```
 
 ## Implemented Scope
@@ -30,6 +30,7 @@ latest commit before Patch 9E-4C-1 work: 09c535b Polish HTML repair candidate ha
 - Manual HTML quality repair preview for short/placeholder `draftHtml`
 - Repair candidate apply UX polish with explicit validate/apply handoff
 - Provider-aware draft generation strategy foundation for `content_draft`
+- Local LLM sectioned draft generation preview for `content_draft`
 
 ## Current Blogger State
 
@@ -52,10 +53,14 @@ latest commit before Patch 9E-4C-1 work: 09c535b Polish HTML repair candidate ha
 - Patch 9E-4C-1 keeps remote/commercial draft generation on the existing one-shot full draft path.
 - Patch 9E-4C-1 identifies local/small-model-like draft routes as `local_sectioned_multi_pass` strategy candidates, but actual sectioned generation is not implemented yet.
 - Draft generation responses and `content_draft` call logs now include safe strategy metadata only.
+- Patch 9E-4C-2 implements local sectioned draft preview behind the existing `generate-draft` endpoint.
+- Local sectioned draft generation runs skeleton, section generation, deterministic assembly, and final polish/fallback.
+- Generated candidate Markdown still requires manual `draftMarkdown에 반영`; `draftHtml` generation/apply and quality checks remain separate.
+- Remote/commercial routes still use the existing one-shot full draft path.
 
 ## Next Patch Candidate
 
-Patch 9E-4C-2 후보: Local LLM sectioned multi-pass long-form generation.
+Patch 9E-4D 후보: Blog post template renderer / publish-ready HTML theme.
 
 Alternative candidates:
 
@@ -63,9 +68,9 @@ Alternative candidates:
 
 Recommended scope:
 
-- Implement local/small-model skeleton-first + sectioned multi-pass + final polish only behind the already exposed strategy foundation.
+- Render saved `draftMarkdown` into Blogger-friendly, readable HTML with a restrained article template.
+- Keep automatic `draftHtml` save out of scope unless explicitly designed; prefer preview/manual apply first.
 - Keep commercial/high-performance remote providers on the existing one-shot full draft path.
-- Keep automatic `draftHtml` save out of scope unless explicitly designed.
 - Keep Blogger OAuth/live draft save out of scope unless Patch 9E-5 is selected.
 
 ## Do Not Start With
@@ -78,6 +83,8 @@ Recommended scope:
 - API Key or secret output
 - prompt full text or raw LLM response logging
 - candidate Markdown full text logging
+- skeleton/section/final polish full text logging
+- Blogger post HTML theme auto-save
 - `git add .` or `git add -A`
 
 ## First Prompt For Next Session
@@ -90,7 +97,8 @@ AGENTS.md와 documents/ 폴더의 관련 문서를 먼저 읽어줘.
 목표:
 - Patch 9E-4B의 repair candidate apply UX polish 구현 상태를 확인한다.
 - Patch 9E-4C-1의 provider-aware draft generation strategy foundation 구현 상태를 확인한다.
-- Local LLM sectioned multi-pass long-form generation 실제 구현 또는 Blogger OAuth/test blog readiness 중 다음 최소 패치를 설계한다.
+- Patch 9E-4C-2의 Local LLM sectioned draft generation preview 구현 상태를 확인한다.
+- Blog post template renderer / publish-ready HTML theme 또는 Blogger OAuth/test blog readiness 중 다음 최소 패치를 설계한다.
 - remote/commercial provider의 기존 one-shot draft generation은 유지한다.
 - 자동 draftHtml 저장, Blogger API 호출, publish/scheduled publish는 명시적으로 범위를 정하기 전까지 구현하지 않는다.
 

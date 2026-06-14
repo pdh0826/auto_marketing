@@ -79,6 +79,9 @@ function sanitizeMetadata(value: Prisma.JsonValue | null): Prisma.JsonValue | nu
 
 function isSensitiveMetadataKey(key: string) {
   const normalized = key.toLowerCase().replace(/[^a-z0-9]/g, "");
+  if (normalized === "prompthash" || normalized === "responsehash") {
+    return false;
+  }
   return [
     "prompt",
     "rawresponse",

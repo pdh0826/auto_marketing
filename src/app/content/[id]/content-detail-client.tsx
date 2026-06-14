@@ -70,9 +70,27 @@ interface GeneratedDraftResult {
     isLocalLike: boolean;
     stepCount: number;
     plannedStepCount: number;
-    sectionedGenerationImplemented: false;
-    finalPolishImplemented: false;
+    sectionedGenerationImplemented: boolean;
+    finalPolishImplemented: boolean;
     providerSummary: DraftGenerationStrategyResolution["providerSummary"];
+    sectionCount: number;
+    sectionKeys: string[];
+    finalPolishApplied: boolean;
+    finalPolishInputTooLong: boolean;
+    finalPolishFallbackReason: string | null;
+    fallbackUsed: boolean;
+    fallbackReasons: string[];
+    stepSummaries: Array<{
+      stepKey: string;
+      sectionKey: string | null;
+      status: "success" | "failed" | "fallback";
+      durationMs: number;
+      promptHash: string | null;
+      responseHash: string | null;
+      responseLength: number;
+      retryCount: number;
+      errorMessage: string | null;
+    }>;
   };
 }
 
@@ -1385,8 +1403,8 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
                 </div>
                 {generatedDraft.metadata.strategy === "local_sectioned_multi_pass" ? (
                   <div className="notice warning">
-                    Local/small-model 전략이 선택되었지만 이번 패치에서는 전략 metadata만 표시합니다. 실제 skeleton-first sectioned generation과 final polish는
-                    Patch 9E-4C-2에서 구현 예정이며, 현재 후보 생성은 기존 one-shot fallback 경로를 사용했습니다.
+                    Local/small-model 전략이 선택되어 skeleton-first sectioned generation을 실행했습니다. 후보는 preview일 뿐이며, 검토 후 수동으로
+                    draftMarkdown에 반영해야 합니다.
                   </div>
                 ) : (
                   <div className="notice">Remote/commercial route는 기존 one-shot full draft 생성을 유지합니다.</div>
@@ -1397,7 +1415,53 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
                   <DetailItem label="Invocation Mode" value={generatedDraft.metadata.providerSummary.invocationMode ?? "-"} />
                   <DetailItem label="API Format" value={generatedDraft.metadata.providerSummary.apiFormat ?? "-"} />
                   <DetailItem label="Strategy Model" value={generatedDraft.metadata.providerSummary.modelName ?? "-"} />
+                  <DetailItem label="Section Count" value={String(generatedDraft.metadata.sectionCount)} />
+                  <DetailItem label="Section Keys" value={generatedDraft.metadata.sectionKeys.length > 0 ? generatedDraft.metadata.sectionKeys.join(", ") : "-"} />
+                  <DetailItem label="Final Polish Applied" value={generatedDraft.metadata.finalPolishApplied ? "yes" : "no"} />
+                  <DetailItem label="Final Polish Too Long" value={generatedDraft.metadata.finalPolishInputTooLong ? "yes" : "no"} />
+                  <DetailItem label="Fallback Used" value={generatedDraft.metadata.fallbackUsed ? "yes" : "no"} />
                 </div>
+                {generatedDraft.metadata.finalPolishFallbackReason ? (
+                  <div className="notice warning">Final polish fallback: {generatedDraft.metadata.finalPolishFallbackReason}</div>
+                ) : null}
+                {generatedDraft.metadata.fallbackReasons.length > 0 ? (
+                  <ValidationList title="Local Sectioned Fallback Reasons" items={generatedDraft.metadata.fallbackReasons} emptyText="fallback reason이 없습니다." isWarning />
+                ) : null}
+                {generatedDraft.metadata.stepSummaries.length > 0 ? (
+                  <div className="read-block">
+                    <h3>Local Sectioned Generation Steps</h3>
+                    <div className="table-wrap">
+                      <table>
+                        <thead>
+                          <tr>
+                            <th>Step</th>
+                            <th>Section</th>
+                            <th>Status</th>
+                            <th>Retry</th>
+                            <th>Duration</th>
+                            <th>Prompt Hash</th>
+                            <th>Response Hash</th>
+                            <th>Length</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {generatedDraft.metadata.stepSummaries.map((step, index) => (
+                            <tr key={`${step.stepKey}-${step.sectionKey ?? "none"}-${index}`}>
+                              <td>{step.stepKey}</td>
+                              <td>{step.sectionKey ?? "-"}</td>
+                              <td>{step.status}</td>
+                              <td>{step.retryCount}</td>
+                              <td>{step.durationMs}ms</td>
+                              <td>{step.promptHash ?? "-"}</td>
+                              <td>{step.responseHash ?? "-"}</td>
+                              <td>{step.responseLength}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                ) : null}
                 {generatedDraft.metadata.repairAttempted ? (
                   generatedDraft.metadata.repairSucceeded ? (
                     <div className="notice">초안 후보에서 위험 문구가 감지되어 자동 수정 1회를 수행했고, 자동 수정 후 validation을 통과했습니다.</div>

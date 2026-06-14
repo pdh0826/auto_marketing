@@ -392,3 +392,23 @@ Patch 9E-4C-1은 `content_draft` route의 provider/model metadata를 기준으�
   - provider/model safe summary
 - prompt 전문, raw response 전문, candidate Markdown 전문, API key, secret, token, encrypted value는 저장하지 않는다.
 - Blogger API read/write, draft save, publish, scheduled publish, token refresh와는 무관하다.
+
+## Patch 9E-4C-2 local sectioned draft generation and LLM boundary
+
+Patch 9E-4C-2는 `local_sectioned_multi_pass` 전략에서 실제 local sectioned draft preview를 생성한다.
+
+- remote/commercial provider는 기존 one-shot path를 유지한다.
+- local/Ollama/local_http-like provider는 skeleton, section generation, deterministic assembly, final polish orchestration을 사용한다.
+- 기존 `POST /api/content-items/[id]/generate-draft` endpoint를 유지하며 신규 endpoint를 추가하지 않는다.
+- local sectioned generation은 `src/lib/llm/local-sectioned-draft-generation.ts`에서 분리한다.
+- section generation 실패 시 section별 1회 retry 후 deterministic fallback paragraph를 사용할 수 있다.
+- final polish 실패 또는 입력 길이 초과는 assembled draft fallback으로 처리할 수 있다.
+- 최종 candidate는 기존 `draftMarkdown` manual apply UI에 연결되며 자동 저장하지 않는다.
+- `llm_call_logs`는 aggregate `content_draft` log에 safe metadata만 저장한다:
+  - strategy, section count, section keys
+  - final polish applied/fallback summary
+  - fallback reasons
+  - step summaries with step/section key, status, retry count, duration, prompt hash, response hash, response length
+- prompt 전문, raw response 전문, candidate Markdown 전문, skeleton 전문, section fragment 전문, final polish 입력/출력 전문, API key, token, secret, encrypted value는 저장하지 않는다.
+- `promptHash`와 `responseHash`는 원문이 아니라 safe hash metadata로 취급한다.
+- Blogger API, draft save, publish, scheduled publish, token refresh와는 무관하다.
