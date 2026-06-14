@@ -7,11 +7,13 @@ const SENSITIVE_INPUT_KEYS = new Set([
   "access_token",
   "refreshToken",
   "refresh_token",
+  "token",
   "clientSecret",
   "client_secret",
   "encryptedValue",
   "apiKey",
   "api_key",
+  "authorization",
   "bearer"
 ].map((key) => key.toLowerCase()));
 
@@ -53,6 +55,7 @@ export function normalizeBloggerConnectionInput(data: Record<string, unknown>) {
     bloggerBlogName: optionalString(data.bloggerBlogName),
     connectedEmail: optionalString(data.connectedEmail),
     scopes,
+    oauthClientIdRef: optionalString(data.oauthClientIdRef),
     clientSecretRef: optionalString(data.clientSecretRef),
     hasClientSecret: optionalBoolean(data.hasClientSecret) ?? false,
     hasAccessToken: optionalBoolean(data.hasAccessToken) ?? false,
@@ -93,6 +96,9 @@ export function normalizeBloggerConnectionPatchInput(data: Record<string, unknow
   }
   if ("clientSecretRef" in data) {
     patch.clientSecretRef = optionalString(data.clientSecretRef);
+  }
+  if ("oauthClientIdRef" in data) {
+    patch.oauthClientIdRef = optionalString(data.oauthClientIdRef);
   }
   if ("hasClientSecret" in data) {
     patch.hasClientSecret = optionalBoolean(data.hasClientSecret) ?? false;

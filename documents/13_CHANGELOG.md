@@ -166,3 +166,22 @@ Policy:
 - No token/client secret plaintext storage.
 - No Blogger API calls, blog list reads, draft saves, publish, or scheduled publish.
 - No LLM calls or `llm_call_logs`.
+
+## Patch 9B Blogger OAuth State Dry Run
+
+Implemented after Patch 9A:
+
+- Added `BloggerOAuthState` model and migration.
+- Added `oauthClientIdRef` safe metadata field to Blogger connections.
+- Added `POST /api/settings/blogger/[id]/oauth/start`.
+- Added `GET /api/settings/blogger/oauth/callback`.
+- Added OAuth authorization URL dry-run UI to `/settings/blogger`.
+
+Policy:
+
+- OAuth state plaintext is not stored; only `stateHash` is persisted.
+- Callback dry-run validates state and consumes it but does not exchange tokens.
+- Authorization code plaintext is not persisted or returned.
+- No access token or refresh token issuance/storage.
+- No Blogger API calls, blog list reads, draft saves, publish, or scheduled publish.
+- No LLM calls or `llm_call_logs`.

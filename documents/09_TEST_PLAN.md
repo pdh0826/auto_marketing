@@ -327,3 +327,19 @@ npm run build
 - publish readiness는 Blogger connection status를 반영하지만 `publishReady`와 top-level `ready`는 false를 유지한다.
 - Blogger OAuth start/callback, Blogger blog list 조회, draft save, publish, scheduled publish는 발생하지 않는다.
 - `llm_call_logs`는 생성되지 않는다.
+
+## Patch 9B 수동 검증
+
+- `POST /api/settings/blogger/[id]/oauth/start`는 authorization URL dry-run을 반환한다.
+- OAuth start 응답에는 authorizationUrl, expiresAt, redirectUri, scopes, `oauthDryRun: true`가 포함된다.
+- OAuth start 응답에는 stateHash, access token, refresh token, client secret, authorization code 원문이 포함되지 않는다.
+- `blogger_oauth_states`에는 state 원문이 아니라 `stateHash`만 저장된다.
+- authorizationUrl에는 client_id, redirect_uri, scope, state가 포함된다.
+- `GET /api/settings/blogger/oauth/callback`은 state 검증까지만 수행하고 token exchange를 하지 않는다.
+- callback dry-run 성공 시 state는 consumed 처리된다.
+- 같은 state를 재사용하면 400으로 거부된다.
+- 만료된 state는 400으로 거부된다.
+- `/settings/blogger`에는 OAuth URL 생성 dry-run UI와 token exchange 미구현 안내가 표시된다.
+- Blogger API 호출, Blogger blog list 조회, draft save, publish, scheduled publish는 발생하지 않는다.
+- publish readiness는 계속 `publishReady=false`를 유지한다.
+- `llm_call_logs`는 생성되지 않는다.

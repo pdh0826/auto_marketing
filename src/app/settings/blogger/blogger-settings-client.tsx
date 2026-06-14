@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
-import type { BloggerConnectionAdmin, BloggerConnectionStatus, BloggerConnectionStatusSummary } from "@/lib/blogger/admin-types";
+import type { BloggerConnectionAdmin, BloggerConnectionStatus, BloggerConnectionStatusSummary, BloggerOAuthStartDryRun } from "@/lib/blogger/admin-types";
 import type { BlogAdmin } from "@/lib/blogs/admin-types";
 import { ApiResult, formatListInput, optionalString, parseListInput, requestJson } from "@/lib/form-utils";
 
@@ -14,6 +14,7 @@ interface BloggerConnectionForm {
   bloggerBlogName: string;
   connectedEmail: string;
   scopes: string;
+  oauthClientIdRef: string;
   clientSecretRef: string;
   hasClientSecret: boolean;
   hasAccessToken: boolean;
@@ -32,6 +33,7 @@ const emptyConnectionForm: BloggerConnectionForm = {
   bloggerBlogName: "",
   connectedEmail: "",
   scopes: "https://www.googleapis.com/auth/blogger",
+  oauthClientIdRef: "",
   clientSecretRef: "",
   hasClientSecret: false,
   hasAccessToken: false,
@@ -45,6 +47,7 @@ export function BloggerSettingsClient() {
   const [blogs, setBlogs] = useState<BlogAdmin[]>([]);
   const [form, setForm] = useState<BloggerConnectionForm>(emptyConnectionForm);
   const [statusPreview, setStatusPreview] = useState<BloggerConnectionStatusSummary | null>(null);
+  const [oauthDryRun, setOauthDryRun] = useState<BloggerOAuthStartDryRun | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -96,6 +99,7 @@ export function BloggerSettingsClient() {
       bloggerBlogName: optionalString(form.bloggerBlogName),
       connectedEmail: optionalString(form.connectedEmail),
       scopes: parseListInput(form.scopes),
+      oauthClientIdRef: optionalString(form.oauthClientIdRef),
       clientSecretRef: optionalString(form.clientSecretRef),
       hasClientSecret: form.hasClientSecret,
       hasAccessToken: form.hasAccessToken,
@@ -112,6 +116,7 @@ export function BloggerSettingsClient() {
       });
       setForm(emptyConnectionForm);
       setStatusPreview(null);
+      setOauthDryRun(null);
       setNotice("Blogger connection placeholder를 저장했습니다. OAuth/API 호출은 수행하지 않았습니다.");
       await loadData();
     } catch (caught) {
@@ -134,6 +139,19 @@ export function BloggerSettingsClient() {
     }
   }
 
+  async function createOAuthDryRun(connection: BloggerConnectionAdmin) {
+    setError(null);
+    setNotice(null);
+
+    try {
+      const result = await requestJson<ApiResult<BloggerOAuthStartDryRun>>(`/api/settings/blogger/${connection.id}/oauth/start`, { method: "POST" });
+      setOauthDryRun(result.data);
+      setNotice("OAuth authorization URL dry-run을 생성했습니다. Token exchange와 Blogger API 호출은 수행하지 않았습니다.");
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "OAuth dry-run URL 생성에 실패했습니다.");
+    }
+  }
+
   return (
     <>
       <section className="card">
@@ -144,7 +162,7 @@ export function BloggerSettingsClient() {
         </p>
         <div className="button-row">
           <button className="button secondary" type="button" disabled>
-            OAuth 시작은 Patch 9B 이후
+            OAuth token exchange는 후속 패치
           </button>
           <button className="button secondary" type="button" disabled>
             Blogger 연결 테스트 비활성
@@ -201,6 +219,10 @@ export function BloggerSettingsClient() {
           <label>
             Connected Email
             <input value={form.connectedEmail} onChange={(event) => setForm({ ...form, connectedEmail: event.target.value })} />
+          </label>
+          <label>
+            OAuth Client ID Ref
+            <input value={form.oauthClientIdRef} onChange={(event) => setForm({ ...form, oauthClientIdRef: event.target.value })} />
           </label>
           <label>
             Client Secret Ref
@@ -293,6 +315,8 @@ export function BloggerSettingsClient() {
                   <td>
                     client secret: {connection.hasClientSecret ? "yes" : "no"}
                     <br />
+                    client id ref: {connection.oauthClientIdRef ?? "no"}
+                    <br />
                     access token: {connection.hasAccessToken ? `yes (${connection.tokenLast4 ?? "last4 unknown"})` : "no"}
                     <br />
                     refresh token: {connection.hasRefreshToken ? "yes" : "no"}
@@ -305,6 +329,9 @@ export function BloggerSettingsClient() {
                       </button>
                       <button className="button secondary" type="button" onClick={() => void loadStatus(connection)}>
                         상태
+                      </button>
+                      <button className="button secondary" type="button" onClick={() => void createOAuthDryRun(connection)}>
+                        OAuth URL 생성
                       </button>
                     </div>
                   </td>
@@ -338,6 +365,31 @@ export function BloggerSettingsClient() {
           {statusPreview.lastError ? <div className="notice error">{statusPreview.lastError}</div> : null}
         </section>
       ) : null}
+
+      {oauthDryRun ? (
+        <section className="admin-section">
+          <div className="section-heading">
+            <div>
+              <h2>OAuth Dry Run</h2>
+              <p className="muted">Authorization URL만 생성합니다. Token exchange, Blogger blog list 조회, draft save, publish는 수행하지 않습니다.</p>
+            </div>
+          </div>
+          <div className="detail-grid">
+            <DetailItem label="Dry Run" value={oauthDryRun.oauthDryRun ? "yes" : "no"} />
+            <DetailItem label="Token Exchange" value={oauthDryRun.tokenExchangeImplemented ? "implemented" : "not implemented"} />
+            <DetailItem label="Blogger API" value={oauthDryRun.bloggerApiImplemented ? "implemented" : "not implemented"} />
+            <DetailItem label="Expires At" value={new Date(oauthDryRun.expiresAt).toLocaleString()} />
+            <DetailItem label="Redirect URI" value={oauthDryRun.redirectUri} />
+          </div>
+          <label className="admin-form full-span">
+            Authorization URL
+            <textarea readOnly value={oauthDryRun.authorizationUrl} />
+          </label>
+          <div className="notice">
+            URL에는 OAuth state가 포함되지만 stateHash는 응답하지 않습니다. Callback dry-run은 state 검증까지만 수행하고 code/token을 저장하지 않습니다.
+          </div>
+        </section>
+      ) : null}
     </>
   );
 }
@@ -352,6 +404,7 @@ function toForm(connection: BloggerConnectionAdmin): BloggerConnectionForm {
     bloggerBlogName: connection.bloggerBlogName ?? "",
     connectedEmail: connection.connectedEmail ?? "",
     scopes: formatListInput(connection.scopes),
+    oauthClientIdRef: connection.oauthClientIdRef ?? "",
     clientSecretRef: connection.clientSecretRef ?? "",
     hasClientSecret: connection.hasClientSecret,
     hasAccessToken: connection.hasAccessToken,

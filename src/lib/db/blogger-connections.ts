@@ -10,6 +10,7 @@ const safeSelect = {
   bloggerBlogName: true,
   connectedEmail: true,
   scopes: true,
+  oauthClientIdRef: true,
   clientSecretRef: true,
   hasClientSecret: true,
   hasAccessToken: true,

@@ -304,3 +304,27 @@ error
 - `Blog.bloggerBlogId`는 기존 호환 필드로 유지한다.
 - 새 연결 흐름에서 Blogger blog ID의 source of truth는 `BloggerConnection.bloggerBlogId`다.
 - Blogger OAuth callback, token 발급, Blogger API 호출, Blogger blog list 조회, publish job 생성은 Patch 9A 범위가 아니다.
+
+## Patch 9B Blogger OAuth state
+
+Patch 9B는 `blogger_oauth_states`를 추가한다.
+
+```text
+id
+connectionId
+stateHash
+redirectUri
+scopes
+expiresAt
+consumedAt
+createdAt
+```
+
+정책:
+
+- OAuth state 원문은 저장하지 않고 SHA-256 hash만 저장한다.
+- authorization code 원문은 저장하지 않는다.
+- access token, refresh token, client secret 원문 저장 테이블은 아직 만들지 않는다.
+- `BloggerConnection.oauthClientIdRef`는 authorization URL dry-run의 `client_id` 입력값으로 사용한다.
+- OAuth state는 만료 시간과 consumedAt으로 재사용을 막는다.
+- token exchange, Blogger API 호출, Blogger blog list 조회, draft save, publish job 생성은 Patch 9B 범위가 아니다.

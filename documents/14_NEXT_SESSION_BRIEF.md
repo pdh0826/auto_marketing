@@ -65,7 +65,7 @@ mediaPlaceholderCount = 1
 
 ## Next Patch
 
-Patch 9B 후보: Blogger OAuth start/callback 설계 또는 OAuth dry-run.
+Patch 9C 후보: OAuth token exchange 설계 또는 token storage security review.
 
 Current Blogger state:
 
@@ -74,12 +74,14 @@ Current Blogger state:
 - Blogger settings APIs return safe DTOs only.
 - No access token, refresh token, or client secret plaintext is stored.
 - Publish readiness can read Blogger connection status but `publishReady` remains false.
+- Patch 9B added OAuth state storage and authorization URL dry-run.
+- OAuth callback dry-run validates and consumes state but does not exchange tokens.
 
 Target:
 
-- Google OAuth start/callback boundary and state handling design.
-- Redirect URI and token encryption/storage policy.
-- OAuth dry-run or start URL generation if approved.
+- Token exchange boundary and encrypted token storage policy.
+- Refresh token handling, rotation, expiry, and redaction policy.
+- Decide whether to implement token exchange in Patch 9C or keep it as security review.
 - Actual Blogger draft save/publish remains later.
 
 ## Do Not Start With
@@ -97,11 +99,11 @@ Target:
 ```text
 AGENTS.md와 documents/ 폴더의 관련 문서를 먼저 읽어줘.
 
-현재 프로젝트 상태를 점검하고 Patch 9B 작업계획을 제안해줘.
+현재 프로젝트 상태를 점검하고 Patch 9C 작업계획을 제안해줘.
 
 목표:
-- Google OAuth start/callback 설계를 검토한다.
-- OAuth state/redirect URI/token 저장 정책을 확정한다.
+- OAuth token exchange와 token storage security 정책을 검토한다.
+- refresh token 저장/회전/만료/redaction 정책을 확정한다.
 - 실제 Blogger draft save/publish는 구현하지 않는다.
 
 아직 구현하지 말고 계획만 작성해줘.

@@ -46,18 +46,20 @@ branch: master
 - draftMarkdown은 자동 저장되지 않고 사용자가 반영했을 때만 DB에 저장됨
 
 다음 세션 1순위 작업:
-Patch 9B 후보: Blogger OAuth start/callback 설계 또는 OAuth dry-run
+Patch 9C 후보: OAuth token exchange 설계 또는 token storage security review
 
 현재 Blogger 상태:
 - Patch 9A에서 `/settings/blogger` placeholder UI와 Blogger connection safe CRUD/status API가 추가됨
 - `blogger_connections`는 연결 상태와 안전한 메타데이터만 저장함
 - access token, refresh token, client secret 원문은 저장하지 않음
 - publish readiness는 Blogger connection status를 반영하지만 `publishReady=false`를 유지함
+- Patch 9B에서 OAuth state 저장과 authorization URL dry-run이 추가됨
+- callback dry-run은 state 검증과 consumed 처리까지만 수행하고 token exchange는 하지 않음
 
-Patch 9B 목표:
-- Google OAuth start/callback 설계를 검토한다.
-- OAuth state/redirect URI/token 저장 정책을 확정한다.
-- 가능하면 OAuth dry-run 또는 start URL 생성까지만 구현한다.
+Patch 9C 목표:
+- OAuth token exchange와 token storage security 정책을 검토한다.
+- refresh token 저장/회전/만료/redaction 정책을 확정한다.
+- 가능하면 token exchange 구현 범위를 별도 승인 가능한 작은 패치로 분리한다.
 - 실제 Blogger draft save/publish는 아직 구현하지 않는다.
 
 금지 사항:
@@ -70,7 +72,7 @@ Patch 9B 목표:
 - git add . 또는 git add -A 금지
 - .env.local 읽기/출력/수정 금지
 
-첫 작업으로 Patch 9B 작업계획을 제안해줘. 아직 구현하지 말고 계획만 작성해줘.
+첫 작업으로 Patch 9C 작업계획을 제안해줘. 아직 구현하지 말고 계획만 작성해줘.
 ```
 
 ## 첫 점검 명령어

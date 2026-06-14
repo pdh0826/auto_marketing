@@ -352,6 +352,7 @@ model BloggerConnection {
   bloggerBlogName    String?
   connectedEmail     String?
   scopes             String[]                @default([])
+  oauthClientIdRef   String?
   clientSecretRef    String?
   hasClientSecret    Boolean                 @default(false)
   hasAccessToken     Boolean                 @default(false)
@@ -363,9 +364,27 @@ model BloggerConnection {
   updatedAt          DateTime                @updatedAt
 
   blog               Blog?                   @relation(fields: [blogId], references: [id], onDelete: SetNull)
+  oauthStates        BloggerOAuthState[]
 
   @@index([blogId])
   @@index([status])
   @@index([bloggerBlogId])
   @@map("blogger_connections")
+}
+
+model BloggerOAuthState {
+  id             String            @id @default(cuid())
+  connectionId   String
+  stateHash      String            @unique
+  redirectUri    String
+  scopes         String[]          @default([])
+  expiresAt      DateTime
+  consumedAt     DateTime?
+  createdAt      DateTime          @default(now())
+
+  connection     BloggerConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+
+  @@index([connectionId])
+  @@index([expiresAt])
+  @@map("blogger_oauth_states")
 }

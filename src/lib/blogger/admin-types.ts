@@ -16,6 +16,7 @@ export interface BloggerConnectionAdmin {
   bloggerBlogName: string | null;
   connectedEmail: string | null;
   scopes: string[];
+  oauthClientIdRef: string | null;
   clientSecretRef: string | null;
   hasClientSecret: boolean;
   hasAccessToken: boolean;
@@ -44,4 +45,22 @@ export interface BloggerConnectionStatusSummary {
   oauthImplemented: false;
   bloggerApiImplemented: false;
   publishImplemented: false;
+}
+
+export interface BloggerOAuthStartDryRun {
+  authorizationUrl: string;
+  expiresAt: string;
+  redirectUri: string;
+  scopes: string[];
+  oauthDryRun: true;
+  tokenExchangeImplemented: false;
+  bloggerApiImplemented: false;
+}
+
+export interface BloggerOAuthCallbackDryRun {
+  status: "callback_dry_run_received";
+  connectionId: string;
+  stateValid: true;
+  tokenExchangeImplemented: false;
+  bloggerApiImplemented: false;
 }
