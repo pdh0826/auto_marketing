@@ -494,3 +494,18 @@ npm run build
 - UI는 Quality Repair Preview candidate textarea, 재검증, HTML 후보 편집기로 복사 버튼을 제공한다.
 - 실제 저장은 기존 `apply-html` 수동 반영 flow에서만 가능하다.
 - `draftHtml`을 수동 반영하면 기존 Blogger approval snapshot이 stale 될 수 있음을 안내한다.
+
+## Patch 9E-4B repair candidate apply UX polish 검증
+
+- Quality Repair Preview 섹션의 버튼은 repair candidate를 `HTML 후보로 사용` 흐름으로 안내한다.
+- `HTML 후보로 사용`은 repair candidate를 기존 HTML candidate textarea state로 복사하지만 `draftHtml`에 저장하지 않는다.
+- repair candidate를 HTML 후보로 복사하면 HTML candidate source가 `quality-repair`로 표시된다.
+- repair candidate를 복사한 직후 기존 HTML candidate validation은 clear/stale 처리되어 `validate-html` 재검증 전에는 `draftHtml에 반영`할 수 없다.
+- HTML candidate textarea를 편집하면 source가 `manual-edit`로 표시되고 재검증 전 `draftHtml에 반영` 버튼이 비활성화된다.
+- HTML Dry Run 결과가 없어도 repair candidate에서 넘어온 HTML candidate editor가 표시되어 기존 `validate-html` / `apply-html` 흐름을 사용할 수 있다.
+- `apply-html` confirm은 `draftHtml` 변경 시 기존 Blogger draft approval snapshot이 stale 될 수 있음을 안내한다.
+- `apply-html` 성공 후 기존 Quality Dry Run, Publish Readiness, Blogger Draft Payload Preview 결과는 clear/stale 처리된다.
+- `apply-html` 성공 notice는 Quality Dry Run / Publish Readiness / Blogger Draft Payload Preview 재실행과 Blogger draft save 전 재승인을 안내한다.
+- 자동 quality-preview, publish-readiness, blogger-draft-preview 재실행은 수행하지 않는다.
+- 자동 `draftHtml` 저장, repair candidate 자동 apply, Blogger API read/write, draft save, publish, scheduled publish, token refresh는 발생하지 않는다.
+- `llm_call_logs`는 생성되지 않는다.

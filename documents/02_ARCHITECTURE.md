@@ -317,3 +317,22 @@ saved draftMarkdown / draftHtml
 - 저장은 기존 `apply-html` 수동 반영 flow에서만 가능하다.
 - LLM Provider와 Blogger API는 호출하지 않고 `llm_call_logs`도 생성하지 않는다.
 - `draftHtml`을 수동 반영하면 기존 Blogger approval snapshot은 stale이 될 수 있다.
+
+## Patch 9E-4B Repair Candidate Apply UX Polish
+
+Patch 9E-4B는 Patch 9E-4A의 repair candidate를 기존 HTML candidate apply path로 더 명확히 연결한다.
+
+```text
+Quality Repair Preview candidate
+→ HTML 후보로 사용
+→ HTML candidate editor source = quality-repair
+→ POST /api/content-items/[id]/validate-html
+→ POST /api/content-items/[id]/apply-html manual save
+→ rerun Quality / Publish Readiness / Blogger Draft Payload Preview
+```
+
+- repair candidate를 HTML 후보로 복사해도 자동 저장하거나 자동 apply하지 않는다.
+- 복사된 후보는 HTML candidate validation을 clear/stale 처리하고 재검증 후에만 수동 반영할 수 있다.
+- HTML candidate source는 UI-only 상태로 `html-preview`, `quality-repair`, `manual-edit`를 표시한다.
+- `apply-html` 성공 후 기존 quality/readiness/Blogger draft preview 결과는 stale로 보고 다시 실행해야 한다.
+- `draftHtml` 변경 후 Blogger draft approval snapshot은 stale이 될 수 있으므로 Blogger draft save 전 재승인이 필요하다.

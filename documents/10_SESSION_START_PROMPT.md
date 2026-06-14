@@ -43,12 +43,14 @@ branch: master
 - publish readiness는 selected blog/manual approval/draft saved check를 표시할 수 있지만 publishReady=false를 유지함
 - Patch 9E-4A에서 짧거나 placeholder에 가까운 draftHtml을 보강하는 rule-based quality repair preview가 추가됨
 - repair candidate는 자동 저장되지 않고 기존 apply-html 수동 flow를 통해서만 draftHtml에 반영 가능함
+- Patch 9E-4B에서 repair candidate를 `HTML 후보로 사용`하는 UX가 정리됨
+- repair candidate를 HTML 후보로 복사하면 기존 validation은 clear/stale 처리되고, validate-html 재검증 후 apply-html로만 수동 저장 가능함
+- draftHtml 변경 후 Quality Dry Run / Publish Readiness / Blogger Draft Payload Preview 재실행 및 Blogger draft approval 재승인이 필요함
 
 다음 세션 1순위 작업:
-Patch 9E-4B 후보: repair candidate apply UX polish
+Patch 9E-4C 후보: Local LLM sectioned multi-pass long-form generation
 
 대체 후보:
-- Patch 9E-4C: Local LLM sectioned multi-pass long-form generation
 - Patch 9E-5: Blogger OAuth/test blog readiness 재점검
 
 금지 사항:
@@ -63,7 +65,7 @@ Patch 9E-4B 후보: repair candidate apply UX polish
 - git add . 또는 git add -A 금지
 - .env.local 읽기/출력/수정 금지
 
-첫 작업으로 Patch 9E-4B 작업계획을 제안해줘. 아직 구현하지 말고 계획만 작성해줘.
+첫 작업으로 Patch 9E-4C 작업계획을 제안해줘. 아직 구현하지 말고 계획만 작성해줘.
 ```
 
 ## 첫 점검 명령어

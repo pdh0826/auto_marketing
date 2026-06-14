@@ -378,3 +378,22 @@ Policy:
 - No `qualityScore`, status, `publishedAt`, or `scheduledAt` mutation.
 - No LLM call or `llm_call_logs`.
 - No Blogger API read/write, draft save, publish, scheduled publish, token refresh, `posts.insert`, or `posts.update`.
+
+## Patch 9E-4B Repair Candidate Apply UX Polish
+
+Implemented after Patch 9E-4A:
+
+- Polished the Quality Repair Preview handoff into the existing HTML candidate editor.
+- Renamed the repair handoff action to `HTML 후보로 사용`.
+- Added a UI-only HTML candidate source state for `html-preview`, `quality-repair`, and `manual-edit`.
+- Repair candidates copied into the HTML candidate editor now require `validate-html` revalidation before manual `apply-html`.
+- The HTML candidate editor can be shown from a repair candidate even when no HTML Dry Run result is present.
+- `apply-html` confirmation and success notices now warn that existing Blogger draft approval snapshots can become stale.
+- After `apply-html` success, stale Quality Dry Run, Publish Readiness, and Blogger Draft Payload Preview results are cleared and the UI asks the user to rerun them.
+
+Policy:
+
+- No automatic `draftHtml` save or repair candidate auto-apply.
+- No automatic quality/readiness/Blogger draft preview rerun.
+- No DB/schema change.
+- No LLM call, `llm_call_logs`, Blogger API read/write, draft save, publish, scheduled publish, token refresh, `posts.insert`, or `posts.update`.

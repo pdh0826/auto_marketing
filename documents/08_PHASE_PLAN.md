@@ -28,15 +28,16 @@
 24. Patch 9E-2 - approved snapshot guard 기반 Blogger API actual draft save: 완료
 25. Patch 9E-3 - Blogger draft save live verification runbook + retry/update policy documentation: 완료
 26. Patch 9E-4A - manual HTML quality repair preview: 완료
-27. Patch 9E-4B/9E-4C 이후 - repair apply UX polish 또는 Local LLM long-form generation
-28. Patch 9E-5 이후 - Blogger OAuth/test blog readiness 재점검
-29. 예약 발행
-30. 운영 대시보드
-31. 키워드 연구소
-32. 상위글 구조 분석
-33. 서비스 홍보 엔진 고도화
-34. 이미지/썸네일
-35. 성과 분석과 리라이트
+27. Patch 9E-4B - repair candidate apply UX polish: 완료
+28. Patch 9E-4C 이후 - Local LLM long-form generation
+29. Patch 9E-5 이후 - Blogger OAuth/test blog readiness 재점검
+30. 예약 발행
+31. 운영 대시보드
+32. 키워드 연구소
+33. 상위글 구조 분석
+34. 서비스 홍보 엔진 고도화
+35. 이미지/썸네일
+36. 성과 분석과 리라이트
 
 ## Patch 8C 완료 기준
 
@@ -138,9 +139,17 @@ Patch 9E-4A 완료:
 - 자동 `draftHtml` 저장, `qualityScore` 저장, status 변경 없음
 - LLM 호출, `llm_call_logs` 생성, Blogger API 호출 없음
 
+Patch 9E-4B 완료:
+
+- repair candidate handoff 버튼을 `HTML 후보로 사용` 흐름으로 명확화
+- HTML candidate source를 UI-only 상태로 `html-preview`, `quality-repair`, `manual-edit` 표시
+- repair candidate를 HTML 후보로 복사한 뒤 기존 validation을 clear/stale 처리하고 재검증을 요구
+- HTML Dry Run 결과가 없어도 repair candidate 기반 HTML candidate editor 표시
+- `apply-html` 성공 후 Quality Dry Run / Publish Readiness / Blogger Draft Payload Preview 재실행과 Blogger draft approval 재승인 안내
+- 자동 `draftHtml` 저장, 자동 apply, LLM 호출, Blogger API 호출 없음
+
 다음 패치 후보:
 
-- Patch 9E-4B: repair candidate apply UX polish
 - Patch 9E-4C: Local LLM sectioned multi-pass long-form generation
 - Patch 9E-5: Blogger OAuth/test blog readiness 재점검
 - Blogger publish/scheduled publish는 별도 패치

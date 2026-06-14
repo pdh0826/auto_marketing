@@ -362,3 +362,13 @@ Patch 9E-4A의 manual HTML quality repair preview는 LLM Provider를 사용하�
 - `llm_call_logs`는 생성하지 않는다.
 - candidate는 자동 저장하지 않으며 사용자가 기존 `apply-html` flow를 실행해야만 `draftHtml`에 반영된다.
 - Blogger API read/write, draft save, publish, scheduled publish, token refresh도 수행하지 않는다.
+
+## Patch 9E-4B repair apply UX and LLM boundary
+
+Patch 9E-4B는 UI-only handoff polish이며 LLM Provider를 사용하지 않는다.
+
+- repair candidate를 `HTML 후보로 사용`해도 provider/model/task route를 조회하지 않는다.
+- 복사된 candidate는 기존 `validate-html` / `apply-html` 흐름으로만 재검증/수동 저장한다.
+- `apply-html` 성공 후 stale preview 결과를 clear하고 재실행 안내만 표시한다.
+- OpenAI/Ollama/Local LLM 호출은 없고 `llm_call_logs`도 생성하지 않는다.
+- Blogger API read/write, draft save, publish, scheduled publish, token refresh도 수행하지 않는다.
