@@ -5,7 +5,7 @@
 ```text
 repo: ~/blog-growth-agent
 branch: master
-latest commit: c49d961 Add Blogger OAuth callback token exchange
+latest commit: d0168ff Add Blogger blog list read-only check
 ```
 
 Recent commits:
@@ -47,6 +47,7 @@ af0ce9a Generate content plan candidates with LLM
 - Blogger token storage security foundation
 - Blogger OAuth callback token exchange
 - Blogger blog list read-only lookup
+- Blogger blog selection save with server revalidation
 
 ## Verified Runtime State
 
@@ -70,7 +71,7 @@ mediaPlaceholderCount = 1
 
 ## Next Patch
 
-Patch 9D-2 후보: 조회된 Blogger blog를 connection에 수동 반영.
+Patch 9E-0 후보: Blogger draft save readiness / draft payload preview.
 
 Current Blogger state:
 
@@ -86,13 +87,14 @@ Current Blogger state:
 - Patch 9C-2 added OAuth callback token exchange.
 - Access/refresh tokens are stored only as encrypted values and safe metadata.
 - Patch 9D-1 added read-only Blogger blog list lookup.
-- Blogger blog selection save, draft save, publish, scheduled publish, and token refresh are not implemented yet.
+- Patch 9D-2 added verified Blogger blog selection save.
+- Blogger draft save, publish, scheduled publish, and token refresh are not implemented yet.
 
 Target:
 
-- Let the user manually copy/apply one of the read-only Blogger blog list results to a Blogger connection.
+- Design a draft-save readiness check and safe draft payload preview before calling Blogger posts APIs.
 - Keep token plaintext hidden and avoid storing raw Blogger responses.
-- Keep Blogger draft save/publish for a later patch.
+- Keep actual Blogger draft save/publish for a later patch unless explicitly approved.
 - Actual Blogger draft save/publish remains later.
 
 ## Do Not Start With
@@ -113,7 +115,7 @@ AGENTS.md와 documents/ 폴더의 관련 문서를 먼저 읽어줘.
 현재 프로젝트 상태를 점검하고 Patch 9D 작업계획을 제안해줘.
 
 목표:
-- Patch 9D-2에서 조회된 Blogger blog를 connection에 수동 반영하는 범위를 검토한다.
+- Patch 9E-0에서 Blogger draft save readiness / draft payload preview 범위를 검토한다.
 - token refresh, Blogger draft save, publish는 구현하지 않는다.
 - 실제 Blogger draft save/publish는 구현하지 않는다.
 

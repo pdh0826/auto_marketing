@@ -4,6 +4,7 @@ import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import type {
   BloggerConnectionAdmin,
   BloggerBlogListResult,
+  BloggerBlogSelectionResult,
   BloggerConnectionSecretStatus,
   BloggerConnectionStatus,
   BloggerConnectionStatusSummary,
@@ -20,6 +21,8 @@ interface BloggerConnectionForm {
   status: BloggerConnectionStatus;
   bloggerBlogId: string;
   bloggerBlogName: string;
+  bloggerBlogUrl: string;
+  bloggerBlogVerifiedAt: string;
   connectedEmail: string;
   scopes: string;
   oauthClientIdRef: string;
@@ -39,6 +42,8 @@ const emptyConnectionForm: BloggerConnectionForm = {
   status: "not_configured",
   bloggerBlogId: "",
   bloggerBlogName: "",
+  bloggerBlogUrl: "",
+  bloggerBlogVerifiedAt: "",
   connectedEmail: "",
   scopes: "https://www.googleapis.com/auth/blogger",
   oauthClientIdRef: "",
@@ -60,6 +65,7 @@ export function BloggerSettingsClient() {
   const [oauthDryRun, setOauthDryRun] = useState<BloggerOAuthStartDryRun | null>(null);
   const [blogListResult, setBlogListResult] = useState<BloggerBlogListResult | null>(null);
   const [blogListLoadingId, setBlogListLoadingId] = useState<string | null>(null);
+  const [selectingBlogId, setSelectingBlogId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -107,8 +113,6 @@ export function BloggerSettingsClient() {
       name: form.name.trim(),
       blogId: optionalString(form.blogId),
       status: form.status,
-      bloggerBlogId: optionalString(form.bloggerBlogId),
-      bloggerBlogName: optionalString(form.bloggerBlogName),
       connectedEmail: optionalString(form.connectedEmail),
       scopes: parseListInput(form.scopes),
       oauthClientIdRef: optionalString(form.oauthClientIdRef),
@@ -187,7 +191,7 @@ export function BloggerSettingsClient() {
     try {
       const result = await requestJson<ApiResult<BloggerOAuthStartDryRun>>(`/api/settings/blogger/${connection.id}/oauth/start`, { method: "POST" });
       setOauthDryRun(result.data);
-      setNotice("OAuth authorization URL을 생성했습니다. Callback에서는 token exchange를 수행하지만 Blogger API 호출은 수행하지 않습니다.");
+      setNotice("OAuth authorization URL을 생성했습니다. Callback에서는 token exchange를 수행하며 Blogger API는 blog list read-only만 지원합니다.");
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "OAuth dry-run URL 생성에 실패했습니다.");
     }
@@ -209,13 +213,39 @@ export function BloggerSettingsClient() {
     }
   }
 
+  async function selectBloggerBlog(blogId: string) {
+    if (!blogListResult) {
+      return;
+    }
+
+    setError(null);
+    setNotice(null);
+    setSelectingBlogId(blogId);
+
+    try {
+      await requestJson<ApiResult<BloggerBlogSelectionResult>>(`/api/settings/blogger/${blogListResult.connectionId}/blogs/select`, {
+        method: "POST",
+        body: JSON.stringify({ blogId })
+      });
+      setStatusPreview(null);
+      setNotice("Blogger blog를 connection에 반영했습니다. draft/publish는 수행하지 않았습니다.");
+      await loadData();
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Blogger blog 선택 저장에 실패했습니다.");
+    } finally {
+      setSelectingBlogId(null);
+    }
+  }
+
+  const activeBlogListConnection = blogListResult ? connections.find((connection) => connection.id === blogListResult.connectionId) ?? null : null;
+
   return (
     <>
       <section className="card">
-        <span className="badge">Patch 9D-1</span>
+        <span className="badge">Patch 9D-2</span>
         <h1>Blogger 설정</h1>
         <p className="muted">
-          Blogger OAuth callback token exchange가 연결되었습니다. 현재 Blogger API는 read-only blog list 조회만 지원하며 token, client secret, Blogger API 응답 원문은 표시하지 않습니다.
+          Blogger OAuth callback token exchange와 read-only blog list 조회가 연결되었습니다. 선택 저장은 서버 재검증 후 safe metadata만 반영합니다.
         </p>
         <div className="button-row">
           <button className="button secondary" type="button" disabled>
@@ -265,14 +295,23 @@ export function BloggerSettingsClient() {
               ))}
             </select>
           </label>
-          <label>
-            Blogger Blog ID
-            <input value={form.bloggerBlogId} onChange={(event) => setForm({ ...form, bloggerBlogId: event.target.value })} />
-          </label>
-          <label>
-            Blogger Blog Name
-            <input value={form.bloggerBlogName} onChange={(event) => setForm({ ...form, bloggerBlogName: event.target.value })} />
-          </label>
+          <div className="notice full-span">
+            Blogger blog 선택은 아래 Blogger 목록 조회 결과에서 “이 블로그 선택”으로만 반영합니다. 직접 입력한 Blogger Blog ID/Name은 검증된 선택으로 간주하지 않습니다.
+            {form.bloggerBlogId ? (
+              <>
+                <br />
+                현재 선택: {form.bloggerBlogName || "-"} ({form.bloggerBlogId})
+                {form.bloggerBlogUrl ? (
+                  <>
+                    <br />
+                    URL: {form.bloggerBlogUrl}
+                  </>
+                ) : null}
+                <br />
+                Verified At: {form.bloggerBlogVerifiedAt ? new Date(form.bloggerBlogVerifiedAt).toLocaleString() : "-"}
+              </>
+            ) : null}
+          </div>
           <label>
             Connected Email
             <input value={form.connectedEmail} onChange={(event) => setForm({ ...form, connectedEmail: event.target.value })} />
@@ -372,6 +411,8 @@ export function BloggerSettingsClient() {
                   <td>
                     {connection.bloggerBlogName ?? "-"}
                     <div className="muted">{connection.bloggerBlogId ?? ""}</div>
+                    {connection.bloggerBlogUrl ? <div className="muted">{connection.bloggerBlogUrl}</div> : null}
+                    <div className="muted">verified: {connection.bloggerBlogVerifiedAt ? new Date(connection.bloggerBlogVerifiedAt).toLocaleString() : "-"}</div>
                   </td>
                   <td>
                     client secret: {connection.hasClientSecret ? "yes" : "no"}
@@ -424,6 +465,8 @@ export function BloggerSettingsClient() {
             <DetailItem label="Status" value={statusPreview.status} />
             <DetailItem label="Blogger Blog ID" value={statusPreview.bloggerBlogId ?? "-"} />
             <DetailItem label="Blogger Blog Name" value={statusPreview.bloggerBlogName ?? "-"} />
+            <DetailItem label="Blogger Blog URL" value={statusPreview.bloggerBlogUrl ?? "-"} />
+            <DetailItem label="Blogger Blog Verified" value={statusPreview.bloggerBlogVerifiedAt ? new Date(statusPreview.bloggerBlogVerifiedAt).toLocaleString() : "-"} />
             <DetailItem label="Connected Email" value={statusPreview.connectedEmail ?? "-"} />
             <DetailItem label="Client Secret" value={statusPreview.hasClientSecret ? "placeholder exists" : "not configured"} />
             <DetailItem label="Access Token" value={statusPreview.hasAccessToken ? `placeholder (${statusPreview.tokenLast4 ?? "last4 unknown"})` : "not configured"} />
@@ -548,18 +591,27 @@ export function BloggerSettingsClient() {
                   <th>URL</th>
                   <th>Published</th>
                   <th>Updated</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {blogListResult.blogs.map((blog) => (
-                  <tr key={blog.id}>
-                    <td>{blog.id}</td>
-                    <td>{blog.name}</td>
-                    <td>{blog.url ?? "-"}</td>
-                    <td>{blog.published ? new Date(blog.published).toLocaleString() : "-"}</td>
-                    <td>{blog.updated ? new Date(blog.updated).toLocaleString() : "-"}</td>
-                  </tr>
-                ))}
+                {blogListResult.blogs.map((blog) => {
+                  const selected = activeBlogListConnection?.bloggerBlogId === blog.id && Boolean(activeBlogListConnection.bloggerBlogVerifiedAt);
+                  return (
+                    <tr key={blog.id}>
+                      <td>{blog.id}</td>
+                      <td>{blog.name}</td>
+                      <td>{blog.url ?? "-"}</td>
+                      <td>{blog.published ? new Date(blog.published).toLocaleString() : "-"}</td>
+                      <td>{blog.updated ? new Date(blog.updated).toLocaleString() : "-"}</td>
+                      <td>
+                        <button className="button secondary" type="button" disabled={selectingBlogId === blog.id || selected} onClick={() => void selectBloggerBlog(blog.id)}>
+                          {selected ? "선택됨" : selectingBlogId === blog.id ? "선택 중" : "이 블로그 선택"}
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           ) : (
@@ -579,6 +631,8 @@ function toForm(connection: BloggerConnectionAdmin): BloggerConnectionForm {
     status: connection.status,
     bloggerBlogId: connection.bloggerBlogId ?? "",
     bloggerBlogName: connection.bloggerBlogName ?? "",
+    bloggerBlogUrl: connection.bloggerBlogUrl ?? "",
+    bloggerBlogVerifiedAt: connection.bloggerBlogVerifiedAt ?? "",
     connectedEmail: connection.connectedEmail ?? "",
     scopes: formatListInput(connection.scopes),
     oauthClientIdRef: connection.oauthClientIdRef ?? "",

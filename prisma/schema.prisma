@@ -356,6 +356,8 @@ model BloggerConnection {
   status             BloggerConnectionStatus @default(not_configured)
   bloggerBlogId      String?
   bloggerBlogName    String?
+  bloggerBlogUrl     String?
+  bloggerBlogVerifiedAt DateTime?
   connectedEmail     String?
   scopes             String[]                @default([])
   oauthClientIdRef   String?
@@ -376,6 +378,7 @@ model BloggerConnection {
   @@index([blogId])
   @@index([status])
   @@index([bloggerBlogId])
+  @@index([bloggerBlogVerifiedAt])
   @@map("blogger_connections")
 }
 

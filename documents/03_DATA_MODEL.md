@@ -400,3 +400,15 @@ Patch 9D-1은 새 DB 모델을 추가하지 않는다.
 - Blogger blog 선택 반영은 후속 Patch 9D-2 범위다.
 - content item status, qualityScore, publishedAt, scheduledAt은 변경하지 않는다.
 - publish readiness는 `publishReady=false`를 유지한다.
+
+## Patch 9D-2 Blogger blog selection data policy
+
+Patch 9D-2는 새 테이블을 추가하지 않고 `blogger_connections`에 검증된 선택 metadata만 추가한다.
+
+- `bloggerBlogUrl`은 선택된 Blogger blog의 safe URL이다.
+- `bloggerBlogVerifiedAt`은 서버가 현재 connected token으로 Blogger blog list를 다시 조회한 뒤 해당 blog ID가 접근 가능할 때만 저장한다.
+- generic PATCH로 들어온 `bloggerBlogId`/`bloggerBlogName`은 검증된 선택으로 간주하지 않으며 verified metadata를 초기화한다.
+- 선택 저장 API는 request body의 blog ID를 그대로 신뢰하지 않고 read-only blog list helper로 재검증한다.
+- raw Blogger response, token, client secret, encrypted value는 저장하지 않는다.
+- content item status, qualityScore, publishedAt, scheduledAt은 변경하지 않는다.
+- publish readiness는 선택된 Blogger blog check를 추가하지만 `publishReady=false`를 유지한다.

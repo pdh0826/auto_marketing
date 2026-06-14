@@ -391,3 +391,16 @@ npm run build
 - Blogger blog 선택 저장, token refresh, draft save, publish, scheduled publish는 발생하지 않는다.
 - publish readiness는 계속 `publishReady=false`를 유지한다.
 - `llm_call_logs`는 생성되지 않는다.
+
+## Patch 9D-2 수동 검증
+
+- `POST /api/settings/blogger/[id]/blogs/select`는 body의 `blogId`를 1차 검증한다.
+- select route는 저장 전 현재 token으로 Blogger blog list를 다시 조회한다.
+- 조회 결과에 없는 `blogId`는 400 `blogger_blog_not_accessible` safe error를 반환한다.
+- access token 없음/만료/복호화 실패/401/403은 safe error만 반환한다.
+- 성공 시 `bloggerBlogId`, `bloggerBlogName`, `bloggerBlogUrl`, `bloggerBlogVerifiedAt`만 저장한다.
+- generic PATCH로 들어온 `bloggerBlogId`/`bloggerBlogName`은 verified metadata를 초기화한다.
+- `/settings/blogger` blog list row에 “이 블로그 선택” 버튼이 표시된다.
+- publish readiness에는 `blogger_blog_selection` check가 추가되지만 `publishReady=false`, top-level `ready=false`를 유지한다.
+- token refresh, draft save, publish, scheduled publish는 발생하지 않는다.
+- `llm_call_logs`는 생성되지 않는다.

@@ -14,6 +14,8 @@ export interface BloggerConnectionAdmin {
   status: BloggerConnectionStatus;
   bloggerBlogId: string | null;
   bloggerBlogName: string | null;
+  bloggerBlogUrl: string | null;
+  bloggerBlogVerifiedAt: string | null;
   connectedEmail: string | null;
   scopes: string[];
   oauthClientIdRef: string | null;
@@ -34,6 +36,8 @@ export interface BloggerConnectionStatusSummary {
   status: BloggerConnectionStatus;
   bloggerBlogId: string | null;
   bloggerBlogName: string | null;
+  bloggerBlogUrl: string | null;
+  bloggerBlogVerifiedAt: string | null;
   connectedEmail: string | null;
   hasClientSecret: boolean;
   hasAccessToken: boolean;
@@ -134,4 +138,12 @@ export interface BloggerBlogListResult {
     blogCount: number;
     fetchedAt: string;
   };
+}
+
+export interface BloggerBlogSelectionResult {
+  connection: BloggerConnectionAdmin;
+  selectedBlog: BloggerBlogListItem;
+  readOnlyRevalidated: true;
+  draftPublishImplemented: false;
+  tokenRefreshImplemented: false;
 }

@@ -8,6 +8,8 @@ const safeSelect = {
   status: true,
   bloggerBlogId: true,
   bloggerBlogName: true,
+  bloggerBlogUrl: true,
+  bloggerBlogVerifiedAt: true,
   connectedEmail: true,
   scopes: true,
   oauthClientIdRef: true,
@@ -65,6 +67,26 @@ export function updateBloggerConnection(id: string, data: Prisma.BloggerConnecti
   return prisma.bloggerConnection.update({
     where: { id },
     data,
+    select: safeSelect
+  });
+}
+
+export function selectBloggerBlogForConnection(
+  id: string,
+  selectedBlog: {
+    id: string;
+    name: string;
+    url: string | null;
+  }
+) {
+  return prisma.bloggerConnection.update({
+    where: { id },
+    data: {
+      bloggerBlogId: selectedBlog.id,
+      bloggerBlogName: selectedBlog.name,
+      bloggerBlogUrl: selectedBlog.url,
+      bloggerBlogVerifiedAt: new Date()
+    },
     select: safeSelect
   });
 }

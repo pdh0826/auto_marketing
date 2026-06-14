@@ -79,3 +79,13 @@ Patch 9D-1은 저장된 encrypted access token을 서버 내부에서만 복호�
 - `BLOGGER_SECRET_ENCRYPTION_KEY`가 없거나 복호화에 실패하면 safe server error를 반환한다.
 - Blogger API 401/403은 raw error body 없이 safe message와 status suggestion만 반환한다.
 - DB 저장, Blogger blog 선택 반영, token refresh, draft save, publish, scheduled publish는 구현하지 않는다.
+
+## Patch 9D-2 Blogger blog selection
+
+Patch 9D-2는 read-only로 조회한 Blogger blog 중 하나를 connection에 수동 반영한다.
+
+- `POST /api/settings/blogger/[id]/blogs/select`는 body의 `blogId`만 받는다.
+- 저장 전 현재 connected token으로 Blogger blog list를 다시 조회해 접근 가능한 blog인지 재검증한다.
+- 조회 결과에 있는 blog만 `bloggerBlogId`, `bloggerBlogName`, `bloggerBlogUrl`, `bloggerBlogVerifiedAt`으로 저장한다.
+- raw Blogger response, token, client secret, encrypted value는 반환하거나 저장하지 않는다.
+- token refresh, draft save, publish, scheduled publish는 구현하지 않는다.

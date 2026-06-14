@@ -203,3 +203,22 @@ Patch 9D-1은 encrypted access token을 서버 내부에서만 복호화해 Blog
 - Blogger API raw response/error body는 반환하거나 저장하지 않는다.
 - DB mutation, Blogger blog 선택 저장, draft save, publish는 수행하지 않는다.
 - publish readiness는 계속 `publishReady=false`를 유지한다.
+
+## Patch 9D-2 Blogger Blog Selection
+
+Patch 9D-2는 read-only 조회 결과 중 사용자가 선택한 Blogger blog를 connection에 verified metadata로 저장한다.
+
+```text
+/settings/blogger
+→ Blogger 목록 조회
+→ 이 블로그 선택
+→ POST /api/settings/blogger/[id]/blogs/select
+→ read-only blog list 재조회
+→ verified safe metadata 저장
+```
+
+- 저장 필드는 Blogger blog ID, name, URL, verified timestamp뿐이다.
+- request body의 blog ID는 저장 전에 현재 token으로 조회 가능한 blog인지 재검증한다.
+- generic PATCH로 저장된 Blogger blog ID/name은 verified selection으로 보지 않는다.
+- publish readiness는 Blogger blog selection check를 추가하지만 `publishReady=false`를 유지한다.
+- token refresh, draft save, publish는 후속 범위다.

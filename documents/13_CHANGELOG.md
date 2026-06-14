@@ -250,3 +250,22 @@ Policy:
 - No Blogger draft save, publish, scheduled publish, or blog selection save.
 - Keep publish readiness `publishReady=false`.
 - No LLM calls or `llm_call_logs`.
+
+## Patch 9D-2 Blogger Blog Selection
+
+Implemented after Patch 9D-1:
+
+- Added `bloggerBlogUrl` and `bloggerBlogVerifiedAt` safe metadata to `BloggerConnection`.
+- Added `POST /api/settings/blogger/[id]/blogs/select`.
+- Revalidate selected `blogId` by calling the read-only Blogger blog list helper before saving.
+- Store only verified safe blog ID, name, URL, and verification timestamp.
+- Added “이 블로그 선택” action to `/settings/blogger`.
+- Added Blogger blog selection check to publish readiness while keeping `publishReady=false`.
+
+Policy:
+
+- Generic PATCH changes to Blogger blog ID/name do not create a verified selection.
+- No token refresh implementation.
+- No Blogger draft save, publish, or scheduled publish.
+- No raw Blogger response/error, token, client secret, or encrypted value returned by API/UI.
+- No LLM calls or `llm_call_logs`.

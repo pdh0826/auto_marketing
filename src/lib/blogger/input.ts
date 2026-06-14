@@ -28,7 +28,7 @@ const SENSITIVE_VALUE_PATTERNS = [
 export function rejectSensitiveBloggerInput(data: Record<string, unknown>) {
   const sensitiveKey = Object.keys(data).find((key) => SENSITIVE_INPUT_KEYS.has(key.toLowerCase()));
   if (sensitiveKey) {
-    throw new Error(`Sensitive field "${sensitiveKey}" is not accepted in Patch 9A Blogger settings.`);
+    throw new Error(`Sensitive field "${sensitiveKey}" is not accepted in Blogger settings.`);
   }
 
   const sensitiveValueKey = Object.entries(data).find(([, value]) => hasSensitiveValue(value))?.[0];
@@ -80,9 +80,13 @@ export function normalizeBloggerConnectionPatchInput(data: Record<string, unknow
   }
   if ("bloggerBlogId" in data) {
     patch.bloggerBlogId = optionalString(data.bloggerBlogId);
+    patch.bloggerBlogUrl = null;
+    patch.bloggerBlogVerifiedAt = null;
   }
   if ("bloggerBlogName" in data) {
     patch.bloggerBlogName = optionalString(data.bloggerBlogName);
+    patch.bloggerBlogUrl = null;
+    patch.bloggerBlogVerifiedAt = null;
   }
   if ("connectedEmail" in data) {
     patch.connectedEmail = optionalString(data.connectedEmail);
