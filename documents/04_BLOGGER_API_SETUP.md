@@ -66,3 +66,16 @@ Patch 9C-2는 OAuth callback에서 authorization code를 Google token endpoint�
 - 새 refresh token도 기존 refresh token도 없으면 connection status는 `oauth_required`로 둔다.
 - API/UI/log에는 authorization code, access token, refresh token, client secret, encryptedValue, raw token response를 반환하거나 저장하지 않는다.
 - token refresh, Blogger API 호출, Blogger blog list 조회, draft save, publish는 아직 구현하지 않는다.
+
+## Patch 9D-1 Blogger blog list read-only
+
+Patch 9D-1은 저장된 encrypted access token을 서버 내부에서만 복호화해 Blogger blog list를 read-only로 조회한다.
+
+- `POST /api/settings/blogger/[id]/blogs`는 `https://www.googleapis.com/blogger/v3/users/self/blogs`만 호출한다.
+- `BloggerConnectionSecret.secretKind = access_token`만 사용하며 refresh token은 사용하지 않는다.
+- access token 원문은 Authorization header에만 사용하고 API/UI/log/docs에 반환하지 않는다.
+- 응답은 Blogger blog ID, name, URL, published, updated만 포함하는 safe DTO로 축소한다.
+- access token이 없거나 만료된 경우 Blogger API를 호출하지 않고 safe error를 반환한다.
+- `BLOGGER_SECRET_ENCRYPTION_KEY`가 없거나 복호화에 실패하면 safe server error를 반환한다.
+- Blogger API 401/403은 raw error body 없이 safe message와 status suggestion만 반환한다.
+- DB 저장, Blogger blog 선택 반영, token refresh, draft save, publish, scheduled publish는 구현하지 않는다.

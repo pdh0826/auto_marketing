@@ -21,15 +21,16 @@
 17. Patch 9B - Blogger OAuth state + authorization URL dry-run: 완료
 18. Patch 9C-1 - Blogger token storage security foundation: 완료
 19. Patch 9C-2 - OAuth callback token exchange: 완료
-20. Patch 9D - Blogger blog list read-only 또는 connection test: 다음 패치 후보
-21. Patch 9E 이후 - Blogger API draft/publish
-22. 예약 발행
-23. 운영 대시보드
-24. 키워드 연구소
-25. 상위글 구조 분석
-26. 서비스 홍보 엔진 고도화
-27. 이미지/썸네일
-28. 성과 분석과 리라이트
+20. Patch 9D-1 - Blogger blog list read-only 조회: 완료
+21. Patch 9D-2 - 조회된 Blogger blog를 connection에 수동 반영: 다음 패치 후보
+22. Patch 9E 이후 - Blogger API draft/publish
+23. 예약 발행
+24. 운영 대시보드
+25. 키워드 연구소
+26. 상위글 구조 분석
+27. 서비스 홍보 엔진 고도화
+28. 이미지/썸네일
+29. 성과 분석과 리라이트
 
 ## Patch 8C 완료 기준
 
@@ -54,16 +55,24 @@ Patch 9A 완료:
 - `/settings/blogger` placeholder UI 추가
 - Blogger settings safe CRUD/status API 추가
 - publish readiness에 Blogger connection status context 반영
-- 실제 Blogger OAuth/API/publish는 아직 미구현
+- 실제 Blogger draft save/publish는 아직 미구현
+
+Patch 9D-1 완료:
+
+- encrypted access token을 서버 내부에서만 복호화해 Blogger blog list를 read-only로 조회
+- `POST /api/settings/blogger/[id]/blogs` 추가
+- `/settings/blogger`에 Blogger 목록 조회 버튼과 safe result table 추가
+- Blogger API raw response, token, client secret, encryptedValue는 반환하지 않음
+- DB mutation, token refresh, draft save, publish는 구현하지 않음
 
 다음 패치 후보:
 
-- Patch 9D: Blogger blog list read-only 또는 connection test
+- Patch 9D-2: 조회된 Blogger blog를 connection에 수동 반영
 - 실제 Blogger draft save/publish는 Patch 9E 이후
 
 먼저 하지 말 것:
 
-- Blogger OAuth/API/publish 구현
+- Blogger draft save/publish 구현
 - HTML 변환과 발행을 한 번에 구현
 - `draftHtml` 자동 저장
 - API Key나 secret 출력

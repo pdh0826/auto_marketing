@@ -3,6 +3,7 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import type {
   BloggerConnectionAdmin,
+  BloggerBlogListResult,
   BloggerConnectionSecretStatus,
   BloggerConnectionStatus,
   BloggerConnectionStatusSummary,
@@ -57,6 +58,8 @@ export function BloggerSettingsClient() {
   const [secretStatus, setSecretStatus] = useState<BloggerConnectionSecretStatus | null>(null);
   const [secretSelfTest, setSecretSelfTest] = useState<BloggerSecretSelfTestResult | null>(null);
   const [oauthDryRun, setOauthDryRun] = useState<BloggerOAuthStartDryRun | null>(null);
+  const [blogListResult, setBlogListResult] = useState<BloggerBlogListResult | null>(null);
+  const [blogListLoadingId, setBlogListLoadingId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -128,7 +131,8 @@ export function BloggerSettingsClient() {
       setSecretStatus(null);
       setSecretSelfTest(null);
       setOauthDryRun(null);
-      setNotice("Blogger connection placeholder를 저장했습니다. OAuth/API 호출은 수행하지 않았습니다.");
+      setBlogListResult(null);
+      setNotice("Blogger connection을 저장했습니다. Blogger draft/publish는 수행하지 않았습니다.");
       await loadData();
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Blogger connection 저장에 실패했습니다.");
@@ -144,7 +148,7 @@ export function BloggerSettingsClient() {
     try {
       const result = await requestJson<ApiResult<BloggerConnectionStatusSummary>>(`/api/settings/blogger/${connection.id}/status`);
       setStatusPreview(result.data);
-      setNotice("저장된 Blogger connection 상태만 조회했습니다. Blogger API는 호출하지 않았습니다.");
+      setNotice("저장된 Blogger connection 상태만 조회했습니다. Blogger API 호출은 목록 조회 버튼에서만 read-only로 수행합니다.");
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Blogger connection status 조회에 실패했습니다.");
     }
@@ -189,20 +193,36 @@ export function BloggerSettingsClient() {
     }
   }
 
+  async function loadBloggerBlogs(connection: BloggerConnectionAdmin) {
+    setError(null);
+    setNotice(null);
+    setBlogListLoadingId(connection.id);
+
+    try {
+      const result = await requestJson<ApiResult<BloggerBlogListResult>>(`/api/settings/blogger/${connection.id}/blogs`, { method: "POST" });
+      setBlogListResult(result.data);
+      setNotice("Blogger blog list를 read-only로 조회했습니다. draft/publish와 token refresh는 수행하지 않았습니다.");
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Blogger blog list 조회에 실패했습니다.");
+    } finally {
+      setBlogListLoadingId(null);
+    }
+  }
+
   return (
     <>
       <section className="card">
-        <span className="badge">Patch 9A</span>
+        <span className="badge">Patch 9D-1</span>
         <h1>Blogger 설정</h1>
         <p className="muted">
-          Blogger OAuth/API 구현 전 connection placeholder와 연결 상태 메타데이터만 관리합니다. Token, client secret, Blogger API 응답 원문은 저장하거나 표시하지 않습니다.
+          Blogger OAuth callback token exchange가 연결되었습니다. 현재 Blogger API는 read-only blog list 조회만 지원하며 token, client secret, Blogger API 응답 원문은 표시하지 않습니다.
         </p>
         <div className="button-row">
           <button className="button secondary" type="button" disabled>
             OAuth callback token exchange 연결됨
           </button>
           <button className="button secondary" type="button" disabled>
-            Blogger 연결 테스트 비활성
+            Blogger draft/publish 비활성
           </button>
         </div>
       </section>
@@ -215,7 +235,7 @@ export function BloggerSettingsClient() {
         <div className="section-heading">
           <div>
             <h2>Connection Placeholder</h2>
-            <p className="muted">안전한 설정 필드만 저장합니다. 실제 OAuth callback, token 발급, blog list 조회는 아직 연결하지 않습니다.</p>
+            <p className="muted">안전한 설정 필드만 저장합니다. OAuth callback token exchange는 구현되었고, Blogger API는 read-only blog list 조회만 가능합니다.</p>
           </div>
         </div>
 
@@ -303,6 +323,7 @@ export function BloggerSettingsClient() {
                   setSecretStatus(null);
                   setSecretSelfTest(null);
                   setOauthDryRun(null);
+                  setBlogListResult(null);
                 }}
               >
                 새 Connection
@@ -379,6 +400,9 @@ export function BloggerSettingsClient() {
                       <button className="button secondary" type="button" onClick={() => void createOAuthDryRun(connection)}>
                         OAuth URL 생성
                       </button>
+                      <button className="button secondary" type="button" disabled={blogListLoadingId === connection.id} onClick={() => void loadBloggerBlogs(connection)}>
+                        {blogListLoadingId === connection.id ? "조회 중" : "Blogger 목록 조회"}
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -393,7 +417,7 @@ export function BloggerSettingsClient() {
           <div className="section-heading">
             <div>
               <h2>Status Preview</h2>
-              <p className="muted">저장된 DB 상태만 표시합니다. Google OAuth와 Blogger API를 호출하지 않습니다.</p>
+              <p className="muted">저장된 DB 상태만 표시합니다. Blogger API read-only 조회는 별도 버튼으로 수행합니다.</p>
             </div>
           </div>
           <div className="detail-grid">
@@ -405,7 +429,7 @@ export function BloggerSettingsClient() {
             <DetailItem label="Access Token" value={statusPreview.hasAccessToken ? `placeholder (${statusPreview.tokenLast4 ?? "last4 unknown"})` : "not configured"} />
             <DetailItem label="Refresh Token" value={statusPreview.hasRefreshToken ? "placeholder exists" : "not configured"} />
             <DetailItem label="OAuth Implemented" value={statusPreview.oauthImplemented ? "yes" : "no"} />
-            <DetailItem label="Blogger API Implemented" value={statusPreview.bloggerApiImplemented ? "yes" : "no"} />
+            <DetailItem label="Blogger Read-only API" value={statusPreview.bloggerApiImplemented ? "blog list only" : "no"} />
             <DetailItem label="Publish Implemented" value={statusPreview.publishImplemented ? "yes" : "no"} />
           </div>
           {statusPreview.lastError ? <div className="notice error">{statusPreview.lastError}</div> : null}
@@ -417,7 +441,7 @@ export function BloggerSettingsClient() {
           <div className="section-heading">
             <div>
               <h2>Token Storage Security</h2>
-              <p className="muted">Token exchange 결과는 encrypted metadata로만 확인합니다. Blogger API 호출은 아직 수행하지 않습니다.</p>
+              <p className="muted">Token exchange 결과는 encrypted metadata로만 확인합니다. Access token 원문은 서버 내부 read-only Blogger API 호출에만 사용됩니다.</p>
             </div>
           </div>
           {secretStatus ? (
@@ -430,7 +454,7 @@ export function BloggerSettingsClient() {
                 <DetailItem label="Access Token Expires" value={secretStatus.accessTokenExpiresAt ? new Date(secretStatus.accessTokenExpiresAt).toLocaleString() : "-"} />
                 <DetailItem label="Secret Material Returned" value={secretStatus.secretMaterialReturned ? "yes" : "no"} />
                 <DetailItem label="Token Exchange" value={secretStatus.tokenExchangeImplemented ? "implemented" : "not implemented"} />
-                <DetailItem label="Blogger API" value={secretStatus.bloggerApiImplemented ? "implemented" : "not implemented"} />
+                <DetailItem label="Blogger Read-only API" value={secretStatus.bloggerApiImplemented ? "blog list only" : "not implemented"} />
               </div>
               {secretStatus.secrets.length > 0 ? (
                 <table className="admin-table">
@@ -476,13 +500,13 @@ export function BloggerSettingsClient() {
           <div className="section-heading">
             <div>
               <h2>OAuth Dry Run</h2>
-              <p className="muted">Authorization URL을 생성합니다. Callback에서는 token exchange를 수행하지만 Blogger blog list 조회, draft save, publish는 수행하지 않습니다.</p>
+              <p className="muted">Authorization URL을 생성합니다. Callback에서는 token exchange를 수행하며, Blogger API는 read-only blog list 조회만 별도 버튼으로 수행합니다.</p>
             </div>
           </div>
           <div className="detail-grid">
             <DetailItem label="Dry Run" value={oauthDryRun.oauthDryRun ? "yes" : "no"} />
             <DetailItem label="Token Exchange" value={oauthDryRun.tokenExchangeImplemented ? "implemented" : "not implemented"} />
-            <DetailItem label="Blogger API" value={oauthDryRun.bloggerApiImplemented ? "implemented" : "not implemented"} />
+            <DetailItem label="Blogger API During OAuth" value={oauthDryRun.bloggerApiImplemented ? "implemented" : "not called"} />
             <DetailItem label="Expires At" value={new Date(oauthDryRun.expiresAt).toLocaleString()} />
             <DetailItem label="Redirect URI" value={oauthDryRun.redirectUri} />
           </div>
@@ -493,6 +517,54 @@ export function BloggerSettingsClient() {
           <div className="notice">
             URL에는 OAuth state가 포함되지만 stateHash는 응답하지 않습니다. Callback은 authorization code를 token으로 교환하며 code/token 원문을 저장하거나 표시하지 않습니다.
           </div>
+        </section>
+      ) : null}
+
+      {blogListResult ? (
+        <section className="admin-section">
+          <div className="section-heading">
+            <div>
+              <h2>Blogger Blog List</h2>
+              <p className="muted">이 조회는 read-only이며 Blogger draft/publish를 수행하지 않습니다.</p>
+            </div>
+          </div>
+          <div className="detail-grid">
+            <DetailItem label="Connection ID" value={blogListResult.connectionId} />
+            <DetailItem label="Read Only" value={blogListResult.readOnly ? "yes" : "no"} />
+            <DetailItem label="Token Refresh" value={blogListResult.tokenRefreshImplemented ? "implemented" : "not implemented"} />
+            <DetailItem label="Draft/Publish" value={blogListResult.draftPublishImplemented ? "implemented" : "not implemented"} />
+            <DetailItem label="Status Suggestion" value={blogListResult.statusSuggestion} />
+            <DetailItem label="Fetched At" value={new Date(blogListResult.metadata.fetchedAt).toLocaleString()} />
+          </div>
+          <div className="notice">
+            token refresh는 아직 구현되지 않았습니다. Blogger blog 선택 반영은 후속 Patch 9D-2에서 처리 예정입니다.
+          </div>
+          {blogListResult.blogs.length > 0 ? (
+            <table className="admin-table">
+              <thead>
+                <tr>
+                  <th>Blog ID</th>
+                  <th>Name</th>
+                  <th>URL</th>
+                  <th>Published</th>
+                  <th>Updated</th>
+                </tr>
+              </thead>
+              <tbody>
+                {blogListResult.blogs.map((blog) => (
+                  <tr key={blog.id}>
+                    <td>{blog.id}</td>
+                    <td>{blog.name}</td>
+                    <td>{blog.url ?? "-"}</td>
+                    <td>{blog.published ? new Date(blog.published).toLocaleString() : "-"}</td>
+                    <td>{blog.updated ? new Date(blog.updated).toLocaleString() : "-"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <div className="notice">조회된 Blogger blog가 없습니다.</div>
+          )}
         </section>
       ) : null}
     </>

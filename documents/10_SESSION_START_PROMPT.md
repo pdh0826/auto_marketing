@@ -46,7 +46,7 @@ branch: master
 - draftMarkdown은 자동 저장되지 않고 사용자가 반영했을 때만 DB에 저장됨
 
 다음 세션 1순위 작업:
-Patch 9D 후보: Blogger blog list read-only 또는 connection test
+Patch 9D-2 후보: 조회된 Blogger blog를 connection에 수동 반영
 
 현재 Blogger 상태:
 - Patch 9A에서 `/settings/blogger` placeholder UI와 Blogger connection safe CRUD/status API가 추가됨
@@ -59,10 +59,11 @@ Patch 9D 후보: Blogger blog list read-only 또는 connection test
 - `encryptedValue`, token 원문, client secret 원문은 API/UI에 반환하지 않음
 - Patch 9C-2에서 OAuth callback token exchange가 추가됨
 - access token과 refresh token은 encrypted secret metadata로만 저장됨
-- Blogger blog list/draft/publish는 아직 구현하지 않음
+- Patch 9D-1에서 Blogger blog list read-only 조회가 추가됨
+- Blogger blog 선택 저장, draft save, publish는 아직 구현하지 않음
 
-Patch 9D 목표:
-- Blogger connection이 connected 상태일 때 Blogger blog list를 read-only로 조회할지, 먼저 connection test를 구현할지 계획한다.
+Patch 9D-2 목표:
+- 조회된 Blogger blog list 결과를 connection에 수동 반영하는 범위를 계획한다.
 - token refresh, draft save, publish는 아직 구현하지 않는다.
 - 실제 Blogger draft save/publish는 아직 구현하지 않는다.
 
@@ -76,7 +77,7 @@ Patch 9D 목표:
 - git add . 또는 git add -A 금지
 - .env.local 읽기/출력/수정 금지
 
-첫 작업으로 Patch 9D 작업계획을 제안해줘. 아직 구현하지 말고 계획만 작성해줘.
+첫 작업으로 Patch 9D-2 작업계획을 제안해줘. 아직 구현하지 말고 계획만 작성해줘.
 ```
 
 ## 첫 점검 명령어

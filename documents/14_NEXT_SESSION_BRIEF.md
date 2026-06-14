@@ -5,7 +5,7 @@
 ```text
 repo: ~/blog-growth-agent
 branch: master
-latest commit: 34b1351 Add manual HTML candidate apply flow
+latest commit: c49d961 Add Blogger OAuth callback token exchange
 ```
 
 Recent commits:
@@ -45,6 +45,8 @@ af0ce9a Generate content plan candidates with LLM
 - Blogger connection placeholder settings
 - Blogger OAuth state and authorization URL dry-run
 - Blogger token storage security foundation
+- Blogger OAuth callback token exchange
+- Blogger blog list read-only lookup
 
 ## Verified Runtime State
 
@@ -68,7 +70,7 @@ mediaPlaceholderCount = 1
 
 ## Next Patch
 
-Patch 9D 후보: Blogger blog list read-only 또는 connection test.
+Patch 9D-2 후보: 조회된 Blogger blog를 connection에 수동 반영.
 
 Current Blogger state:
 
@@ -83,12 +85,13 @@ Current Blogger state:
 - `encryptedValue`, token plaintext, client secret plaintext, and authorization code plaintext are not returned by API/UI.
 - Patch 9C-2 added OAuth callback token exchange.
 - Access/refresh tokens are stored only as encrypted values and safe metadata.
-- Blogger blog list, draft save, publish, scheduled publish, and token refresh are not implemented yet.
+- Patch 9D-1 added read-only Blogger blog list lookup.
+- Blogger blog selection save, draft save, publish, scheduled publish, and token refresh are not implemented yet.
 
 Target:
 
-- Decide whether Patch 9D should implement Blogger blog list read-only or a narrower connection test first.
-- Reuse encrypted access token storage without exposing token plaintext.
+- Let the user manually copy/apply one of the read-only Blogger blog list results to a Blogger connection.
+- Keep token plaintext hidden and avoid storing raw Blogger responses.
 - Keep Blogger draft save/publish for a later patch.
 - Actual Blogger draft save/publish remains later.
 
@@ -110,7 +113,7 @@ AGENTS.md와 documents/ 폴더의 관련 문서를 먼저 읽어줘.
 현재 프로젝트 상태를 점검하고 Patch 9D 작업계획을 제안해줘.
 
 목표:
-- Blogger blog list read-only 또는 connection test 범위를 검토한다.
+- Patch 9D-2에서 조회된 Blogger blog를 connection에 수동 반영하는 범위를 검토한다.
 - token refresh, Blogger draft save, publish는 구현하지 않는다.
 - 실제 Blogger draft save/publish는 구현하지 않는다.
 

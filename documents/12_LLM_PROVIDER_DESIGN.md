@@ -291,3 +291,12 @@ Patch 9B의 OAuth state + authorization URL dry-run도 LLM Provider를 사용하
 - OpenAI/Ollama/Local LLM 호출은 없다.
 - `llm_call_logs`는 생성하지 않는다.
 - authorization code, access token, refresh token, client secret 원문은 저장하거나 로그에 남기지 않는다.
+
+## Patch 9D-1 Blogger blog list and LLM boundary
+
+Patch 9D-1의 read-only Blogger blog list 조회는 LLM Provider를 사용하지 않는다.
+
+- `/api/settings/blogger/[id]/blogs`는 provider/model/task route를 조회하지 않는다.
+- OpenAI/Ollama/Local LLM 호출은 없다.
+- `llm_call_logs`는 생성하지 않는다.
+- Blogger API raw response/error body와 token 원문은 LLM 로그나 일반 로그에 남기지 않는다.

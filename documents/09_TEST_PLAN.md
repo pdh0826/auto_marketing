@@ -335,11 +335,10 @@ npm run build
 - OAuth start 응답에는 stateHash, access token, refresh token, client secret, authorization code 원문이 포함되지 않는다.
 - `blogger_oauth_states`에는 state 원문이 아니라 `stateHash`만 저장된다.
 - authorizationUrl에는 client_id, redirect_uri, scope, state가 포함된다.
-- `GET /api/settings/blogger/oauth/callback`은 state 검증까지만 수행하고 token exchange를 하지 않는다.
-- callback dry-run 성공 시 state는 consumed 처리된다.
+- Patch 9C-2 이후 `GET /api/settings/blogger/oauth/callback`은 state 검증 후 token exchange를 수행한다.
 - 같은 state를 재사용하면 400으로 거부된다.
 - 만료된 state는 400으로 거부된다.
-- `/settings/blogger`에는 OAuth URL 생성 dry-run UI와 token exchange 미구현 안내가 표시된다.
+- `/settings/blogger`에는 OAuth URL 생성 UI와 token exchange 구현 완료 안내가 표시된다.
 - Blogger API 호출, Blogger blog list 조회, draft save, publish, scheduled publish는 발생하지 않는다.
 - publish readiness는 계속 `publishReady=false`를 유지한다.
 - `llm_call_logs`는 생성되지 않는다.
@@ -354,8 +353,7 @@ npm run build
 - secret self-test 응답에는 plaintext, ciphertext, `encryptedValue`가 포함되지 않는다.
 - `BLOGGER_SECRET_ENCRYPTION_KEY`가 없으면 self-test는 safe failure를 반환하고 token exchange는 계속 비활성 상태다.
 - `/settings/blogger`에는 Token Storage Security 섹션이 표시되며 token/client secret 원문 입력창은 없다.
-- OAuth callback token exchange는 여전히 미구현이다.
-- `https://oauth2.googleapis.com/token` 호출 코드는 아직 없다.
+- Patch 9C-2 이후 OAuth callback token exchange와 `https://oauth2.googleapis.com/token` 호출 helper가 구현되어 있다.
 - Blogger API 호출, Blogger blog list 조회, draft save, publish, scheduled publish는 발생하지 않는다.
 - publish readiness는 계속 `publishReady=false`를 유지한다.
 - `llm_call_logs`는 생성되지 않는다.
@@ -377,4 +375,19 @@ npm run build
 - `secret-status` 응답에는 safe metadata만 표시된다.
 - Blogger API 호출, Blogger blog list 조회, draft save, publish, scheduled publish는 발생하지 않는다.
 - publish readiness는 Blogger status가 `connected`이면 connection check만 pass할 수 있지만 `publishReady=false`를 유지한다.
+- `llm_call_logs`는 생성되지 않는다.
+
+## Patch 9D-1 수동 검증
+
+- `POST /api/settings/blogger/[id]/blogs`는 encrypted access token을 서버 내부에서만 복호화해 Blogger blog list를 read-only로 조회한다.
+- access token이 없으면 400 `access_token_missing` safe error를 반환한다.
+- access token metadata가 만료되어 있으면 Blogger API를 호출하지 않고 400 `access_token_expired` safe error를 반환한다.
+- `BLOGGER_SECRET_ENCRYPTION_KEY`가 없으면 500 `blogger_secret_key_not_configured` safe error를 반환한다.
+- 복호화 실패는 500 `token_decryption_failed` safe error를 반환한다.
+- Blogger API 401/403은 raw body 없이 safe error와 `statusSuggestion`만 반환한다.
+- 성공 응답의 `blogs`는 Blog ID, Name, URL, Published, Updated만 포함한다.
+- 응답에는 `Bearer`, token 원문, refresh token 원문, client secret 원문, `encryptedValue`, raw Blogger response가 포함되지 않는다.
+- `/settings/blogger`에는 “Blogger 목록 조회” 버튼과 결과 테이블이 표시된다.
+- Blogger blog 선택 저장, token refresh, draft save, publish, scheduled publish는 발생하지 않는다.
+- publish readiness는 계속 `publishReady=false`를 유지한다.
 - `llm_call_logs`는 생성되지 않는다.

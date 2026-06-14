@@ -387,3 +387,16 @@ Patch 9C-2는 새 DB 모델을 추가하지 않고 Patch 9C-1의 `blogger_connec
 - Google raw token response body는 저장하지 않는다.
 - `encryptedValue`는 API/UI 응답에 반환하지 않는다.
 - Blogger blog list, draft save, publish job 생성은 Patch 9C-2 범위가 아니다.
+
+## Patch 9D-1 Blogger blog list read-only data policy
+
+Patch 9D-1은 새 DB 모델을 추가하지 않는다.
+
+- read-only blog list 조회는 `BloggerConnectionSecret.secretKind = access_token`만 읽는다.
+- `encryptedValue`는 서버 내부 helper에서만 조회하고 API/UI 응답에는 반환하지 않는다.
+- access token 원문은 복호화 후 Blogger API Authorization header에만 사용한다.
+- access token 만료 여부는 `BloggerConnectionSecret.expiresAt` metadata로 확인한다.
+- Blogger blog list 결과는 DB에 저장하지 않는다.
+- Blogger blog 선택 반영은 후속 Patch 9D-2 범위다.
+- content item status, qualityScore, publishedAt, scheduledAt은 변경하지 않는다.
+- publish readiness는 `publishReady=false`를 유지한다.

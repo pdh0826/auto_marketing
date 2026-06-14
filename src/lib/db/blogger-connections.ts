@@ -81,7 +81,7 @@ export function toBloggerConnectionStatusSummary(connection: SafeBloggerConnecti
   return {
     ...connection,
     oauthImplemented: true as const,
-    bloggerApiImplemented: false as const,
+    bloggerApiImplemented: true as const,
     publishImplemented: false as const
   };
 }

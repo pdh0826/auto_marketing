@@ -229,3 +229,24 @@ Policy:
 - No token refresh implementation.
 - No Blogger API calls, blog list reads, draft saves, publish, or scheduled publish.
 - No LLM calls or `llm_call_logs`.
+
+## Patch 9D-1 Blogger Blog List Read-only
+
+Implemented after Patch 9C-2:
+
+- Added read-only Blogger blog list helper.
+- Added `POST /api/settings/blogger/[id]/blogs`.
+- Decrypt stored encrypted access token only inside server-side Blogger helper.
+- Call only `GET https://www.googleapis.com/blogger/v3/users/self/blogs`.
+- Return a safe blog DTO with ID, name, URL, published, and updated fields.
+- Added “Blogger 목록 조회” action and result table to `/settings/blogger`.
+- Updated Blogger settings copy to reflect that OAuth callback token exchange is implemented and Blogger API support is limited to read-only blog list.
+
+Policy:
+
+- No raw access token, refresh token, client secret, encrypted value, raw Blogger response, or raw Blogger error returned by API/UI.
+- No DB mutation in the blog list route.
+- No token refresh implementation.
+- No Blogger draft save, publish, scheduled publish, or blog selection save.
+- Keep publish readiness `publishReady=false`.
+- No LLM calls or `llm_call_logs`.

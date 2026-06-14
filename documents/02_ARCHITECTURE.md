@@ -160,8 +160,8 @@ Patch 9A는 실제 OAuth/API 호출 전에 Blogger 연결 설정을 안전한 pl
 - `blogger_connections`는 Blogger 연결 상태와 안전한 메타데이터만 저장한다.
 - access token, refresh token, client secret 원문은 저장하지 않는다.
 - `Blog.bloggerBlogId`는 기존 호환 필드로 유지하되 새 연결 흐름의 source of truth는 `BloggerConnection.bloggerBlogId`다.
-- publish readiness는 Blogger connection status를 반영하지만, 사용자 최종 승인 저장과 실제 OAuth/API가 없으므로 `publishReady`는 계속 false다.
-- Blogger OAuth start/callback, Blogger blog list 조회, draft save, publish는 Patch 9B 이후 범위다.
+- publish readiness는 Blogger connection status를 반영하지만, 사용자 최종 승인 저장과 실제 발행 기능이 없으므로 `publishReady`는 계속 false다.
+- Blogger OAuth start/callback과 read-only blog list 조회는 구현되었다. Blogger blog 선택 저장, draft save, publish는 후속 범위다.
 
 ## Patch 9B/9C Blogger OAuth and Token Storage Foundation
 
@@ -182,4 +182,24 @@ Patch 9B, 9C-1, 9C-2는 실제 Blogger API 호출 전 OAuth/token 보안 경계�
 - `clientSecretRef`는 서버 내부 env key name으로만 해석한다.
 - secret status API와 UI는 `encryptedValue`, access token, refresh token, client secret 원문을 반환하지 않는다.
 - secret self-test는 서버 내부 dummy string만 사용하며 plaintext/ciphertext/encryptedValue를 반환하지 않는다.
-- token refresh, Blogger blog list 조회, draft save, publish는 아직 구현하지 않는다.
+- token refresh, draft save, publish는 아직 구현하지 않는다.
+
+## Patch 9D-1 Blogger Blog List Read-only
+
+Patch 9D-1은 encrypted access token을 서버 내부에서만 복호화해 Blogger blog list를 read-only로 조회한다.
+
+```text
+/settings/blogger
+→ Blogger 목록 조회
+→ POST /api/settings/blogger/[id]/blogs
+→ decrypt access_token server-side
+→ GET https://www.googleapis.com/blogger/v3/users/self/blogs
+→ safe DTO only
+```
+
+- API/UI는 Blogger blog ID, name, URL, published, updated만 표시한다.
+- access token 원문은 Authorization header에만 사용하고 반환하지 않는다.
+- refresh token은 사용하지 않으며 token refresh도 수행하지 않는다.
+- Blogger API raw response/error body는 반환하거나 저장하지 않는다.
+- DB mutation, Blogger blog 선택 저장, draft save, publish는 수행하지 않는다.
+- publish readiness는 계속 `publishReady=false`를 유지한다.

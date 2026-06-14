@@ -17,6 +17,20 @@ const safeSecretSelect = {
 
 export type SafeBloggerConnectionSecret = Prisma.BloggerConnectionSecretGetPayload<{ select: typeof safeSecretSelect }>;
 
+const encryptedSecretSelect = {
+  id: true,
+  connectionId: true,
+  secretKind: true,
+  encryptedValue: true,
+  keyVersion: true,
+  tokenType: true,
+  scopes: true,
+  expiresAt: true,
+  updatedAt: true
+} satisfies Prisma.BloggerConnectionSecretSelect;
+
+export type EncryptedBloggerConnectionSecret = Prisma.BloggerConnectionSecretGetPayload<{ select: typeof encryptedSecretSelect }>;
+
 interface UpsertBloggerConnectionSecretInput {
   connectionId: string;
   secretKind: BloggerSecretKind;
@@ -54,6 +68,18 @@ export async function getBloggerConnectionSecretStatus(connectionId: string) {
     secrets,
     secretMaterialReturned: false as const
   };
+}
+
+export function getEncryptedBloggerConnectionSecret(connectionId: string, secretKind: BloggerSecretKind) {
+  return prisma.bloggerConnectionSecret.findUnique({
+    where: {
+      connectionId_secretKind: {
+        connectionId,
+        secretKind
+      }
+    },
+    select: encryptedSecretSelect
+  });
 }
 
 export async function upsertEncryptedBloggerConnectionSecret(data: UpsertBloggerConnectionSecretInput) {

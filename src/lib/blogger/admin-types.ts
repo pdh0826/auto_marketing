@@ -43,7 +43,7 @@ export interface BloggerConnectionStatusSummary {
   lastError: string | null;
   blog: BloggerConnectionBlogSummary | null;
   oauthImplemented: boolean;
-  bloggerApiImplemented: false;
+  bloggerApiImplemented: boolean;
   publishImplemented: false;
 }
 
@@ -101,7 +101,7 @@ export interface BloggerConnectionSecretStatus {
   secrets: BloggerConnectionSecretAdmin[];
   secretMaterialReturned: false;
   tokenExchangeImplemented: boolean;
-  bloggerApiImplemented: false;
+  bloggerApiImplemented: boolean;
 }
 
 export interface BloggerSecretSelfTestResult {
@@ -111,5 +111,27 @@ export interface BloggerSecretSelfTestResult {
   message: string;
   secretMaterialReturned: false;
   tokenExchangeImplemented: boolean;
-  bloggerApiImplemented: false;
+  bloggerApiImplemented: boolean;
+}
+
+export interface BloggerBlogListItem {
+  id: string;
+  name: string;
+  url: string | null;
+  published: string | null;
+  updated: string | null;
+}
+
+export interface BloggerBlogListResult {
+  connectionId: string;
+  readOnly: true;
+  bloggerApiImplemented: true;
+  tokenRefreshImplemented: false;
+  draftPublishImplemented: false;
+  statusSuggestion: BloggerConnectionStatus;
+  blogs: BloggerBlogListItem[];
+  metadata: {
+    blogCount: number;
+    fetchedAt: string;
+  };
 }

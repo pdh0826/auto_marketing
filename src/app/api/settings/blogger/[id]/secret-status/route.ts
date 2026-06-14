@@ -22,7 +22,7 @@ export async function GET(_request: Request, { params }: RouteContext) {
     data: {
       ...status,
       tokenExchangeImplemented: true,
-      bloggerApiImplemented: false as const
+      bloggerApiImplemented: true as const
     }
   });
 }
