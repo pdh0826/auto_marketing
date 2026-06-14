@@ -309,3 +309,13 @@ Patch 9D-2의 Blogger blog 선택 저장은 LLM Provider를 사용하지 않는�
 - OpenAI/Ollama/Local LLM 호출은 없다.
 - `llm_call_logs`는 생성하지 않는다.
 - Blogger API raw response/error body와 token 원문은 LLM 로그나 일반 로그에 남기지 않는다.
+
+## Patch 9E-0 Blogger draft payload preview and LLM boundary
+
+Patch 9E-0의 Blogger draft payload preview는 LLM Provider를 사용하지 않는다.
+
+- `/api/content-items/[id]/blogger-draft-preview`는 provider/model/task route를 조회하지 않는다.
+- saved `draftHtml`과 verified Blogger blog selection metadata만 preview source로 사용한다.
+- OpenAI/Ollama/Local LLM 호출은 없다.
+- `llm_call_logs`는 생성하지 않는다.
+- Blogger API read/write 호출도 없으므로 token 원문이나 raw Blogger response/error body를 다루지 않는다.

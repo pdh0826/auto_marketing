@@ -89,3 +89,13 @@ Patch 9D-2는 read-only로 조회한 Blogger blog 중 하나를 connection에 �
 - 조회 결과에 있는 blog만 `bloggerBlogId`, `bloggerBlogName`, `bloggerBlogUrl`, `bloggerBlogVerifiedAt`으로 저장한다.
 - raw Blogger response, token, client secret, encrypted value는 반환하거나 저장하지 않는다.
 - token refresh, draft save, publish, scheduled publish는 구현하지 않는다.
+
+## Patch 9E-0 Blogger draft payload preview
+
+Patch 9E-0은 Blogger posts API를 호출하기 전에 draft payload 후보와 readiness만 preview한다.
+
+- `POST /api/content-items/[id]/blogger-draft-preview`는 Blogger API를 호출하지 않는다.
+- target blog는 저장된 verified Blogger blog selection metadata만 사용한다.
+- saved `draftHtml`만 HTML source로 사용하고 `draftMarkdown` 변환은 수행하지 않는다.
+- 응답에는 target blog safe metadata, title candidate, HTML length/snippet, labels candidate, readiness flags, blocking issues, warnings를 포함한다.
+- DB mutation, token refresh, draft save, publish, scheduled publish는 구현하지 않는다.

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import type { BloggerDraftPayloadPreview } from "@/lib/blogger/admin-types";
 import type { ContentAssetAdmin } from "@/lib/content/asset-types";
 import type { ContentItemAdmin } from "@/lib/content/admin-types";
 import { buildContentPlanDryRun, type ContentPlanDryRunResult, type ReadinessStatus } from "@/lib/content/content-plan-preview";
@@ -69,6 +70,7 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
   const [htmlPreviewResult, setHtmlPreviewResult] = useState<HtmlPreviewDryRunResult | null>(null);
   const [qualityPreviewResult, setQualityPreviewResult] = useState<HtmlQualityPreviewResult | null>(null);
   const [publishReadinessResult, setPublishReadinessResult] = useState<PublishReadinessResult | null>(null);
+  const [bloggerDraftPreviewResult, setBloggerDraftPreviewResult] = useState<BloggerDraftPayloadPreview | null>(null);
   const [generatedPlan, setGeneratedPlan] = useState<GeneratedPlanResult | null>(null);
   const [generatedDraft, setGeneratedDraft] = useState<GeneratedDraftResult | null>(null);
   const [candidateText, setCandidateText] = useState("");
@@ -99,6 +101,7 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
   const [applyingHtml, setApplyingHtml] = useState(false);
   const [runningQualityPreview, setRunningQualityPreview] = useState(false);
   const [runningPublishReadiness, setRunningPublishReadiness] = useState(false);
+  const [runningBloggerDraftPreview, setRunningBloggerDraftPreview] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [assetsError, setAssetsError] = useState<string | null>(null);
   const [routeError, setRouteError] = useState<string | null>(null);
@@ -108,6 +111,7 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
   const [htmlApplyError, setHtmlApplyError] = useState<string | null>(null);
   const [qualityPreviewError, setQualityPreviewError] = useState<string | null>(null);
   const [publishReadinessError, setPublishReadinessError] = useState<string | null>(null);
+  const [bloggerDraftPreviewError, setBloggerDraftPreviewError] = useState<string | null>(null);
   const [planError, setPlanError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -120,6 +124,7 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
   const canApplyHtmlCandidate = Boolean(htmlCandidateText && htmlCandidateValidation?.validation.ok && !htmlDirty && !applyingHtml);
   const canRunQualityPreview = Boolean(contentItem?.draftHtml && !runningQualityPreview);
   const canRunPublishReadiness = Boolean(!runningPublishReadiness);
+  const canRunBloggerDraftPreview = Boolean(!runningBloggerDraftPreview);
 
   const loadContentItem = useCallback(async () => {
     setLoading(true);
@@ -465,6 +470,25 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
     }
   }
 
+  async function runBloggerDraftPreview() {
+    setNotice(null);
+    setBloggerDraftPreviewError(null);
+    setRunningBloggerDraftPreview(true);
+
+    try {
+      const result = await requestJson<ApiResult<BloggerDraftPayloadPreview>>(`/api/content-items/${contentItemId}/blogger-draft-preview`, {
+        method: "POST",
+        body: JSON.stringify({})
+      });
+      setBloggerDraftPreviewResult(result.data);
+      setNotice("Blogger draft payload preview를 생성했습니다. DB에는 저장하지 않았고 Blogger API를 호출하지 않았습니다.");
+    } catch (caught) {
+      setBloggerDraftPreviewError(caught instanceof Error ? caught.message : "Blogger draft payload preview에 실패했습니다.");
+    } finally {
+      setRunningBloggerDraftPreview(false);
+    }
+  }
+
   async function generatePlanCandidate() {
     setNotice(null);
     setGenerationError(null);
@@ -626,7 +650,7 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
                 </p>
               </div>
               <button className="button secondary" type="button" disabled>
-                Blogger 연결은 Patch 9A에서 설정 예정
+                Blogger draft/publish는 후속 패치에서 연결 예정
               </button>
             </div>
 
@@ -679,6 +703,89 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
               </>
             ) : (
               <div className="notice">Publish Readiness Check를 실행하면 발행 준비 gate 결과가 화면에만 생성됩니다.</div>
+            )}
+          </section>
+
+          <section className="admin-section">
+            <div className="section-heading">
+              <div>
+                <h2>Blogger Draft Payload Preview</h2>
+                <p className="muted">
+                  저장된 draftHtml과 검증된 Blogger blog 선택 metadata로 draft payload 후보를 확인합니다. Blogger API read/write와 DB 저장은 수행하지 않습니다.
+                </p>
+              </div>
+              <button className="button secondary" type="button" disabled>
+                Blogger draft save는 아직 수행하지 않습니다
+              </button>
+            </div>
+
+            {!contentItem.draftHtml ? <div className="notice error">저장된 draftHtml이 없습니다. 먼저 HTML 후보를 draftHtml에 반영하세요.</div> : null}
+            {bloggerDraftPreviewError ? <div className="notice error">{bloggerDraftPreviewError}</div> : null}
+
+            <div className="form-actions">
+              <button className="button" type="button" disabled={!canRunBloggerDraftPreview} onClick={() => void runBloggerDraftPreview()}>
+                {runningBloggerDraftPreview ? "Draft Payload Preview 실행 중" : "Draft Payload Preview"}
+              </button>
+              <button className="button secondary" type="button" disabled>
+                실제 저장 버튼은 후속 패치에서 연결 예정
+              </button>
+            </div>
+
+            {bloggerDraftPreviewResult ? (
+              <>
+                <div className={bloggerDraftPreviewResult.draftPayloadReady ? "notice" : "notice error"}>
+                  <strong>Blogger Draft Payload Preview</strong>
+                  <p>
+                    contentReady: {bloggerDraftPreviewResult.contentReady ? "yes" : "no"} / bloggerConnectionReady:{" "}
+                    {bloggerDraftPreviewResult.bloggerConnectionReady ? "yes" : "no"} / selectedBlogReady:{" "}
+                    {bloggerDraftPreviewResult.selectedBlogReady ? "yes" : "no"} / draftPayloadReady:{" "}
+                    {bloggerDraftPreviewResult.draftPayloadReady ? "yes" : "no"}
+                  </p>
+                  <p>이 단계는 payload preview/readiness only입니다. Blogger draft save는 아직 수행하지 않습니다.</p>
+                </div>
+                <div className="detail-grid">
+                  <DetailItem label="Target Blog ID" value={bloggerDraftPreviewResult.targetBlog?.id ?? "-"} />
+                  <DetailItem label="Target Blog Name" value={bloggerDraftPreviewResult.targetBlog?.name ?? "-"} />
+                  <DetailItem label="Target Blog URL" value={bloggerDraftPreviewResult.targetBlog?.url ?? "-"} />
+                  <DetailItem label="Verified At" value={bloggerDraftPreviewResult.targetBlog?.verifiedAt ? formatDate(bloggerDraftPreviewResult.targetBlog.verifiedAt) : "-"} />
+                  <DetailItem label="Title Candidate" value={bloggerDraftPreviewResult.titleCandidate ?? "-"} />
+                  <DetailItem label="HTML Length" value={String(bloggerDraftPreviewResult.htmlLength)} />
+                  <DetailItem label="HTML Validation" value={bloggerDraftPreviewResult.htmlSafetySummary.validationOk ? "pass" : "fail"} />
+                  <DetailItem label="HTML Issues" value={String(bloggerDraftPreviewResult.htmlSafetySummary.issueCount)} />
+                  <DetailItem label="HTML Warnings" value={String(bloggerDraftPreviewResult.htmlSafetySummary.warningCount)} />
+                  <DetailItem label="Quality Grade" value={bloggerDraftPreviewResult.htmlSafetySummary.qualityGrade} />
+                  <DetailItem label="Quality Score Preview" value={String(bloggerDraftPreviewResult.htmlSafetySummary.qualityScorePreview)} />
+                  <DetailItem label="Quality Required Fails" value={String(bloggerDraftPreviewResult.htmlSafetySummary.qualityRequiredFailCount)} />
+                  <DetailItem label="Blogger API Write" value={bloggerDraftPreviewResult.bloggerApiWriteImplemented ? "implemented" : "not implemented"} />
+                  <DetailItem label="Blogger API Read" value={bloggerDraftPreviewResult.bloggerApiReadImplemented ? "implemented" : "not implemented"} />
+                  <DetailItem label="Draft Save" value={bloggerDraftPreviewResult.draftSaveImplemented ? "implemented" : "not implemented"} />
+                  <DetailItem label="Publish" value={bloggerDraftPreviewResult.publishImplemented ? "implemented" : "not implemented"} />
+                </div>
+                <ValidationList
+                  title="Blogger Draft Preview Blocking Issues"
+                  items={bloggerDraftPreviewResult.blockingIssues}
+                  emptyText="blocking issue가 없습니다."
+                  isError
+                />
+                <ValidationList
+                  title="Blogger Draft Preview Warnings"
+                  items={bloggerDraftPreviewResult.warnings}
+                  emptyText="warning이 없습니다."
+                  isWarning
+                />
+                <ValidationList
+                  title="Labels Candidate"
+                  items={bloggerDraftPreviewResult.labelsCandidate}
+                  emptyText="labels 후보가 없습니다."
+                />
+                <div className="read-block">
+                  <h3>HTML Snippet</h3>
+                  <pre>{bloggerDraftPreviewResult.htmlSnippet ?? "저장된 draftHtml snippet이 없습니다."}</pre>
+                </div>
+                <div className="notice">preview는 저장된 draftHtml의 짧은 snippet만 표시합니다. full draftHtml payload 저장/전송은 후속 패치 범위입니다.</div>
+              </>
+            ) : (
+              <div className="notice">Draft Payload Preview를 실행하면 Blogger draft 저장 전 payload 후보와 readiness 결과가 화면에만 생성됩니다.</div>
             )}
           </section>
 

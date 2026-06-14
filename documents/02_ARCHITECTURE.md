@@ -222,3 +222,22 @@ Patch 9D-2는 read-only 조회 결과 중 사용자가 선택한 Blogger blog를
 - generic PATCH로 저장된 Blogger blog ID/name은 verified selection으로 보지 않는다.
 - publish readiness는 Blogger blog selection check를 추가하지만 `publishReady=false`를 유지한다.
 - token refresh, draft save, publish는 후속 범위다.
+
+## Patch 9E-0 Blogger Draft Payload Preview
+
+Patch 9E-0은 실제 Blogger draft save 전에 payload 후보와 readiness를 preview-only로 확인한다.
+
+```text
+/content/[id]
+→ Draft Payload Preview
+→ POST /api/content-items/[id]/blogger-draft-preview
+→ saved draftHtml + verified Blogger selection metadata 확인
+→ safe preview DTO 반환
+```
+
+- API는 request body에서 target Blogger blog ID를 받지 않는다.
+- target blog는 content item의 Blog에 연결된 `BloggerConnection` verified metadata만 사용한다.
+- 연결된 Blogger connection이 여러 개면 임의 선택하지 않고 blocking issue를 반환한다.
+- saved `draftHtml`만 payload 후보 HTML source로 사용하며 `draftMarkdown` 즉시 변환은 하지 않는다.
+- Blogger API read/write, token refresh, DB mutation, draft save, publish는 수행하지 않는다.
+- publish readiness의 `publishReady=false`와 top-level `ready=false`는 유지한다.

@@ -71,7 +71,7 @@ mediaPlaceholderCount = 1
 
 ## Next Patch
 
-Patch 9E-0 후보: Blogger draft save readiness / draft payload preview.
+Patch 9E-1 후보: Blogger draft save 구현 전 최종 승인/guard 또는 actual draft save.
 
 Current Blogger state:
 
@@ -88,14 +88,14 @@ Current Blogger state:
 - Access/refresh tokens are stored only as encrypted values and safe metadata.
 - Patch 9D-1 added read-only Blogger blog list lookup.
 - Patch 9D-2 added verified Blogger blog selection save.
+- Patch 9E-0 added Blogger draft payload preview/readiness without Blogger API calls or DB mutation.
 - Blogger draft save, publish, scheduled publish, and token refresh are not implemented yet.
 
 Target:
 
-- Design a draft-save readiness check and safe draft payload preview before calling Blogger posts APIs.
+- Review the final guard requirements before calling Blogger posts APIs, then decide whether Patch 9E-1 should implement actual Blogger draft save.
 - Keep token plaintext hidden and avoid storing raw Blogger responses.
-- Keep actual Blogger draft save/publish for a later patch unless explicitly approved.
-- Actual Blogger draft save/publish remains later.
+- Keep publish/scheduled publish for a later patch unless explicitly approved.
 
 ## Do Not Start With
 
@@ -112,12 +112,12 @@ Target:
 ```text
 AGENTS.md와 documents/ 폴더의 관련 문서를 먼저 읽어줘.
 
-현재 프로젝트 상태를 점검하고 Patch 9D 작업계획을 제안해줘.
+현재 프로젝트 상태를 점검하고 Patch 9E-1 작업계획을 제안해줘.
 
 목표:
-- Patch 9E-0에서 Blogger draft save readiness / draft payload preview 범위를 검토한다.
-- token refresh, Blogger draft save, publish는 구현하지 않는다.
-- 실제 Blogger draft save/publish는 구현하지 않는다.
+- Patch 9E-0의 Blogger draft payload preview/readiness 구현 상태를 확인한다.
+- Patch 9E-1에서 actual Blogger draft save를 시작할지, 최종 승인/guard를 먼저 둘지 검토한다.
+- token refresh, publish, scheduled publish는 구현하지 않는다.
 
 아직 구현하지 말고 계획만 작성해줘.
 ```

@@ -23,8 +23,8 @@
 19. Patch 9C-2 - OAuth callback token exchange: 완료
 20. Patch 9D-1 - Blogger blog list read-only 조회: 완료
 21. Patch 9D-2 - 조회된 Blogger blog를 connection에 수동 반영: 완료
-22. Patch 9E-0 - Blogger draft save readiness / draft payload preview: 다음 패치 후보
-23. Patch 9E-1 이후 - Blogger API draft save
+22. Patch 9E-0 - Blogger draft save readiness / draft payload preview: 완료
+23. Patch 9E-1 이후 - Blogger API draft save guard/actual implementation
 24. 예약 발행
 25. 운영 대시보드
 26. 키워드 연구소
@@ -75,10 +75,20 @@ Patch 9D-2 완료:
 - publish readiness에 Blogger blog selection check 추가, `publishReady=false` 유지
 - token refresh, draft save, publish는 구현하지 않음
 
+Patch 9E-0 완료:
+
+- `POST /api/content-items/[id]/blogger-draft-preview` preview-only API 추가
+- saved `draftHtml`만 Blogger draft payload 후보로 사용
+- verified Blogger blog selection metadata만 target blog로 사용
+- Blogger connection이 여러 개면 임의 선택하지 않고 `blogger_connection_ambiguous` blocking issue 반환
+- HTML validation, quality preview, publish readiness를 조합해 `draftPayloadReady` preview flag 제공
+- Blogger API read/write, DB mutation, token refresh, draft save, publish는 구현하지 않음
+- publish readiness의 `publishReady=false`, top-level `ready=false` 유지
+
 다음 패치 후보:
 
-- Patch 9E-0: Blogger draft save readiness / draft payload preview
-- 실제 Blogger draft save/publish는 Patch 9E-1 이후
+- Patch 9E-1: Blogger draft save 구현 전 최종 승인/guard 또는 actual draft save
+- Blogger publish/scheduled publish는 Patch 9E-1 이후 별도 패치
 
 먼저 하지 말 것:
 

@@ -56,6 +56,14 @@ export function getBloggerConnectionForBlog(blogId: string) {
   });
 }
 
+export function listBloggerConnectionsForBlog(blogId: string) {
+  return prisma.bloggerConnection.findMany({
+    where: { blogId },
+    orderBy: { updatedAt: "desc" },
+    select: safeSelect
+  });
+}
+
 export function createBloggerConnection(data: Prisma.BloggerConnectionUncheckedCreateInput) {
   return prisma.bloggerConnection.create({
     data,

@@ -404,3 +404,17 @@ npm run build
 - publish readiness에는 `blogger_blog_selection` check가 추가되지만 `publishReady=false`, top-level `ready=false`를 유지한다.
 - token refresh, draft save, publish, scheduled publish는 발생하지 않는다.
 - `llm_call_logs`는 생성되지 않는다.
+
+## Patch 9E-0 수동 검증
+
+- `POST /api/content-items/[id]/blogger-draft-preview`는 request body의 blog id를 받지 않는다.
+- target blog는 content item의 Blog에 연결된 `BloggerConnection` verified metadata에서만 결정한다.
+- 연결된 Blogger connection이 여러 개면 임의 선택하지 않고 `blogger_connection_ambiguous` blocking issue를 반환한다.
+- `bloggerBlogId`와 `bloggerBlogVerifiedAt`이 모두 있어야 `selectedBlogReady=true`다.
+- saved `draftHtml`만 HTML source로 사용하고 `draftMarkdown` 즉시 변환은 수행하지 않는다.
+- 응답은 `htmlSnippet`을 짧게 반환하고 full `draftHtml`을 payload preview로 크게 반환하지 않는다.
+- draftHtml 없음, title 후보 없음, HTML validation fail, quality required fail은 `draftPayloadReady=false`를 만든다.
+- verified blog + connected connection + valid draftHtml + content readiness pass면 `draftPayloadReady=true`가 될 수 있지만 `draftSaveImplemented=false`다.
+- Blogger API read/write, token refresh, draft save, publish, scheduled publish는 발생하지 않는다.
+- content item status, `qualityScore`, `publishedAt`, `scheduledAt`은 변경되지 않는다.
+- `llm_call_logs`는 생성되지 않는다.

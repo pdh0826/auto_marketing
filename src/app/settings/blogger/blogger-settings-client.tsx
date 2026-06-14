@@ -580,7 +580,7 @@ export function BloggerSettingsClient() {
             <DetailItem label="Fetched At" value={new Date(blogListResult.metadata.fetchedAt).toLocaleString()} />
           </div>
           <div className="notice">
-            token refresh는 아직 구현되지 않았습니다. Blogger blog 선택 반영은 후속 Patch 9D-2에서 처리 예정입니다.
+            token refresh는 아직 구현되지 않았습니다. 선택 저장은 verified metadata로만 반영되며 Blogger draft/publish는 후속 패치에서 처리 예정입니다.
           </div>
           {blogListResult.blogs.length > 0 ? (
             <table className="admin-table">

@@ -269,3 +269,23 @@ Policy:
 - No Blogger draft save, publish, or scheduled publish.
 - No raw Blogger response/error, token, client secret, or encrypted value returned by API/UI.
 - No LLM calls or `llm_call_logs`.
+
+## Patch 9E-0 Blogger Draft Payload Preview
+
+Implemented after Patch 9D-2:
+
+- Added preview-only `POST /api/content-items/[id]/blogger-draft-preview`.
+- Added a pure Blogger draft payload preview helper that uses saved `draftHtml` only.
+- Uses stored verified Blogger blog selection metadata as the target blog.
+- Treats `bloggerBlogId` without `bloggerBlogVerifiedAt` as unverified.
+- Returns title candidate, short HTML snippet, labels candidate, HTML safety summary, readiness flags, blocking issues, and warnings.
+- Adds a “Blogger Draft Payload Preview” section to the content detail page.
+- Keeps actual Blogger draft save, publish, scheduled publish, token refresh, and Blogger API read/write out of scope.
+- Keeps publish readiness `publishReady=false` and top-level `ready=false`.
+
+Policy:
+
+- No DB mutation.
+- No Blogger API read/write call.
+- No full `draftHtml` payload preview returned as a large response field.
+- No access token, refresh token, client secret, encrypted value, raw Blogger response/error, LLM call, or `llm_call_logs`.

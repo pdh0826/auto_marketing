@@ -412,3 +412,15 @@ Patch 9D-2는 새 테이블을 추가하지 않고 `blogger_connections`에 검�
 - raw Blogger response, token, client secret, encrypted value는 저장하지 않는다.
 - content item status, qualityScore, publishedAt, scheduledAt은 변경하지 않는다.
 - publish readiness는 선택된 Blogger blog check를 추가하지만 `publishReady=false`를 유지한다.
+
+## Patch 9E-0 Blogger draft payload preview data policy
+
+Patch 9E-0은 새 테이블이나 컬럼을 추가하지 않는다.
+
+- `POST /api/content-items/[id]/blogger-draft-preview`는 DB를 변경하지 않는다.
+- preview target blog는 `bloggerBlogId`, `bloggerBlogName`, `bloggerBlogUrl`, `bloggerBlogVerifiedAt` safe metadata만 사용한다.
+- `bloggerBlogId`만 있고 `bloggerBlogVerifiedAt`이 없으면 verified selection으로 보지 않는다.
+- saved `draftHtml`만 payload 후보 source로 사용하며, API/UI에는 짧은 `htmlSnippet`과 summary 중심으로 반환한다.
+- `qualityScore`, `status`, `publishedAt`, `scheduledAt`은 변경하지 않는다.
+- Blogger API read/write, token refresh, draft save, publish는 수행하지 않는다.
+- raw Blogger response, token, client secret, encrypted value는 저장하거나 반환하지 않는다.

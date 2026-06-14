@@ -147,3 +147,36 @@ export interface BloggerBlogSelectionResult {
   draftPublishImplemented: false;
   tokenRefreshImplemented: false;
 }
+
+export interface BloggerDraftPayloadPreview {
+  contentItemId: string;
+  targetBlog: {
+    id: string;
+    name: string | null;
+    url: string | null;
+    verifiedAt: string | null;
+  } | null;
+  titleCandidate: string | null;
+  htmlLength: number;
+  htmlSnippet: string | null;
+  htmlSafetySummary: {
+    validationOk: boolean;
+    issueCount: number;
+    warningCount: number;
+    qualityGrade: "pass" | "warn" | "fail";
+    qualityScorePreview: number;
+    qualityRequiredFailCount: number;
+  };
+  labelsCandidate: string[];
+  contentReady: boolean;
+  bloggerConnectionReady: boolean;
+  selectedBlogReady: boolean;
+  draftPayloadReady: boolean;
+  blockingIssues: string[];
+  warnings: string[];
+  bloggerApiWriteImplemented: false;
+  bloggerApiReadImplemented: false;
+  draftSaveImplemented: false;
+  publishImplemented: false;
+  tokenRefreshImplemented: false;
+}
