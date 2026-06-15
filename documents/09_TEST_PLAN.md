@@ -693,3 +693,14 @@ npm run build
 - UI preview 영역은 `draftHtml에 반영` 버튼을 제공하지 않는다.
 - preview 버튼 클릭 후 `draftMarkdown`, `draftHtml`, status, `qualityScore`, `publishedAt`, `scheduledAt`이 변경되지 않아야 한다.
 - preview 버튼 클릭 후 Blogger API/draft save/publish/token refresh와 LLM 호출이 발생하지 않아야 한다.
+
+## Patch 9E-4E Blog HTML preview manual apply guard 검증
+
+- Blog post template preview 결과가 있고 validation error가 없으면 “HTML 후보로 사용” 버튼이 표시/활성화되어야 한다.
+- “HTML 후보로 사용”은 preview HTML을 기존 HTML candidate editor state로만 복사해야 한다.
+- 복사 직후 HTML candidate source는 `blog template preview` 계열로 표시되어야 한다.
+- 복사 직후 HTML candidate validation은 stale/empty 상태가 되어 기존 `validate-html` 재검증 전 `draftHtml에 반영` 버튼이 활성화되지 않아야 한다.
+- 기존 `validate-html` / `apply-html` route와 버튼은 그대로 재사용해야 하며, 이번 패치에서 새 저장 API를 만들지 않는다.
+- preview validation error가 있으면 HTML 후보로 가져오기 버튼은 disabled이거나 error 안내를 표시해야 한다.
+- 버튼 클릭만으로 `content_items.draftMarkdown`/`draftHtml`, status, `qualityScore`, `publishedAt`, `scheduledAt`이 변경되지 않아야 한다.
+- 버튼 클릭만으로 Blogger API, Blogger draft save, publish, scheduled publish, token refresh, LLM 호출, `llm_call_logs` 생성이 발생하지 않아야 한다.

@@ -112,10 +112,13 @@ latest committed baseline before Patch 9E-4C-3C: 3cb3fbc Add stepwise draft gene
 - Patch 9E-4D adds deterministic Blog Post Template HTML preview from the current Draft Markdown candidate.
 - `POST /api/content-items/[id]/blog-post-template-preview` is preview-only and does not mutate content items, create `llm_call_logs`, or call Blogger APIs.
 - The content detail UI can render themed preview HTML in an iframe/read-only textarea, but does not provide a `draftHtml` apply button in that preview area.
+- Patch 9E-4E adds a client-side handoff guard from Blog Post Template HTML preview to the existing HTML candidate editor.
+- The “HTML 후보로 사용” action does not call APIs, save `draftHtml`, create `llm_call_logs`, mutate content items, or touch Blogger tables.
+- HTML candidate source can now show `blog template preview`; validation is stale until existing `validate-html` is run.
 
 ## Next Patch Candidate
 
-Patch 9E-4E 후보: Blog post template preview to existing HTML candidate handoff guard.
+Patch 9E-4F 후보: Blog template HTML candidate validation/apply readiness polish.
 
 Alternative candidates:
 
@@ -123,8 +126,9 @@ Alternative candidates:
 
 Recommended scope:
 
-- Decide whether a reviewed Blog Post Template HTML preview can be copied into the existing HTML candidate editor.
-- If implemented, keep the action client-side only and require existing `validate-html` and manual `apply-html` before saving.
+- Review the end-to-end path from stepwise final candidate to blog template preview to HTML candidate validation.
+- Improve readiness/stale notices around `validate-html`, `apply-html`, quality preview, and Blogger draft approval invalidation.
+- Keep any `draftHtml` save behind the existing manual `apply-html` confirmation only.
 - Keep automatic `draftHtml`, status, qualityScore, Blogger draft save, and publish out of scope unless separately requested.
 - Keep existing `generate-draft` route unchanged.
 - Keep commercial/high-performance remote providers on the existing one-shot full draft path.
@@ -152,13 +156,13 @@ Recommended scope:
 ```text
 AGENTS.md와 documents/ 폴더의 관련 문서를 먼저 읽어줘.
 
-현재 프로젝트 상태를 점검하고 Patch 9E-4E 작업계획을 제안해줘.
+현재 프로젝트 상태를 점검하고 Patch 9E-4F 작업계획을 제안해줘.
 
 목표:
-- Patch 9E-4D의 Blog Post Template HTML preview 구현 상태를 확인한다.
-- Preview HTML을 기존 HTML candidate editor로 client-side 복사할지 설계한다.
-- 복사한다면 `validate-html`과 manual `apply-html` guard를 반드시 재사용한다.
-- 자동 `draftHtml` 저장, content item status/qualityScore/publishedAt/scheduledAt 변경, Blogger API 호출, LLM 호출은 금지한다.
+- Patch 9E-4E의 Blog HTML preview manual apply guard 구현 상태를 확인한다.
+- Stepwise final candidate → Draft Markdown candidate → Blog HTML preview → HTML candidate editor → validate-html 흐름의 UX/stale 안내를 점검한다.
+- 기존 `apply-html` 수동 저장 guard를 유지하고, 자동 `draftHtml` 저장은 금지한다.
+- content item status/qualityScore/publishedAt/scheduledAt 변경, Blogger API 호출, LLM 호출은 금지한다.
 - Blogger OAuth/live draft save는 Patch 9E-5 후보로 분리한다.
 
 아직 구현하지 말고 계획만 작성해줘.

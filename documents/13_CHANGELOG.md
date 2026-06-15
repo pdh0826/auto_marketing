@@ -686,3 +686,20 @@ Policy:
 - No content item status, `qualityScore`, `publishedAt`, or `scheduledAt` mutation.
 - No LLM call or `llm_call_logs` creation.
 - No Blogger API read/write, draft save, publish, scheduled publish, token refresh, `posts.insert`, or `posts.update`.
+
+## Patch 9E-4E: Blog HTML Preview Manual Apply Guard
+
+Implemented after Patch 9E-4D:
+
+- Added an “HTML 후보로 사용” action for Blog Post Template HTML previews.
+- The action copies preview HTML into the existing HTML candidate editor as client-side state only.
+- Added `blog template preview` HTML candidate source labeling.
+- The handoff clears/stales HTML candidate validation so the existing `validate-html` and manual `apply-html` flow must be used before saving.
+- Added UI copy clarifying that the handoff does not save `draftHtml`, mutate content items, or call Blogger APIs.
+
+Policy:
+
+- No automatic `draftMarkdown` or `draftHtml` save.
+- No content item status, `qualityScore`, `publishedAt`, or `scheduledAt` mutation.
+- No LLM call or `llm_call_logs` creation.
+- No Blogger API read/write, draft save, publish, scheduled publish, token refresh, `posts.insert`, or `posts.update`.

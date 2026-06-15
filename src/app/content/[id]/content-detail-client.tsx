@@ -124,7 +124,7 @@ interface ApiErrorWithData extends Error {
   };
 }
 
-type HtmlCandidateSource = "none" | "html-preview" | "quality-repair" | "manual-edit";
+type HtmlCandidateSource = "none" | "html-preview" | "quality-repair" | "blog-template-preview" | "manual-edit";
 type DraftCandidateSource = "none" | "llm-generated" | "stepwise-final-candidate" | "manual-edit";
 type StepwiseRunStatus = "pending" | "running" | "completed" | "failed" | "cancelled";
 type StepwiseStepStatus = "pending" | "running" | "success" | "failed";
@@ -316,6 +316,9 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
   const canApplyGeneratedDraft = Boolean(generatedDraft?.validation.ok && !draftDirty && !applyingDraft);
   const canRunHtmlPreview = Boolean(contentItem?.draftMarkdown && !runningHtmlPreview);
   const canRunBlogPostTemplatePreview = Boolean(draftCandidateText.trim() && !runningBlogPostTemplatePreview);
+  const canCopyBlogPostTemplatePreviewToHtmlCandidate = Boolean(
+    blogPostTemplatePreviewResult?.html && blogPostTemplatePreviewResult.validationSummary.errors.length === 0
+  );
   const canApplyHtmlCandidate = Boolean(htmlCandidateText && htmlCandidateValidation?.validation.ok && !htmlDirty && !applyingHtml);
   const canRunQualityPreview = Boolean(contentItem?.draftHtml && !runningQualityPreview);
   const canRunQualityRepairPreview = Boolean((contentItem?.draftMarkdown || contentItem?.draftHtml) && !runningQualityRepairPreview);
@@ -789,6 +792,26 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
     setHtmlEditMode(false);
     setHtmlDirty(true);
     setNotice("Quality repair 후보를 HTML 후보로 사용합니다. HTML 후보 섹션에서 재검증한 뒤 수동으로 draftHtml에 반영하세요.");
+  }
+
+  function copyBlogPostTemplatePreviewToHtmlCandidate() {
+    if (!blogPostTemplatePreviewResult?.html) {
+      setBlogPostTemplatePreviewError("Blog post template preview HTML이 없습니다.");
+      return;
+    }
+    if (blogPostTemplatePreviewResult.validationSummary.errors.length > 0) {
+      setBlogPostTemplatePreviewError("Template preview error가 있는 HTML은 후보로 가져올 수 없습니다.");
+      return;
+    }
+
+    setHtmlCandidateText(blogPostTemplatePreviewResult.html);
+    setHtmlCandidateSource("blog-template-preview");
+    setHtmlCandidateValidation(null);
+    setHtmlEditMode(false);
+    setHtmlDirty(true);
+    setHtmlPreviewError(null);
+    setHtmlApplyError(null);
+    setNotice("Blog template preview HTML을 HTML 후보로 가져왔습니다. 아직 draftHtml에 저장하지 않았고, 기존 HTML 재검증과 수동 반영 버튼을 별도로 눌러야 저장됩니다.");
   }
 
   async function createStepwiseRun() {
@@ -2047,8 +2070,25 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
                         Preview HTML (read-only)
                         <textarea value={blogPostTemplatePreviewResult.html} readOnly spellCheck={false} />
                       </label>
+                      {blogPostTemplatePreviewResult.validationSummary.errors.length > 0 ? (
+                        <div className="notice error">Template preview error가 있어 HTML 후보로 가져올 수 없습니다. 초안 후보를 수정한 뒤 preview를 다시 생성하세요.</div>
+                      ) : null}
+                      <div className="form-actions">
+                        <button
+                          className="button secondary"
+                          type="button"
+                          disabled={!canCopyBlogPostTemplatePreviewToHtmlCandidate}
+                          onClick={copyBlogPostTemplatePreviewToHtmlCandidate}
+                        >
+                          HTML 후보로 사용
+                        </button>
+                        <button className="button secondary" type="button" disabled>
+                          draftHtml 저장은 기존 수동 반영 버튼에서만 수행
+                        </button>
+                      </div>
                       <div className="notice warning">
-                        이 preview는 draftHtml에 자동 반영하지 않습니다. HTML 저장/품질 검사/Blogger draft save는 별도 수동 단계에서 재검증 후 진행하세요.
+                        이 preview는 draftHtml에 자동 반영하지 않습니다. HTML 후보로 가져오기만으로는 content item이 변경되지 않습니다. 기존 HTML 검증 및 수동 반영 버튼을
+                        별도로 눌러야 저장되며, Blogger draft save/publish/token refresh는 호출하지 않습니다.
                       </div>
                     </>
                   ) : (
@@ -2169,7 +2209,7 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
                   <DetailItem label="Assets Without Placeholder" value={String(htmlPreviewResult.metadata.assetWithoutPlaceholderCount)} />
                 </div>
                 <div className="notice">
-                  HTML candidate source: {formatHtmlCandidateSource(htmlCandidateSource)}. source가 quality repair이면 HTML 후보 재검증 후 수동 반영하세요.
+                  HTML candidate source: {formatHtmlCandidateSource(htmlCandidateSource)}. {getHtmlCandidateSourceGuidance(htmlCandidateSource)}
                 </div>
                 <ReadinessTable checks={htmlPreviewResult.checks} />
                 <ValidationList title="Markdown Validation Errors" items={htmlPreviewResult.draftValidation.errors} emptyText="draft validation error가 없습니다." isError />
@@ -2221,7 +2261,7 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
                     <HtmlMediaMappingTable mappings={htmlCandidateValidation.mediaMappings} />
                   </>
                 ) : (
-                  <div className="notice">HTML 후보 재검증 결과가 표시됩니다. quality-repair source는 재검증 후 수동 반영하세요.</div>
+                  <div className="notice">HTML 후보 재검증 결과가 표시됩니다. {getHtmlCandidateSourceGuidance(htmlCandidateSource)}</div>
                 )}
                 <div className="read-block">
                   <h3>HTML Candidate Preview</h3>
@@ -2265,7 +2305,8 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
             {!htmlPreviewResult && htmlCandidateText ? (
               <>
                 <div className="notice warning">
-                  HTML candidate source: {formatHtmlCandidateSource(htmlCandidateSource)}. HTML Dry Run metadata는 없지만, 기존 validate-html / apply-html 흐름으로 재검증하고 수동 반영할 수 있습니다.
+                  HTML candidate source: {formatHtmlCandidateSource(htmlCandidateSource)}. HTML Dry Run metadata는 없지만, 기존 validate-html / apply-html 흐름으로 재검증하고
+                  수동 반영할 수 있습니다. {getHtmlCandidateSourceGuidance(htmlCandidateSource)}
                 </div>
                 {htmlCandidateValidation ? (
                   <>
@@ -2293,7 +2334,7 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
                     )}
                   </>
                 ) : (
-                  <div className="notice warning">HTML 후보로 사용한 repair candidate는 HTML 후보 섹션에서 재검증한 뒤 수동 반영하세요.</div>
+                  <div className="notice warning">HTML 후보는 HTML 후보 섹션에서 재검증한 뒤 수동 반영하세요. {getHtmlCandidateSourceGuidance(htmlCandidateSource)}</div>
                 )}
                 <div className="read-block">
                   <h3>HTML Candidate Preview</h3>
@@ -3094,15 +3135,34 @@ function countRequiredQualityFails(result: HtmlQualityPreviewResult) {
 
 function formatHtmlCandidateSource(source: HtmlCandidateSource) {
   if (source === "html-preview") {
-    return "html-preview";
+    return "generated HTML candidate";
   }
   if (source === "quality-repair") {
-    return "quality-repair";
+    return "quality repair HTML candidate";
+  }
+  if (source === "blog-template-preview") {
+    return "blog template preview";
   }
   if (source === "manual-edit") {
-    return "manual-edit";
+    return "manual edit";
   }
-  return "none";
+  return "saved draftHtml / none";
+}
+
+function getHtmlCandidateSourceGuidance(source: HtmlCandidateSource) {
+  if (source === "blog-template-preview") {
+    return "Blog template preview에서 가져온 후보이며, 아직 draftHtml에 저장되지 않았습니다. 재검증 후 기존 수동 반영 버튼을 별도로 눌러야 저장됩니다.";
+  }
+  if (source === "quality-repair") {
+    return "Quality repair에서 가져온 후보이며, 아직 draftHtml에 저장되지 않았습니다. 재검증 후 기존 수동 반영 버튼을 별도로 눌러야 저장됩니다.";
+  }
+  if (source === "html-preview") {
+    return "저장된 draftMarkdown에서 생성한 HTML 후보이며, 검토 후 수동 반영 버튼을 눌러야 draftHtml에 저장됩니다.";
+  }
+  if (source === "manual-edit") {
+    return "사용자가 편집한 HTML 후보이며, 재검증 후 수동 반영 버튼을 눌러야 draftHtml에 저장됩니다.";
+  }
+  return "HTML 후보가 아직 없거나 saved draftHtml만 표시 중입니다.";
 }
 
 function formatDraftCandidateSource(source: DraftCandidateSource) {

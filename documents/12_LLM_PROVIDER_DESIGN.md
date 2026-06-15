@@ -685,3 +685,14 @@ Boundary:
 - Raw HTML and blocked patterns are escaped/count-summarized; prompt text, provider responses, tokens, secrets, and encrypted values are not involved.
 - The UI preview uses the current Draft Markdown candidate state and does not save `draftHtml`.
 - No `llm_call_logs`, Blogger API calls, draft save, publish, scheduled publish, token refresh, or content item status/quality timestamp mutations occur.
+
+## Patch 9E-4E blog template preview handoff guard
+
+Patch 9E-4E allows a reviewed Blog Post Template HTML preview to be copied into the existing HTML candidate editor.
+
+Boundary:
+
+- The handoff action is client-side state only and does not call the LLM provider, create `llm_call_logs`, or call a server API.
+- It does not mutate `content_items.draftMarkdown`, `draftHtml`, status, `qualityScore`, `publishedAt`, or `scheduledAt`.
+- It marks the HTML candidate validation as stale so the existing `validate-html` and manual `apply-html` flow must be used before saving.
+- Blogger API, draft save, publish, scheduled publish, and token refresh remain out of scope.
