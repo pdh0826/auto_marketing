@@ -696,3 +696,16 @@ Boundary:
 - It does not mutate `content_items.draftMarkdown`, `draftHtml`, status, `qualityScore`, `publishedAt`, or `scheduledAt`.
 - It marks the HTML candidate validation as stale so the existing `validate-html` and manual `apply-html` flow must be used before saving.
 - Blogger API, draft save, publish, scheduled publish, and token refresh remain out of scope.
+
+## Patch 9E-4F manual draftHtml apply guard hardening
+
+Patch 9E-4F hardens the existing manual `apply-html` save path.
+
+Boundary:
+
+- `/api/content-items/[id]/apply-html` reuses deterministic HTML validation on the server immediately before saving.
+- The route writes only `content_items.draftHtml`; it does not mutate `draftMarkdown`, status, `qualityScore`, `publishedAt`, or `scheduledAt`.
+- The route returns safe apply summary metadata only: source, validation status, HTML length, unsafe pattern count, applied field, and side-effect false flags.
+- The UI keeps `draftHtml에 반영` disabled until a current HTML candidate validation has passed and the candidate is not dirty.
+- The UI uses a 2-step explicit confirmation guard: the first click arms the save and the second click calls `apply-html`.
+- Blogger API, draft save, publish, scheduled publish, token refresh, LLM calls, and `llm_call_logs` remain out of scope.

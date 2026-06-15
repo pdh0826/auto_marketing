@@ -704,3 +704,15 @@ npm run build
 - preview validation error가 있으면 HTML 후보로 가져오기 버튼은 disabled이거나 error 안내를 표시해야 한다.
 - 버튼 클릭만으로 `content_items.draftMarkdown`/`draftHtml`, status, `qualityScore`, `publishedAt`, `scheduledAt`이 변경되지 않아야 한다.
 - 버튼 클릭만으로 Blogger API, Blogger draft save, publish, scheduled publish, token refresh, LLM 호출, `llm_call_logs` 생성이 발생하지 않아야 한다.
+
+## Patch 9E-4F Manual draftHtml apply guard hardening 검증
+
+- `POST /api/content-items/[id]/apply-html`는 저장 전 서버에서 `validateHtmlCandidate`를 다시 실행해야 한다.
+- 비어 있는 HTML, validation fail, 위험 태그/script/iframe/event handler/javascript URL/local path 패턴은 저장을 거부해야 한다.
+- 저장 성공 시 업데이트 대상은 `content_items.draftHtml`뿐이어야 하며 `updatedAt` 외 `draftMarkdown`, status, `qualityScore`, `publishedAt`, `scheduledAt`은 변경하지 않아야 한다.
+- apply 응답에는 full HTML이 아닌 safe guard summary가 포함되어야 한다: source, validationOk, htmlLength, unsafePatternCount, appliedField, side-effect false flags.
+- UI는 재검증 전 또는 validation fail/stale 상태에서 `draftHtml에 반영` 버튼을 disabled로 유지해야 한다.
+- UI는 저장 버튼 주변에 draftHtml만 저장, Blogger draft save/publish/token refresh 없음, publish/scheduled publish 별도 단계 문구를 표시해야 한다.
+- UI 저장은 2-step 명시 승인 guard를 사용한다: 첫 클릭은 저장 확인 대기 상태를 표시하고, 두 번째 클릭에서만 `apply-html`을 호출한다.
+- 저장 성공 후 HTML candidate source는 saved/applied 상태로 표시되고, Quality Dry Run / Publish Readiness / Blogger Draft Payload Preview 재실행 및 draft approval stale 가능성을 안내해야 한다.
+- 저장 smoke에서는 `draftHtml` hash만 변경되고 `draftMarkdown`, status, `qualityScore`, `publishedAt`, `scheduledAt`, Blogger tables, `llm_call_logs`는 변경되지 않아야 한다.

@@ -703,3 +703,23 @@ Policy:
 - No content item status, `qualityScore`, `publishedAt`, or `scheduledAt` mutation.
 - No LLM call or `llm_call_logs` creation.
 - No Blogger API read/write, draft save, publish, scheduled publish, token refresh, `posts.insert`, or `posts.update`.
+
+## Patch 9E-4F: Manual draftHtml Apply Guard Hardening
+
+Implemented after Patch 9E-4E:
+
+- Hardened the existing `POST /api/content-items/[id]/apply-html` response with safe guard summary metadata.
+- Added unsafe pattern count to HTML candidate validation metadata.
+- Kept server-side validation immediately before saving `draftHtml`.
+- Added UI copy clarifying that `draftHtml에 반영` saves only `draftHtml` and does not call Blogger draft save/publish/token refresh.
+- Replaced the native confirm with an in-page 2-step explicit save confirmation guard.
+- Added last apply guard summary display on the content detail page.
+- After successful manual apply, the HTML candidate source is shown as applied/saved draftHtml.
+
+Policy:
+
+- `apply-html` writes only `content_items.draftHtml`.
+- No automatic `draftMarkdown` save.
+- No content item status, `qualityScore`, `publishedAt`, or `scheduledAt` mutation.
+- No LLM call or `llm_call_logs` creation.
+- No Blogger API read/write, draft save, publish, scheduled publish, token refresh, `posts.insert`, or `posts.update`.

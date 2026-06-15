@@ -59,6 +59,7 @@ export interface HtmlCandidateValidationResult {
     unmatchedMediaReferenceCount: number;
     assetWithoutReferenceCount: number;
     externalUrlCount: number;
+    unsafePatternCount: number;
   };
 }
 
@@ -164,7 +165,8 @@ export function validateHtmlCandidate(candidateHtml: unknown, assets: ContentAss
       matchedMediaReferenceCount,
       unmatchedMediaReferenceCount,
       assetWithoutReferenceCount,
-      externalUrlCount
+      externalUrlCount,
+      unsafePatternCount: countHtmlCandidateUnsafePatterns(html)
     }
   };
 }
@@ -300,6 +302,17 @@ function buildHtmlCandidateSecurityChecks(html: string): HtmlSecurityCheck[] {
         : "로컬 저장 경로 또는 storagePath 문자열이 감지되지 않았습니다."
     }
   ];
+}
+
+function countHtmlCandidateUnsafePatterns(html: string) {
+  const patterns = [
+    /<\s*(script|iframe|object|embed|form|input|button|style|link|meta)\b/gi,
+    /javascript\s*:/gi,
+    /\son[a-z]+\s*=/gi,
+    /(storagePath|local-data\/|\/uploads\/|file:\/\/|\/Users\/|\/private\/|[A-Za-z]:\\)/gi
+  ];
+
+  return patterns.reduce((count, pattern) => count + (html.match(pattern)?.length ?? 0), 0);
 }
 
 function convertMarkdownToHtml(markdown: string, placeholders: PlaceholderToken[], assets: ContentAssetAdmin[]) {

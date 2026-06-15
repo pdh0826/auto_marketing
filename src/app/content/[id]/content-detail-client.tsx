@@ -124,7 +124,21 @@ interface ApiErrorWithData extends Error {
   };
 }
 
-type HtmlCandidateSource = "none" | "html-preview" | "quality-repair" | "blog-template-preview" | "manual-edit";
+interface HtmlApplySummary {
+  source: string;
+  validationOk: boolean;
+  htmlLength: number;
+  unsafePatternCount: number;
+  applied: boolean;
+  appliedField: string | null;
+  contentItemSideEffect: string;
+  bloggerSideEffect: false;
+  llmSideEffect: false;
+  publishSideEffect: false;
+  tokenRefreshSideEffect: false;
+}
+
+type HtmlCandidateSource = "none" | "html-preview" | "quality-repair" | "blog-template-preview" | "applied-html-candidate" | "manual-edit";
 type DraftCandidateSource = "none" | "llm-generated" | "stepwise-final-candidate" | "manual-edit";
 type StepwiseRunStatus = "pending" | "running" | "completed" | "failed" | "cancelled";
 type StepwiseStepStatus = "pending" | "running" | "success" | "failed";
@@ -257,6 +271,8 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
   const [htmlEditMode, setHtmlEditMode] = useState(false);
   const [htmlDirty, setHtmlDirty] = useState(false);
   const [htmlCandidateValidation, setHtmlCandidateValidation] = useState<HtmlCandidateValidationResult | null>(null);
+  const [lastHtmlApplySummary, setLastHtmlApplySummary] = useState<HtmlApplySummary | null>(null);
+  const [htmlApplyConfirmationPending, setHtmlApplyConfirmationPending] = useState(false);
   const [qualityRepairCandidateText, setQualityRepairCandidateText] = useState("");
   const [qualityRepairEditMode, setQualityRepairEditMode] = useState(false);
   const [qualityRepairDirty, setQualityRepairDirty] = useState(false);
@@ -611,6 +627,8 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
       setHtmlCandidateSource("html-preview");
       setHtmlEditMode(false);
       setHtmlDirty(false);
+      setLastHtmlApplySummary(null);
+      setHtmlApplyConfirmationPending(false);
       const validation = await validateHtmlCandidateOnServer(result.data.previewHtml);
       setHtmlCandidateValidation(validation);
       setNotice("HTML 변환 dry-run preview를 생성했습니다. DB에는 저장하지 않았습니다.");
@@ -667,6 +685,8 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
       const validation = await validateHtmlCandidateOnServer(htmlCandidateText);
       setHtmlCandidateValidation(validation);
       setHtmlDirty(false);
+      setLastHtmlApplySummary(null);
+      setHtmlApplyConfirmationPending(false);
       setNotice("HTML 후보를 재검증했습니다. 아직 DB에 저장하지 않았습니다.");
     } catch (caught) {
       setHtmlApplyError(caught instanceof Error ? caught.message : "HTML 후보 재검증에 실패했습니다.");
@@ -684,8 +704,10 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
       setHtmlApplyError("편집된 HTML 후보는 재검증 후 반영할 수 있습니다.");
       return;
     }
-    const confirmed = window.confirm("draftHtml을 변경하면 기존 Blogger draft approval snapshot은 stale이 될 수 있습니다. 계속 반영할까요?");
-    if (!confirmed) {
+    if (!htmlApplyConfirmationPending) {
+      setHtmlApplyConfirmationPending(true);
+      setHtmlApplyError(null);
+      setNotice("draftHtml 저장 확인 단계입니다. 이 버튼은 draftHtml만 저장하며 Blogger draft save/publish/token refresh는 실행하지 않습니다. 저장하려면 같은 버튼을 한 번 더 누르세요.");
       return;
     }
 
@@ -701,10 +723,11 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
           securityChecks: HtmlCandidateValidationResult["securityChecks"];
           mediaMappings: HtmlCandidateValidationResult["mediaMappings"];
           metadata: HtmlCandidateValidationResult["metadata"];
+          applySummary: HtmlApplySummary;
         }>
       >(`/api/content-items/${contentItemId}/apply-html`, {
         method: "POST",
-        body: JSON.stringify({ candidateHtml: htmlCandidateText })
+        body: JSON.stringify({ candidateHtml: htmlCandidateText, source: htmlCandidateSource })
       });
       setContentItem(result.data.contentItem);
       setHtmlCandidateValidation({
@@ -714,6 +737,9 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
         metadata: result.data.metadata
       });
       setHtmlDirty(false);
+      setHtmlCandidateSource("applied-html-candidate");
+      setLastHtmlApplySummary(result.data.applySummary);
+      setHtmlApplyConfirmationPending(false);
       setQualityPreviewResult(null);
       setPublishReadinessResult(null);
       setBloggerDraftPreviewResult(null);
@@ -791,6 +817,8 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
     setHtmlCandidateValidation(null);
     setHtmlEditMode(false);
     setHtmlDirty(true);
+    setLastHtmlApplySummary(null);
+    setHtmlApplyConfirmationPending(false);
     setNotice("Quality repair 후보를 HTML 후보로 사용합니다. HTML 후보 섹션에서 재검증한 뒤 수동으로 draftHtml에 반영하세요.");
   }
 
@@ -809,6 +837,8 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
     setHtmlCandidateValidation(null);
     setHtmlEditMode(false);
     setHtmlDirty(true);
+    setLastHtmlApplySummary(null);
+    setHtmlApplyConfirmationPending(false);
     setHtmlPreviewError(null);
     setHtmlApplyError(null);
     setNotice("Blog template preview HTML을 HTML 후보로 가져왔습니다. 아직 draftHtml에 저장하지 않았고, 기존 HTML 재검증과 수동 반영 버튼을 별도로 눌러야 저장됩니다.");
@@ -2189,9 +2219,36 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
                 {validatingHtml ? "재검증 중" : "HTML 후보 재검증"}
               </button>
               <button className="button" type="button" disabled={!canApplyHtmlCandidate} onClick={() => void applyHtmlCandidate()}>
-                {applyingHtml ? "draftHtml 반영 중" : "draftHtml에 반영"}
+                {formatHtmlApplyButtonLabel(applyingHtml, htmlApplyConfirmationPending)}
               </button>
             </div>
+            <div className="notice">
+              `draftHtml에 반영` 버튼은 draftHtml만 저장합니다. Blogger draft save/publish는 실행하지 않고, publish/scheduled publish/token refresh는 별도 단계입니다.
+              validation을 통과한 HTML 후보만 명시 승인 후 저장할 수 있습니다.
+            </div>
+            {htmlApplyConfirmationPending ? (
+              <div className="notice warning">
+                draftHtml 저장 확인 대기 중입니다. 같은 버튼을 한 번 더 누르면 서버가 HTML 후보를 다시 검증한 뒤 draftHtml만 저장합니다. Blogger/LLM/publish/token refresh는
+                실행하지 않습니다.
+              </div>
+            ) : null}
+            {lastHtmlApplySummary ? (
+              <div className="read-block">
+                <h3>Last draftHtml Apply Guard Summary</h3>
+                <div className="detail-grid">
+                  <DetailItem label="Source" value={`${lastHtmlApplySummary.source} -> ${formatHtmlCandidateSource(htmlCandidateSource)}`} />
+                  <DetailItem label="Validation OK" value={lastHtmlApplySummary.validationOk ? "yes" : "no"} />
+                  <DetailItem label="HTML Length" value={String(lastHtmlApplySummary.htmlLength)} />
+                  <DetailItem label="Unsafe Patterns" value={String(lastHtmlApplySummary.unsafePatternCount)} />
+                  <DetailItem label="Applied Field" value={lastHtmlApplySummary.appliedField ?? "-"} />
+                  <DetailItem label="Content Side Effect" value={lastHtmlApplySummary.contentItemSideEffect} />
+                  <DetailItem label="Blogger Side Effect" value={String(lastHtmlApplySummary.bloggerSideEffect)} />
+                  <DetailItem label="LLM Side Effect" value={String(lastHtmlApplySummary.llmSideEffect)} />
+                  <DetailItem label="Publish Side Effect" value={String(lastHtmlApplySummary.publishSideEffect)} />
+                  <DetailItem label="Token Refresh Side Effect" value={String(lastHtmlApplySummary.tokenRefreshSideEffect)} />
+                </div>
+              </div>
+            ) : null}
 
             {htmlPreviewResult ? (
               <>
@@ -2233,7 +2290,7 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
                         html length: {htmlCandidateValidation.metadata.htmlLength} / media refs:{" "}
                         {htmlCandidateValidation.metadata.mediaReferenceCount} / matched:{" "}
                         {htmlCandidateValidation.metadata.matchedMediaReferenceCount} / unmatched:{" "}
-                        {htmlCandidateValidation.metadata.unmatchedMediaReferenceCount}
+                        {htmlCandidateValidation.metadata.unmatchedMediaReferenceCount} / unsafe patterns: {htmlCandidateValidation.metadata.unsafePatternCount}
                       </p>
                     </div>
                     {htmlDirty ? (
@@ -2281,6 +2338,8 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
                       setHtmlCandidateText(event.target.value);
                       setHtmlCandidateSource("manual-edit");
                       setHtmlDirty(true);
+                      setLastHtmlApplySummary(null);
+                      setHtmlApplyConfirmationPending(false);
                     }}
                     spellCheck={false}
                   />
@@ -2293,7 +2352,7 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
                     {validatingHtml ? "재검증 중" : "재검증"}
                   </button>
                   <button className="button" type="button" disabled={!canApplyHtmlCandidate} onClick={() => void applyHtmlCandidate()}>
-                    {applyingHtml ? "draftHtml 반영 중" : "draftHtml에 반영"}
+                    {formatHtmlApplyButtonLabel(applyingHtml, htmlApplyConfirmationPending)}
                   </button>
                 </div>
                 <div className="notice">draftHtml에 반영해도 Blogger 발행, Blogger draft 저장, LLM 호출, llm_call_logs 생성은 수행하지 않습니다.</div>
@@ -2320,7 +2379,7 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
                         html length: {htmlCandidateValidation.metadata.htmlLength} / media refs:{" "}
                         {htmlCandidateValidation.metadata.mediaReferenceCount} / matched:{" "}
                         {htmlCandidateValidation.metadata.matchedMediaReferenceCount} / unmatched:{" "}
-                        {htmlCandidateValidation.metadata.unmatchedMediaReferenceCount}
+                        {htmlCandidateValidation.metadata.unmatchedMediaReferenceCount} / unsafe patterns: {htmlCandidateValidation.metadata.unsafePatternCount}
                       </p>
                     </div>
                     {htmlDirty ? (
@@ -2349,6 +2408,8 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
                       setHtmlCandidateText(event.target.value);
                       setHtmlCandidateSource("manual-edit");
                       setHtmlDirty(true);
+                      setLastHtmlApplySummary(null);
+                      setHtmlApplyConfirmationPending(false);
                     }}
                     spellCheck={false}
                   />
@@ -2361,7 +2422,7 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
                     {validatingHtml ? "재검증 중" : "재검증"}
                   </button>
                   <button className="button" type="button" disabled={!canApplyHtmlCandidate} onClick={() => void applyHtmlCandidate()}>
-                    {applyingHtml ? "draftHtml 반영 중" : "draftHtml에 반영"}
+                    {formatHtmlApplyButtonLabel(applyingHtml, htmlApplyConfirmationPending)}
                   </button>
                 </div>
                 <div className="notice">draftHtml에 반영해도 Blogger 발행, Blogger draft 저장, LLM 호출, llm_call_logs 생성은 수행하지 않습니다.</div>
@@ -3143,6 +3204,9 @@ function formatHtmlCandidateSource(source: HtmlCandidateSource) {
   if (source === "blog-template-preview") {
     return "blog template preview";
   }
+  if (source === "applied-html-candidate") {
+    return "applied HTML candidate / saved draftHtml";
+  }
   if (source === "manual-edit") {
     return "manual edit";
   }
@@ -3152,6 +3216,9 @@ function formatHtmlCandidateSource(source: HtmlCandidateSource) {
 function getHtmlCandidateSourceGuidance(source: HtmlCandidateSource) {
   if (source === "blog-template-preview") {
     return "Blog template preview에서 가져온 후보이며, 아직 draftHtml에 저장되지 않았습니다. 재검증 후 기존 수동 반영 버튼을 별도로 눌러야 저장됩니다.";
+  }
+  if (source === "applied-html-candidate") {
+    return "방금 수동 반영으로 draftHtml에 저장된 HTML 후보입니다. Quality Dry Run, Publish Readiness, Blogger Draft Payload Preview를 다시 실행하세요.";
   }
   if (source === "quality-repair") {
     return "Quality repair에서 가져온 후보이며, 아직 draftHtml에 저장되지 않았습니다. 재검증 후 기존 수동 반영 버튼을 별도로 눌러야 저장됩니다.";
@@ -3163,6 +3230,16 @@ function getHtmlCandidateSourceGuidance(source: HtmlCandidateSource) {
     return "사용자가 편집한 HTML 후보이며, 재검증 후 수동 반영 버튼을 눌러야 draftHtml에 저장됩니다.";
   }
   return "HTML 후보가 아직 없거나 saved draftHtml만 표시 중입니다.";
+}
+
+function formatHtmlApplyButtonLabel(applying: boolean, confirmationPending: boolean) {
+  if (applying) {
+    return "draftHtml 반영 중";
+  }
+  if (confirmationPending) {
+    return "draftHtml 저장 확정";
+  }
+  return "draftHtml에 반영";
 }
 
 function formatDraftCandidateSource(source: DraftCandidateSource) {
