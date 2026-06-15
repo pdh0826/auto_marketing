@@ -669,3 +669,20 @@ Policy:
 - No content item status, `qualityScore`, `publishedAt`, or `scheduledAt` mutation.
 - No LLM call or `llm_call_logs` creation.
 - No Blogger API read/write, draft save, publish, scheduled publish, token refresh, `posts.insert`, or `posts.update`.
+
+## Patch 9E-4D: Blog Post Template Renderer Preview
+
+Implemented after Patch 9E-4C-3F:
+
+- Added deterministic Markdown-to-HTML blog post template preview rendering.
+- Added `POST /api/content-items/[id]/blog-post-template-preview`.
+- Added content detail UI controls to generate a themed HTML preview from the current Draft Markdown candidate.
+- Preview output includes safe validation summary counts for headings, FAQ, media placeholders, unsafe patterns, and preview-only side-effect metadata.
+- Preview HTML is displayed in an iframe and read-only textarea.
+
+Policy:
+
+- No automatic `draftMarkdown` or `draftHtml` save.
+- No content item status, `qualityScore`, `publishedAt`, or `scheduledAt` mutation.
+- No LLM call or `llm_call_logs` creation.
+- No Blogger API read/write, draft save, publish, scheduled publish, token refresh, `posts.insert`, or `posts.update`.

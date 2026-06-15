@@ -673,3 +673,15 @@ Boundary:
 - It does not mutate `content_items.draftMarkdown`, `draftHtml`, status, `qualityScore`, `publishedAt`, or `scheduledAt`.
 - The existing manual `draftMarkdown에 반영` button remains the only path that can write the candidate to `content_items`.
 - Blogger API, draft save, publish, scheduled publish, and token refresh remain out of scope.
+
+## Patch 9E-4D blog post template renderer preview
+
+Patch 9E-4D adds a deterministic Markdown-to-HTML theme preview for the current draft candidate.
+
+Boundary:
+
+- `/api/content-items/[id]/blog-post-template-preview` does not use an LLM provider or task route.
+- The API reads content item/blog/brand/assets only to build a safe preview summary and media mapping counts.
+- Raw HTML and blocked patterns are escaped/count-summarized; prompt text, provider responses, tokens, secrets, and encrypted values are not involved.
+- The UI preview uses the current Draft Markdown candidate state and does not save `draftHtml`.
+- No `llm_call_logs`, Blogger API calls, draft save, publish, scheduled publish, token refresh, or content item status/quality timestamp mutations occur.

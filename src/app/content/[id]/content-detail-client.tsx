@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { BloggerDraftPayloadPreview, BloggerDraftSaveAdmin } from "@/lib/blogger/admin-types";
+import type { BlogPostTemplatePreviewResult, BlogPostTemplatePreviewSource } from "@/lib/blog-renderer/blog-post-template-renderer";
 import type { ContentAssetAdmin } from "@/lib/content/asset-types";
 import type { ContentItemAdmin } from "@/lib/content/admin-types";
 import { buildContentPlanDryRun, type ContentPlanDryRunResult, type ReadinessStatus } from "@/lib/content/content-plan-preview";
@@ -233,6 +234,7 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
   const [dryRunResult, setDryRunResult] = useState<ContentPlanDryRunResult | null>(null);
   const [draftDryRunResult, setDraftDryRunResult] = useState<DraftMarkdownDryRunResult | null>(null);
   const [htmlPreviewResult, setHtmlPreviewResult] = useState<HtmlPreviewDryRunResult | null>(null);
+  const [blogPostTemplatePreviewResult, setBlogPostTemplatePreviewResult] = useState<BlogPostTemplatePreviewResult | null>(null);
   const [qualityPreviewResult, setQualityPreviewResult] = useState<HtmlQualityPreviewResult | null>(null);
   const [qualityRepairPreviewResult, setQualityRepairPreviewResult] = useState<HtmlQualityRepairPreviewResult | null>(null);
   const [publishReadinessResult, setPublishReadinessResult] = useState<PublishReadinessResult | null>(null);
@@ -268,6 +270,7 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
   const [generatingPlan, setGeneratingPlan] = useState(false);
   const [generatingDraft, setGeneratingDraft] = useState(false);
   const [runningHtmlPreview, setRunningHtmlPreview] = useState(false);
+  const [runningBlogPostTemplatePreview, setRunningBlogPostTemplatePreview] = useState(false);
   const [applyingPlan, setApplyingPlan] = useState(false);
   const [applyingDraft, setApplyingDraft] = useState(false);
   const [revalidatingPlan, setRevalidatingPlan] = useState(false);
@@ -293,6 +296,7 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
   const [generationError, setGenerationError] = useState<string | null>(null);
   const [draftGenerationError, setDraftGenerationError] = useState<string | null>(null);
   const [htmlPreviewError, setHtmlPreviewError] = useState<string | null>(null);
+  const [blogPostTemplatePreviewError, setBlogPostTemplatePreviewError] = useState<string | null>(null);
   const [htmlApplyError, setHtmlApplyError] = useState<string | null>(null);
   const [qualityPreviewError, setQualityPreviewError] = useState<string | null>(null);
   const [qualityRepairPreviewError, setQualityRepairPreviewError] = useState<string | null>(null);
@@ -311,6 +315,7 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
   const canGenerateDraft = Boolean(contentItem?.planJson && draftDryRunResult?.ready && !generatingDraft);
   const canApplyGeneratedDraft = Boolean(generatedDraft?.validation.ok && !draftDirty && !applyingDraft);
   const canRunHtmlPreview = Boolean(contentItem?.draftMarkdown && !runningHtmlPreview);
+  const canRunBlogPostTemplatePreview = Boolean(draftCandidateText.trim() && !runningBlogPostTemplatePreview);
   const canApplyHtmlCandidate = Boolean(htmlCandidateText && htmlCandidateValidation?.validation.ok && !htmlDirty && !applyingHtml);
   const canRunQualityPreview = Boolean(contentItem?.draftHtml && !runningQualityPreview);
   const canRunQualityRepairPreview = Boolean((contentItem?.draftMarkdown || contentItem?.draftHtml) && !runningQualityRepairPreview);
@@ -520,6 +525,8 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
       setGeneratedDraft(result.data);
       setDraftCandidateText(result.data.candidateDraftMarkdown);
       setDraftCandidateSource("llm-generated");
+      setBlogPostTemplatePreviewResult(null);
+      setBlogPostTemplatePreviewError(null);
       setNotice("본문 초안 후보를 생성했습니다. 아직 DB에 저장되지 않았습니다.");
     } catch (caught) {
       setDraftGenerationError(caught instanceof Error ? caught.message : "본문 초안 후보 생성에 실패했습니다.");
@@ -608,6 +615,34 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
       setHtmlPreviewError(caught instanceof Error ? caught.message : "HTML 변환 dry-run preview에 실패했습니다.");
     } finally {
       setRunningHtmlPreview(false);
+    }
+  }
+
+  async function runBlogPostTemplatePreview() {
+    if (!draftCandidateText.trim()) {
+      setBlogPostTemplatePreviewError("Markdown 후보가 비어 있습니다.");
+      return;
+    }
+
+    setNotice(null);
+    setBlogPostTemplatePreviewError(null);
+    setRunningBlogPostTemplatePreview(true);
+
+    try {
+      const result = await requestJson<ApiResult<BlogPostTemplatePreviewResult>>(`/api/content-items/${contentItemId}/blog-post-template-preview`, {
+        method: "POST",
+        body: JSON.stringify({
+          markdown: draftCandidateText,
+          source: toBlogPostTemplatePreviewSource(draftCandidateSource),
+          theme: "clean_blog"
+        })
+      });
+      setBlogPostTemplatePreviewResult(result.data);
+      setNotice("블로그 HTML template preview를 생성했습니다. DB 저장, LLM 호출, Blogger API 호출은 수행하지 않았습니다.");
+    } catch (caught) {
+      setBlogPostTemplatePreviewError(caught instanceof Error ? caught.message : "블로그 HTML template preview 생성에 실패했습니다.");
+    } finally {
+      setRunningBlogPostTemplatePreview(false);
     }
   }
 
@@ -980,6 +1015,8 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
     });
     setDraftCandidateText(selectedStepwiseRun.finalCandidateMarkdown);
     setDraftCandidateSource("stepwise-final-candidate");
+    setBlogPostTemplatePreviewResult(null);
+    setBlogPostTemplatePreviewError(null);
     setDraftEditMode(false);
     setDraftDirty(false);
     setDraftGenerationError(null);
@@ -1923,6 +1960,8 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
                       setDraftCandidateText(event.target.value);
                       setDraftCandidateSource("manual-edit");
                       setDraftDirty(true);
+                      setBlogPostTemplatePreviewResult(null);
+                      setBlogPostTemplatePreviewError(null);
                     }}
                     spellCheck={false}
                   />
@@ -1937,6 +1976,84 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
                   <button className="button" type="button" disabled={!canApplyGeneratedDraft} onClick={() => void applyGeneratedDraft()}>
                     draftMarkdown에 반영
                   </button>
+                </div>
+                <div className="read-block">
+                  <div className="section-heading compact">
+                    <div>
+                      <h3>Blog Post Template HTML Preview</h3>
+                      <p className="muted">
+                        현재 초안 후보 Markdown을 publish-ready HTML theme preview로 변환합니다. draftHtml에는 저장하지 않고 Blogger API도 호출하지 않습니다.
+                      </p>
+                    </div>
+                    <button className="button secondary" type="button" disabled={!canRunBlogPostTemplatePreview} onClick={() => void runBlogPostTemplatePreview()}>
+                      {runningBlogPostTemplatePreview ? "HTML preview 생성 중" : "블로그 HTML preview 생성"}
+                    </button>
+                  </div>
+                  <div className="notice">
+                    Preview source: {formatDraftCandidateSource(draftCandidateSource)}. 결과는 화면 확인용입니다. draftHtml 적용은 기존 HTML 후보 검증/수동 반영 흐름에서 별도로
+                    진행해야 합니다.
+                  </div>
+                  {blogPostTemplatePreviewError ? <div className="notice error">{blogPostTemplatePreviewError}</div> : null}
+                  {blogPostTemplatePreviewResult ? (
+                    <>
+                      <div className={blogPostTemplatePreviewResult.validationSummary.ok ? "notice" : "notice error"}>
+                        <strong>Template Preview Summary</strong>
+                        <p>
+                          status: {blogPostTemplatePreviewResult.validationSummary.ok ? "pass" : "fail"} / source:{" "}
+                          {formatBlogPostTemplatePreviewSource(blogPostTemplatePreviewResult.sourceSummary.source)} / theme:{" "}
+                          {blogPostTemplatePreviewResult.sourceSummary.theme}
+                        </p>
+                        <p>
+                          markdown length: {blogPostTemplatePreviewResult.validationSummary.markdownLength} / html length:{" "}
+                          {blogPostTemplatePreviewResult.validationSummary.htmlLength} / title: {blogPostTemplatePreviewResult.sourceSummary.titleCandidate}
+                        </p>
+                        <p>
+                          preview-only: {blogPostTemplatePreviewResult.metadata.previewOnly ? "yes" : "no"} / DB mutation:{" "}
+                          {blogPostTemplatePreviewResult.metadata.dbMutation ? "yes" : "no"} / LLM call:{" "}
+                          {blogPostTemplatePreviewResult.metadata.llmCall ? "yes" : "no"} / Blogger API:{" "}
+                          {blogPostTemplatePreviewResult.metadata.bloggerApiCall ? "yes" : "no"}
+                        </p>
+                      </div>
+                      <div className="detail-grid">
+                        <DetailItem label="H1" value={String(blogPostTemplatePreviewResult.validationSummary.h1Count)} />
+                        <DetailItem label="H2" value={String(blogPostTemplatePreviewResult.validationSummary.h2Count)} />
+                        <DetailItem label="H3" value={String(blogPostTemplatePreviewResult.validationSummary.h3Count)} />
+                        <DetailItem label="Paragraphs" value={String(blogPostTemplatePreviewResult.validationSummary.paragraphCount)} />
+                        <DetailItem label="FAQ Headings" value={String(blogPostTemplatePreviewResult.validationSummary.faqHeadingCount)} />
+                        <DetailItem label="Media Placeholders" value={String(blogPostTemplatePreviewResult.validationSummary.mediaPlaceholderCount)} />
+                        <DetailItem label="Matched Media" value={String(blogPostTemplatePreviewResult.validationSummary.matchedMediaCount)} />
+                        <DetailItem label="Unmatched Media" value={String(blogPostTemplatePreviewResult.validationSummary.unmatchedMediaPlaceholderCount)} />
+                        <DetailItem label="Assets Without Placeholder" value={String(blogPostTemplatePreviewResult.validationSummary.assetWithoutPlaceholderCount)} />
+                        <DetailItem label="Unsafe Patterns" value={String(blogPostTemplatePreviewResult.validationSummary.unsafePatternCount)} />
+                        <DetailItem label="Raw HTML Escaped" value={blogPostTemplatePreviewResult.validationSummary.rawHtmlEscaped ? "yes" : "no"} />
+                      </div>
+                      <ValidationList
+                        title="Template Preview Errors"
+                        items={blogPostTemplatePreviewResult.validationSummary.errors}
+                        emptyText="template preview error가 없습니다."
+                        isError
+                      />
+                      <ValidationList
+                        title="Template Preview Warnings"
+                        items={blogPostTemplatePreviewResult.validationSummary.warnings}
+                        emptyText="template preview warning이 없습니다."
+                        isWarning
+                      />
+                      <div className="read-block">
+                        <h3>Themed HTML Preview</h3>
+                        <iframe className="html-preview-frame" sandbox="" srcDoc={blogPostTemplatePreviewResult.html} title="Blog post template HTML preview" />
+                      </div>
+                      <label className="plan-editor read-block">
+                        Preview HTML (read-only)
+                        <textarea value={blogPostTemplatePreviewResult.html} readOnly spellCheck={false} />
+                      </label>
+                      <div className="notice warning">
+                        이 preview는 draftHtml에 자동 반영하지 않습니다. HTML 저장/품질 검사/Blogger draft save는 별도 수동 단계에서 재검증 후 진행하세요.
+                      </div>
+                    </>
+                  ) : (
+                    <div className="notice">초안 후보를 검토한 뒤 블로그 HTML preview를 생성할 수 있습니다. 이 단계는 DB mutation 없이 실행됩니다.</div>
+                  )}
                 </div>
               </div>
             ) : (
@@ -2999,6 +3116,26 @@ function formatDraftCandidateSource(source: DraftCandidateSource) {
     return "manual edit";
   }
   return "none";
+}
+
+function toBlogPostTemplatePreviewSource(source: DraftCandidateSource): BlogPostTemplatePreviewSource {
+  if (source === "stepwise-final-candidate") {
+    return "stepwise_final_candidate";
+  }
+  if (source === "llm-generated" || source === "manual-edit") {
+    return "manual_draft_candidate";
+  }
+  return "saved_draft_markdown";
+}
+
+function formatBlogPostTemplatePreviewSource(source: BlogPostTemplatePreviewSource) {
+  if (source === "stepwise_final_candidate") {
+    return "stepwise final candidate";
+  }
+  if (source === "saved_draft_markdown") {
+    return "saved draftMarkdown";
+  }
+  return "manual draft candidate";
 }
 
 function QualityGroupTable({ title, checks }: { title: string; checks: HtmlQualityPreviewResult["checks"] }) {

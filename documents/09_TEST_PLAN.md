@@ -681,3 +681,15 @@ npm run build
 - 기존 `draftMarkdown에 반영` 버튼을 별도로 누르기 전까지 `content_items.draftMarkdown`/`draftHtml`, status, `qualityScore`, `publishedAt`, `scheduledAt`은 변경되지 않아야 한다.
 - Blogger API, Blogger draft save, publish, scheduled publish, token refresh는 호출하지 않아야 한다.
 - `llm_call_logs`, `blogger_draft_saves`, `blogger_draft_approvals` count가 버튼 클릭만으로 증가하지 않아야 한다.
+
+## Patch 9E-4D Blog post template renderer preview 검증
+
+- `POST /api/content-items/[id]/blog-post-template-preview`는 request body의 Markdown 후보를 deterministic HTML theme preview로 변환한다.
+- API는 content item/blog/brand/assets를 read-only로 조회하고 `content_items`, Blogger tables, `llm_call_logs`를 변경하지 않는다.
+- Markdown 후보가 비어 있으면 400 `markdown_required`를 반환해야 한다.
+- renderer는 raw HTML과 script/iframe/form/style/javascript/event-handler 계열 패턴을 escape하고 safe summary count만 반환해야 한다.
+- preview summary에는 title candidate, theme, H1/H2/H3/paragraph/FAQ/media/unsafe pattern counts, warnings/errors, preview-only metadata가 포함되어야 한다.
+- UI는 Draft Markdown 후보 섹션에서 “블로그 HTML preview 생성” 버튼을 제공하고, 결과를 iframe/read-only textarea로 표시한다.
+- UI preview 영역은 `draftHtml에 반영` 버튼을 제공하지 않는다.
+- preview 버튼 클릭 후 `draftMarkdown`, `draftHtml`, status, `qualityScore`, `publishedAt`, `scheduledAt`이 변경되지 않아야 한다.
+- preview 버튼 클릭 후 Blogger API/draft save/publish/token refresh와 LLM 호출이 발생하지 않아야 한다.
