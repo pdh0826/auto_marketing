@@ -124,6 +124,7 @@ interface ApiErrorWithData extends Error {
 }
 
 type HtmlCandidateSource = "none" | "html-preview" | "quality-repair" | "manual-edit";
+type DraftCandidateSource = "none" | "llm-generated" | "stepwise-final-candidate" | "manual-edit";
 type StepwiseRunStatus = "pending" | "running" | "completed" | "failed" | "cancelled";
 type StepwiseStepStatus = "pending" | "running" | "success" | "failed";
 
@@ -246,6 +247,7 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
   const [candidateDirty, setCandidateDirty] = useState(false);
   const [candidateParseError, setCandidateParseError] = useState<string | null>(null);
   const [draftCandidateText, setDraftCandidateText] = useState("");
+  const [draftCandidateSource, setDraftCandidateSource] = useState<DraftCandidateSource>("none");
   const [draftEditMode, setDraftEditMode] = useState(false);
   const [draftDirty, setDraftDirty] = useState(false);
   const [htmlCandidateText, setHtmlCandidateText] = useState("");
@@ -505,6 +507,7 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
     setDraftGenerationError(null);
     setGeneratedDraft(null);
     setDraftCandidateText("");
+    setDraftCandidateSource("none");
     setDraftEditMode(false);
     setDraftDirty(false);
     setGeneratingDraft(true);
@@ -516,6 +519,7 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
       });
       setGeneratedDraft(result.data);
       setDraftCandidateText(result.data.candidateDraftMarkdown);
+      setDraftCandidateSource("llm-generated");
       setNotice("본문 초안 후보를 생성했습니다. 아직 DB에 저장되지 않았습니다.");
     } catch (caught) {
       setDraftGenerationError(caught instanceof Error ? caught.message : "본문 초안 후보 생성에 실패했습니다.");
@@ -894,6 +898,93 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
     } finally {
       setFinalPolishingStepwiseRun(false);
     }
+  }
+
+  function copyStepwiseFinalCandidateToDraftCandidate() {
+    if (!selectedStepwiseRun?.finalCandidateMarkdown || !contentItem) {
+      setStepwiseError("finalCandidateMarkdown이 있는 completed stepwise run을 먼저 선택하세요.");
+      return;
+    }
+
+    const validation = validateDraftMarkdown(selectedStepwiseRun.finalCandidateMarkdown, {
+      contentItem,
+      assets
+    });
+    const provider = contentDraftRoute?.primaryProvider ?? null;
+    const model = contentDraftRoute?.primaryModel ?? null;
+    setGeneratedDraft({
+      candidateDraftMarkdown: selectedStepwiseRun.finalCandidateMarkdown,
+      validation,
+      route: {
+        providerName: provider?.name ?? "stepwise run candidate",
+        modelName: model?.displayName ?? model?.name ?? "stepwise final candidate",
+        usedFallback: false
+      },
+      metadata: {
+        latencyMs: 0,
+        responseSummary: "stepwise_final_candidate_manual_import",
+        markdownLength: selectedStepwiseRun.finalCandidateMarkdown.length,
+        repairAttempted: false,
+        repairSucceeded: false,
+        initialValidationErrorCount: validation.errors.length,
+        initialValidationWarningCount: validation.warnings.length,
+        finalValidationErrorCount: validation.errors.length,
+        finalValidationWarningCount: validation.warnings.length,
+        strategy: "local_sectioned_stepwise",
+        strategyReason: "explicit_strategy",
+        isLocalLike: true,
+        stepCount: selectedStepwiseRun.steps.filter((step) => step.status === "success").length + (selectedStepwiseRun.finalCandidateMarkdown ? 1 : 0),
+        plannedStepCount: STEPWISE_STEP_ORDER.length + 1,
+        sectionedGenerationImplemented: true,
+        finalPolishImplemented: true,
+        providerSummary: {
+          providerName: provider?.name ?? null,
+          providerType: provider?.providerType ?? null,
+          invocationMode: provider?.invocationMode ?? null,
+          apiFormat: provider?.apiFormat ?? null,
+          modelName: model?.displayName ?? model?.name ?? null
+        },
+        sectionCount: selectedStepwiseRun.steps.filter((step) => STEPWISE_SECTION_KEYS.includes(step.stepKey as (typeof STEPWISE_SECTION_KEYS)[number])).length,
+        sectionKeys: [...STEPWISE_SECTION_KEYS],
+        finalPolishApplied: true,
+        finalPolishInputTooLong: false,
+        finalPolishFallbackReason: null,
+        fallbackUsed: false,
+        fallbackReasons: [],
+        faqRequired: Boolean(selectedStepwiseRun.validationSummary?.guardSummary?.faqRequired),
+        faqSectionDetected: Boolean(selectedStepwiseRun.validationSummary?.guardSummary?.faqSectionDetectedAfter),
+        faqFallbackAppended: Boolean(selectedStepwiseRun.validationSummary?.guardSummary?.faqFallbackAppended),
+        faqCount: selectedStepwiseRun.validationSummary?.guardSummary?.faqCount ?? 0,
+        safetyScrubApplied: Boolean(selectedStepwiseRun.validationSummary?.guardSummary?.safetyScrubApplied),
+        safetyScrubCount: selectedStepwiseRun.validationSummary?.guardSummary?.safetyScrubCount ?? 0,
+        safetyScrubCodes: selectedStepwiseRun.validationSummary?.guardSummary?.safetyScrubCodes ?? [],
+        timeoutPolicy: "stepwise_manual_import",
+        overallTimeoutMs: 0,
+        stepTimeoutMs: 0,
+        skeletonTimeoutMs: 0,
+        sectionTimeoutMs: 0,
+        finalPolishTimeoutMs: 0,
+        repairTimeoutMs: 0,
+        stepSummaries: selectedStepwiseRun.steps.map((step) => ({
+          stepKey: step.stepKey,
+          sectionKey: step.sectionKey,
+          status: step.status === "success" ? "success" : step.status === "failed" ? "failed" : "fallback",
+          durationMs: step.latencyMs ?? 0,
+          promptHash: step.promptHash,
+          responseHash: step.responseHash,
+          responseLength: step.outputMarkdown?.length ?? 0,
+          retryCount: Math.max(0, step.attempt - 1),
+          errorMessage: step.errorCode
+        }))
+      }
+    });
+    setDraftCandidateText(selectedStepwiseRun.finalCandidateMarkdown);
+    setDraftCandidateSource("stepwise-final-candidate");
+    setDraftEditMode(false);
+    setDraftDirty(false);
+    setDraftGenerationError(null);
+    setStepwiseError(null);
+    setStepwiseNotice("Stepwise final candidate를 기존 초안 후보로 가져왔습니다. DB/API 호출은 없었고, draftMarkdown 반영은 기존 수동 버튼을 별도로 눌러야 합니다.");
   }
 
   async function runPublishReadiness() {
@@ -1693,6 +1784,7 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
                     latency: {generatedDraft.metadata.latencyMs}ms / length: {generatedDraft.metadata.markdownLength} / summary:{" "}
                     {generatedDraft.metadata.responseSummary}
                   </p>
+                  <p>candidate source: {formatDraftCandidateSource(draftCandidateSource)}</p>
                   <p>
                     repair: {generatedDraft.metadata.repairAttempted ? "attempted" : "not attempted"} / result:{" "}
                     {generatedDraft.metadata.repairSucceeded ? "success" : generatedDraft.metadata.repairAttempted ? "not passed" : "-"}
@@ -1792,6 +1884,12 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
                     <div className="notice warning">초안 후보에서 위험 문구가 감지되어 자동 수정 1회를 수행했습니다.</div>
                   )
                 ) : null}
+                {draftCandidateSource === "stepwise-final-candidate" ? (
+                  <div className="notice warning">
+                    Stepwise final candidate를 수동 적용 후보로 가져왔습니다. 아직 content item에 저장하지 않았고, LLM/Blogger API를 호출하지 않았습니다.
+                    내용을 검토한 뒤 기존 draftMarkdown에 반영 버튼을 별도로 눌러야 저장됩니다.
+                  </div>
+                ) : null}
                 {draftDirty ? (
                   <div className="notice warning">편집된 초안 후보는 재검증 후 반영할 수 있습니다.</div>
                 ) : !generatedDraft.validation.ok ? (
@@ -1823,6 +1921,7 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
                     readOnly={!draftEditMode}
                     onChange={(event) => {
                       setDraftCandidateText(event.target.value);
+                      setDraftCandidateSource("manual-edit");
                       setDraftDirty(true);
                     }}
                     spellCheck={false}
@@ -1866,6 +1965,7 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
             onExecuteStep={(stepKey) => void executeStepwiseStep(stepKey)}
             onAssemble={() => void assembleStepwiseRun()}
             onFinalPolish={() => void finalPolishStepwiseRun()}
+            onUseFinalCandidate={() => copyStepwiseFinalCandidateToDraftCandidate()}
           />
 
           <section className="admin-section">
@@ -2338,7 +2438,8 @@ function StepwiseDraftGenerationSection({
   onSelect,
   onExecuteStep,
   onAssemble,
-  onFinalPolish
+  onFinalPolish,
+  onUseFinalCandidate
 }: {
   runs: StepwiseDraftGenerationRunSummary[];
   selectedRun: StepwiseDraftGenerationRunDetail | null;
@@ -2360,8 +2461,10 @@ function StepwiseDraftGenerationSection({
   onExecuteStep: (stepKey: string) => void;
   onAssemble: () => void;
   onFinalPolish: () => void;
+  onUseFinalCandidate: () => void;
 }) {
   const missingSectionKeys = selectedRun ? getMissingStepwiseSectionKeys(selectedRun) : [];
+  const canUseFinalCandidate = Boolean(selectedRun?.finalCandidateMarkdown && selectedRun.status === "completed");
 
   return (
     <section className="admin-section">
@@ -2443,6 +2546,20 @@ function StepwiseDraftGenerationSection({
           <StepwiseValidationSummary summary={selectedRun.validationSummary} />
           <StepwiseCandidatePreview title="Assembled Candidate Markdown" value={selectedRun.assembledCandidateMarkdown} />
           <StepwiseCandidatePreview title="Final Candidate Markdown" value={selectedRun.finalCandidateMarkdown} />
+
+          <div className={canUseFinalCandidate ? "notice" : "notice warning"}>
+            <strong>Manual apply guard</strong>
+            <p>finalCandidateMarkdown은 content item에 즉시 저장하지 않습니다. 아래 버튼은 기존 초안 후보 편집기에 client-side로만 복사합니다.</p>
+            <p>draftHtml 변환, Blogger API, draft save, publish, token refresh와는 별도 단계입니다.</p>
+            <div className="form-actions">
+              <button className="button" type="button" disabled={!canUseFinalCandidate} onClick={onUseFinalCandidate}>
+                수동 적용 후보로 사용
+              </button>
+              <button className="button secondary" type="button" disabled>
+                자동 저장 없음
+              </button>
+            </div>
+          </div>
 
           <div className="notice warning">
             <strong>Ollama diagnostics</strong>
@@ -2867,6 +2984,19 @@ function formatHtmlCandidateSource(source: HtmlCandidateSource) {
   }
   if (source === "manual-edit") {
     return "manual-edit";
+  }
+  return "none";
+}
+
+function formatDraftCandidateSource(source: DraftCandidateSource) {
+  if (source === "llm-generated") {
+    return "LLM generated draft candidate";
+  }
+  if (source === "stepwise-final-candidate") {
+    return "stepwise final candidate";
+  }
+  if (source === "manual-edit") {
+    return "manual edit";
   }
   return "none";
 }

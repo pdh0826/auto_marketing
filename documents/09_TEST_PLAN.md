@@ -672,3 +672,12 @@ npm run build
 - UI 문구는 content item 자동 변경 없음, Blogger API/draft save/publish/token refresh 없음, run candidate only 정책을 명확히 표시해야 한다.
 - timeout/model 관련 errorCode는 사람이 이해할 수 있는 안내로 표시해야 한다.
 - Runtime smoke는 page 200, existing run 조회, 새 run 생성, precondition에 따른 버튼 활성화, content item/Blogger side effect 없음 순서로 확인한다.
+
+## Patch 9E-4C-3F Stepwise final candidate manual apply guard 검증
+
+- completed stepwise run에 `finalCandidateMarkdown`이 있으면 “수동 적용 후보로 사용” 버튼이 표시되어야 한다.
+- 버튼 클릭은 client-side state만 변경해야 하며 API 호출, LLM 호출, DB write를 수행하지 않아야 한다.
+- 기존 Draft Markdown 후보 textarea에 final candidate가 채워지고 source가 `stepwise final candidate`로 표시되어야 한다.
+- 기존 `draftMarkdown에 반영` 버튼을 별도로 누르기 전까지 `content_items.draftMarkdown`/`draftHtml`, status, `qualityScore`, `publishedAt`, `scheduledAt`은 변경되지 않아야 한다.
+- Blogger API, Blogger draft save, publish, scheduled publish, token refresh는 호출하지 않아야 한다.
+- `llm_call_logs`, `blogger_draft_saves`, `blogger_draft_approvals` count가 버튼 클릭만으로 증가하지 않아야 한다.

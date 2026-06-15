@@ -106,21 +106,23 @@ latest committed baseline before Patch 9E-4C-3C: 3cb3fbc Add stepwise draft gene
 - Patch 9E-4C-3E adds content detail UI for listing/selecting stepwise runs, creating a run, executing one step at a time, assembling, and final polishing.
 - Stepwise UI shows safe step metadata, hashes, validation summary, and read-only assembled/final candidate previews.
 - Stepwise UI does not auto-apply candidates to `content_items` and remains separate from Blogger draft save/publish controls.
+- Patch 9E-4C-3F adds a client-side manual apply guard for completed stepwise final candidates.
+- The “수동 적용 후보로 사용” action copies `finalCandidateMarkdown` into the existing Draft Markdown candidate editor only.
+- The copy action does not call APIs, create `llm_call_logs`, mutate `content_items`, or touch Blogger tables.
 
 ## Next Patch Candidate
 
-Patch 9E-4C-3F 후보: Stepwise candidate manual apply planning/guard.
+Patch 9E-4D 후보: Blog post template renderer / publish-ready HTML theme.
 
 Alternative candidates:
 
-- Patch 9E-4D: Blog post template renderer / publish-ready HTML theme.
 - Patch 9E-5: Blogger OAuth/test blog readiness 재점검.
 
 Recommended scope:
 
-- Decide whether final stepwise candidate can be copied into the existing draftMarkdown candidate/manual apply flow.
-- Require explicit user review and validation before any `content_items.draftMarkdown` mutation.
-- Keep automatic `draftHtml`, status, qualityScore, Blogger draft save, and publish out of scope.
+- Design and implement a controlled Markdown-to-HTML renderer/theme for Blogger-ready previews.
+- Keep renderer output as preview/candidate until existing manual apply is explicitly used.
+- Keep automatic `draftHtml`, status, qualityScore, Blogger draft save, and publish out of scope unless separately requested.
 - Keep existing `generate-draft` route unchanged.
 - Keep commercial/high-performance remote providers on the existing one-shot full draft path.
 - Keep Blogger OAuth/live draft save out of scope unless Patch 9E-5 is selected.

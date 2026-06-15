@@ -661,3 +661,15 @@ Boundary:
 - The UI does not change content item status, `qualityScore`, `publishedAt`, or `scheduledAt`.
 - The UI is separated from Blogger draft save/publish flows and does not call Blogger APIs.
 - Retry/force UX and candidate apply UX remain follow-up work.
+
+## Patch 9E-4C-3F stepwise final candidate manual apply guard
+
+Patch 9E-4C-3F allows a reviewed stepwise final candidate to be copied into the existing draft Markdown candidate UI without saving it.
+
+Boundary:
+
+- The copy action is client-side state only.
+- It does not call the LLM provider, create `llm_call_logs`, or call a server API.
+- It does not mutate `content_items.draftMarkdown`, `draftHtml`, status, `qualityScore`, `publishedAt`, or `scheduledAt`.
+- The existing manual `draftMarkdown에 반영` button remains the only path that can write the candidate to `content_items`.
+- Blogger API, draft save, publish, scheduled publish, and token refresh remain out of scope.

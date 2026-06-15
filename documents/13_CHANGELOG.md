@@ -653,3 +653,19 @@ Policy:
 - No content item status, `qualityScore`, `publishedAt`, or `scheduledAt` mutation.
 - No Blogger API read/write, draft save, publish, scheduled publish, token refresh, `posts.insert`, or `posts.update`.
 - Retry/force and content item candidate apply remain follow-up patches.
+
+## Patch 9E-4C-3F: Stepwise Final Candidate Manual Apply Guard
+
+Implemented after Patch 9E-4C-3E:
+
+- Added a “수동 적용 후보로 사용” action for completed stepwise runs with `finalCandidateMarkdown`.
+- The action copies the final candidate into the existing Draft Markdown candidate editor as client-side state only.
+- Added draft candidate source labeling for LLM generated, stepwise final candidate, and manual edit sources.
+- Added safety copy explaining that the copy action does not save content items or call Blogger/LLM APIs.
+
+Policy:
+
+- No automatic `draftMarkdown` or `draftHtml` save.
+- No content item status, `qualityScore`, `publishedAt`, or `scheduledAt` mutation.
+- No LLM call or `llm_call_logs` creation.
+- No Blogger API read/write, draft save, publish, scheduled publish, token refresh, `posts.insert`, or `posts.update`.
