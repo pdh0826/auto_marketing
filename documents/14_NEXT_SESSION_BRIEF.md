@@ -103,10 +103,13 @@ latest committed baseline before Patch 9E-4C-3C: 3cb3fbc Add stepwise draft gene
 - `POST /api/content-items/[id]/draft-generation-runs/[runId]/final-polish` runs one local-like provider final polish call after assembly.
 - Assemble/final polish store candidates only on the run and do not auto-apply to `content_items`.
 - `scripts/smoke_9e4c3d_assemble_final_polish.mjs` can run assemble-only by default, or include final polish with `--final-polish`.
+- Patch 9E-4C-3E adds content detail UI for listing/selecting stepwise runs, creating a run, executing one step at a time, assembling, and final polishing.
+- Stepwise UI shows safe step metadata, hashes, validation summary, and read-only assembled/final candidate previews.
+- Stepwise UI does not auto-apply candidates to `content_items` and remains separate from Blogger draft save/publish controls.
 
 ## Next Patch Candidate
 
-Patch 9E-4C-3E 후보: Local stepwise UI.
+Patch 9E-4C-3F 후보: Stepwise candidate manual apply planning/guard.
 
 Alternative candidates:
 
@@ -115,9 +118,9 @@ Alternative candidates:
 
 Recommended scope:
 
-- Add content detail UI controls for local stepwise run start/read, step execution, assemble, and final polish.
-- Display run/step status, safe validation summaries, and candidate availability without exposing prompt/raw response text.
-- Keep manual review/apply as a separate explicit action; do not auto-write `content_items.draftMarkdown` or `draftHtml`.
+- Decide whether final stepwise candidate can be copied into the existing draftMarkdown candidate/manual apply flow.
+- Require explicit user review and validation before any `content_items.draftMarkdown` mutation.
+- Keep automatic `draftHtml`, status, qualityScore, Blogger draft save, and publish out of scope.
 - Keep existing `generate-draft` route unchanged.
 - Keep commercial/high-performance remote providers on the existing one-shot full draft path.
 - Keep Blogger OAuth/live draft save out of scope unless Patch 9E-5 is selected.

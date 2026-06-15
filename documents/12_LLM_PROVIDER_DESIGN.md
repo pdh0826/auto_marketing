@@ -641,3 +641,23 @@ Boundary:
 - No automatic `content_items.draftMarkdown` or `draftHtml` save.
 - No content item status, `qualityScore`, `publishedAt`, or `scheduledAt` mutation.
 - Blogger API, draft save, publish, scheduled publish, and token refresh remain out of scope.
+
+## Patch 9E-4C-3E content detail stepwise UI
+
+Patch 9E-4C-3E exposes the persisted local stepwise backend flow on the content detail page.
+
+UI capabilities:
+
+- List and select recent `local_sectioned_stepwise` runs for the current content item.
+- Create a new run without executing LLM calls.
+- Execute one skeleton/section step at a time through the step API.
+- Run deterministic assemble when all section outputs are available.
+- Run final polish as one explicit local LLM call after assembly.
+- Display safe status, attempt, latency, hashes, output summary, validation summary, and read-only assembled/final candidates.
+
+Boundary:
+
+- The UI does not auto-apply run candidates to `content_items.draftMarkdown` or `draftHtml`.
+- The UI does not change content item status, `qualityScore`, `publishedAt`, or `scheduledAt`.
+- The UI is separated from Blogger draft save/publish flows and does not call Blogger APIs.
+- Retry/force UX and candidate apply UX remain follow-up work.

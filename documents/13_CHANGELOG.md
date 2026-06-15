@@ -634,3 +634,22 @@ Policy:
 - No content item status, `qualityScore`, `publishedAt`, or `scheduledAt` mutation.
 - No prompt full text, raw response full text, assembled/final candidate full text in metadata, secret, token, or encrypted value logging.
 - No Blogger API read/write, draft save, publish, scheduled publish, token refresh, `posts.insert`, or `posts.update`.
+
+## Patch 9E-4C-3E: Content Detail Stepwise UI
+
+Implemented after Patch 9E-4C-3D:
+
+- Added a Stepwise Draft Generation section to the content detail screen.
+- Added UI for listing/selecting persisted stepwise runs.
+- Added UI for creating a new stepwise run.
+- Added one-step-at-a-time local LLM execution buttons for skeleton and section steps.
+- Added deterministic assemble and final polish controls.
+- Added read-only assembled/final candidate previews and validation summary display.
+- Added human-readable diagnostics for common local provider timeout/model errors.
+
+Policy:
+
+- No automatic `draftMarkdown` or `draftHtml` save.
+- No content item status, `qualityScore`, `publishedAt`, or `scheduledAt` mutation.
+- No Blogger API read/write, draft save, publish, scheduled publish, token refresh, `posts.insert`, or `posts.update`.
+- Retry/force and content item candidate apply remain follow-up patches.

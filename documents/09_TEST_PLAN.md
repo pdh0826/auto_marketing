@@ -660,3 +660,15 @@ npm run build
 - `content_items.draftMarkdown`/`draftHtml`, status, `qualityScore`, `publishedAt`, `scheduledAt`은 변경하지 않는다.
 - Blogger API, draft save, publish, scheduled publish, token refresh는 호출하지 않는다.
 - `scripts/smoke_9e4c3d_assemble_final_polish.mjs`는 API 기반 smoke helper이며 기본은 assemble만 수행하고 `--final-polish`가 있을 때만 LLM 호출을 포함한다.
+
+## Patch 9E-4C-3E Content detail stepwise UI 검증
+
+- `/content/[id]` 화면에 Stepwise Draft Generation 섹션이 표시되어야 한다.
+- UI는 run 목록 조회, run 선택, 새 run 생성, skeleton/section step 실행, deterministic assemble, final polish를 기존 9E-4C API로 호출해야 한다.
+- 성공한 step은 이번 UI에서 재실행 버튼을 제공하지 않고 완료/재사용 상태로 보여야 한다.
+- assemble 버튼은 `intro`, `body_1`, `body_2`, `body_3`, `conclusion_cta_faq`가 모두 success이고 outputMarkdown이 있을 때만 활성화되어야 한다.
+- final polish 버튼은 assembled candidate가 있을 때만 활성화되어야 한다.
+- assembled/final candidate preview는 읽기 전용이어야 하며 `content_items.draftMarkdown`/`draftHtml`에 반영하는 버튼을 제공하지 않는다.
+- UI 문구는 content item 자동 변경 없음, Blogger API/draft save/publish/token refresh 없음, run candidate only 정책을 명확히 표시해야 한다.
+- timeout/model 관련 errorCode는 사람이 이해할 수 있는 안내로 표시해야 한다.
+- Runtime smoke는 page 200, existing run 조회, 새 run 생성, precondition에 따른 버튼 활성화, content item/Blogger side effect 없음 순서로 확인한다.

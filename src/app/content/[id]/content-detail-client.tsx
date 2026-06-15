@@ -124,6 +124,105 @@ interface ApiErrorWithData extends Error {
 }
 
 type HtmlCandidateSource = "none" | "html-preview" | "quality-repair" | "manual-edit";
+type StepwiseRunStatus = "pending" | "running" | "completed" | "failed" | "cancelled";
+type StepwiseStepStatus = "pending" | "running" | "success" | "failed";
+
+interface StepwiseValidationSummary {
+  phase?: string;
+  ok?: boolean;
+  errorCount?: number;
+  warningCount?: number;
+  markdownLength?: number;
+  errors?: string[];
+  warnings?: string[];
+  guardSummary?: {
+    faqRequired?: boolean;
+    faqCount?: number;
+    faqSectionDetectedBefore?: boolean;
+    faqSectionDetectedAfter?: boolean;
+    faqFallbackAppended?: boolean;
+    safetyScrubApplied?: boolean;
+    safetyScrubCount?: number;
+    safetyScrubCodes?: string[];
+    h1Count?: number;
+    h2OrH3Count?: number;
+    mediaPlaceholderCount?: number;
+  };
+}
+
+interface StepwiseDraftGenerationStep {
+  id: string;
+  runId: string;
+  stepKey: string;
+  sectionKey: string | null;
+  status: StepwiseStepStatus;
+  attempt: number;
+  outputMarkdown: string | null;
+  outputSummary: string | null;
+  hasOutputMarkdown: boolean;
+  promptHash: string | null;
+  responseHash: string | null;
+  latencyMs: number | null;
+  errorCode: string | null;
+  metadata: unknown;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface StepwiseDraftGenerationRunSummary {
+  id: string;
+  contentItemId: string;
+  strategy: string;
+  status: StepwiseRunStatus;
+  currentStepKey: string | null;
+  sectionKeys: unknown;
+  hasAssembledCandidateMarkdown: boolean;
+  hasFinalCandidateMarkdown: boolean;
+  validationSummary: StepwiseValidationSummary | null;
+  metadata: unknown;
+  stepCount: number | null;
+  createdAt: string;
+  updatedAt: string;
+  completedAt: string | null;
+}
+
+interface StepwiseDraftGenerationRunDetail extends StepwiseDraftGenerationRunSummary {
+  assembledCandidateMarkdown: string | null;
+  finalCandidateMarkdown: string | null;
+  steps: StepwiseDraftGenerationStep[];
+}
+
+interface StepwiseRunsApiResult {
+  contentItemId: string;
+  runs: StepwiseDraftGenerationRunSummary[];
+}
+
+interface StepwiseRunApiResult {
+  run: StepwiseDraftGenerationRunDetail;
+}
+
+interface StepwiseStepApiResult extends StepwiseRunApiResult {
+  step: StepwiseDraftGenerationStep;
+  executed: boolean;
+  reusedExistingSuccess: boolean;
+}
+
+interface StepwiseAssembleApiResult extends StepwiseRunApiResult {
+  assembledCandidateMarkdown: string;
+  validationSummary: StepwiseValidationSummary;
+  executed: boolean;
+  reusedExistingAssembled: boolean;
+}
+
+interface StepwiseFinalPolishApiResult extends StepwiseRunApiResult {
+  finalCandidateMarkdown: string;
+  validationSummary: StepwiseValidationSummary;
+  executed: boolean;
+  reusedExistingFinal: boolean;
+}
+
+const STEPWISE_STEP_ORDER = ["skeleton", "intro", "body_1", "body_2", "body_3", "conclusion_cta_faq"] as const;
+const STEPWISE_SECTION_KEYS = ["intro", "body_1", "body_2", "body_3", "conclusion_cta_faq"] as const;
 
 export function ContentDetailClient({ contentItemId }: ContentDetailClientProps) {
   const [contentItem, setContentItem] = useState<ContentItemAdmin | null>(null);
@@ -137,6 +236,9 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
   const [qualityRepairPreviewResult, setQualityRepairPreviewResult] = useState<HtmlQualityRepairPreviewResult | null>(null);
   const [publishReadinessResult, setPublishReadinessResult] = useState<PublishReadinessResult | null>(null);
   const [bloggerDraftPreviewResult, setBloggerDraftPreviewResult] = useState<BloggerDraftPayloadPreview | null>(null);
+  const [stepwiseRuns, setStepwiseRuns] = useState<StepwiseDraftGenerationRunSummary[]>([]);
+  const [selectedStepwiseRunId, setSelectedStepwiseRunId] = useState<string | null>(null);
+  const [selectedStepwiseRun, setSelectedStepwiseRun] = useState<StepwiseDraftGenerationRunDetail | null>(null);
   const [generatedPlan, setGeneratedPlan] = useState<GeneratedPlanResult | null>(null);
   const [generatedDraft, setGeneratedDraft] = useState<GeneratedDraftResult | null>(null);
   const [candidateText, setCandidateText] = useState("");
@@ -178,6 +280,11 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
   const [approvingBloggerDraft, setApprovingBloggerDraft] = useState(false);
   const [revokingBloggerDraftApproval, setRevokingBloggerDraftApproval] = useState(false);
   const [savingBloggerDraft, setSavingBloggerDraft] = useState(false);
+  const [loadingStepwiseRuns, setLoadingStepwiseRuns] = useState(false);
+  const [creatingStepwiseRun, setCreatingStepwiseRun] = useState(false);
+  const [executingStepwiseStepKey, setExecutingStepwiseStepKey] = useState<string | null>(null);
+  const [assemblingStepwiseRun, setAssemblingStepwiseRun] = useState(false);
+  const [finalPolishingStepwiseRun, setFinalPolishingStepwiseRun] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [assetsError, setAssetsError] = useState<string | null>(null);
   const [routeError, setRouteError] = useState<string | null>(null);
@@ -190,6 +297,8 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
   const [publishReadinessError, setPublishReadinessError] = useState<string | null>(null);
   const [bloggerDraftPreviewError, setBloggerDraftPreviewError] = useState<string | null>(null);
   const [bloggerDraftSaveError, setBloggerDraftSaveError] = useState<string | null>(null);
+  const [stepwiseError, setStepwiseError] = useState<string | null>(null);
+  const [stepwiseNotice, setStepwiseNotice] = useState<string | null>(null);
   const [planError, setPlanError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [draftHtmlPostApplyNotice, setDraftHtmlPostApplyNotice] = useState(false);
@@ -216,6 +325,10 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
       !bloggerDraftPreviewResult.draftSaveSummary.draftSaved &&
       !savingBloggerDraft
   );
+  const stepwiseBusy = Boolean(loadingStepwiseRuns || creatingStepwiseRun || executingStepwiseStepKey || assemblingStepwiseRun || finalPolishingStepwiseRun);
+  const canCreateStepwiseRun = Boolean(contentItem?.planJson && !creatingStepwiseRun);
+  const canAssembleStepwiseRun = Boolean(selectedStepwiseRun && !stepwiseBusy && getMissingStepwiseSectionKeys(selectedStepwiseRun).length === 0);
+  const canFinalPolishStepwiseRun = Boolean(selectedStepwiseRun?.assembledCandidateMarkdown && !stepwiseBusy);
   const draftStrategyResolution = useMemo(
     () =>
       resolveDraftGenerationStrategy({
@@ -274,6 +387,41 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
     void loadAssets();
     void loadRoutes();
   }, [loadAssets, loadContentItem, loadRoutes]);
+
+  const loadStepwiseRunDetail = useCallback(
+    async (runId: string) => {
+      const result = await requestJson<ApiResult<StepwiseRunApiResult>>(`/api/content-items/${contentItemId}/draft-generation-runs/${runId}`);
+      setSelectedStepwiseRun(result.data.run);
+      setSelectedStepwiseRunId(result.data.run.id);
+      return result.data.run;
+    },
+    [contentItemId]
+  );
+
+  const loadStepwiseRuns = useCallback(async () => {
+    setLoadingStepwiseRuns(true);
+    setStepwiseError(null);
+
+    try {
+      const result = await requestJson<ApiResult<StepwiseRunsApiResult>>(`/api/content-items/${contentItemId}/draft-generation-runs`);
+      setStepwiseRuns(result.data.runs);
+      const nextSelectedRunId = selectedStepwiseRunId ?? result.data.runs[0]?.id ?? null;
+      if (nextSelectedRunId) {
+        await loadStepwiseRunDetail(nextSelectedRunId);
+      } else {
+        setSelectedStepwiseRun(null);
+        setSelectedStepwiseRunId(null);
+      }
+    } catch (caught) {
+      setStepwiseError(buildStepwiseErrorMessage(caught instanceof Error ? caught.message : "stepwise run 목록 조회에 실패했습니다."));
+    } finally {
+      setLoadingStepwiseRuns(false);
+    }
+  }, [contentItemId, loadStepwiseRunDetail, selectedStepwiseRunId]);
+
+  useEffect(() => {
+    void loadStepwiseRuns();
+  }, [loadStepwiseRuns]);
 
   async function savePlanJson() {
     setPlanError(null);
@@ -602,6 +750,150 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
     setHtmlEditMode(false);
     setHtmlDirty(true);
     setNotice("Quality repair 후보를 HTML 후보로 사용합니다. HTML 후보 섹션에서 재검증한 뒤 수동으로 draftHtml에 반영하세요.");
+  }
+
+  async function createStepwiseRun() {
+    setStepwiseError(null);
+    setStepwiseNotice(null);
+    setCreatingStepwiseRun(true);
+
+    try {
+      const result = await requestJson<ApiResult<StepwiseRunApiResult>>(`/api/content-items/${contentItemId}/draft-generation-runs`, {
+        method: "POST",
+        body: JSON.stringify({})
+      });
+      setSelectedStepwiseRun(result.data.run);
+      setSelectedStepwiseRunId(result.data.run.id);
+      setStepwiseNotice("새 stepwise run을 생성했습니다. content item에는 자동 반영하지 않았습니다.");
+      const runs = await requestJson<ApiResult<StepwiseRunsApiResult>>(`/api/content-items/${contentItemId}/draft-generation-runs`);
+      setStepwiseRuns(runs.data.runs);
+    } catch (caught) {
+      setStepwiseError(buildStepwiseErrorMessage(caught instanceof Error ? caught.message : "stepwise run 생성에 실패했습니다."));
+    } finally {
+      setCreatingStepwiseRun(false);
+    }
+  }
+
+  async function selectStepwiseRun(runId: string) {
+    setStepwiseError(null);
+    setStepwiseNotice(null);
+    setSelectedStepwiseRunId(runId);
+    setLoadingStepwiseRuns(true);
+
+    try {
+      await loadStepwiseRunDetail(runId);
+    } catch (caught) {
+      setStepwiseError(buildStepwiseErrorMessage(caught instanceof Error ? caught.message : "stepwise run 상세 조회에 실패했습니다."));
+    } finally {
+      setLoadingStepwiseRuns(false);
+    }
+  }
+
+  async function executeStepwiseStep(stepKey: string) {
+    if (!selectedStepwiseRun) {
+      return;
+    }
+
+    setStepwiseError(null);
+    setStepwiseNotice(null);
+    setExecutingStepwiseStepKey(stepKey);
+
+    try {
+      const result = await requestJson<ApiResult<StepwiseStepApiResult>>(
+        `/api/content-items/${contentItemId}/draft-generation-runs/${selectedStepwiseRun.id}/steps/${stepKey}`,
+        {
+          method: "POST",
+          body: JSON.stringify({})
+        }
+      );
+      setSelectedStepwiseRun(result.data.run);
+      setStepwiseNotice(
+        result.data.executed
+          ? `${stepKey} step을 로컬 LLM으로 실행했습니다. content item에는 자동 반영하지 않았습니다.`
+          : `${stepKey} step은 이미 성공 상태라 기존 결과를 재사용했습니다.`
+      );
+      await loadStepwiseRuns();
+    } catch (caught) {
+      setStepwiseError(buildStepwiseErrorMessage(caught instanceof Error ? caught.message : `${stepKey} step 실행에 실패했습니다.`));
+      if (selectedStepwiseRunId) {
+        try {
+          await loadStepwiseRunDetail(selectedStepwiseRunId);
+        } catch {
+          // keep the original error visible
+        }
+      }
+    } finally {
+      setExecutingStepwiseStepKey(null);
+    }
+  }
+
+  async function assembleStepwiseRun() {
+    if (!selectedStepwiseRun) {
+      return;
+    }
+
+    setStepwiseError(null);
+    setStepwiseNotice(null);
+    setAssemblingStepwiseRun(true);
+
+    try {
+      const result = await requestJson<ApiResult<StepwiseAssembleApiResult>>(
+        `/api/content-items/${contentItemId}/draft-generation-runs/${selectedStepwiseRun.id}/assemble`,
+        {
+          method: "POST",
+          body: JSON.stringify({})
+        }
+      );
+      setSelectedStepwiseRun(result.data.run);
+      setStepwiseNotice(
+        result.data.executed
+          ? "section output을 deterministic assemble로 결합했습니다. LLM/Blogger API는 호출하지 않았고 content item에도 반영하지 않았습니다."
+          : "기존 assembled candidate를 재사용했습니다."
+      );
+      await loadStepwiseRuns();
+    } catch (caught) {
+      setStepwiseError(buildStepwiseErrorMessage(caught instanceof Error ? caught.message : "stepwise assemble에 실패했습니다."));
+    } finally {
+      setAssemblingStepwiseRun(false);
+    }
+  }
+
+  async function finalPolishStepwiseRun() {
+    if (!selectedStepwiseRun) {
+      return;
+    }
+
+    setStepwiseError(null);
+    setStepwiseNotice(null);
+    setFinalPolishingStepwiseRun(true);
+
+    try {
+      const result = await requestJson<ApiResult<StepwiseFinalPolishApiResult>>(
+        `/api/content-items/${contentItemId}/draft-generation-runs/${selectedStepwiseRun.id}/final-polish`,
+        {
+          method: "POST",
+          body: JSON.stringify({})
+        }
+      );
+      setSelectedStepwiseRun(result.data.run);
+      setStepwiseNotice(
+        result.data.executed
+          ? "final polish를 로컬 LLM으로 실행했습니다. 결과는 run candidate에만 저장했고 content item에는 자동 반영하지 않았습니다."
+          : "기존 final candidate를 재사용했습니다."
+      );
+      await loadStepwiseRuns();
+    } catch (caught) {
+      setStepwiseError(buildStepwiseErrorMessage(caught instanceof Error ? caught.message : "final polish에 실패했습니다."));
+      if (selectedStepwiseRunId) {
+        try {
+          await loadStepwiseRunDetail(selectedStepwiseRunId);
+        } catch {
+          // keep the original error visible
+        }
+      }
+    } finally {
+      setFinalPolishingStepwiseRun(false);
+    }
   }
 
   async function runPublishReadiness() {
@@ -1553,6 +1845,29 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
             )}
           </section>
 
+          <StepwiseDraftGenerationSection
+            runs={stepwiseRuns}
+            selectedRun={selectedStepwiseRun}
+            selectedRunId={selectedStepwiseRunId}
+            loading={loadingStepwiseRuns}
+            creating={creatingStepwiseRun}
+            executingStepKey={executingStepwiseStepKey}
+            assembling={assemblingStepwiseRun}
+            finalPolishing={finalPolishingStepwiseRun}
+            busy={stepwiseBusy}
+            canCreateRun={canCreateStepwiseRun}
+            canAssemble={canAssembleStepwiseRun}
+            canFinalPolish={canFinalPolishStepwiseRun}
+            error={stepwiseError}
+            notice={stepwiseNotice}
+            onRefresh={() => void loadStepwiseRuns()}
+            onCreate={() => void createStepwiseRun()}
+            onSelect={(runId) => void selectStepwiseRun(runId)}
+            onExecuteStep={(stepKey) => void executeStepwiseStep(stepKey)}
+            onAssemble={() => void assembleStepwiseRun()}
+            onFinalPolish={() => void finalPolishStepwiseRun()}
+          />
+
           <section className="admin-section">
             <div className="section-heading">
               <div>
@@ -2001,6 +2316,358 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
       ) : null}
     </>
   );
+}
+
+function StepwiseDraftGenerationSection({
+  runs,
+  selectedRun,
+  selectedRunId,
+  loading,
+  creating,
+  executingStepKey,
+  assembling,
+  finalPolishing,
+  busy,
+  canCreateRun,
+  canAssemble,
+  canFinalPolish,
+  error,
+  notice,
+  onRefresh,
+  onCreate,
+  onSelect,
+  onExecuteStep,
+  onAssemble,
+  onFinalPolish
+}: {
+  runs: StepwiseDraftGenerationRunSummary[];
+  selectedRun: StepwiseDraftGenerationRunDetail | null;
+  selectedRunId: string | null;
+  loading: boolean;
+  creating: boolean;
+  executingStepKey: string | null;
+  assembling: boolean;
+  finalPolishing: boolean;
+  busy: boolean;
+  canCreateRun: boolean;
+  canAssemble: boolean;
+  canFinalPolish: boolean;
+  error: string | null;
+  notice: string | null;
+  onRefresh: () => void;
+  onCreate: () => void;
+  onSelect: (runId: string) => void;
+  onExecuteStep: (stepKey: string) => void;
+  onAssemble: () => void;
+  onFinalPolish: () => void;
+}) {
+  const missingSectionKeys = selectedRun ? getMissingStepwiseSectionKeys(selectedRun) : [];
+
+  return (
+    <section className="admin-section">
+      <div className="section-heading">
+        <div>
+          <h2>Stepwise Draft Generation</h2>
+          <p className="muted">로컬 LLM 기반 단계별 장문 초안 생성 run을 조회하고 한 단계씩 실행합니다.</p>
+        </div>
+        <button className="button secondary" type="button" disabled>
+          후보 저장소 only
+        </button>
+      </div>
+
+      <div className="notice warning">
+        <strong>실험적 local stepwise flow</strong>
+        <p>content item에는 자동 반영하지 않습니다. draftMarkdown/draftHtml/status/qualityScore/publishedAt/scheduledAt을 변경하지 않습니다.</p>
+        <p>Blogger API, Blogger draft save, publish, scheduled publish, token refresh를 호출하지 않습니다.</p>
+        <p>생성 결과는 stepwise run candidate에만 저장됩니다. content item 적용 기능은 후속 패치에서 별도로 설계합니다.</p>
+      </div>
+
+      {error ? <div className="notice error">{error}</div> : null}
+      {notice ? <div className="notice">{notice}</div> : null}
+      {loading ? <div className="notice">stepwise run 정보를 불러오는 중입니다.</div> : null}
+
+      <div className="form-actions">
+        <button className="button" type="button" disabled={!canCreateRun} onClick={onCreate}>
+          {creating ? "새 run 생성 중" : "새 stepwise run 생성"}
+        </button>
+        <button className="button secondary" type="button" disabled={loading} onClick={onRefresh}>
+          Run 목록 새로고침
+        </button>
+        <button className="button secondary" type="button" disabled>
+          content item 적용은 후속 패치
+        </button>
+      </div>
+
+      <StepwiseRunList runs={runs} selectedRunId={selectedRunId} onSelect={onSelect} />
+
+      {selectedRun ? (
+        <>
+          <div className="detail-grid">
+            <DetailItem label="Selected Run ID" value={selectedRun.id} />
+            <DetailItem label="Strategy" value={selectedRun.strategy} />
+            <DetailItem label="Status" value={selectedRun.status} />
+            <DetailItem label="Current Step" value={selectedRun.currentStepKey ?? "-"} />
+            <DetailItem label="Created" value={formatDate(selectedRun.createdAt)} />
+            <DetailItem label="Updated" value={formatDate(selectedRun.updatedAt)} />
+            <DetailItem label="Completed" value={selectedRun.completedAt ? formatDate(selectedRun.completedAt) : "-"} />
+            <DetailItem label="Assembled Candidate" value={selectedRun.assembledCandidateMarkdown ? "yes" : "no"} />
+            <DetailItem label="Final Candidate" value={selectedRun.finalCandidateMarkdown ? "yes" : "no"} />
+          </div>
+
+          <StepwiseStepTable
+            run={selectedRun}
+            busy={busy}
+            executingStepKey={executingStepKey}
+            onExecuteStep={onExecuteStep}
+          />
+
+          <div className={missingSectionKeys.length > 0 ? "notice warning" : "notice"}>
+            <strong>Assemble readiness</strong>
+            {missingSectionKeys.length > 0 ? (
+              <p>아직 assemble할 수 없습니다. 빠진 section: {missingSectionKeys.join(", ")}</p>
+            ) : (
+              <p>모든 section output이 success 상태입니다. deterministic assemble을 실행할 수 있습니다.</p>
+            )}
+            <p>assemble은 LLM 호출 없이 section output을 고정 순서로 결합합니다.</p>
+          </div>
+
+          <div className="form-actions">
+            <button className="button" type="button" disabled={!canAssemble} onClick={onAssemble}>
+              {assembling ? "Assemble 실행 중" : "Deterministic Assemble"}
+            </button>
+            <button className="button secondary" type="button" disabled={!canFinalPolish} onClick={onFinalPolish}>
+              {finalPolishing ? "Final Polish 실행 중" : "Final Polish 로컬 LLM 호출"}
+            </button>
+          </div>
+
+          <StepwiseValidationSummary summary={selectedRun.validationSummary} />
+          <StepwiseCandidatePreview title="Assembled Candidate Markdown" value={selectedRun.assembledCandidateMarkdown} />
+          <StepwiseCandidatePreview title="Final Candidate Markdown" value={selectedRun.finalCandidateMarkdown} />
+
+          <div className="notice warning">
+            <strong>Ollama diagnostics</strong>
+            <p>{formatStepwiseErrorCode("provider_first_byte_timeout")}</p>
+            <p>다른 큰 모델이 GPU/context를 점유하면 first-byte timeout이 날 수 있습니다.</p>
+            <p>실제 LLM 실행 전 `node scripts/smoke_9e4c3c_stepwise_local_ollama.mjs --probe-generate` 확인을 권장합니다.</p>
+          </div>
+        </>
+      ) : (
+        <div className="notice">선택된 stepwise run이 없습니다. 기존 run을 선택하거나 새 run을 생성하세요.</div>
+      )}
+    </section>
+  );
+}
+
+function StepwiseRunList({
+  runs,
+  selectedRunId,
+  onSelect
+}: {
+  runs: StepwiseDraftGenerationRunSummary[];
+  selectedRunId: string | null;
+  onSelect: (runId: string) => void;
+}) {
+  if (runs.length === 0) {
+    return <div className="notice">아직 stepwise run이 없습니다. 새 stepwise run을 생성하세요.</div>;
+  }
+
+  return (
+    <div className="read-block">
+      <h3>Recent Runs</h3>
+      <div className="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Run</th>
+              <th>Status</th>
+              <th>Current</th>
+              <th>Steps</th>
+              <th>Created</th>
+              <th>Updated</th>
+              <th>Completed</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {runs.map((run) => (
+              <tr key={run.id}>
+                <td>
+                  <code>{run.id}</code>
+                </td>
+                <td>{run.status}</td>
+                <td>{run.currentStepKey ?? "-"}</td>
+                <td>{run.stepCount ?? "-"}</td>
+                <td>{formatDate(run.createdAt)}</td>
+                <td>{formatDate(run.updatedAt)}</td>
+                <td>{run.completedAt ? formatDate(run.completedAt) : "-"}</td>
+                <td>
+                  <button className="button secondary" type="button" disabled={selectedRunId === run.id} onClick={() => onSelect(run.id)}>
+                    {selectedRunId === run.id ? "선택됨" : "선택"}
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function StepwiseStepTable({
+  run,
+  busy,
+  executingStepKey,
+  onExecuteStep
+}: {
+  run: StepwiseDraftGenerationRunDetail;
+  busy: boolean;
+  executingStepKey: string | null;
+  onExecuteStep: (stepKey: string) => void;
+}) {
+  const stepsByKey = new Map(run.steps.map((step) => [step.stepKey, step]));
+
+  return (
+    <div className="read-block">
+      <h3>Step Execution</h3>
+      <div className="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Step</th>
+              <th>Section</th>
+              <th>Status</th>
+              <th>Attempt</th>
+              <th>Output</th>
+              <th>Latency</th>
+              <th>Error</th>
+              <th>Hashes</th>
+              <th>Summary</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {STEPWISE_STEP_ORDER.map((stepKey) => {
+              const step = stepsByKey.get(stepKey);
+              const canRun = Boolean(step && canRunStepwiseStep(run, stepKey, busy));
+              return (
+                <tr key={stepKey}>
+                  <td>
+                    <code>{stepKey}</code>
+                  </td>
+                  <td>{step?.sectionKey ?? "-"}</td>
+                  <td>{step?.status ?? "missing"}</td>
+                  <td>{step?.attempt ?? "-"}</td>
+                  <td>{step?.hasOutputMarkdown ? "yes" : "no"}</td>
+                  <td>{step?.latencyMs ? `${step.latencyMs}ms` : "-"}</td>
+                  <td>{step?.errorCode ? formatStepwiseErrorCode(step.errorCode) : "-"}</td>
+                  <td>
+                    <div>prompt: {step?.promptHash ?? "-"}</div>
+                    <div>response: {step?.responseHash ?? "-"}</div>
+                  </td>
+                  <td>{step?.outputSummary ? step.outputSummary.slice(0, 180) : "-"}</td>
+                  <td>
+                    <button className="button secondary" type="button" disabled={!canRun} onClick={() => onExecuteStep(stepKey)}>
+                      {executingStepKey === stepKey ? "로컬 LLM 호출 중" : step?.status === "success" ? "완료" : "로컬 LLM 호출"}
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      <div className="notice">성공한 step은 이번 UI에서 다시 실행하지 않습니다. retry/force UX는 후속 패치에서 별도로 다룹니다.</div>
+    </div>
+  );
+}
+
+function StepwiseValidationSummary({ summary }: { summary: StepwiseValidationSummary | null }) {
+  if (!summary) {
+    return <div className="notice">validation summary가 아직 없습니다. assemble 또는 final polish 후 표시됩니다.</div>;
+  }
+
+  return (
+    <div className={summary.ok ? "notice" : "notice warning"}>
+      <strong>Run Candidate Validation Summary</strong>
+      <p>
+        phase: {summary.phase ?? "-"} / ok: {summary.ok ? "yes" : "no"} / length: {summary.markdownLength ?? "-"} / errors:{" "}
+        {summary.errorCount ?? 0} / warnings: {summary.warningCount ?? 0}
+      </p>
+      {summary.guardSummary ? (
+        <p>
+          FAQ required: {summary.guardSummary.faqRequired ? "yes" : "no"} / FAQ detected:{" "}
+          {summary.guardSummary.faqSectionDetectedAfter ? "yes" : "no"} / safety scrub:{" "}
+          {summary.guardSummary.safetyScrubApplied ? `applied ${summary.guardSummary.safetyScrubCount ?? 0}` : "not applied"}
+        </p>
+      ) : null}
+      {summary.errors && summary.errors.length > 0 ? <ValidationList title="Candidate Errors" items={summary.errors} emptyText="error가 없습니다." isError /> : null}
+      {summary.warnings && summary.warnings.length > 0 ? <ValidationList title="Candidate Warnings" items={summary.warnings} emptyText="warning이 없습니다." isWarning /> : null}
+    </div>
+  );
+}
+
+function StepwiseCandidatePreview({ title, value }: { title: string; value: string | null }) {
+  return (
+    <div className="read-block">
+      <h3>{title}</h3>
+      {value ? <pre style={{ maxHeight: 420, overflow: "auto" }}>{value}</pre> : <div className="notice">아직 candidate가 없습니다.</div>}
+    </div>
+  );
+}
+
+function getMissingStepwiseSectionKeys(run: StepwiseDraftGenerationRunDetail) {
+  return STEPWISE_SECTION_KEYS.filter((key) => {
+    const step = run.steps.find((item) => item.stepKey === key);
+    return step?.status !== "success" || !step.hasOutputMarkdown;
+  });
+}
+
+function canRunStepwiseStep(run: StepwiseDraftGenerationRunDetail, stepKey: string, busy: boolean) {
+  const step = run.steps.find((item) => item.stepKey === stepKey);
+  if (!step || busy || run.status === "completed" || run.status === "cancelled" || step.status === "running" || step.status === "success") {
+    return false;
+  }
+  if (stepKey === "skeleton") {
+    return true;
+  }
+  const skeleton = run.steps.find((item) => item.stepKey === "skeleton");
+  return Boolean(skeleton?.status === "success" && skeleton.hasOutputMarkdown);
+}
+
+function buildStepwiseErrorMessage(code: string) {
+  return `${code}: ${formatStepwiseErrorCode(code)}`;
+}
+
+function formatStepwiseErrorCode(code: string) {
+  if (code === "provider_first_byte_timeout") {
+    return "provider_first_byte_timeout - Ollama/model이 첫 응답 byte를 제시간에 반환하지 않았습니다. 다른 큰 모델이 GPU/context를 점유했는지 확인하세요.";
+  }
+  if (code === "provider_idle_timeout") {
+    return "provider_idle_timeout - streaming 응답 도중 provider가 멈췄습니다. Ollama 상태와 모델 부하를 확인하세요.";
+  }
+  if (code === "provider_timeout") {
+    return "provider_timeout - provider 호출 전체 제한 시간을 초과했습니다.";
+  }
+  if (code === "provider_network_error") {
+    return "provider_network_error - local provider endpoint에 연결하지 못했습니다.";
+  }
+  if (code === "provider_model_not_found") {
+    return "provider_model_not_found - 설정된 Ollama model이 /api/tags 결과에 없습니다.";
+  }
+  if (code === "section_steps_required") {
+    return "section_steps_required - assemble 전 모든 section step이 success이고 outputMarkdown이 있어야 합니다.";
+  }
+  if (code === "assembled_candidate_required") {
+    return "assembled_candidate_required - final polish 전 assembled candidate가 필요합니다.";
+  }
+  if (code === "skeleton_required") {
+    return "skeleton_required - section step 실행 전 skeleton step이 먼저 성공해야 합니다.";
+  }
+  if (code === "local_stepwise_route_required") {
+    return "local_stepwise_route_required - stepwise 실행은 local/Ollama/local_http content_draft route에서만 허용됩니다.";
+  }
+  return code;
 }
 
 function DetailItem({ label, value }: { label: string; value: string }) {
