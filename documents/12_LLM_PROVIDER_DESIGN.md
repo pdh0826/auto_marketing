@@ -513,3 +513,26 @@ Boundary:
 - Content detail UI는 Patch 9E-4C-3E 이후로 분리한다.
 - `content_items.draftMarkdown`/`draftHtml` 자동 저장은 금지하며 manual apply에서만 변경한다.
 - Blogger API, draft save, publish, scheduled publish, token refresh와는 무관하다.
+
+## Patch 9E-4C-3B local sectioned stepwise start/read API
+
+Patch 9E-4C-3B adds API access to the persisted stepwise run foundation without executing any LLM step.
+
+API:
+
+- `POST /api/content-items/[id]/draft-generation-runs`
+  - Requires saved `planJson`.
+  - Creates a `local_sectioned_stepwise` run with `pending` status and `currentStepKey=skeleton`.
+  - Creates pending placeholders for `skeleton`, `intro`, `body_1`, `body_2`, `body_3`, and `conclusion_cta_faq`.
+- `GET /api/content-items/[id]/draft-generation-runs`
+  - Returns safe run summaries for the content item, newest first.
+- `GET /api/content-items/[id]/draft-generation-runs/[runId]`
+  - Returns one run detail with step summaries when the run belongs to the URL content item.
+
+Boundary:
+
+- No provider invocation, no prompt construction, no `llm_call_logs` creation.
+- No step execution API, assembly API, final polish API, cancel API, or UI.
+- Existing `POST /api/content-items/[id]/generate-draft` behavior is unchanged.
+- Safe responses do not include prompt full text, raw response full text, request/response body, API key, token, secret, or encrypted value.
+- `content_items.draftMarkdown`/`draftHtml`, status, `qualityScore`, `publishedAt`, and `scheduledAt` are not changed.

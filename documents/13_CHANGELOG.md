@@ -540,3 +540,25 @@ Policy:
 - No content item status, `qualityScore`, `publishedAt`, or `scheduledAt` mutation.
 - No prompt full text, raw response, request/response body, candidate Markdown, section fragment, secret, token, or encrypted value logging.
 - No Blogger API read/write, draft save, publish, scheduled publish, token refresh, `posts.insert`, or `posts.update`.
+
+## Patch 9E-4C-3B: Local Stepwise Draft Generation Start/Read API
+
+Implemented after Patch 9E-4C-3A:
+
+- Added `POST /api/content-items/[id]/draft-generation-runs`.
+- Added `GET /api/content-items/[id]/draft-generation-runs`.
+- Added `GET /api/content-items/[id]/draft-generation-runs/[runId]`.
+- The start API requires saved `planJson` and creates a `local_sectioned_stepwise` run only.
+- New runs start as `pending`, set `currentStepKey=skeleton`, and create pending step placeholders for skeleton and default section keys.
+- List and detail APIs return safe run/step DTOs.
+- Reused the 3A repository helpers and added a local stepwise creation helper plus DTO mappers.
+
+Policy:
+
+- No LLM provider call and no `llm_call_logs` creation.
+- No step execution, assembly, final polish, cancel API, or UI.
+- Existing `POST /api/content-items/[id]/generate-draft` behavior is unchanged.
+- No automatic `draftMarkdown` or `draftHtml` save.
+- No content item status, `qualityScore`, `publishedAt`, or `scheduledAt` mutation.
+- No prompt full text, raw response, request/response body, secret, token, or encrypted value response/storage.
+- No Blogger API read/write, draft save, publish, scheduled publish, token refresh, `posts.insert`, or `posts.update`.

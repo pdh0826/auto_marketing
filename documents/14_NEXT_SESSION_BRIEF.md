@@ -5,7 +5,7 @@
 ```text
 repo: ~/blog-growth-agent
 branch: master
-latest committed baseline before Patch 9E-4C-3A: 60685b2 Harden local sectioned draft safety and timeout policy
+latest committed baseline before Patch 9E-4C-3B: 4fc29e3 Add stepwise draft generation run storage
 ```
 
 ## Implemented Scope
@@ -36,6 +36,7 @@ latest committed baseline before Patch 9E-4C-3A: 60685b2 Harden local sectioned 
 - Local sectioned draft timeout policy hotfix
 - Local sectioned draft cold-start timeout policy hotfix
 - Local stepwise draft generation DB schema/repository foundation
+- Local stepwise draft generation start/read API
 
 ## Current Blogger State
 
@@ -79,22 +80,30 @@ latest committed baseline before Patch 9E-4C-3A: 60685b2 Harden local sectioned 
 - The new run/step repository stores safe status/hash/latency/metadata and normalized Markdown fragments only.
 - Patch 9E-4C-3A does not add API routes or UI and does not change the existing `generate-draft` route.
 - Existing `local_sectioned_multi_pass` single-request behavior is preserved as legacy/debug behavior.
+- Patch 9E-4C-3B adds start/read APIs for persisted stepwise runs.
+- `POST /api/content-items/[id]/draft-generation-runs` creates a `local_sectioned_stepwise` pending run only and requires saved `planJson`.
+- `GET /api/content-items/[id]/draft-generation-runs` returns safe run summaries.
+- `GET /api/content-items/[id]/draft-generation-runs/[runId]` returns one run detail with pending/executed step summaries.
+- Patch 9E-4C-3B does not execute LLM steps, create `llm_call_logs`, add UI, or change `generate-draft`.
 
 ## Next Patch Candidate
 
-Patch 9E-4C-3B 후보: Local stepwise draft generation start/read run API.
+Patch 9E-4C-3C 후보: Local stepwise draft generation skeleton/section execution API.
 
 Alternative candidates:
 
-- Patch 9E-4C-3C: Local stepwise skeleton/section execution API.
+- Patch 9E-4C-3D: Local stepwise deterministic assemble/final polish API.
 - Patch 9E-4D: Blog post template renderer / publish-ready HTML theme.
 - Patch 9E-5: Blogger OAuth/test blog readiness 재점검.
 
 Recommended scope:
 
-- Add start/read APIs for `content_draft_generation_runs`.
-- Start run should create run state only and must not call the LLM.
-- Read run should return run + step safe DTOs without prompt/raw response/body fields.
+- Add skeleton/section step execution APIs for existing `content_draft_generation_runs`.
+- Each step should be one request with a local step timeout policy.
+- Failed steps should be retryable without restarting the run.
+- Step execution should store normalized Markdown fragment/output summary and safe hashes/metadata only.
+- Deterministic assembly and final polish should remain out of scope until 9E-4C-3D.
+- UI should remain out of scope until 9E-4C-3E.
 - Keep existing `generate-draft` route unchanged.
 - Keep commercial/high-performance remote providers on the existing one-shot full draft path.
 - Keep Blogger OAuth/live draft save out of scope unless Patch 9E-5 is selected.
@@ -121,7 +130,7 @@ Recommended scope:
 ```text
 AGENTS.md와 documents/ 폴더의 관련 문서를 먼저 읽어줘.
 
-현재 프로젝트 상태를 점검하고 Patch 9E-4C-3B 작업계획을 제안해줘.
+현재 프로젝트 상태를 점검하고 Patch 9E-4C-3C 작업계획을 제안해줘.
 
 목표:
 - Patch 9E-4B의 repair candidate apply UX polish 구현 상태를 확인한다.
@@ -132,7 +141,8 @@ AGENTS.md와 documents/ 폴더의 관련 문서를 먼저 읽어줘.
 - Patch 9E-4C-2-hotfix3의 Local sectioned timeout policy 구현 상태를 확인한다.
 - Patch 9E-4C-2-hotfix4의 Local sectioned cold-start timeout policy 구현 상태를 확인한다.
 - Patch 9E-4C-3A의 Local stepwise draft generation DB schema/repository foundation 구현 상태를 확인한다.
-- Local stepwise draft generation start/read run API의 최소 범위를 설계한다.
+- Patch 9E-4C-3B의 Local stepwise draft generation start/read run API 구현 상태를 확인한다.
+- Local stepwise skeleton/section step execution API의 최소 범위를 설계한다.
 - remote/commercial provider의 기존 one-shot draft generation은 유지한다.
 - 자동 draftHtml 저장, Blogger API 호출, publish/scheduled publish는 명시적으로 범위를 정하기 전까지 구현하지 않는다.
 

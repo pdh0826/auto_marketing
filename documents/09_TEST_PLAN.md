@@ -599,3 +599,16 @@ npm run build
 - 기존 `POST /api/content-items/[id]/generate-draft` 동작은 변경하지 않는다.
 - 자동 `content_items.draftMarkdown`/`draftHtml` 저장, status/qualityScore/publishedAt/scheduledAt 변경, Blogger API/draft save/publish/token refresh는 발생하지 않는다.
 - 검증 명령은 `git diff --check`, placeholder `DATABASE_URL` 기반 `npx prisma validate`, `npx prisma generate`, `npm run lint`, `npm run typecheck`, `npm run build`를 사용한다.
+
+## Patch 9E-4C-3B Local stepwise draft generation start/read API 검증
+
+- `POST /api/content-items/[id]/draft-generation-runs`는 saved `planJson`이 있는 content item에 대해서만 `local_sectioned_stepwise` run을 생성해야 한다.
+- run 생성은 LLM provider를 호출하지 않고 `llm_call_logs`를 생성하지 않아야 한다.
+- 생성된 run은 `pending` status, `currentStepKey=skeleton`, 기본 section keys(`intro`, `body_1`, `body_2`, `body_3`, `conclusion_cta_faq`)를 가져야 한다.
+- 생성 응답은 run detail과 pending step summaries만 반환해야 하며 prompt/raw response/body/token/secret/encryptedValue를 반환하지 않아야 한다.
+- `GET /api/content-items/[id]/draft-generation-runs`는 해당 content item의 run 목록을 최신순 safe summary로 반환해야 한다.
+- `GET /api/content-items/[id]/draft-generation-runs/[runId]`는 해당 content item에 속한 run만 steps 포함 detail로 반환해야 한다.
+- 이번 패치는 step execution, assemble, final polish, cancel API를 추가하지 않는다.
+- 기존 `POST /api/content-items/[id]/generate-draft` 동작은 변경하지 않는다.
+- 자동 `content_items.draftMarkdown`/`draftHtml` 저장, status/qualityScore/publishedAt/scheduledAt 변경, Blogger API/draft save/publish/token refresh는 발생하지 않는다.
+- local DB smoke는 3A migration 적용 여부가 확인된 경우에만 수행한다.
