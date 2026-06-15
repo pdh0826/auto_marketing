@@ -278,6 +278,27 @@ export function updateContentDraftGenerationRunProgress(input: {
   });
 }
 
+export function saveAssembledContentDraftGenerationRun(input: {
+  runId: string;
+  assembledCandidateMarkdown: string;
+  validationSummary?: Prisma.InputJsonValue | null;
+  metadata?: Prisma.InputJsonValue | null;
+}) {
+  return prisma.contentDraftGenerationRun.update({
+    where: { id: input.runId },
+    data: {
+      status: "running",
+      currentStepKey: "final_polish",
+      assembledCandidateMarkdown: input.assembledCandidateMarkdown,
+      finalCandidateMarkdown: null,
+      validationSummary: toNullableJsonInput(input.validationSummary),
+      metadata: toNullableJsonInput(input.metadata),
+      completedAt: null
+    },
+    select: runSafeSelect
+  });
+}
+
 export function completeContentDraftGenerationRun(input: {
   runId: string;
   assembledCandidateMarkdown?: string | null;
@@ -295,6 +316,24 @@ export function completeContentDraftGenerationRun(input: {
       validationSummary: toNullableJsonInput(input.validationSummary),
       metadata: toNullableJsonInput(input.metadata),
       completedAt: new Date()
+    },
+    select: runSafeSelect
+  });
+}
+
+export function failContentDraftGenerationRun(input: {
+  runId: string;
+  currentStepKey?: string | null;
+  validationSummary?: Prisma.InputJsonValue | null;
+  metadata?: Prisma.InputJsonValue | null;
+}) {
+  return prisma.contentDraftGenerationRun.update({
+    where: { id: input.runId },
+    data: {
+      status: "failed",
+      currentStepKey: input.currentStepKey ?? null,
+      validationSummary: toNullableJsonInput(input.validationSummary),
+      metadata: toNullableJsonInput(input.metadata)
     },
     select: runSafeSelect
   });

@@ -610,3 +610,27 @@ Policy:
 - No content item `draftMarkdown`, `draftHtml`, status, `qualityScore`, `publishedAt`, or `scheduledAt` mutation.
 - No Blogger API read/write, draft save, publish, scheduled publish, token refresh, `posts.insert`, or `posts.update`.
 - No prompt full text, raw response full text, output Markdown full text, skeleton/section fragment full text, candidate Markdown, secret, token, or encrypted value logging.
+
+## Patch 9E-4C-3D: Local Stepwise Assemble and Final Polish API
+
+Implemented after Patch 9E-4C-3C smoke stabilization:
+
+- Added `POST /api/content-items/[id]/draft-generation-runs/[runId]/assemble`.
+- Added `POST /api/content-items/[id]/draft-generation-runs/[runId]/final-polish`.
+- Added repository helpers for saving assembled candidates and marking run-level final polish failures.
+- Deterministic assembly combines successful section outputs in the fixed stepwise order.
+- Assembly requires all required section steps to be `success` with `outputMarkdown`.
+- Assembly stores `assembledCandidateMarkdown`, safe validation summary, and safe metadata without calling an LLM.
+- Final polish requires an assembled candidate and calls the configured local-like `content_draft` route once.
+- Final polish success stores `finalCandidateMarkdown`, safe validation summary, and completes the run.
+- Final polish failure keeps the assembled candidate as fallback and records safe failure metadata only.
+- Added `scripts/smoke_9e4c3d_assemble_final_polish.mjs` for API-level assemble/final polish smoke checks.
+
+Policy:
+
+- Existing `POST /api/content-items/[id]/generate-draft` behavior is unchanged.
+- No UI was added.
+- No automatic `draftMarkdown` or `draftHtml` save.
+- No content item status, `qualityScore`, `publishedAt`, or `scheduledAt` mutation.
+- No prompt full text, raw response full text, assembled/final candidate full text in metadata, secret, token, or encrypted value logging.
+- No Blogger API read/write, draft save, publish, scheduled publish, token refresh, `posts.insert`, or `posts.update`.

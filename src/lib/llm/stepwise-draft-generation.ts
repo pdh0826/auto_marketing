@@ -3,6 +3,7 @@ import type { Prisma } from "@prisma/client";
 import type { ContentAssetAdmin } from "@/lib/content/asset-types";
 import type { ContentItemAdmin } from "@/lib/content/admin-types";
 import { buildDraftMarkdownDryRun, type DraftPromptPreview } from "@/lib/content/draft-preview";
+import { validateDraftMarkdown } from "@/lib/content/draft-validation";
 import { validatePlanJson } from "@/lib/content/plan-validation";
 import { createLlmCallLog } from "@/lib/db/llm-call-logs";
 import { prisma } from "@/lib/db/client";
@@ -10,17 +11,21 @@ import {
   DEFAULT_LOCAL_SECTIONED_STEPWISE_SECTION_KEYS,
   DEFAULT_LOCAL_SECTIONED_STEPWISE_STEP_KEYS,
   LOCAL_SECTIONED_STEPWISE_STRATEGY,
+  completeContentDraftGenerationRun,
+  failContentDraftGenerationRun,
   getContentDraftGenerationRunForContentItem,
   markContentDraftGenerationStepFailed,
   markContentDraftGenerationStepPendingRetry,
   markContentDraftGenerationStepRunning,
   markContentDraftGenerationStepSuccess,
+  saveAssembledContentDraftGenerationRun,
   toContentDraftGenerationRunDetail,
   toContentDraftGenerationStepSummary,
   updateContentDraftGenerationRunProgress,
   type SafeContentDraftGenerationRunWithSteps,
   type SafeContentDraftGenerationStep
 } from "@/lib/db/content-draft-generation-runs";
+import { scrubLocalSectionedDraftSafetyPhrases } from "@/lib/llm/local-sectioned-draft-generation";
 import type { LlmTaskRouteAdmin } from "@/lib/llm/admin-types";
 import { isLocalLikeDraftProvider } from "@/lib/llm/draft-generation-strategy";
 import { getOpenAiCompletionTokenParameter } from "@/lib/llm/provider-test";
@@ -34,14 +39,28 @@ const STEPWISE_OLLAMA_KEEP_ALIVE = "30s";
 const STEPWISE_OLLAMA_PREFLIGHT_TIMEOUT_SECONDS = 10;
 const SKELETON_MAX_TOKENS = 360;
 const SECTION_MAX_TOKENS = 900;
+const FINAL_POLISH_MAX_TOKENS = 1400;
 const SKELETON_NUM_CTX = 2048;
 const SECTION_NUM_CTX = 4096;
+const FINAL_POLISH_NUM_CTX = 8192;
 
 export interface ExecuteStepwiseDraftGenerationStepInput {
   contentItemId: string;
   runId: string;
   stepKey: string;
   retry?: boolean;
+}
+
+export interface AssembleStepwiseDraftGenerationRunInput {
+  contentItemId: string;
+  runId: string;
+  force?: boolean;
+}
+
+export interface FinalPolishStepwiseDraftGenerationRunInput {
+  contentItemId: string;
+  runId: string;
+  force?: boolean;
 }
 
 export class StepwiseDraftGenerationError extends Error {
@@ -95,6 +114,284 @@ type ProviderWithSecrets = NonNullable<Awaited<ReturnType<typeof prisma.llmProvi
 
 type StepwiseContentItem = NonNullable<Awaited<ReturnType<typeof loadStepwiseContentItem>>>;
 type StepwiseTaskRoute = NonNullable<Awaited<ReturnType<typeof loadContentDraftRoute>>>;
+
+export async function assembleStepwiseDraftGenerationRun(input: AssembleStepwiseDraftGenerationRunInput) {
+  const run = await getContentDraftGenerationRunForContentItem(input.contentItemId, input.runId);
+  if (!run) {
+    throw new StepwiseDraftGenerationError("draft_generation_run_not_found", "Draft generation run not found.", 404);
+  }
+  assertLocalStepwiseRun(run);
+  if (run.status === "cancelled") {
+    throw new StepwiseDraftGenerationError("run_not_executable", "Cancelled runs cannot be assembled.", 409);
+  }
+  if (run.status === "completed" && input.force) {
+    throw new StepwiseDraftGenerationError("completed_run_not_force_assembled", "Completed runs cannot be force-assembled.", 409);
+  }
+  if (run.assembledCandidateMarkdown && !input.force) {
+    return {
+      run: toContentDraftGenerationRunDetail(run),
+      assembledCandidateMarkdown: run.assembledCandidateMarkdown,
+      validationSummary: run.validationSummary,
+      executed: false,
+      reusedExistingAssembled: true
+    };
+  }
+
+  const contentItem = await loadStepwiseContentItem(input.contentItemId);
+  if (!contentItem) {
+    throw new StepwiseDraftGenerationError("content_item_not_found", "Content item not found.", 404);
+  }
+
+  const planJson = requirePlanJson(contentItem);
+  const sectionOutputs = getRequiredSectionOutputs(run);
+  const contentItemForValidation = contentItem as unknown as ContentItemAdmin;
+  const assembled = buildAssembledCandidateMarkdown({
+    title: getDraftTitle(contentItemForValidation, planJson),
+    sections: sectionOutputs
+  });
+  const guarded = applyDeterministicCandidateGuards(assembled, planJson);
+  const validationSummary = buildCandidateValidationSummary({
+    phase: "assemble",
+    markdown: guarded.markdown,
+    contentItem: contentItemForValidation,
+    assets: contentItem.assets as unknown as ContentAssetAdmin[],
+    sectionKeys: sectionOutputs.map((section) => section.key),
+    guardSummary: guarded.summary
+  });
+
+  const saved = await saveAssembledContentDraftGenerationRun({
+    runId: run.id,
+    assembledCandidateMarkdown: guarded.markdown,
+    validationSummary,
+    metadata: {
+      lastAction: "deterministic_assemble",
+      stepExecutionImplemented: true,
+      assemblyImplemented: true,
+      finalPolishImplemented: false,
+      contentItemAutoApply: false,
+      bloggerApiImplemented: false,
+      assembledLength: guarded.markdown.length,
+      sectionKeys: sectionOutputs.map((section) => section.key),
+      validationOk: validationSummary.ok,
+      warningCount: validationSummary.warningCount,
+      errorCount: validationSummary.errorCount,
+      guardSummary: guarded.summary
+    }
+  });
+  const detailedRun = await getContentDraftGenerationRunForContentItem(saved.contentItemId, saved.id);
+
+  return {
+    run: detailedRun ? toContentDraftGenerationRunDetail(detailedRun) : toContentDraftGenerationRunDetail(run),
+    assembledCandidateMarkdown: guarded.markdown,
+    validationSummary,
+    executed: true,
+    reusedExistingAssembled: false
+  };
+}
+
+export async function finalPolishStepwiseDraftGenerationRun(input: FinalPolishStepwiseDraftGenerationRunInput) {
+  const run = await getContentDraftGenerationRunForContentItem(input.contentItemId, input.runId);
+  if (!run) {
+    throw new StepwiseDraftGenerationError("draft_generation_run_not_found", "Draft generation run not found.", 404);
+  }
+  assertLocalStepwiseRun(run);
+  if (run.status === "cancelled") {
+    throw new StepwiseDraftGenerationError("run_not_executable", "Cancelled runs cannot run final polish.", 409);
+  }
+  if (!run.assembledCandidateMarkdown?.trim()) {
+    throw new StepwiseDraftGenerationError("assembled_candidate_required", "Assembled candidate Markdown is required before final polish.", 409);
+  }
+  if (run.finalCandidateMarkdown && !input.force) {
+    return {
+      run: toContentDraftGenerationRunDetail(run),
+      finalCandidateMarkdown: run.finalCandidateMarkdown,
+      validationSummary: run.validationSummary,
+      executed: false,
+      reusedExistingFinal: true
+    };
+  }
+
+  const contentItem = await loadStepwiseContentItem(input.contentItemId);
+  if (!contentItem) {
+    throw new StepwiseDraftGenerationError("content_item_not_found", "Content item not found.", 404);
+  }
+  const route = await loadContentDraftRoute();
+  assertContentDraftRouteReady(route);
+
+  const provider = route.primaryProvider;
+  const model = route.primaryModel;
+  if (!isLocalLikeDraftProvider(provider)) {
+    throw new StepwiseDraftGenerationError("local_stepwise_route_required", "Stepwise final polish requires a local/Ollama/local_http content_draft route.", 409);
+  }
+
+  const contentItemForValidation = contentItem as unknown as ContentItemAdmin;
+  const assets = contentItem.assets as unknown as ContentAssetAdmin[];
+  const planJson = requirePlanJson(contentItem);
+  const planValidation = validatePlanJson(planJson, contentItemForValidation);
+  if (!planValidation.ok) {
+    throw new StepwiseDraftGenerationError("plan_json_validation_failed", "Saved planJson did not pass validation.", 400);
+  }
+  const dryRun = buildDraftMarkdownDryRun(contentItemForValidation, assets, route as unknown as LlmTaskRouteAdmin);
+  if (!dryRun.ready) {
+    throw new StepwiseDraftGenerationError("content_draft_not_ready", "content_draft readiness checks did not pass.", 409);
+  }
+
+  await updateContentDraftGenerationRunProgress({
+    runId: run.id,
+    status: "running",
+    currentStepKey: "final_polish",
+    metadata: {
+      lastStartedStepKey: "final_polish",
+      stepExecutionImplemented: true,
+      assemblyImplemented: true,
+      finalPolishImplemented: true,
+      contentItemAutoApply: false,
+      bloggerApiImplemented: false
+    }
+  });
+
+  const prompt = buildStepwiseFinalPolishPrompt({
+    contentItem: contentItemForValidation,
+    planJson,
+    mediaMapping: dryRun.mediaMapping,
+    assembledCandidateMarkdown: run.assembledCandidateMarkdown
+  });
+  const promptHash = hashText(`${prompt.system}\n${prompt.user}\n${prompt.outputFormat}`);
+
+  try {
+    const result = await callProvider(
+      provider,
+      model.name,
+      prompt,
+      route.temperature,
+      getMaxTokensForStep("final_polish", route.maxTokens),
+      STEPWISE_STEP_TIMEOUT_SECONDS,
+      "final_polish"
+    );
+    const normalizedFinal = normalizeFinalCandidateMarkdown(result.text, getDraftTitle(contentItemForValidation, planJson));
+    const guarded = applyDeterministicCandidateGuards(normalizedFinal, planJson);
+    const responseHash = hashText(guarded.markdown);
+    const validationSummary = buildCandidateValidationSummary({
+      phase: "final_polish",
+      markdown: guarded.markdown,
+      contentItem: contentItemForValidation,
+      assets,
+      sectionKeys: getRequiredSectionOutputs(run).map((section) => section.key),
+      guardSummary: guarded.summary
+    });
+
+    await recordStepwiseDraftLog({
+      contentItemId: input.contentItemId,
+      providerId: provider.id,
+      modelId: model.id,
+      status: "success",
+      latencyMs: result.latencyMs,
+      inputTokens: result.inputTokens,
+      outputTokens: result.outputTokens,
+      errorMessage: null,
+      metadata: {
+        responseSummary: result.responseSummary,
+        runId: run.id,
+        stepKey: "final_polish",
+        sectionKey: null,
+        attempt: input.force ? 2 : 1,
+        promptHash,
+        responseHash,
+        outputLength: guarded.markdown.length,
+        outputSummaryLength: summarizeStepOutput("final_polish", guarded.markdown).length,
+        requestOptionsSummary: result.requestOptionsSummary,
+        provider,
+        modelName: model.displayName ?? model.name
+      }
+    });
+
+    const saved = await completeContentDraftGenerationRun({
+      runId: run.id,
+      assembledCandidateMarkdown: run.assembledCandidateMarkdown,
+      finalCandidateMarkdown: guarded.markdown,
+      validationSummary,
+      metadata: {
+        lastSuccessfulStepKey: "final_polish",
+        lastStepLatencyMs: result.latencyMs,
+        stepExecutionImplemented: true,
+        assemblyImplemented: true,
+        finalPolishImplemented: true,
+        contentItemAutoApply: false,
+        bloggerApiImplemented: false,
+        promptHash,
+        responseHash,
+        finalCandidateLength: guarded.markdown.length,
+        validationOk: validationSummary.ok,
+        warningCount: validationSummary.warningCount,
+        errorCount: validationSummary.errorCount,
+        guardSummary: guarded.summary
+      }
+    });
+    const detailedRun = await getContentDraftGenerationRunForContentItem(saved.contentItemId, saved.id);
+
+    return {
+      run: detailedRun ? toContentDraftGenerationRunDetail(detailedRun) : toContentDraftGenerationRunDetail(run),
+      finalCandidateMarkdown: guarded.markdown,
+      validationSummary,
+      executed: true,
+      reusedExistingFinal: false
+    };
+  } catch (error) {
+    const providerError = error instanceof ProviderCallError ? error : null;
+    const failureCode = providerError?.responseSummary ?? "final_polish_provider_call_failed";
+    const validationSummary = {
+      phase: "final_polish",
+      ok: false,
+      errorCode: failureCode,
+      fallbackCandidateAvailable: true,
+      assembledCandidateAvailable: true
+    } satisfies Prisma.InputJsonObject;
+
+    await failContentDraftGenerationRun({
+      runId: run.id,
+      currentStepKey: "final_polish",
+      validationSummary,
+      metadata: {
+        lastFailedStepKey: "final_polish",
+        lastFailureCode: failureCode,
+        stepExecutionImplemented: true,
+        assemblyImplemented: true,
+        finalPolishImplemented: true,
+        contentItemAutoApply: false,
+        bloggerApiImplemented: false,
+        requestOptionsSummary: toRequestOptionsJson(providerError?.requestOptionsSummary ?? null),
+        promptHash,
+        fallbackCandidateAvailable: true
+      }
+    });
+    await recordStepwiseDraftLog({
+      contentItemId: input.contentItemId,
+      providerId: provider.id,
+      modelId: model.id,
+      status: "failed",
+      latencyMs: providerError?.latencyMs ?? null,
+      inputTokens: null,
+      outputTokens: null,
+      errorMessage: error instanceof Error ? error.message : "final polish provider call failed",
+      metadata: {
+        responseSummary: failureCode,
+        runId: run.id,
+        stepKey: "final_polish",
+        sectionKey: null,
+        attempt: input.force ? 2 : 1,
+        promptHash,
+        responseHash: null,
+        outputLength: 0,
+        outputSummaryLength: 0,
+        requestOptionsSummary: providerError?.requestOptionsSummary ?? null,
+        provider,
+        modelName: model.displayName ?? model.name
+      }
+    });
+
+    throw new StepwiseDraftGenerationError(failureCode, safeErrorMessage(error instanceof Error ? error.message : "Final polish failed.", 240), 400);
+  }
+}
 
 export async function executeStepwiseDraftGenerationStep(input: ExecuteStepwiseDraftGenerationStepInput) {
   if (!isAllowedStepKey(input.stepKey)) {
@@ -350,11 +647,15 @@ export async function executeStepwiseDraftGenerationStep(input: ExecuteStepwiseD
 }
 
 function assertRunExecutable(run: SafeContentDraftGenerationRunWithSteps) {
-  if (run.strategy !== LOCAL_SECTIONED_STEPWISE_STRATEGY) {
-    throw new StepwiseDraftGenerationError("local_stepwise_run_required", "This run is not a local stepwise draft generation run.", 409);
-  }
+  assertLocalStepwiseRun(run);
   if (run.status === "cancelled" || run.status === "completed") {
     throw new StepwiseDraftGenerationError("run_not_executable", "Completed or cancelled runs cannot execute draft generation steps.", 409);
+  }
+}
+
+function assertLocalStepwiseRun(run: SafeContentDraftGenerationRunWithSteps) {
+  if (run.strategy !== LOCAL_SECTIONED_STEPWISE_STRATEGY) {
+    throw new StepwiseDraftGenerationError("local_stepwise_run_required", "This run is not a local stepwise draft generation run.", 409);
   }
 }
 
@@ -380,6 +681,25 @@ function getNextStepKey(stepKey: string) {
     return null;
   }
   return DEFAULT_LOCAL_SECTIONED_STEPWISE_STEP_KEYS[index + 1] ?? null;
+}
+
+function getRequiredSectionOutputs(run: SafeContentDraftGenerationRunWithSteps) {
+  const sections = DEFAULT_LOCAL_SECTIONED_STEPWISE_SECTION_KEYS.map((key) => {
+    const step = run.steps.find((item) => item.stepKey === key);
+    return { key, step };
+  });
+  const missing = sections
+    .filter((section) => section.step?.status !== "success" || !section.step.outputMarkdown?.trim())
+    .map((section) => section.key);
+
+  if (missing.length > 0) {
+    throw new StepwiseDraftGenerationError("section_steps_required", `Successful section outputs are required before assembly. Missing: ${missing.join(", ")}.`, 409);
+  }
+
+  return sections.map((section) => ({
+    key: section.key,
+    markdown: section.step?.outputMarkdown ?? ""
+  }));
 }
 
 function requirePlanJson(contentItem: StepwiseContentItem) {
@@ -588,6 +908,235 @@ function buildSafePromptContext(
   };
 }
 
+function buildStepwiseFinalPolishPrompt(input: {
+  contentItem: ContentItemAdmin;
+  planJson: Record<string, unknown>;
+  mediaMapping: Array<{ assetId: string; placementHint: string; caption: string | null; placeholder: string }>;
+  assembledCandidateMarkdown: string;
+}): DraftPromptPreview {
+  const faqRequired = Array.isArray(input.planJson.faq) && input.planJson.faq.length > 0;
+  return {
+    system: [
+      "You are a careful Korean Markdown final editor for Blog Growth Agent.",
+      "Polish the assembled draft for tone, transitions, repetition, CTA balance, and disclaimer clarity.",
+      "Do not add unsupported claims, investment recommendations, guaranteed outcomes, return examples, success stories, or aggressive sign-up language.",
+      "Use neutral, informational phrasing for finance or investment-related content.",
+      "Do not delete media placeholders.",
+      faqRequired ? "Preserve a dedicated FAQ-like section with question headings. Do not merge FAQ items into general paragraphs." : "Do not invent FAQ items.",
+      "Return one complete Markdown draft with exactly one H1."
+    ].join("\n"),
+    user: JSON.stringify(
+      {
+        context: buildSafePromptContext(input.contentItem, input.planJson, input.mediaMapping),
+        assembledCandidateMarkdown: input.assembledCandidateMarkdown
+      },
+      null,
+      2
+    ),
+    outputFormat: [
+      "Return Markdown only.",
+      "Keep exactly one H1 at the top.",
+      "Keep H2/H3 structure.",
+      "Keep media placeholders.",
+      faqRequired ? "Keep a dedicated FAQ-like section because savedPlanJson.faq exists." : "Do not add FAQ unless already present.",
+      "Do not wrap in code fences.",
+      "Do not include commentary before or after the Markdown."
+    ].join("\n")
+  };
+}
+
+function buildAssembledCandidateMarkdown(input: { title: string; sections: Array<{ key: string; markdown: string }> }) {
+  const seenHeadings = new Set<string>();
+  const fragments = input.sections
+    .map((section) => normalizeSectionOutputForAssembly(section.markdown))
+    .map((section) => removeDuplicateHeadings(section, seenHeadings))
+    .filter(Boolean);
+  return normalizeMarkdown(`# ${stripMarkdownHeading(input.title || "본문 초안")}\n\n${fragments.join("\n\n")}`);
+}
+
+function normalizeSectionOutputForAssembly(value: string) {
+  return normalizeMarkdown(stripCodeFences(value).replace(/^#\s+.+$/gm, "").trim());
+}
+
+function normalizeFinalCandidateMarkdown(value: string, title: string) {
+  const lines = normalizeMarkdown(stripCodeFences(value))
+    .split(/\r?\n/)
+    .filter((line) => !/^#\s+/.test(line.trim()));
+  return normalizeMarkdown(`# ${stripMarkdownHeading(title || "본문 초안")}\n\n${lines.join("\n").trim()}`);
+}
+
+function applyDeterministicCandidateGuards(markdown: string, planJson: Record<string, unknown>) {
+  const faqItems = getFaqItemsFromPlan(planJson);
+  const faqDetectedBefore = hasFaqLikeSection(markdown);
+  let nextMarkdown = markdown;
+  let faqFallbackAppended = false;
+
+  if (faqItems.length > 0 && !faqDetectedBefore) {
+    nextMarkdown = normalizeMarkdown(`${nextMarkdown}\n\n${buildFaqFallbackMarkdown(faqItems)}`);
+    faqFallbackAppended = true;
+  }
+
+  const scrubResult = scrubLocalSectionedDraftSafetyPhrases(nextMarkdown);
+  nextMarkdown = scrubResult.markdown;
+
+  return {
+    markdown: nextMarkdown,
+    summary: {
+      faqRequired: faqItems.length > 0,
+      faqCount: faqItems.length,
+      faqSectionDetectedBefore: faqDetectedBefore,
+      faqSectionDetectedAfter: hasFaqLikeSection(nextMarkdown),
+      faqFallbackAppended,
+      safetyScrubApplied: scrubResult.scrubApplied,
+      safetyScrubCount: scrubResult.scrubCount,
+      safetyScrubCodes: scrubResult.scrubCodes,
+      h1Count: countMarkdownHeadings(nextMarkdown, 1),
+      h2OrH3Count: countMarkdownHeadings(nextMarkdown, 2) + countMarkdownHeadings(nextMarkdown, 3),
+      mediaPlaceholderCount: countMediaPlaceholders(nextMarkdown)
+    }
+  };
+}
+
+function buildCandidateValidationSummary(input: {
+  phase: "assemble" | "final_polish";
+  markdown: string;
+  contentItem: ContentItemAdmin;
+  assets: ContentAssetAdmin[];
+  sectionKeys: string[];
+  guardSummary: ReturnType<typeof applyDeterministicCandidateGuards>["summary"];
+}) {
+  const validation = validateDraftMarkdown(input.markdown, {
+    contentItem: input.contentItem,
+    assets: input.assets
+  });
+  return {
+    phase: input.phase,
+    ok: validation.ok,
+    errorCount: validation.errors.length,
+    warningCount: validation.warnings.length,
+    errors: validation.errors,
+    warnings: validation.warnings,
+    markdownLength: input.markdown.length,
+    sectionKeys: input.sectionKeys,
+    guardSummary: input.guardSummary,
+    contentItemAutoApply: false,
+    bloggerApiImplemented: false
+  } satisfies Prisma.InputJsonObject;
+}
+
+function getDraftTitle(contentItem: ContentItemAdmin, planJson: Record<string, unknown>) {
+  if (contentItem.title?.trim()) {
+    return contentItem.title.trim();
+  }
+  const titleCandidates = Array.isArray(planJson.titleCandidates) ? planJson.titleCandidates : [];
+  const first = titleCandidates.find((item): item is string => typeof item === "string" && item.trim().length > 0);
+  return first?.trim() ?? "본문 초안";
+}
+
+function getFaqItemsFromPlan(planJson: Record<string, unknown>) {
+  if (!Array.isArray(planJson.faq)) {
+    return [];
+  }
+  return planJson.faq
+    .map((item) => normalizeFaqItem(item))
+    .filter((item): item is { question: string; answer: string } => Boolean(item))
+    .slice(0, 5);
+}
+
+function normalizeFaqItem(item: unknown) {
+  if (typeof item === "string") {
+    const question = sanitizeMarkdownLine(item);
+    return question ? { question, answer: "본문의 핵심 기준을 참고해 자신의 상황에 맞게 차분히 확인하는 것이 좋습니다." } : null;
+  }
+  if (!item || typeof item !== "object") {
+    return null;
+  }
+  const record = item as Record<string, unknown>;
+  const question = firstStringValue(record, ["question", "q", "title", "heading"]);
+  const answer = firstStringValue(record, ["answer", "a", "response", "description"]);
+  if (!question) {
+    return null;
+  }
+  return {
+    question: sanitizeMarkdownLine(question),
+    answer: sanitizeMarkdownParagraph(answer || "본문의 핵심 기준을 참고해 자신의 상황에 맞게 판단하는 것이 좋습니다.")
+  };
+}
+
+function firstStringValue(record: Record<string, unknown>, keys: string[]) {
+  for (const key of keys) {
+    const value = record[key];
+    if (typeof value === "string" && value.trim()) {
+      return value;
+    }
+  }
+  return null;
+}
+
+function buildFaqFallbackMarkdown(items: Array<{ question: string; answer: string }>) {
+  return [
+    "## FAQ",
+    "",
+    ...items.flatMap((item) => [`### ${item.question}`, "", item.answer, ""])
+  ].join("\n").trim();
+}
+
+function hasFaqLikeSection(value: string) {
+  return /(^|\n)#{2,3}\s*(faq|자주 묻|질문)/i.test(value) || /(^|\n)###\s+.+\?/m.test(value);
+}
+
+function removeDuplicateHeadings(value: string, seen: Set<string>) {
+  return value
+    .split(/\r?\n/)
+    .filter((line) => {
+      const match = line.match(/^(#{2,3})\s+(.+)$/);
+      if (!match) {
+        return true;
+      }
+      const normalized = match[2].trim().toLowerCase();
+      if (seen.has(normalized)) {
+        return false;
+      }
+      seen.add(normalized);
+      return true;
+    })
+    .join("\n")
+    .trim();
+}
+
+function countMarkdownHeadings(markdown: string, level: number) {
+  const hashes = "#".repeat(level);
+  const pattern = new RegExp(`(^|\\n)${hashes}\\s+\\S`, "g");
+  return markdown.match(pattern)?.length ?? 0;
+}
+
+function countMediaPlaceholders(markdown: string) {
+  return markdown.match(/<!--\s*media:/gi)?.length ?? 0;
+}
+
+function stripMarkdownHeading(value: string) {
+  return value.replace(/^#{1,6}\s+/, "").trim();
+}
+
+function sanitizeMarkdownLine(value: string) {
+  return stripHtml(value)
+    .replace(/^#{1,6}\s+/, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 120);
+}
+
+function sanitizeMarkdownParagraph(value: string) {
+  return stripHtml(value)
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 500);
+}
+
+function stripHtml(value: string) {
+  return value.replace(/<[^>]*>/g, "");
+}
+
 function getPreviousSectionSummaries(run: SafeContentDraftGenerationRunWithSteps, stepKey: string) {
   const targetIndex = DEFAULT_LOCAL_SECTIONED_STEPWISE_SECTION_KEYS.indexOf(stepKey as (typeof DEFAULT_LOCAL_SECTIONED_STEPWISE_SECTION_KEYS)[number]);
   if (targetIndex <= 0) {
@@ -600,7 +1149,7 @@ function getPreviousSectionSummaries(run: SafeContentDraftGenerationRunWithSteps
 }
 
 function getMaxTokensForStep(stepKey: string, routeMaxTokens: number | null) {
-  const max = stepKey === "skeleton" ? SKELETON_MAX_TOKENS : SECTION_MAX_TOKENS;
+  const max = stepKey === "skeleton" ? SKELETON_MAX_TOKENS : stepKey === "final_polish" ? FINAL_POLISH_MAX_TOKENS : SECTION_MAX_TOKENS;
   return Math.min(routeMaxTokens ?? max, max);
 }
 
@@ -910,6 +1459,7 @@ async function recordStepwiseDraftLog(input: {
     modelName: string | null;
   };
 }) {
+  const isFinalPolish = input.metadata.stepKey === "final_polish";
   await createLlmCallLog({
     taskType: "content_draft",
     contentItemId: input.contentItemId,
@@ -922,7 +1472,8 @@ async function recordStepwiseDraftLog(input: {
     estimatedCost: null,
     errorMessage: input.errorMessage ? safeErrorMessage(input.errorMessage, 500) : null,
     metadata: {
-      purpose: "content_draft_stepwise_step_execution",
+      purpose: isFinalPolish ? "content_draft_stepwise_final_polish" : "content_draft_stepwise_step_execution",
+      phase: isFinalPolish ? "final_polish" : "step_execution",
       strategy: LOCAL_SECTIONED_STEPWISE_STRATEGY,
       runId: input.metadata.runId,
       stepKey: input.metadata.stepKey,
@@ -945,8 +1496,8 @@ async function recordStepwiseDraftLog(input: {
         modelName: input.metadata.modelName
       },
       stepExecutionImplemented: true,
-      assemblyImplemented: false,
-      finalPolishImplemented: false,
+      assemblyImplemented: isFinalPolish,
+      finalPolishImplemented: isFinalPolish,
       contentItemAutoApply: false,
       bloggerApiImplemented: false
     } as Prisma.InputJsonObject
@@ -1086,11 +1637,23 @@ function getPromptInputLength(prompt: DraftPromptPreview) {
 }
 
 function getDefaultNumPredictForStep(stepKey: string) {
-  return stepKey === "skeleton" ? SKELETON_MAX_TOKENS : SECTION_MAX_TOKENS;
+  if (stepKey === "skeleton") {
+    return SKELETON_MAX_TOKENS;
+  }
+  if (stepKey === "final_polish") {
+    return FINAL_POLISH_MAX_TOKENS;
+  }
+  return SECTION_MAX_TOKENS;
 }
 
 function getNumCtxForStep(stepKey: string) {
-  return stepKey === "skeleton" ? SKELETON_NUM_CTX : SECTION_NUM_CTX;
+  if (stepKey === "skeleton") {
+    return SKELETON_NUM_CTX;
+  }
+  if (stepKey === "final_polish") {
+    return FINAL_POLISH_NUM_CTX;
+  }
+  return SECTION_NUM_CTX;
 }
 
 function getBaseUrlHostOnly(value: string | null) {

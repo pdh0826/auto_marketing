@@ -643,3 +643,20 @@ npm run build
 - `--probe-generate` 옵션은 짧은 streaming generate probe만 수행하며 content item, Blogger table, draft generation run을 변경하지 않는다.
 - 실제 step smoke는 run 생성, skeleton step 1회, content item hash/status 불변, Blogger count 불변, log redaction 확인 순서로 수행한다.
 - selected model이 first-byte timeout을 반복하면 route/model 변경 또는 Ollama runner 정리 같은 운영 조치를 먼저 수행하고, timeout 무제한 연장으로 해결하지 않는다.
+
+## Patch 9E-4C-3D Local stepwise deterministic assemble/final polish API 검증
+
+- `POST /api/content-items/[id]/draft-generation-runs/[runId]/assemble`는 LLM provider를 호출하지 않아야 한다.
+- assemble API는 `intro`, `body_1`, `body_2`, `body_3`, `conclusion_cta_faq` section step이 모두 `success`이고 `outputMarkdown`이 있을 때만 동작해야 한다.
+- skeleton step output은 assembly body로 붙이지 않고 reference/precondition 용도로만 사용해야 한다.
+- required section이 빠져 있으면 `section_steps_required` 계열 400/409 응답을 반환해야 한다.
+- 성공 시 run의 `assembledCandidateMarkdown`, `validationSummary`, safe metadata만 갱신하고 `currentStepKey=final_polish`, `status=running`으로 이동해야 한다.
+- 이미 assembled candidate가 있으면 `force=true`가 없을 때 기존 결과를 재사용하고 LLM/DB 추가 변경을 피해야 한다.
+- `POST /api/content-items/[id]/draft-generation-runs/[runId]/final-polish`는 assembled candidate가 있을 때만 실행되어야 한다.
+- final polish API는 기존 local stepwise provider policy를 재사용하며 local/Ollama/local_http-like `content_draft` route가 아니면 거부해야 한다.
+- final polish 성공 시 run의 `finalCandidateMarkdown`, `validationSummary`, safe metadata를 저장하고 `status=completed`, `currentStepKey=null`, `completedAt`을 설정해야 한다.
+- final polish 실패 시 assembled candidate는 fallback candidate로 남아야 하며, prompt/raw response/final candidate 전문을 `llm_call_logs.metadata`에 저장하지 않아야 한다.
+- `llm_call_logs`에는 final polish의 run id, step key, prompt/response hash, output length, request options summary, provider safe summary만 저장해야 한다.
+- `content_items.draftMarkdown`/`draftHtml`, status, `qualityScore`, `publishedAt`, `scheduledAt`은 변경하지 않는다.
+- Blogger API, draft save, publish, scheduled publish, token refresh는 호출하지 않는다.
+- `scripts/smoke_9e4c3d_assemble_final_polish.mjs`는 API 기반 smoke helper이며 기본은 assemble만 수행하고 `--final-polish`가 있을 때만 LLM 호출을 포함한다.

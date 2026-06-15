@@ -606,3 +606,38 @@ Smoke helper:
 
 - `scripts/smoke_9e4c3c_stepwise_local_ollama.mjs` checks the configured `content_draft` primary route and Ollama model availability.
 - `--probe-generate` performs only a short streaming generate probe and does not mutate content items, generation runs, Blogger tables, or draft fields.
+
+## Patch 9E-4C-3D local sectioned stepwise assemble/final polish API
+
+Patch 9E-4C-3D adds the next two stepwise APIs after individual skeleton/section execution.
+
+API:
+
+- `POST /api/content-items/[id]/draft-generation-runs/[runId]/assemble`
+  - Deterministically combines successful section outputs in the fixed order: `intro`, `body_1`, `body_2`, `body_3`, `conclusion_cta_faq`.
+  - Does not call an LLM provider and does not create `llm_call_logs`.
+  - Requires every required section step to be `success` with `outputMarkdown`.
+  - Stores `assembledCandidateMarkdown`, validation summary, and safe metadata on the run.
+  - Sets `status=running` and `currentStepKey=final_polish`.
+  - Reuses an existing assembled candidate unless `force=true`.
+- `POST /api/content-items/[id]/draft-generation-runs/[runId]/final-polish`
+  - Requires `assembledCandidateMarkdown`.
+  - Calls the configured local-like `content_draft` route for one final polish request.
+  - Stores `finalCandidateMarkdown`, validation summary, and safe metadata on success.
+  - Completes the run with `status=completed`, `currentStepKey=null`, and `completedAt`.
+  - On failure, keeps the assembled candidate as fallback and records only safe failure metadata.
+
+Safety and redaction:
+
+- Assembly and final polish run deterministic H1/FAQ/safety validation summaries.
+- FAQ fallback and safety phrase scrub metadata is stored as counts/codes only.
+- Prompt full text, raw provider response text, assembled/final candidate full text in metadata, API keys, tokens, secrets, and encrypted values are not stored in `llm_call_logs.metadata`.
+- Candidate Markdown is stored only in the run candidate fields needed for review and later manual apply.
+
+Boundary:
+
+- Existing `POST /api/content-items/[id]/generate-draft` behavior is unchanged.
+- No UI is added in this patch.
+- No automatic `content_items.draftMarkdown` or `draftHtml` save.
+- No content item status, `qualityScore`, `publishedAt`, or `scheduledAt` mutation.
+- Blogger API, draft save, publish, scheduled publish, and token refresh remain out of scope.

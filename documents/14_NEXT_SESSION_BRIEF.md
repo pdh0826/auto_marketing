@@ -98,25 +98,26 @@ latest committed baseline before Patch 9E-4C-3C: 3cb3fbc Add stepwise draft gene
 - Stepwise Ollama calls preflight `/api/tags` and fail with safe codes such as `provider_model_not_found`, `provider_first_byte_timeout`, `provider_idle_timeout`, or `provider_timeout`.
 - Skeleton smoke defaults are intentionally small (`num_predict=360`, `num_ctx=2048`) and use short `keep_alive=30s`.
 - `scripts/smoke_9e4c3c_stepwise_local_ollama.mjs` can check the configured local route and selected Ollama model without mutating content items or Blogger data.
+- Patch 9E-4C-3D adds deterministic assemble and final polish APIs for persisted local stepwise runs.
+- `POST /api/content-items/[id]/draft-generation-runs/[runId]/assemble` combines successful section outputs in fixed order without LLM calls.
+- `POST /api/content-items/[id]/draft-generation-runs/[runId]/final-polish` runs one local-like provider final polish call after assembly.
+- Assemble/final polish store candidates only on the run and do not auto-apply to `content_items`.
+- `scripts/smoke_9e4c3d_assemble_final_polish.mjs` can run assemble-only by default, or include final polish with `--final-polish`.
 
 ## Next Patch Candidate
 
-Patch 9E-4C-3D 후보: Local stepwise deterministic assemble/final polish API.
+Patch 9E-4C-3E 후보: Local stepwise UI.
 
 Alternative candidates:
 
-- Patch 9E-4C-3E: Local stepwise UI.
 - Patch 9E-4D: Blog post template renderer / publish-ready HTML theme.
 - Patch 9E-5: Blogger OAuth/test blog readiness 재점검.
 
 Recommended scope:
 
-- Add deterministic assembly API that combines successful skeleton/section outputs.
-- Add final polish API as a separate one-step request, with assembled candidate fallback on failure.
-- Re-run FAQ/media/H1/safety guards after assembly/final polish.
-- Store assembled/final candidate on the run, but do not auto-apply to `content_items`.
-- Before starting 9E-4C-3D, confirm at least skeleton and one section can complete with the selected local model or deliberately switch the local `content_draft` route/model through an approved DB update.
-- UI should remain out of scope until 9E-4C-3E.
+- Add content detail UI controls for local stepwise run start/read, step execution, assemble, and final polish.
+- Display run/step status, safe validation summaries, and candidate availability without exposing prompt/raw response text.
+- Keep manual review/apply as a separate explicit action; do not auto-write `content_items.draftMarkdown` or `draftHtml`.
 - Keep existing `generate-draft` route unchanged.
 - Keep commercial/high-performance remote providers on the existing one-shot full draft path.
 - Keep Blogger OAuth/live draft save out of scope unless Patch 9E-5 is selected.
