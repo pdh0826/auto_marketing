@@ -151,3 +151,14 @@ Patch 9E-4C-2-hotfix는 saved `planJson.faq`가 있는 local sectioned draft에�
 - FAQ fallback은 `planJson.faq`의 question/answer를 사용하되 HTML tag를 제거하고 Markdown line/paragraph로 정규화한다.
 - metadata에는 `faqRequired`, `faqSectionDetected`, `faqFallbackAppended`, `faqCount` 같은 safe summary만 저장한다.
 - FAQ 질문/답변 전문, prompt 전문, raw response 전문, candidate 전문, section fragment 전문은 로그에 저장하지 않는다.
+
+## Patch 9E-4C-2-hotfix2 Local safety phrase scrub
+
+Patch 9E-4C-2-hotfix2는 local sectioned draft의 final candidate가 validation에 들어가기 전에 deterministic safety phrase scrub을 수행한다.
+
+- FAQ preservation guard 이후, `validateDraftMarkdown` 호출 전에 `안전한 투자`, `안전하게 매수`, `성공`, `성공 사례`, `수익 보장`, `확실한 수익`, `수익률 예시`, `매수 추천`, `매도 추천`, `원금 보장`, `손실 없음`, `리스크 없음` 같은 문구를 안전한 표현으로 정규화한다.
+- final polish prompt도 금지 문구와 `신중한 판단`, `참고용 정보`, `투자 결과`, `판단 보조` 같은 대체 표현을 명시한다.
+- validation 실패 후 repair 후보가 만들어지는 경우에도 local sectioned 전략에서는 repair 결과를 다시 safety scrub한 뒤 재검증한다.
+- metadata/log/UI에는 `safetyScrubApplied`, `safetyScrubCount`, `safetyScrubCodes` 같은 safe summary만 표시한다.
+- prompt 전문, raw response 전문, candidate 전문, scrub 전후 문장 전문은 저장하지 않는다.
+- remote/commercial one-shot draft generation path는 변경하지 않는다.

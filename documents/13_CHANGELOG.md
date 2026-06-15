@@ -459,3 +459,62 @@ Policy:
 - No FAQ question/answer full-text metadata or logs.
 - No prompt full text, raw response, candidate Markdown, section fragment, final polish input/output, secret, token, or encrypted value logging.
 - No Blogger API read/write, draft save, publish, scheduled publish, token refresh, `posts.insert`, or `posts.update`.
+
+## Patch 9E-4C-2 Hotfix2: Local Safety Phrase Scrub
+
+Implemented after the FAQ preservation smoke exposed validation-blocking safety phrases:
+
+- Added deterministic safety phrase scrub for local sectioned draft candidates.
+- Applied scrub after FAQ guard/fallback and before `validateDraftMarkdown`.
+- Reused the same scrub for local sectioned repair results before repair validation.
+- Strengthened final polish prompt with explicit blocked phrases and neutral alternatives.
+- Added safe scrub metadata: `safetyScrubApplied`, `safetyScrubCount`, and `safetyScrubCodes`.
+- Updated content detail UI to show scrub summary without showing candidate or scrubbed sentence text.
+
+Policy:
+
+- Remote/commercial one-shot draft path is unchanged.
+- No automatic `draftMarkdown` or `draftHtml` save.
+- No DB/schema or TaskRoute schema change.
+- No prompt full text, raw response, candidate Markdown, scrubbed sentence text, section fragment, final polish input/output, secret, token, or encrypted value logging.
+- No Blogger API read/write, draft save, publish, scheduled publish, token refresh, `posts.insert`, or `posts.update`.
+
+## Patch 9E-4C-2 Hotfix3: Local Sectioned Timeout Policy
+
+Implemented after hotfix2 smoke showed local sectioned generation could exceed the existing 180s provider timeout:
+
+- Added an extended timeout policy for `local_sectioned_multi_pass`.
+- Kept remote/commercial `one_shot_full_draft` on the existing route/provider timeout behavior.
+- Set local sectioned overall timeout to 600000ms.
+- Set skeleton step timeout to 240000ms, section generation/retry timeout to 180000ms, and final polish timeout to 300000ms.
+- Set local sectioned repair timeout to 300000ms.
+- Added safe timeout metadata: `timeoutPolicy`, `overallTimeoutMs`, `stepTimeoutMs`, and `finalPolishTimeoutMs`.
+- Changed content draft provider abort errors to the short safe message/summary `provider_timeout`.
+- Updated content detail UI to show timeout policy metadata.
+
+Policy:
+
+- No automatic `draftMarkdown` or `draftHtml` save.
+- No DB/schema or TaskRoute schema change.
+- No prompt full text, raw response, candidate Markdown, section fragment, final polish input/output, secret, token, or encrypted value logging.
+- No Blogger API read/write, draft save, publish, scheduled publish, token refresh, `posts.insert`, or `posts.update`.
+
+## Patch 9E-4C-2 Hotfix4: Local Sectioned Cold-Start Timeout Policy
+
+Implemented after hotfix3 smoke exceeded the new 240s skeleton/provider step timeout:
+
+- Increased local sectioned overall timeout to 1200000ms.
+- Increased skeleton timeout to 600000ms.
+- Increased section generation/retry timeout to 300000ms.
+- Increased final polish timeout to 600000ms.
+- Increased local sectioned repair timeout to 600000ms.
+- Added more granular safe timeout metadata: `skeletonTimeoutMs`, `sectionTimeoutMs`, and `repairTimeoutMs`.
+- Kept remote/commercial `one_shot_full_draft` on the existing route/provider timeout behavior.
+
+Policy:
+
+- If local smoke still times out, the next step is async/background job design rather than further timeout extension.
+- No automatic `draftMarkdown` or `draftHtml` save.
+- No DB/schema or TaskRoute schema change.
+- No prompt full text, raw response, candidate Markdown, section fragment, final polish input/output, secret, token, or encrypted value logging.
+- No Blogger API read/write, draft save, publish, scheduled publish, token refresh, `posts.insert`, or `posts.update`.

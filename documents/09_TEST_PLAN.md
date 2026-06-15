@@ -552,3 +552,37 @@ npm run build
 - FAQ 질문/답변 전문은 metadata/log에 저장하지 않는다.
 - hotfix 후 local smoke에서 기존 `planJson.faq exists, but the draft does not appear to include an FAQ-like section.` warning이 사라지는지 확인한다.
 - 자동 `draftMarkdown`/`draftHtml` 저장, status/qualityScore/publishedAt/scheduledAt 변경, Blogger API/draft save/publish/token refresh는 발생하지 않는다.
+
+## Patch 9E-4C-2-hotfix2 Local safety phrase scrub 검증
+
+- local sectioned final candidate는 FAQ guard 이후, `validateDraftMarkdown` 이전에 deterministic safety phrase scrub을 통과해야 한다.
+- `안전한 투자`, `안전하게 매수`, `성공`, `성공 사례`, `수익 보장`, `확실한 수익`, `수익률 예시`, `매수 추천`, `매도 추천`, `원금 보장`, `손실 없음`, `리스크 없음` 같은 문구가 validation-blocking phrase로 남지 않아야 한다.
+- validation 실패 후 repair가 수행되면 local sectioned repair 결과도 재검증 전에 safety scrub을 통과해야 한다.
+- response/log/UI metadata에는 `safetyScrubApplied`, `safetyScrubCount`, `safetyScrubCodes` safe summary만 포함한다.
+- scrub 전후 문장 전문, prompt 전문, raw response 전문, candidate Markdown 전문, section fragment 전문은 logs/API metadata에 저장하지 않는다.
+- remote/commercial one-shot provider route는 기존 경로와 metadata default(`safetyScrubApplied=false`, count 0)를 유지해야 한다.
+- FAQ preservation metadata와 fallback 동작은 유지되어야 한다.
+- 자동 `draftMarkdown`/`draftHtml` 저장, status/qualityScore/publishedAt/scheduledAt 변경, Blogger API/draft save/publish/token refresh는 발생하지 않는다.
+
+## Patch 9E-4C-2-hotfix3 Local sectioned timeout policy 검증
+
+- `local_sectioned_multi_pass` 전략은 기존 route/provider timeout을 그대로 각 step에 적용하지 않고 extended timeout policy를 사용한다.
+- local sectioned overall timeout은 600000ms로 제한한다.
+- skeleton step timeout은 240000ms, section generation/retry timeout은 180000ms, final polish 및 local sectioned repair timeout은 300000ms를 사용한다.
+- remote/commercial `one_shot_full_draft` 경로는 기존 route/provider timeout 정책을 유지한다.
+- response/log/UI metadata에는 `timeoutPolicy`, `overallTimeoutMs`, `stepTimeoutMs`, `finalPolishTimeoutMs` safe summary만 포함한다.
+- timeout error는 `provider_timeout` 또는 `local_sectioned_overall_timeout` 같은 짧은 safe message로 유지한다.
+- timeout 발생 시에도 prompt 전문, raw response 전문, candidate Markdown 전문, section fragment 전문, final polish 입력/출력 전문은 logs/API metadata에 저장하지 않는다.
+- local smoke는 1회만 실행하고, 다시 timeout되면 반복 실행하지 않고 중단한다.
+- 자동 `draftMarkdown`/`draftHtml` 저장, status/qualityScore/publishedAt/scheduledAt 변경, Blogger API/draft save/publish/token refresh는 발생하지 않는다.
+
+## Patch 9E-4C-2-hotfix4 Local sectioned cold-start timeout 보정 검증
+
+- `local_sectioned_multi_pass` 전략은 Ollama cold-start/model-load 지연을 고려한 더 긴 timeout policy를 사용한다.
+- local sectioned overall timeout은 1200000ms로 제한한다.
+- skeleton step timeout은 600000ms, section generation/retry timeout은 300000ms, final polish 및 local sectioned repair timeout은 600000ms를 사용한다.
+- remote/commercial `one_shot_full_draft` 경로는 기존 route/provider timeout 정책을 유지한다.
+- response/log/UI metadata에는 `timeoutPolicy`, `overallTimeoutMs`, `stepTimeoutMs`, `skeletonTimeoutMs`, `sectionTimeoutMs`, `finalPolishTimeoutMs`, `repairTimeoutMs` safe summary만 포함한다.
+- timeout error는 계속 `provider_timeout` 또는 `local_sectioned_overall_timeout` 같은 짧은 safe message로 유지한다.
+- local smoke는 1회만 실행하고, 다시 timeout되면 timeout 추가 연장이 아니라 async/background job 설계로 전환한다.
+- 자동 `draftMarkdown`/`draftHtml` 저장, status/qualityScore/publishedAt/scheduledAt 변경, Blogger API/draft save/publish/token refresh는 발생하지 않는다.

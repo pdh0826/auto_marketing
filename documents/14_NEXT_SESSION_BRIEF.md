@@ -5,7 +5,7 @@
 ```text
 repo: ~/blog-growth-agent
 branch: master
-latest commit before Patch 9E-4C-2-hotfix work: 5a18e09 Add local sectioned draft generation preview
+latest commit before Patch 9E-4C-2-hotfix4 work: 23e0be1 Preserve FAQ section in local sectioned drafts
 ```
 
 ## Implemented Scope
@@ -32,6 +32,9 @@ latest commit before Patch 9E-4C-2-hotfix work: 5a18e09 Add local sectioned draf
 - Provider-aware draft generation strategy foundation for `content_draft`
 - Local LLM sectioned draft generation preview for `content_draft`
 - Local sectioned draft FAQ preservation hotfix
+- Local sectioned draft safety phrase scrub hotfix
+- Local sectioned draft timeout policy hotfix
+- Local sectioned draft cold-start timeout policy hotfix
 
 ## Current Blogger State
 
@@ -58,6 +61,16 @@ latest commit before Patch 9E-4C-2-hotfix work: 5a18e09 Add local sectioned draf
 - Local sectioned draft generation runs skeleton, section generation, deterministic assembly, and final polish/fallback.
 - Patch 9E-4C-2-hotfix preserves saved `planJson.faq` in local sectioned drafts.
 - If final polish removes the FAQ structure, deterministic fallback appends a safe `## FAQ` section and records safe FAQ metadata.
+- Patch 9E-4C-2-hotfix2 scrubs validation-blocking local sectioned safety phrases after FAQ guard/fallback and before draft validation.
+- Local sectioned repair results also pass through the same deterministic scrub before repair validation.
+- Scrub metadata is limited to `safetyScrubApplied`, `safetyScrubCount`, and `safetyScrubCodes`.
+- Patch 9E-4C-2-hotfix3 separates local sectioned timeout policy from one-shot timeout behavior.
+- Local sectioned generation uses a 600000ms overall timeout, 240000ms skeleton timeout, 180000ms section timeout, and 300000ms final polish/repair timeout.
+- Timeout metadata is limited to `timeoutPolicy`, `overallTimeoutMs`, `stepTimeoutMs`, and `finalPolishTimeoutMs`.
+- Patch 9E-4C-2-hotfix4 extends the local sectioned timeout policy for Ollama cold-start/model-load delays.
+- Local sectioned generation now uses a 1200000ms overall timeout, 600000ms skeleton timeout, 300000ms section/retry timeout, and 600000ms final polish/repair timeout.
+- Timeout metadata also includes `skeletonTimeoutMs`, `sectionTimeoutMs`, and `repairTimeoutMs`.
+- If local sectioned smoke still times out, the next step should be async/background job design instead of further timeout extension.
 - Generated candidate Markdown still requires manual `draftMarkdown에 반영`; `draftHtml` generation/apply and quality checks remain separate.
 - Remote/commercial routes still use the existing one-shot full draft path.
 
@@ -88,6 +101,7 @@ Recommended scope:
 - candidate Markdown full text logging
 - skeleton/section/final polish full text logging
 - FAQ question/answer full text logging
+- safety scrubbed sentence full text logging
 - Blogger post HTML theme auto-save
 - `git add .` or `git add -A`
 
@@ -103,6 +117,9 @@ AGENTS.md와 documents/ 폴더의 관련 문서를 먼저 읽어줘.
 - Patch 9E-4C-1의 provider-aware draft generation strategy foundation 구현 상태를 확인한다.
 - Patch 9E-4C-2의 Local LLM sectioned draft generation preview 구현 상태를 확인한다.
 - Patch 9E-4C-2-hotfix의 Local FAQ preservation 구현 상태를 확인한다.
+- Patch 9E-4C-2-hotfix2의 Local safety phrase scrub 구현 상태를 확인한다.
+- Patch 9E-4C-2-hotfix3의 Local sectioned timeout policy 구현 상태를 확인한다.
+- Patch 9E-4C-2-hotfix4의 Local sectioned cold-start timeout policy 구현 상태를 확인한다.
 - Blog post template renderer / publish-ready HTML theme 또는 Blogger OAuth/test blog readiness 중 다음 최소 패치를 설계한다.
 - remote/commercial provider의 기존 one-shot draft generation은 유지한다.
 - 자동 draftHtml 저장, Blogger API 호출, publish/scheduled publish는 명시적으로 범위를 정하기 전까지 구현하지 않는다.

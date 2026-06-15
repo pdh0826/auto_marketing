@@ -8,7 +8,13 @@ import { createLlmCallLog } from "@/lib/db/llm-call-logs";
 import { prisma } from "@/lib/db/client";
 import type { LlmTaskRouteAdmin } from "@/lib/llm/admin-types";
 import { resolveDraftGenerationStrategy, type DraftGenerationStrategy, type DraftGenerationStrategyResolution } from "@/lib/llm/draft-generation-strategy";
-import { generateLocalSectionedDraftCandidate, type LocalSectionedDraftMetadata } from "@/lib/llm/local-sectioned-draft-generation";
+import {
+  LOCAL_SECTIONED_DRAFT_TIMEOUT_POLICY,
+  generateLocalSectionedDraftCandidate,
+  scrubLocalSectionedDraftSafetyPhrases,
+  type LocalSectionedDraftMetadata,
+  type LocalSectionedSafetyScrubResult
+} from "@/lib/llm/local-sectioned-draft-generation";
 import { decryptSecret } from "@/lib/llm/secrets";
 import { getOpenAiCompletionTokenParameter } from "@/lib/llm/provider-test";
 import { redactSensitiveText, safeErrorMessage } from "@/lib/llm/redaction";
@@ -67,6 +73,16 @@ export interface GenerateContentDraftResult {
     faqSectionDetected: boolean;
     faqFallbackAppended: boolean;
     faqCount: number;
+    safetyScrubApplied: boolean;
+    safetyScrubCount: number;
+    safetyScrubCodes: string[];
+    timeoutPolicy: string;
+    overallTimeoutMs: number;
+    stepTimeoutMs: number;
+    skeletonTimeoutMs: number;
+    sectionTimeoutMs: number;
+    finalPolishTimeoutMs: number;
+    repairTimeoutMs: number;
   };
 }
 
@@ -234,6 +250,7 @@ export async function generateContentDraft({ contentItemId }: GenerateContentDra
   let totalLatencyMs = callResult.latencyMs;
   let totalInputTokens = callResult.inputTokens;
   let totalOutputTokens = callResult.outputTokens;
+  let acceptedRepairSafetyScrubResult: LocalSectionedSafetyScrubResult | null = null;
 
   if (!initialValidation.ok) {
     repairAttempted = true;
@@ -245,9 +262,11 @@ export async function generateContentDraft({ contentItemId }: GenerateContentDra
         validation: initialValidation,
         temperature: route.temperature,
         maxTokens: route.maxTokens,
-        timeoutSeconds: route.timeoutSeconds
+        timeoutSeconds: getRepairTimeoutSeconds(strategyResolution, route.timeoutSeconds)
       });
-      const repairedDraftMarkdown = repairResult.text.trim();
+      const repairSafetyScrubResult =
+        strategyResolution.strategy === "local_sectioned_multi_pass" ? scrubLocalSectionedDraftSafetyPhrases(repairResult.text.trim()) : null;
+      const repairedDraftMarkdown = repairSafetyScrubResult?.markdown ?? repairResult.text.trim();
       const repairedValidation = validateDraftMarkdown(repairedDraftMarkdown, {
         contentItem: contentItemForValidation,
         assets
@@ -260,6 +279,7 @@ export async function generateContentDraft({ contentItemId }: GenerateContentDra
       if (isRepairCandidateAtLeastAsSafe(repairedValidation, initialValidation)) {
         candidateDraftMarkdown = repairedDraftMarkdown;
         validation = repairedValidation;
+        acceptedRepairSafetyScrubResult = repairSafetyScrubResult;
       }
       repairSucceeded = validation.ok;
     } catch {
@@ -281,7 +301,7 @@ export async function generateContentDraft({ contentItemId }: GenerateContentDra
     errorMessage: validation.ok ? null : "Generated draftMarkdown did not pass validation.",
     metadata: {
       usedFallback,
-      ...buildDraftStrategyLogMetadata(strategyResolution, callResult.sectionedMetadata),
+      ...buildDraftStrategyLogMetadata(strategyResolution, callResult.sectionedMetadata, acceptedRepairSafetyScrubResult),
       apiFormat: provider.apiFormat,
       invocationMode: provider.invocationMode,
       responseSummary: repairAttempted ? (repairSucceeded ? "draft_repaired" : "draft_repair_failed") : callResult.responseSummary,
@@ -318,7 +338,7 @@ export async function generateContentDraft({ contentItemId }: GenerateContentDra
       initialValidationWarningCount: initialValidation.warnings.length,
       finalValidationErrorCount: validation.errors.length,
       finalValidationWarningCount: validation.warnings.length,
-      ...buildDraftStrategyLogMetadata(strategyResolution, callResult.sectionedMetadata)
+      ...buildDraftStrategyLogMetadata(strategyResolution, callResult.sectionedMetadata, acceptedRepairSafetyScrubResult)
     }
   };
 }
@@ -349,8 +369,8 @@ async function generateDraftCandidateWithProvider(input: {
     mediaMapping: input.dryRun.mediaMapping,
     temperature: input.temperature,
     maxTokens: input.maxTokens,
-    callProvider: async ({ prompt, temperature, maxTokens }) =>
-      callProvider(input.provider, input.modelName, prompt, temperature, maxTokens, input.timeoutSeconds)
+    callProvider: async ({ prompt, temperature, maxTokens, timeoutSeconds }) =>
+      callProvider(input.provider, input.modelName, prompt, temperature, maxTokens, timeoutSeconds)
   });
 
   return {
@@ -595,6 +615,16 @@ async function recordDraftLog(input: {
     faqSectionDetected: boolean;
     faqFallbackAppended: boolean;
     faqCount: number;
+    safetyScrubApplied: boolean;
+    safetyScrubCount: number;
+    safetyScrubCodes: string[];
+    timeoutPolicy: string;
+    overallTimeoutMs: number;
+    stepTimeoutMs: number;
+    skeletonTimeoutMs: number;
+    sectionTimeoutMs: number;
+    finalPolishTimeoutMs: number;
+    repairTimeoutMs: number;
   };
 }) {
   await createLlmCallLog({
@@ -631,6 +661,16 @@ async function recordDraftLog(input: {
       faqSectionDetected: input.metadata.faqSectionDetected,
       faqFallbackAppended: input.metadata.faqFallbackAppended,
       faqCount: input.metadata.faqCount,
+      safetyScrubApplied: input.metadata.safetyScrubApplied,
+      safetyScrubCount: input.metadata.safetyScrubCount,
+      safetyScrubCodes: input.metadata.safetyScrubCodes,
+      timeoutPolicy: input.metadata.timeoutPolicy,
+      overallTimeoutMs: input.metadata.overallTimeoutMs,
+      stepTimeoutMs: input.metadata.stepTimeoutMs,
+      skeletonTimeoutMs: input.metadata.skeletonTimeoutMs,
+      sectionTimeoutMs: input.metadata.sectionTimeoutMs,
+      finalPolishTimeoutMs: input.metadata.finalPolishTimeoutMs,
+      repairTimeoutMs: input.metadata.repairTimeoutMs,
       apiFormat: input.metadata.apiFormat,
       invocationMode: input.metadata.invocationMode,
       responseSummary: input.metadata.responseSummary,
@@ -650,7 +690,33 @@ async function recordDraftLog(input: {
   });
 }
 
-function buildDraftStrategyLogMetadata(resolution: DraftGenerationStrategyResolution, sectionedMetadata: LocalSectionedDraftMetadata | null = null) {
+function buildDraftStrategyLogMetadata(
+  resolution: DraftGenerationStrategyResolution,
+  sectionedMetadata: LocalSectionedDraftMetadata | null = null,
+  repairSafetyScrubResult: LocalSectionedSafetyScrubResult | null = null
+) {
+  const safetyScrubCount = (sectionedMetadata?.safetyScrubCount ?? 0) + (repairSafetyScrubResult?.scrubCount ?? 0);
+  const safetyScrubCodes = Array.from(new Set([...(sectionedMetadata?.safetyScrubCodes ?? []), ...(repairSafetyScrubResult?.scrubCodes ?? [])])).sort();
+  const localTimeoutMetadata =
+    resolution.strategy === "local_sectioned_multi_pass"
+      ? {
+          timeoutPolicy: sectionedMetadata?.timeoutPolicy ?? LOCAL_SECTIONED_DRAFT_TIMEOUT_POLICY.timeoutPolicy,
+          overallTimeoutMs: sectionedMetadata?.overallTimeoutMs ?? LOCAL_SECTIONED_DRAFT_TIMEOUT_POLICY.overallTimeoutMs,
+          stepTimeoutMs: sectionedMetadata?.stepTimeoutMs ?? LOCAL_SECTIONED_DRAFT_TIMEOUT_POLICY.stepTimeoutMs,
+          skeletonTimeoutMs: sectionedMetadata?.skeletonTimeoutMs ?? LOCAL_SECTIONED_DRAFT_TIMEOUT_POLICY.skeletonTimeoutMs,
+          sectionTimeoutMs: sectionedMetadata?.sectionTimeoutMs ?? LOCAL_SECTIONED_DRAFT_TIMEOUT_POLICY.sectionTimeoutMs,
+          finalPolishTimeoutMs: sectionedMetadata?.finalPolishTimeoutMs ?? LOCAL_SECTIONED_DRAFT_TIMEOUT_POLICY.finalPolishTimeoutMs,
+          repairTimeoutMs: sectionedMetadata?.repairTimeoutMs ?? LOCAL_SECTIONED_DRAFT_TIMEOUT_POLICY.repairTimeoutMs
+        }
+      : {
+          timeoutPolicy: "route_provider_default",
+          overallTimeoutMs: 0,
+          stepTimeoutMs: 0,
+          skeletonTimeoutMs: 0,
+          sectionTimeoutMs: 0,
+          finalPolishTimeoutMs: 0,
+          repairTimeoutMs: 0
+        };
   return {
     strategy: resolution.strategy,
     strategyReason: resolution.strategyReason,
@@ -671,8 +737,19 @@ function buildDraftStrategyLogMetadata(resolution: DraftGenerationStrategyResolu
     faqRequired: sectionedMetadata?.faqRequired ?? false,
     faqSectionDetected: sectionedMetadata?.faqSectionDetected ?? false,
     faqFallbackAppended: sectionedMetadata?.faqFallbackAppended ?? false,
-    faqCount: sectionedMetadata?.faqCount ?? 0
+    faqCount: sectionedMetadata?.faqCount ?? 0,
+    safetyScrubApplied: Boolean(sectionedMetadata?.safetyScrubApplied || repairSafetyScrubResult?.scrubApplied),
+    safetyScrubCount,
+    safetyScrubCodes,
+    ...localTimeoutMetadata
   };
+}
+
+function getRepairTimeoutSeconds(resolution: DraftGenerationStrategyResolution, routeTimeoutSeconds: number | null) {
+  if (resolution.strategy !== "local_sectioned_multi_pass") {
+    return routeTimeoutSeconds;
+  }
+  return Math.ceil(LOCAL_SECTIONED_DRAFT_TIMEOUT_POLICY.repairTimeoutMs / 1000);
 }
 
 function getProviderApiKey(provider: ProviderWithSecrets) {
@@ -690,9 +767,9 @@ async function fetchWithTimeout(url: string, init: RequestInit, timeoutSeconds: 
     return await fetch(url, { ...init, signal: controller.signal });
   } catch (error) {
     if (error instanceof Error && error.name === "AbortError") {
-      throw new ProviderCallError("Provider call timed out.", "timeout", timeoutSeconds * 1000);
+      throw new ProviderCallError("provider_timeout", "provider_timeout", timeoutSeconds * 1000);
     }
-    throw new ProviderCallError(error instanceof Error ? safeErrorMessage(error.message) : "Provider call failed.", "network_error", 0);
+    throw new ProviderCallError("provider_network_error", "provider_network_error", 0);
   } finally {
     clearTimeout(timeout);
   }

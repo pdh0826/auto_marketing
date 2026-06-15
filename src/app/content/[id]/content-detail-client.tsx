@@ -84,6 +84,16 @@ interface GeneratedDraftResult {
     faqSectionDetected: boolean;
     faqFallbackAppended: boolean;
     faqCount: number;
+    safetyScrubApplied: boolean;
+    safetyScrubCount: number;
+    safetyScrubCodes: string[];
+    timeoutPolicy: string;
+    overallTimeoutMs: number;
+    stepTimeoutMs: number;
+    skeletonTimeoutMs: number;
+    sectionTimeoutMs: number;
+    finalPolishTimeoutMs: number;
+    repairTimeoutMs: number;
     stepSummaries: Array<{
       stepKey: string;
       sectionKey: string | null;
@@ -1428,6 +1438,19 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
                   <DetailItem label="FAQ Detected" value={generatedDraft.metadata.faqSectionDetected ? "yes" : "no"} />
                   <DetailItem label="FAQ Fallback" value={generatedDraft.metadata.faqFallbackAppended ? "appended" : "not appended"} />
                   <DetailItem label="FAQ Count" value={String(generatedDraft.metadata.faqCount)} />
+                  <DetailItem label="Safety Scrub" value={generatedDraft.metadata.safetyScrubApplied ? "applied" : "not applied"} />
+                  <DetailItem label="Safety Scrub Count" value={String(generatedDraft.metadata.safetyScrubCount)} />
+                  <DetailItem
+                    label="Safety Scrub Codes"
+                    value={generatedDraft.metadata.safetyScrubCodes.length > 0 ? generatedDraft.metadata.safetyScrubCodes.join(", ") : "-"}
+                  />
+                  <DetailItem label="Timeout Policy" value={generatedDraft.metadata.timeoutPolicy} />
+                  <DetailItem label="Overall Timeout" value={formatMs(generatedDraft.metadata.overallTimeoutMs)} />
+                  <DetailItem label="Step Timeout" value={formatMs(generatedDraft.metadata.stepTimeoutMs)} />
+                  <DetailItem label="Skeleton Timeout" value={formatMs(generatedDraft.metadata.skeletonTimeoutMs)} />
+                  <DetailItem label="Section Timeout" value={formatMs(generatedDraft.metadata.sectionTimeoutMs)} />
+                  <DetailItem label="Final Polish Timeout" value={formatMs(generatedDraft.metadata.finalPolishTimeoutMs)} />
+                  <DetailItem label="Repair Timeout" value={formatMs(generatedDraft.metadata.repairTimeoutMs)} />
                 </div>
                 {generatedDraft.metadata.finalPolishFallbackReason ? (
                   <div className="notice warning">Final polish fallback: {generatedDraft.metadata.finalPolishFallbackReason}</div>
@@ -2413,4 +2436,14 @@ function formatBytes(value: number) {
     return `${Math.round(value / 1024)}KB`;
   }
   return `${(value / 1024 / 1024).toFixed(1)}MB`;
+}
+
+function formatMs(value: number) {
+  if (!value) {
+    return "-";
+  }
+  if (value < 1000) {
+    return `${value}ms`;
+  }
+  return `${Math.round(value / 1000)}s`;
 }

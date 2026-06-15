@@ -37,6 +37,16 @@ export interface LocalSectionedDraftMetadata {
   faqSectionDetected: boolean;
   faqFallbackAppended: boolean;
   faqCount: number;
+  safetyScrubApplied: boolean;
+  safetyScrubCount: number;
+  safetyScrubCodes: string[];
+  timeoutPolicy: string;
+  overallTimeoutMs: number;
+  stepTimeoutMs: number;
+  skeletonTimeoutMs: number;
+  sectionTimeoutMs: number;
+  finalPolishTimeoutMs: number;
+  repairTimeoutMs: number;
 }
 
 export interface LocalSectionedDraftResult {
@@ -52,6 +62,7 @@ export type LocalSectionedDraftProviderCall = (input: {
   prompt: DraftPromptPreview;
   temperature: number | null;
   maxTokens: number | null;
+  timeoutSeconds: number | null;
 }) => Promise<LocalSectionedDraftCallResult>;
 
 interface LocalSectionedDraftInput {
@@ -80,7 +91,54 @@ interface FaqItem {
   answer: string;
 }
 
+export interface LocalSectionedSafetyScrubResult {
+  markdown: string;
+  scrubApplied: boolean;
+  scrubCount: number;
+  scrubCodes: string[];
+}
+
 const FINAL_POLISH_MAX_INPUT_CHARS = 8500;
+
+export const LOCAL_SECTIONED_DRAFT_TIMEOUT_POLICY = {
+  timeoutPolicy: "local_sectioned_multi_pass_cold_start_extended",
+  overallTimeoutMs: 1_200_000,
+  skeletonTimeoutMs: 600_000,
+  sectionTimeoutMs: 300_000,
+  stepTimeoutMs: 300_000,
+  finalPolishTimeoutMs: 600_000,
+  repairTimeoutMs: 600_000
+} as const;
+
+const LOCAL_SECTIONED_SAFETY_PHRASE_REPLACEMENTS = [
+  { phrase: "투자의 성공이나 손실", replacement: "투자 결과나 손실", code: "success_outcome_phrase" },
+  { phrase: "투자의 성공", replacement: "투자 결과", code: "success_outcome_phrase" },
+  { phrase: "성공이나 손실", replacement: "결과나 손실", code: "success_outcome_phrase" },
+  { phrase: "성공적인 투자", replacement: "신중한 투자 판단", code: "success_promise_phrase" },
+  { phrase: "성공 사례", replacement: "활용 예시", code: "success_story_phrase" },
+  { phrase: "더 안전한 투자 결정", replacement: "더 신중한 판단", code: "investment_safe_phrase" },
+  { phrase: "안전한 투자 결정", replacement: "신중한 투자 판단", code: "investment_safe_phrase" },
+  { phrase: "안전한 투자", replacement: "신중한 투자 판단", code: "investment_safe_phrase" },
+  { phrase: "안전하게 매수", replacement: "신중하게 검토", code: "safe_buy_phrase" },
+  { phrase: "수익 보장", replacement: "성과를 단정하지 않음", code: "guaranteed_profit_phrase" },
+  { phrase: "확실한 수익", replacement: "확정되지 않은 투자 결과", code: "guaranteed_profit_phrase" },
+  { phrase: "급등 확정", replacement: "변동 가능성", code: "guaranteed_movement_phrase" },
+  { phrase: "반드시 오른다", replacement: "변동 가능성이 있다", code: "guaranteed_movement_phrase" },
+  { phrase: "무조건 오른다", replacement: "변동 가능성이 있다", code: "guaranteed_movement_phrase" },
+  { phrase: "매수 추천", replacement: "매수 판단 참고", code: "buy_sell_recommendation_phrase" },
+  { phrase: "매도 추천", replacement: "매도 판단 참고", code: "buy_sell_recommendation_phrase" },
+  { phrase: "원금 보장", replacement: "원금 손실 가능성 안내", code: "principal_guarantee_phrase" },
+  { phrase: "손실 없음", replacement: "손실 가능성 확인", code: "risk_free_phrase" },
+  { phrase: "리스크 없음", replacement: "리스크 확인 필요", code: "risk_free_phrase" },
+  { phrase: "수익률 예시", replacement: "성과 지표 예시", code: "return_example_phrase" },
+  { phrase: "수익률", replacement: "성과 지표", code: "return_rate_phrase" },
+  { phrase: "무료 체험", replacement: "기능 살펴보기", code: "aggressive_cta_phrase" },
+  { phrase: "지금 시작", replacement: "공식 페이지에서 확인", code: "aggressive_cta_phrase" },
+  { phrase: "신뢰할 수 있는 투자", replacement: "참고용 투자 정보", code: "trust_investment_phrase" },
+  { phrase: "매수 타이밍을 잡다", replacement: "매수 시점 판단에 참고하다", code: "timing_advice_phrase" },
+  { phrase: "더 유리합니다", replacement: "판단에 도움이 될 수 있습니다", code: "advantage_claim_phrase" },
+  { phrase: "성공", replacement: "결과", code: "success_promise_phrase" }
+] as const;
 
 export async function generateLocalSectionedDraftCandidate(input: LocalSectionedDraftInput): Promise<LocalSectionedDraftResult> {
   const stepSummaries: LocalSectionedDraftStepSummary[] = [];
@@ -89,6 +147,7 @@ export async function generateLocalSectionedDraftCandidate(input: LocalSectioned
   let totalInputTokens: number | null = null;
   let totalOutputTokens: number | null = null;
   const faqItems = getFaqItems(input.planJson);
+  const overallDeadlineMs = Date.now() + LOCAL_SECTIONED_DRAFT_TIMEOUT_POLICY.overallTimeoutMs;
 
   const skeletonPrompt = buildSkeletonPrompt(input);
   const skeletonCall = await runStepCall({
@@ -98,7 +157,9 @@ export async function generateLocalSectionedDraftCandidate(input: LocalSectioned
     temperature: Math.min(input.temperature ?? 0.2, 0.2),
     maxTokens: Math.min(input.maxTokens ?? 900, 900),
     callProvider: input.callProvider,
-    stepSummaries
+    stepSummaries,
+    stepTimeoutMs: LOCAL_SECTIONED_DRAFT_TIMEOUT_POLICY.skeletonTimeoutMs,
+    overallDeadlineMs
   });
   totalLatencyMs += skeletonCall.latencyMs;
   totalInputTokens = sumNullableTokens(totalInputTokens, skeletonCall.inputTokens);
@@ -114,7 +175,8 @@ export async function generateLocalSectionedDraftCandidate(input: LocalSectioned
       skeleton,
       previousSectionSummaries,
       input,
-      stepSummaries
+      stepSummaries,
+      overallDeadlineMs
     });
     totalLatencyMs += sectionResult.latencyMs;
     totalInputTokens = sumNullableTokens(totalInputTokens, sectionResult.inputTokens);
@@ -152,7 +214,9 @@ export async function generateLocalSectionedDraftCandidate(input: LocalSectioned
         temperature: Math.min(input.temperature ?? 0.2, 0.2),
         maxTokens: input.maxTokens,
         callProvider: input.callProvider,
-        stepSummaries
+        stepSummaries,
+        stepTimeoutMs: LOCAL_SECTIONED_DRAFT_TIMEOUT_POLICY.finalPolishTimeoutMs,
+        overallDeadlineMs
       });
       totalLatencyMs += polishCall.latencyMs;
       totalInputTokens = sumNullableTokens(totalInputTokens, polishCall.inputTokens);
@@ -192,6 +256,21 @@ export async function generateLocalSectionedDraftCandidate(input: LocalSectioned
       errorMessage: null
     });
   }
+  const safetyScrubResult = scrubLocalSectionedDraftSafetyPhrases(candidateDraftMarkdown);
+  candidateDraftMarkdown = safetyScrubResult.markdown;
+  if (safetyScrubResult.scrubApplied) {
+    stepSummaries.push({
+      stepKey: "safety_phrase_scrub",
+      sectionKey: null,
+      status: "success",
+      durationMs: 0,
+      promptHash: null,
+      responseHash: hashText(candidateDraftMarkdown),
+      responseLength: candidateDraftMarkdown.length,
+      retryCount: 0,
+      errorMessage: null
+    });
+  }
 
   return {
     candidateDraftMarkdown,
@@ -211,7 +290,17 @@ export async function generateLocalSectionedDraftCandidate(input: LocalSectioned
       faqRequired: faqItems.length > 0,
       faqSectionDetected: faqGuardResult.detectedAfter,
       faqFallbackAppended: faqGuardResult.fallbackAppended,
-      faqCount: faqItems.length
+      faqCount: faqItems.length,
+      safetyScrubApplied: safetyScrubResult.scrubApplied,
+      safetyScrubCount: safetyScrubResult.scrubCount,
+      safetyScrubCodes: safetyScrubResult.scrubCodes,
+      timeoutPolicy: LOCAL_SECTIONED_DRAFT_TIMEOUT_POLICY.timeoutPolicy,
+      overallTimeoutMs: LOCAL_SECTIONED_DRAFT_TIMEOUT_POLICY.overallTimeoutMs,
+      stepTimeoutMs: LOCAL_SECTIONED_DRAFT_TIMEOUT_POLICY.stepTimeoutMs,
+      skeletonTimeoutMs: LOCAL_SECTIONED_DRAFT_TIMEOUT_POLICY.skeletonTimeoutMs,
+      sectionTimeoutMs: LOCAL_SECTIONED_DRAFT_TIMEOUT_POLICY.sectionTimeoutMs,
+      finalPolishTimeoutMs: LOCAL_SECTIONED_DRAFT_TIMEOUT_POLICY.finalPolishTimeoutMs,
+      repairTimeoutMs: LOCAL_SECTIONED_DRAFT_TIMEOUT_POLICY.repairTimeoutMs
     }
   };
 }
@@ -222,6 +311,7 @@ async function generateSectionWithRetry(input: {
   previousSectionSummaries: string[];
   input: LocalSectionedDraftInput;
   stepSummaries: LocalSectionedDraftStepSummary[];
+  overallDeadlineMs: number;
 }) {
   const prompt = buildSectionPrompt(input.input, input.skeleton, input.section, input.previousSectionSummaries);
   try {
@@ -232,7 +322,9 @@ async function generateSectionWithRetry(input: {
       temperature: input.input.temperature,
       maxTokens: Math.min(input.input.maxTokens ?? 1200, 1400),
       callProvider: input.input.callProvider,
-      stepSummaries: input.stepSummaries
+      stepSummaries: input.stepSummaries,
+      stepTimeoutMs: LOCAL_SECTIONED_DRAFT_TIMEOUT_POLICY.sectionTimeoutMs,
+      overallDeadlineMs: input.overallDeadlineMs
     });
     return { ...result, text: normalizeSectionMarkdown(result.text), fallbackReason: null };
   } catch {
@@ -246,7 +338,9 @@ async function generateSectionWithRetry(input: {
         maxTokens: Math.min(input.input.maxTokens ?? 1000, 1100),
         callProvider: input.input.callProvider,
         stepSummaries: input.stepSummaries,
-        retryCount: 1
+        retryCount: 1,
+        stepTimeoutMs: LOCAL_SECTIONED_DRAFT_TIMEOUT_POLICY.sectionTimeoutMs,
+        overallDeadlineMs: input.overallDeadlineMs
       });
       return { ...retryResult, text: normalizeSectionMarkdown(retryResult.text), fallbackReason: null };
     } catch (retryError) {
@@ -283,14 +377,18 @@ async function runStepCall(input: {
   callProvider: LocalSectionedDraftProviderCall;
   stepSummaries: LocalSectionedDraftStepSummary[];
   retryCount?: number;
+  stepTimeoutMs: number;
+  overallDeadlineMs?: number;
 }) {
   const promptHash = hashText(`${input.prompt.system}\n${input.prompt.user}\n${input.prompt.outputFormat}`);
   const startedAt = Date.now();
   try {
+    const timeoutSeconds = getStepTimeoutSeconds(input.stepTimeoutMs, input.overallDeadlineMs);
     const result = await input.callProvider({
       prompt: input.prompt,
       temperature: input.temperature,
-      maxTokens: input.maxTokens
+      maxTokens: input.maxTokens,
+      timeoutSeconds
     });
     input.stepSummaries.push({
       stepKey: input.stepKey,
@@ -318,6 +416,14 @@ async function runStepCall(input: {
     });
     throw error;
   }
+}
+
+function getStepTimeoutSeconds(stepTimeoutMs: number, overallDeadlineMs?: number) {
+  const remainingMs = overallDeadlineMs ? overallDeadlineMs - Date.now() : stepTimeoutMs;
+  if (remainingMs <= 0) {
+    throw new Error("local_sectioned_overall_timeout");
+  }
+  return Math.max(1, Math.ceil(Math.min(stepTimeoutMs, remainingMs) / 1000));
 }
 
 function buildSkeletonPrompt(input: LocalSectionedDraftInput): DraftPromptPreview {
@@ -401,6 +507,8 @@ function buildFinalPolishPrompt(input: LocalSectionedDraftInput, assembledDraft:
       "You are a careful Korean Markdown final editor.",
       "Polish the assembled draft for tone, transitions, logical flow, repetition, CTA balance, and disclaimer clarity.",
       "Do not add unsupported claims, investment recommendations, guaranteed outcomes, or aggressive sign-up language.",
+      "Never use unsafe investment or promotion phrases such as 안전한 투자, 안전하게 매수, 성공, 성공 사례, 수익 보장, 확실한 수익, 수익률 예시, 매수 추천, 매도 추천, 원금 보장, 손실 없음, 리스크 없음.",
+      "Use neutral alternatives such as 신중한 판단, 참고용 정보, 투자 결과, 판단 보조, 기능 살펴보기, 공식 페이지에서 확인.",
       "Do not delete media placeholders.",
       faqItems.length > 0 ? "Preserve the ## FAQ heading and ### question structure. Do not delete FAQ items or merge them into general paragraphs." : "Do not invent FAQ items.",
       "Return one complete Markdown draft with exactly one H1."
@@ -615,6 +723,37 @@ function buildFaqFallbackMarkdown(markdown: string, faqItems: FaqItem[]) {
       ""
     ])
   ].join("\n").trim();
+}
+
+export function scrubLocalSectionedDraftSafetyPhrases(markdown: string): LocalSectionedSafetyScrubResult {
+  let nextMarkdown = markdown;
+  let scrubCount = 0;
+  const scrubCodes = new Set<string>();
+
+  for (const replacement of LOCAL_SECTIONED_SAFETY_PHRASE_REPLACEMENTS) {
+    const result = replaceAllWithCount(nextMarkdown, replacement.phrase, replacement.replacement);
+    if (result.count > 0) {
+      nextMarkdown = result.value;
+      scrubCount += result.count;
+      scrubCodes.add(replacement.code);
+    }
+  }
+
+  return {
+    markdown: normalizeMarkdown(nextMarkdown),
+    scrubApplied: scrubCount > 0,
+    scrubCount,
+    scrubCodes: Array.from(scrubCodes).sort()
+  };
+}
+
+function replaceAllWithCount(value: string, phrase: string, replacement: string) {
+  const parts = value.split(phrase);
+  const count = parts.length - 1;
+  return {
+    value: count > 0 ? parts.join(replacement) : value,
+    count
+  };
 }
 
 function normalizeSectionMarkdown(value: string) {
