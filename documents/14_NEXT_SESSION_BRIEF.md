@@ -5,7 +5,7 @@
 ```text
 repo: ~/blog-growth-agent
 branch: master
-latest committed baseline before Patch 9E-4C-3B: 4fc29e3 Add stepwise draft generation run storage
+latest committed baseline before Patch 9E-4C-3C: 3cb3fbc Add stepwise draft generation run APIs
 ```
 
 ## Implemented Scope
@@ -37,6 +37,7 @@ latest committed baseline before Patch 9E-4C-3B: 4fc29e3 Add stepwise draft gene
 - Local sectioned draft cold-start timeout policy hotfix
 - Local stepwise draft generation DB schema/repository foundation
 - Local stepwise draft generation start/read API
+- Local stepwise draft generation skeleton/section step execution API
 
 ## Current Blogger State
 
@@ -85,24 +86,30 @@ latest committed baseline before Patch 9E-4C-3B: 4fc29e3 Add stepwise draft gene
 - `GET /api/content-items/[id]/draft-generation-runs` returns safe run summaries.
 - `GET /api/content-items/[id]/draft-generation-runs/[runId]` returns one run detail with pending/executed step summaries.
 - Patch 9E-4C-3B does not execute LLM steps, create `llm_call_logs`, add UI, or change `generate-draft`.
+- Patch 9E-4C-3C adds `POST /api/content-items/[id]/draft-generation-runs/[runId]/steps/[stepKey]`.
+- Step execution supports `skeleton`, `intro`, `body_1`, `body_2`, `body_3`, and `conclusion_cta_faq`.
+- Each request executes at most one step and requires a local-like `content_draft` primary route.
+- Section steps require a successful skeleton step.
+- Successful step output is stored only on `content_draft_generation_steps` as normalized Markdown fragment plus short summary/hash/latency metadata.
+- Step execution may create `llm_call_logs`, but logs contain only safe step metadata and hashes, not prompt/raw response/output Markdown.
+- Patch 9E-4C-3C does not add assembly, final polish, cancel API, UI, or content item auto-apply.
 
 ## Next Patch Candidate
 
-Patch 9E-4C-3C 후보: Local stepwise draft generation skeleton/section execution API.
+Patch 9E-4C-3D 후보: Local stepwise deterministic assemble/final polish API.
 
 Alternative candidates:
 
-- Patch 9E-4C-3D: Local stepwise deterministic assemble/final polish API.
+- Patch 9E-4C-3E: Local stepwise UI.
 - Patch 9E-4D: Blog post template renderer / publish-ready HTML theme.
 - Patch 9E-5: Blogger OAuth/test blog readiness 재점검.
 
 Recommended scope:
 
-- Add skeleton/section step execution APIs for existing `content_draft_generation_runs`.
-- Each step should be one request with a local step timeout policy.
-- Failed steps should be retryable without restarting the run.
-- Step execution should store normalized Markdown fragment/output summary and safe hashes/metadata only.
-- Deterministic assembly and final polish should remain out of scope until 9E-4C-3D.
+- Add deterministic assembly API that combines successful skeleton/section outputs.
+- Add final polish API as a separate one-step request, with assembled candidate fallback on failure.
+- Re-run FAQ/media/H1/safety guards after assembly/final polish.
+- Store assembled/final candidate on the run, but do not auto-apply to `content_items`.
 - UI should remain out of scope until 9E-4C-3E.
 - Keep existing `generate-draft` route unchanged.
 - Keep commercial/high-performance remote providers on the existing one-shot full draft path.
@@ -130,7 +137,7 @@ Recommended scope:
 ```text
 AGENTS.md와 documents/ 폴더의 관련 문서를 먼저 읽어줘.
 
-현재 프로젝트 상태를 점검하고 Patch 9E-4C-3C 작업계획을 제안해줘.
+현재 프로젝트 상태를 점검하고 Patch 9E-4C-3D 작업계획을 제안해줘.
 
 목표:
 - Patch 9E-4B의 repair candidate apply UX polish 구현 상태를 확인한다.
@@ -142,7 +149,8 @@ AGENTS.md와 documents/ 폴더의 관련 문서를 먼저 읽어줘.
 - Patch 9E-4C-2-hotfix4의 Local sectioned cold-start timeout policy 구현 상태를 확인한다.
 - Patch 9E-4C-3A의 Local stepwise draft generation DB schema/repository foundation 구현 상태를 확인한다.
 - Patch 9E-4C-3B의 Local stepwise draft generation start/read run API 구현 상태를 확인한다.
-- Local stepwise skeleton/section step execution API의 최소 범위를 설계한다.
+- Patch 9E-4C-3C의 Local stepwise skeleton/section step execution API 구현 상태를 확인한다.
+- Local stepwise deterministic assemble/final polish API의 최소 범위를 설계한다.
 - remote/commercial provider의 기존 one-shot draft generation은 유지한다.
 - 자동 draftHtml 저장, Blogger API 호출, publish/scheduled publish는 명시적으로 범위를 정하기 전까지 구현하지 않는다.
 

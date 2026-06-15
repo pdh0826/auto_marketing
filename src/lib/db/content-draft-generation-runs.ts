@@ -140,6 +140,16 @@ export function getContentDraftGenerationRunForContentItem(contentItemId: string
   });
 }
 
+export function getContentDraftGenerationStepForRun(runId: string, stepKey: string) {
+  return prisma.contentDraftGenerationStep.findFirst({
+    where: {
+      runId,
+      stepKey
+    },
+    select: stepSafeSelect
+  });
+}
+
 export function listContentDraftGenerationRunsForContentItem(contentItemId: string) {
   return prisma.contentDraftGenerationRun.findMany({
     where: { contentItemId },
@@ -179,6 +189,28 @@ export function markContentDraftGenerationStepRunning(input: {
     data: {
       status: "running",
       attempt: input.attempt,
+      errorCode: null,
+      metadata: toNullableJsonInput(input.metadata)
+    },
+    select: stepSafeSelect
+  });
+}
+
+export function markContentDraftGenerationStepPendingRetry(input: {
+  stepId: string;
+  attempt: number;
+  metadata?: Prisma.InputJsonValue | null;
+}) {
+  return prisma.contentDraftGenerationStep.update({
+    where: { id: input.stepId },
+    data: {
+      status: "pending",
+      attempt: input.attempt,
+      outputMarkdown: null,
+      outputSummary: null,
+      promptHash: null,
+      responseHash: null,
+      latencyMs: null,
       errorCode: null,
       metadata: toNullableJsonInput(input.metadata)
     },

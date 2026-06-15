@@ -562,3 +562,29 @@ Policy:
 - No content item status, `qualityScore`, `publishedAt`, or `scheduledAt` mutation.
 - No prompt full text, raw response, request/response body, secret, token, or encrypted value response/storage.
 - No Blogger API read/write, draft save, publish, scheduled publish, token refresh, `posts.insert`, or `posts.update`.
+
+## Patch 9E-4C-3C: Local Stepwise Draft Generation Step Execution API
+
+Implemented after Patch 9E-4C-3B:
+
+- Added `POST /api/content-items/[id]/draft-generation-runs/[runId]/steps/[stepKey]`.
+- Added a stepwise draft generation service for single-step skeleton/section execution.
+- Supported step keys are `skeleton`, `intro`, `body_1`, `body_2`, `body_3`, and `conclusion_cta_faq`.
+- Each request executes at most one step.
+- Section steps are blocked until skeleton succeeds.
+- Completed/cancelled runs, already-running steps, and remote/commercial routes are rejected.
+- Existing successful steps are reused unless retry/force is explicitly requested.
+- Retry increments only the target step attempt.
+- Step success stores normalized Markdown output, short summary, prompt/response hashes, latency, and safe metadata in the step row.
+- Step failure marks only the target step as failed.
+- Step execution writes `content_draft` LLM call logs with safe stepwise metadata.
+
+Policy:
+
+- Existing `POST /api/content-items/[id]/generate-draft` behavior is unchanged.
+- No automatic full step chain execution.
+- No assembly, final polish, cancel API, or UI.
+- No automatic `draftMarkdown` or `draftHtml` save.
+- No content item status, `qualityScore`, `publishedAt`, or `scheduledAt` mutation.
+- No prompt full text, raw response, request/response body, output Markdown full text, skeleton/section fragment full text, candidate Markdown, secret, token, or encrypted value logging.
+- No Blogger API read/write, draft save, publish, scheduled publish, token refresh, `posts.insert`, or `posts.update`.

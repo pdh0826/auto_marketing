@@ -536,3 +536,41 @@ Boundary:
 - Existing `POST /api/content-items/[id]/generate-draft` behavior is unchanged.
 - Safe responses do not include prompt full text, raw response full text, request/response body, API key, token, secret, or encrypted value.
 - `content_items.draftMarkdown`/`draftHtml`, status, `qualityScore`, `publishedAt`, and `scheduledAt` are not changed.
+
+## Patch 9E-4C-3C local sectioned stepwise skeleton/section execution API
+
+Patch 9E-4C-3C adds a one-step-at-a-time execution API for persisted local stepwise draft generation runs.
+
+API:
+
+- `POST /api/content-items/[id]/draft-generation-runs/[runId]/steps/[stepKey]`
+  - Allowed step keys: `skeleton`, `intro`, `body_1`, `body_2`, `body_3`, `conclusion_cta_faq`.
+  - Executes exactly one step per request.
+  - Reuses an existing successful step unless `retry` or `force` is explicitly requested.
+  - Refuses section execution until the skeleton step has succeeded.
+  - Refuses completed/cancelled runs and already-running steps.
+
+Provider boundary:
+
+- Uses the existing `content_draft` primary TaskRoute.
+- Requires a local-like provider route (`local`, `local_http`, `cli`, `local_http` invocation mode, `cli` invocation mode, `ollama_compatible`, or `custom_cli` style local detection).
+- Remote/commercial one-shot routes are rejected with `local_stepwise_route_required`.
+- Per-step provider timeout is capped at 600 seconds.
+
+Persistence and logging:
+
+- Step success stores normalized Markdown fragment, short output summary, prompt hash, response hash, latency, and safe metadata in `content_draft_generation_steps`.
+- Step failure marks only that step as failed and records a safe error code/metadata.
+- Retry increments only the failed/retried step attempt.
+- `llm_call_logs` may be created for step execution, but only with safe metadata: run id, step key, section key, attempt, provider/model summary, hashes, latency, output length, and response summary.
+- Prompt full text, raw provider response, output Markdown full text, skeleton/section fragment full text, candidate Markdown, API keys, tokens, secrets, and encrypted values are not stored in call logs.
+
+Boundary:
+
+- No automatic full run execution.
+- No deterministic assembly API.
+- No final polish API.
+- No cancel API.
+- No UI.
+- No `content_items.draftMarkdown`/`draftHtml` mutation.
+- Blogger API, draft save, publish, scheduled publish, and token refresh remain out of scope.

@@ -612,3 +612,21 @@ npm run build
 - 기존 `POST /api/content-items/[id]/generate-draft` 동작은 변경하지 않는다.
 - 자동 `content_items.draftMarkdown`/`draftHtml` 저장, status/qualityScore/publishedAt/scheduledAt 변경, Blogger API/draft save/publish/token refresh는 발생하지 않는다.
 - local DB smoke는 3A migration 적용 여부가 확인된 경우에만 수행한다.
+
+## Patch 9E-4C-3C Local stepwise skeleton/section step execution API 검증
+
+- `POST /api/content-items/[id]/draft-generation-runs/[runId]/steps/[stepKey]`는 한 요청에서 하나의 step만 실행해야 한다.
+- 허용 step key는 `skeleton`, `intro`, `body_1`, `body_2`, `body_3`, `conclusion_cta_faq`뿐이다.
+- URL content item id와 run id가 일치하지 않으면 404를 반환해야 한다.
+- run status가 `completed` 또는 `cancelled`이면 409로 실행을 거부해야 한다.
+- step status가 `running`이면 409로 실행을 거부해야 한다.
+- step status가 `success`이고 retry/force 요청이 없으면 기존 step result를 반환하고 LLM을 다시 호출하지 않아야 한다.
+- section step은 skeleton step이 `success`이고 `outputMarkdown`이 있을 때만 실행되어야 하며, 아니면 `skeleton_required` 409를 반환해야 한다.
+- `content_draft` primary route가 local/Ollama/local_http-like가 아니면 `local_stepwise_route_required`로 거부해야 한다.
+- 성공 시 step row에 normalized `outputMarkdown`, short `outputSummary`, `promptHash`, `responseHash`, latency, safe metadata가 저장되어야 한다.
+- 실패 시 해당 step만 `failed`로 표시하고 run은 `failed`/current step 상태가 되어야 하며, retry 시 해당 step attempt만 증가해야 한다.
+- `llm_call_logs`에는 run id, step key, section key, attempt, hash, latency, response summary, output length 같은 safe metadata만 저장해야 한다.
+- `llm_call_logs`와 metadata에는 prompt 전문, raw response 전문, outputMarkdown 전문, candidate 전문, skeleton/section fragment 전문, secret/token/encryptedValue가 없어야 한다.
+- 이번 패치는 assemble/final polish/cancel API와 UI를 추가하지 않는다.
+- 자동 `content_items.draftMarkdown`/`draftHtml` 저장, status/qualityScore/publishedAt/scheduledAt 변경, Blogger API/draft save/publish/token refresh는 발생하지 않는다.
+- smoke는 migration 적용 여부 확인 후 skeleton 1회, skeleton 성공 시 section 1개까지만 수행하고 반복 실행하지 않는다.
