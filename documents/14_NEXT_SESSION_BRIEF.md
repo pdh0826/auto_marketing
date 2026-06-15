@@ -124,6 +124,9 @@ latest committed baseline before Patch 9E-4C-3C: 3cb3fbc Add stepwise draft gene
 - Draft Save Preflight returns only safe metadata: short hashes, counts, blocking reasons, warnings, selected blog summary, connection/token presence booleans, approval status, and side-effect flags.
 - The content detail Blogger Draft save button now requires a passing preflight result in addition to existing payload approval guards.
 - Preflight does not mutate content items, create `llm_call_logs`, call Blogger APIs, save Blogger drafts, publish, schedule publish, or refresh tokens.
+- Patch 9E-4G-1b improves Draft Save Preflight UX/readiness guidance.
+- Content detail now maps blocking reasons to next actions, shows a readiness checklist, links to `/settings/blogger` when no Blogger connection exists, and keeps the Blogger Draft save button disabled until preflight passes.
+- 9E-4G-1b does not change preflight server behavior, mutate content items, create `llm_call_logs`, call Blogger APIs, start OAuth automatically, save drafts, publish, schedule publish, or refresh tokens.
 
 ## Next Patch Candidate
 
@@ -137,6 +140,7 @@ Recommended scope:
 
 - Re-run and verify saved `draftHtml` Quality Dry Run, Publish Readiness, Blogger Draft Payload Preview, and Blogger Draft Save Preflight.
 - Confirm preflight blocks missing Blogger connection, missing verified selected blog, missing/expired token, missing active approval, stale approval, HTML validation failures, and content readiness failures.
+- Use the 9E-4G-1b checklist/action items to clear blockers before any live write attempt.
 - Only consider actual Blogger draft save after the user explicitly approves a live test blog write.
 - Keep publish, scheduled publish, token refresh, and posts.update out of scope.
 - Keep automatic `draftHtml`, status, qualityScore, Blogger draft save, and publish out of scope unless separately requested.
@@ -169,8 +173,9 @@ AGENTS.md와 documents/ 폴더의 관련 문서를 먼저 읽어줘.
 현재 프로젝트 상태를 점검하고 Patch 9E-4G 작업계획을 제안해줘.
 
 목표:
-- Patch 9E-4G-1의 saved draftHtml readiness recheck / Blogger Draft Save Preflight 구현 상태를 확인한다.
+- Patch 9E-4G-1/1b의 saved draftHtml readiness recheck / Blogger Draft Save Preflight UX 구현 상태를 확인한다.
 - 저장된 `draftHtml` 기준 Quality Dry Run / Publish Readiness / Blogger Draft Payload Preview / Draft Save Preflight 결과를 점검한다.
+- preflight checklist와 action item이 현재 blocker를 정확히 안내하는지 확인한다.
 - 실제 Blogger draft save를 진행할 경우 live test blog 사용자 승인, active approval snapshot match, verified selected blog, access token 상태를 다시 확인한다.
 - content item status/qualityScore/publishedAt/scheduledAt 자동 변경, Blogger publish/scheduled publish/token refresh, LLM 호출은 금지한다.
 - 실제 live draft save는 별도 승인 후 Patch 9E-4G-2 또는 Patch 9E-5 후보로 분리한다.

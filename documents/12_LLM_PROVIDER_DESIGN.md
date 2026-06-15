@@ -719,4 +719,15 @@ Patch 9E-4G-1 adds a read-only preflight gate before any future Blogger draft sa
 - The route does not mutate `content_items`, Blogger tables, approvals, draft saves, or `llm_call_logs`.
 - The route does not call Blogger write APIs, Blogger draft save, publish, scheduled publish, token refresh, or LLM providers.
 - Full `draftHtml`, prompt text, raw model responses, token values, encrypted values, and raw Blogger response/error bodies are not returned or logged.
+
+## Patch 9E-4G-1b Blogger draft save readiness UX and connection guidance
+
+Patch 9E-4G-1b is a UI/readiness guidance patch on top of the preflight gate.
+
+- It does not add LLM provider usage and does not create `llm_call_logs`.
+- It maps preflight blocking reason keys to human-readable next actions in the content detail UI.
+- It adds `/settings/blogger` navigation guidance when the preflight reports no Blogger connection.
+- It keeps the actual Blogger Draft save button disabled until preflight passes.
+- It keeps all preflight side-effect flags visible as false and does not mutate `content_items` or Blogger tables.
+- It does not call Blogger API write, draft save, publish, scheduled publish, token refresh, or OAuth start automatically.
 - Blogger API, draft save, publish, scheduled publish, token refresh, LLM calls, and `llm_call_logs` remain out of scope.

@@ -742,3 +742,22 @@ Policy:
 - No LLM call or `llm_call_logs` creation.
 - No `content_items` mutation, including `draftMarkdown`, `draftHtml`, status, `qualityScore`, `publishedAt`, or `scheduledAt`.
 - Secret material, encrypted values, raw Blogger responses, prompt text, and full `draftHtml` are not returned.
+
+## Patch 9E-4G-1b: Blogger Draft Save Readiness UX and Connection Guidance
+
+Implemented after Patch 9E-4G-1:
+
+- Improved the content detail Draft Save Preflight result block with a human-readable readiness checklist.
+- Added blocking reason to next-action guidance for Blogger connection, blog selection, draft payload readiness, manual approval, stale approval, and draft save readiness.
+- Added `/settings/blogger` navigation guidance when no Blogger connection exists.
+- Added clearer copy around the disabled Blogger Draft save button explaining that preflight must pass before any real draft save attempt.
+- Added stale approval guidance explaining that changed `draftHtml` can invalidate prior payload previews and approval snapshots.
+- Kept side-effect flags visible and explicit: Blogger API write, draft save, publish, scheduled publish, token refresh, LLM call, and content item mutation remain false during preflight.
+
+Policy:
+
+- UX/readiness guidance only.
+- No Blogger API write, draft save, publish, scheduled publish, token refresh, `posts.insert`, or `posts.update`.
+- No LLM call or `llm_call_logs` creation.
+- No `content_items` mutation, including `draftMarkdown`, `draftHtml`, status, `qualityScore`, `publishedAt`, or `scheduledAt`.
+- No schema or migration change.

@@ -1506,6 +1506,10 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
               저장된 draftHtml 기준으로 HTML validation, Quality Dry Run, Publish Readiness, Blogger Draft Payload Preview, Blogger Draft Save Preflight를 차례로 확인합니다.
               preflight는 점검 전용이며 Blogger API write, draft save, publish, token refresh, LLM 호출을 실행하지 않습니다.
             </div>
+            <div className="notice">
+              실제 Blogger draft save는 preflight 통과 전에는 저장할 수 없습니다. 다음 단계에서 사용자 명시 승인 후에만 실행되며, publish=false draft 저장만 허용합니다.
+              publish/scheduled publish/token refresh는 별도 단계입니다.
+            </div>
 
             <div className="form-actions">
               <button className="button" type="button" disabled={!canRunBloggerDraftPreview} onClick={() => void runBloggerDraftPreview()}>
@@ -1537,6 +1541,26 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
                   </p>
                   <p>preflight only입니다. Blogger write, draft save, publish, token refresh, LLM 호출, content item mutation은 수행하지 않았습니다.</p>
                 </div>
+                {bloggerDraftSavePreflightResult.bloggerConnectionSummary.connectionCount === 0 ? (
+                  <div className="notice warning">
+                    <strong>Blogger 연결이 필요합니다.</strong>
+                    <p>설정 화면에서 Blogger OAuth 연결을 완료한 뒤, 대상 Blogger blog를 선택하세요. 이 화면에서는 OAuth start를 자동 호출하지 않습니다.</p>
+                    <div className="form-actions">
+                      <Link className="button secondary" href="/settings/blogger">
+                        Blogger 설정으로 이동
+                      </Link>
+                    </div>
+                  </div>
+                ) : null}
+                <BloggerDraftSaveReadinessChecklist
+                  result={bloggerDraftSavePreflightResult}
+                  hasSavedDraftHtml={Boolean(contentItem.draftHtml)}
+                  qualityDryRunChecked={Boolean(qualityPreviewResult)}
+                  publishReadinessChecked={Boolean(publishReadinessResult)}
+                  draftPayloadPreviewChecked={Boolean(bloggerDraftPreviewResult)}
+                  draftAlreadySaved={Boolean(bloggerDraftPreviewResult?.draftSaveSummary.draftSaved)}
+                />
+                <BloggerDraftSaveActionItems result={bloggerDraftSavePreflightResult} />
                 <div className="detail-grid">
                   <DetailItem label="HTML Hash" value={bloggerDraftSavePreflightResult.htmlHashPrefix || "-"} />
                   <DetailItem label="HTML Length" value={String(bloggerDraftSavePreflightResult.htmlLength)} />
@@ -1571,6 +1595,15 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
                   <DetailItem label="Payload Ready" value={bloggerDraftSavePreflightResult.draftPayloadPreviewSummary.draftPayloadReady ? "yes" : "no"} />
                   <DetailItem label="Title Candidate" value={bloggerDraftSavePreflightResult.draftPayloadPreviewSummary.titleCandidate ?? "-"} />
                 </div>
+                {bloggerDraftSavePreflightResult.approvalSnapshotStatus.requiresReapproval ? (
+                  <div className="notice warning">
+                    <strong>Manual approval 재확인이 필요합니다.</strong>
+                    <p>
+                      draftHtml이 바뀌면 기존 Blogger Draft Payload Preview와 approval snapshot은 stale일 수 있습니다. approval snapshot hash와 현재 draftHtml hash가
+                      일치하지 않거나 approval이 없으면 Draft Payload Preview를 다시 실행하고 payload를 수동 승인하세요.
+                    </p>
+                  </div>
+                ) : null}
                 <div className="detail-grid">
                   <DetailItem label="Blogger API Write" value={String(bloggerDraftSavePreflightResult.sideEffectSummary.bloggerApiWrite)} />
                   <DetailItem label="Blogger Draft Save" value={String(bloggerDraftSavePreflightResult.sideEffectSummary.bloggerDraftSave)} />
@@ -3464,6 +3497,224 @@ function PublishReadinessSummary({ result }: { result: PublishReadinessResult })
       </div>
     </>
   );
+}
+
+function BloggerDraftSaveReadinessChecklist({
+  result,
+  hasSavedDraftHtml,
+  qualityDryRunChecked,
+  publishReadinessChecked,
+  draftPayloadPreviewChecked,
+  draftAlreadySaved
+}: {
+  result: BloggerDraftSavePreflight;
+  hasSavedDraftHtml: boolean;
+  qualityDryRunChecked: boolean;
+  publishReadinessChecked: boolean;
+  draftPayloadPreviewChecked: boolean;
+  draftAlreadySaved: boolean;
+}) {
+  const rows = [
+    {
+      key: "saved-draft-html",
+      label: "Saved draftHtml exists",
+      status: hasSavedDraftHtml ? "pass" : "fail",
+      message: hasSavedDraftHtml ? "저장된 draftHtml이 있습니다." : "HTML 후보를 검증한 뒤 draftHtml에 수동 반영하세요."
+    },
+    {
+      key: "html-validation",
+      label: "HTML validation pass",
+      status: result.htmlValidation.ok ? "pass" : "fail",
+      message: result.htmlValidation.ok ? "저장된 draftHtml validation이 통과했습니다." : "HTML validation error를 해결하고 다시 반영하세요."
+    },
+    {
+      key: "quality-dry-run",
+      label: "Quality Dry Run checked",
+      status: qualityDryRunChecked ? "pass" : "warn",
+      message: qualityDryRunChecked ? "화면에서 Quality Dry Run을 실행했습니다." : "Quality Dry Run을 실행해 저장된 draftHtml 품질을 확인하세요."
+    },
+    {
+      key: "publish-readiness",
+      label: "Publish Readiness checked",
+      status: publishReadinessChecked ? "pass" : "warn",
+      message: publishReadinessChecked ? "화면에서 Publish Readiness를 실행했습니다." : "Publish Readiness를 실행해 gate 상태를 확인하세요."
+    },
+    {
+      key: "blogger-connection",
+      label: "Blogger connection configured",
+      status: result.bloggerConnectionSummary.connectionCount > 0 && result.bloggerConnectionSummary.status === "connected" ? "pass" : "fail",
+      message:
+        result.bloggerConnectionSummary.connectionCount > 0 && result.bloggerConnectionSummary.status === "connected"
+          ? "Blogger connection이 connected 상태입니다."
+          : "설정 > Blogger에서 연결을 먼저 완료하세요."
+    },
+    {
+      key: "blog-selection",
+      label: "Blog selected",
+      status: result.selectedBlogSummary.selected ? "pass" : "fail",
+      message: result.selectedBlogSummary.selected ? "검증된 Blogger blog가 선택되어 있습니다." : "연결 후 대상 Blogger blog를 선택하세요."
+    },
+    {
+      key: "payload-preview",
+      label: "Draft payload preview ready",
+      status: result.draftPayloadPreviewSummary.draftPayloadReady ? "pass" : "fail",
+      message: draftPayloadPreviewChecked
+        ? result.draftPayloadPreviewSummary.draftPayloadReady
+          ? "Draft payload preview가 ready 상태입니다."
+          : "Draft payload preview blocking reason을 해결하세요."
+        : "Blogger Draft Payload Preview를 실행해 payload 후보를 확인하세요."
+    },
+    {
+      key: "manual-approval",
+      label: "Manual approval snapshot matches current draftHtml",
+      status: result.approvalSnapshotStatus.status === "approved" && result.approvalSnapshotStatus.approvalMatchesCurrentPreview ? "pass" : "fail",
+      message:
+        result.approvalSnapshotStatus.status === "approved" && result.approvalSnapshotStatus.approvalMatchesCurrentPreview
+          ? "Manual approval snapshot이 현재 draftHtml/payload와 일치합니다."
+          : "Blogger Draft Payload Preview를 확인하고 수동 approval snapshot을 생성하세요."
+    },
+    {
+      key: "draft-save-ready",
+      label: "Draft already saved or save ready",
+      status: draftAlreadySaved || result.canSaveDraft ? "pass" : "fail",
+      message: draftAlreadySaved
+        ? "현재 preview 기준 draft save 성공 기록이 있습니다."
+        : result.canSaveDraft
+          ? "Draft save를 시도할 수 있는 상태입니다."
+          : "아직 draft save 성공 기록이 없거나 현재 approval과 일치하지 않습니다."
+    }
+  ];
+
+  return (
+    <div className="read-block">
+      <h3>Draft Save Readiness Checklist</h3>
+      <div className="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Step</th>
+              <th>Status</th>
+              <th>Next action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row) => (
+              <tr key={row.key}>
+                <td>{row.label}</td>
+                <td>{row.status}</td>
+                <td>{row.message}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function BloggerDraftSaveActionItems({ result }: { result: BloggerDraftSavePreflight }) {
+  const items = result.blockingReasons.map((reason) => getBloggerDraftSaveActionItem(reason));
+  const dedupedItems = items.filter((item, index) => items.findIndex((candidate) => candidate.action === item.action && candidate.label === item.label) === index);
+
+  return (
+    <div className={dedupedItems.length > 0 ? "notice warning" : "notice"}>
+      <strong>What To Do Next</strong>
+      {dedupedItems.length === 0 ? (
+        <p>blocking reason이 없습니다. 실제 draft save 전 사용자 승인 문구와 대상 test blog를 다시 확인하세요.</p>
+      ) : (
+        <ul>
+          {dedupedItems.map((item) => (
+            <li key={item.reason}>
+              <strong>{item.label}</strong>: {item.action} <span className="muted">({item.reason})</span>
+            </li>
+          ))}
+        </ul>
+      )}
+      {result.bloggerConnectionSummary.connectionCount === 0 ? (
+        <p>
+          <Link href="/settings/blogger">Blogger 설정</Link>에서 connection을 만든 뒤 이 preflight를 다시 실행하세요.
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+function getBloggerDraftSaveActionItem(reason: string) {
+  if (reason === "blogger_connection_not_configured" || reason === "blogger_connection") {
+    return {
+      reason,
+      label: "Blogger connection",
+      action: "설정 > Blogger에서 OAuth 연결을 먼저 완료하세요."
+    };
+  }
+  if (reason === "blogger_connection_not_connected") {
+    return {
+      reason,
+      label: "Blogger connection status",
+      action: "Blogger connection 상태를 확인하고 필요하면 다시 연결하세요."
+    };
+  }
+  if (reason === "blogger_client_secret_missing" || reason === "blogger_access_token_missing") {
+    return {
+      reason,
+      label: "Blogger token/secret",
+      action: "Blogger 설정에서 client secret과 OAuth token 상태를 확인하세요."
+    };
+  }
+  if (reason === "blogger_blog_selection" || reason === "blogger_blog_not_verified") {
+    return {
+      reason,
+      label: "Blogger blog selection",
+      action: "연결 후 대상 Blogger blog를 선택하세요."
+    };
+  }
+  if (reason === "manual_approval" || reason === "blogger_draft_approval_required") {
+    return {
+      reason,
+      label: "Manual approval",
+      action: "Blogger Draft Payload Preview를 확인하고 수동 approval snapshot을 생성하세요."
+    };
+  }
+  if (reason === "blogger_draft_approval_stale") {
+    return {
+      reason,
+      label: "Stale approval",
+      action: "draftHtml 또는 target blog가 바뀌었습니다. Draft Payload Preview를 다시 실행하고 재승인하세요."
+    };
+  }
+  if (reason === "draft_payload_not_ready") {
+    return {
+      reason,
+      label: "Draft payload preview",
+      action: "Draft Payload Preview를 다시 실행하고 blocking issue를 해결하세요."
+    };
+  }
+  if (reason === "blogger_draft_saved") {
+    return {
+      reason,
+      label: "Draft saved check",
+      action: "아직 draft save 성공 기록이 없거나 현재 approval과 일치하지 않습니다."
+    };
+  }
+  if (reason === "draft_html_missing" || reason === "draft_html_validation_failed") {
+    return {
+      reason,
+      label: "Saved draftHtml",
+      action: "HTML 후보를 검증하고 draftHtml에 수동 반영한 뒤 preflight를 다시 실행하세요."
+    };
+  }
+  if (reason === "content_readiness_not_passed") {
+    return {
+      reason,
+      label: "Content readiness",
+      action: "Quality Dry Run과 Publish Readiness 결과의 required fail을 해결하세요."
+    };
+  }
+  return {
+    reason,
+    label: "Readiness check",
+    action: "관련 readiness 결과를 확인하고 blocking issue를 해결하세요."
+  };
 }
 
 function buildBloggerDraftSaveErrorMessage(message: string, draftSave: BloggerDraftSaveAdmin | null) {

@@ -728,3 +728,16 @@ npm run build
 - `apply-html` 성공 후 기존 Quality Dry Run, Publish Readiness, Blogger Draft Payload Preview, Draft Save Preflight 결과는 stale/clear 처리되어야 한다.
 - preflight 호출 전후 `content_items.draftMarkdown`/`draftHtml`, status, `qualityScore`, `publishedAt`, `scheduledAt`, Blogger tables, `llm_call_logs`는 변경되지 않아야 한다.
 - preflight는 prompt/raw response/full `draftHtml`, access token, refresh token, encrypted value, raw Blogger response/error body를 반환하지 않아야 한다.
+
+## Patch 9E-4G-1b Blogger draft save readiness UX / connection guidance 검증
+
+- Content detail의 Draft Save Preflight 결과는 raw blocking key만 보여주지 않고 사용자 친화적인 next action을 함께 표시해야 한다.
+- `blogger_connection_not_configured` 또는 `blogger_connection`은 `/settings/blogger` 이동 안내와 함께 Blogger 연결 완료 action으로 표시해야 한다.
+- `blogger_blog_selection`은 대상 Blogger blog 선택 action으로 표시해야 한다.
+- `manual_approval` 또는 `blogger_draft_approval_required`는 Draft Payload Preview 확인 후 수동 approval snapshot 생성 action으로 표시해야 한다.
+- `draft_payload_not_ready`는 Draft Payload Preview 재실행 및 blocking issue 해결 action으로 표시해야 한다.
+- `blogger_draft_saved`는 아직 draft save 성공 기록이 없거나 현재 approval과 일치하지 않는다는 안내로 표시해야 한다.
+- UI checklist는 saved draftHtml, HTML validation, Quality Dry Run, Publish Readiness, Blogger connection, blog selection, payload preview, manual approval match, draft saved/save ready 상태를 표시해야 한다.
+- connectionCount=0 상태에서 `/settings/blogger` 링크가 보이고 OAuth start를 자동 호출하지 않아야 한다.
+- 실제 Blogger Draft 저장 버튼은 `canSaveDraft=false`일 때 disabled 상태를 유지해야 한다.
+- UX 패치 전후 `content_items.draftMarkdown`/`draftHtml`, status, `qualityScore`, `publishedAt`, `scheduledAt`, Blogger tables, `llm_call_logs`는 변경되지 않아야 한다.
