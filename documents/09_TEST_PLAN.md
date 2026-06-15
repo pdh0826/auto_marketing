@@ -586,3 +586,16 @@ npm run build
 - timeout error는 계속 `provider_timeout` 또는 `local_sectioned_overall_timeout` 같은 짧은 safe message로 유지한다.
 - local smoke는 1회만 실행하고, 다시 timeout되면 timeout 추가 연장이 아니라 async/background job 설계로 전환한다.
 - 자동 `draftMarkdown`/`draftHtml` 저장, status/qualityScore/publishedAt/scheduledAt 변경, Blogger API/draft save/publish/token refresh는 발생하지 않는다.
+
+## Patch 9E-4C-3A Local stepwise draft generation DB/repository foundation 검증
+
+- Prisma schema에 `ContentDraftGenerationRunStatus`, `ContentDraftGenerationStepStatus`, `ContentDraftGenerationRun`, `ContentDraftGenerationStep`가 추가되어야 한다.
+- migration은 새 enum/table/index/FK/grant만 추가해야 하며 기존 데이터 삭제, reset, destructive migration이 없어야 한다.
+- `content_draft_generation_runs`는 content item별 stepwise run 상태, strategy, section keys, assembled/final candidate, validation summary, safe metadata를 저장할 수 있어야 한다.
+- `content_draft_generation_steps`는 step key, optional section key, attempt, status, normalized Markdown fragment, output summary, prompt/response hash, latency, safe error code, safe metadata를 저장할 수 있어야 한다.
+- repository helper는 run 생성/조회/list, step 생성/running/success/failed, run progress update, complete, cancel을 제공해야 한다.
+- repository metadata sanitizer는 prompt/raw response/body/token/secret/encryptedValue/sourceMemo/planJson/draftMarkdown/draftHtml/candidate/section fragment 계열 키를 저장 전에 제거해야 하며 `promptHash`/`responseHash`는 허용해야 한다.
+- 이번 패치는 API route와 UI를 추가하지 않는다.
+- 기존 `POST /api/content-items/[id]/generate-draft` 동작은 변경하지 않는다.
+- 자동 `content_items.draftMarkdown`/`draftHtml` 저장, status/qualityScore/publishedAt/scheduledAt 변경, Blogger API/draft save/publish/token refresh는 발생하지 않는다.
+- 검증 명령은 `git diff --check`, placeholder `DATABASE_URL` 기반 `npx prisma validate`, `npx prisma generate`, `npm run lint`, `npm run typecheck`, `npm run build`를 사용한다.

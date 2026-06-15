@@ -122,68 +122,84 @@ enum BloggerDraftSaveStatus {
   failed
 }
 
+enum ContentDraftGenerationRunStatus {
+  pending
+  running
+  failed
+  completed
+  cancelled
+}
+
+enum ContentDraftGenerationStepStatus {
+  pending
+  running
+  success
+  failed
+  skipped
+}
+
 model Blog {
-  id                     String        @id @default(cuid())
+  id                     String      @id @default(cuid())
   name                   String
   url                    String
   bloggerBlogId          String?
   mainTopic              String?
-  subTopics              String[]      @default([])
+  subTopics              String[]    @default([])
   targetReader           String?
   tone                   String?
-  locale                 String        @default("ko-KR")
-  forbiddenPhrases       String[]      @default([])
-  preferredPhrases       String[]      @default([])
-  defaultContentLength   Int           @default(1200)
-  defaultCtaStrength     CtaStrength   @default(normal)
-  dailyPublishLimit      Int           @default(1)
+  locale                 String      @default("ko-KR")
+  forbiddenPhrases       String[]    @default([])
+  preferredPhrases       String[]    @default([])
+  defaultContentLength   Int         @default(1200)
+  defaultCtaStrength     CtaStrength @default(normal)
+  dailyPublishLimit      Int         @default(1)
   nightExcludeStart      String?
   nightExcludeEnd        String?
-  autoPublishEnabled     Boolean       @default(false)
-  manualApprovalRequired Boolean       @default(true)
-  status                 BlogStatus    @default(active)
-  createdAt              DateTime      @default(now())
-  updatedAt              DateTime      @updatedAt
+  autoPublishEnabled     Boolean     @default(false)
+  manualApprovalRequired Boolean     @default(true)
+  status                 BlogStatus  @default(active)
+  createdAt              DateTime    @default(now())
+  updatedAt              DateTime    @updatedAt
 
-  contentItems           ContentItem[]
-  bloggerConnections     BloggerConnection[]
+  contentItems       ContentItem[]
+  bloggerConnections BloggerConnection[]
 
   @@index([status])
   @@map("blogs")
 }
 
 model BrandProfile {
-  id               String        @id @default(cuid())
+  id               String   @id @default(cuid())
   name             String
   serviceName      String?
   shortDescription String?
   longDescription  String?
-  targetUsers      String[]      @default([])
-  coreFeatures     String[]      @default([])
-  problemsSolved   String[]      @default([])
+  targetUsers      String[] @default([])
+  coreFeatures     String[] @default([])
+  problemsSolved   String[] @default([])
   mainUrl          String?
   ctaWeak          String?
   ctaNormal        String?
   ctaStrong        String?
-  forbiddenPhrases String[]      @default([])
-  preferredPhrases String[]      @default([])
+  forbiddenPhrases String[] @default([])
+  preferredPhrases String[] @default([])
   riskDisclaimer   String?
-  isDefault        Boolean       @default(false)
-  createdAt        DateTime      @default(now())
-  updatedAt        DateTime      @updatedAt
+  isDefault        Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
-  contentItems     ContentItem[]
+  contentItems ContentItem[]
 
   @@index([isDefault])
   @@map("brand_profiles")
 }
 
 model ContentItem {
-  id             String         @id @default(cuid())
+  id             String        @id @default(cuid())
   blogId         String?
   brandProfileId String?
   mode           ContentMode
-  status         ContentStatus  @default(idea)
+  status         ContentStatus @default(idea)
   title          String?
   targetKeyword  String?
   sourceMemo     String?
@@ -193,15 +209,16 @@ model ContentItem {
   qualityScore   Int?
   scheduledAt    DateTime?
   publishedAt    DateTime?
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
 
-  blog           Blog?          @relation(fields: [blogId], references: [id], onDelete: SetNull)
-  brandProfile   BrandProfile?  @relation(fields: [brandProfileId], references: [id], onDelete: SetNull)
-  llmCallLogs    LlmCallLog[]
-  assets         ContentAsset[]
+  blog                  Blog?                       @relation(fields: [blogId], references: [id], onDelete: SetNull)
+  brandProfile          BrandProfile?               @relation(fields: [brandProfileId], references: [id], onDelete: SetNull)
+  llmCallLogs           LlmCallLog[]
+  assets                ContentAsset[]
   bloggerDraftApprovals BloggerDraftApproval[]
-  bloggerDraftSaves BloggerDraftSave[]
+  bloggerDraftSaves     BloggerDraftSave[]
+  draftGenerationRuns   ContentDraftGenerationRun[]
 
   @@index([blogId])
   @@index([brandProfileId])
@@ -229,7 +246,7 @@ model ContentAsset {
   createdAt     DateTime              @default(now())
   updatedAt     DateTime              @updatedAt
 
-  contentItem   ContentItem           @relation(fields: [contentItemId], references: [id], onDelete: Cascade)
+  contentItem ContentItem @relation(fields: [contentItemId], references: [id], onDelete: Cascade)
 
   @@index([contentItemId])
   @@index([assetType])
@@ -262,11 +279,11 @@ model LlmProvider {
   createdAt           DateTime              @default(now())
   updatedAt           DateTime              @updatedAt
 
-  models              LlmModel[]
-  primaryRoutes       LlmTaskRoute[]        @relation("PrimaryProvider")
-  fallbackRoutes      LlmTaskRoute[]        @relation("FallbackProvider")
-  callLogs            LlmCallLog[]
-  secrets             LlmProviderSecret[]
+  models         LlmModel[]
+  primaryRoutes  LlmTaskRoute[]      @relation("PrimaryProvider")
+  fallbackRoutes LlmTaskRoute[]      @relation("FallbackProvider")
+  callLogs       LlmCallLog[]
+  secrets        LlmProviderSecret[]
 
   @@index([providerType])
   @@index([invocationMode])
@@ -277,16 +294,16 @@ model LlmProvider {
 }
 
 model LlmProviderSecret {
-  id             String      @id @default(cuid())
+  id             String   @id @default(cuid())
   providerId     String
   secretKind     String
   encryptedValue String
-  keyVersion     String      @default("v1")
+  keyVersion     String   @default("v1")
   apiKeyLast4    String?
-  createdAt      DateTime    @default(now())
-  updatedAt      DateTime    @updatedAt
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
-  provider       LlmProvider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  provider LlmProvider @relation(fields: [providerId], references: [id], onDelete: Cascade)
 
   @@unique([providerId, secretKind])
   @@index([providerId])
@@ -294,18 +311,18 @@ model LlmProviderSecret {
 }
 
 model LlmModel {
-  id             String          @id @default(cuid())
-  providerId     String
-  name           String
-  displayName    String?
-  isDefault      Boolean         @default(false)
-  isEnabled      Boolean         @default(true)
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
+  id          String   @id @default(cuid())
+  providerId  String
+  name        String
+  displayName String?
+  isDefault   Boolean  @default(false)
+  isEnabled   Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  provider       LlmProvider     @relation(fields: [providerId], references: [id], onDelete: Cascade)
-  primaryRoutes  LlmTaskRoute[]  @relation("PrimaryModel")
-  fallbackRoutes LlmTaskRoute[]  @relation("FallbackModel")
+  provider       LlmProvider    @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  primaryRoutes  LlmTaskRoute[] @relation("PrimaryModel")
+  fallbackRoutes LlmTaskRoute[] @relation("FallbackModel")
   callLogs       LlmCallLog[]
 
   @@unique([providerId, name])
@@ -314,8 +331,8 @@ model LlmModel {
 }
 
 model LlmTaskRoute {
-  id                 String       @id @default(cuid())
-  taskType           LlmTaskType   @unique
+  id                 String      @id @default(cuid())
+  taskType           LlmTaskType @unique
   primaryProviderId  String
   primaryModelId     String
   fallbackProviderId String?
@@ -323,14 +340,14 @@ model LlmTaskRoute {
   temperature        Float?
   maxTokens          Int?
   timeoutSeconds     Int?
-  isEnabled          Boolean      @default(true)
-  createdAt          DateTime     @default(now())
-  updatedAt          DateTime     @updatedAt
+  isEnabled          Boolean     @default(true)
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
 
-  primaryProvider    LlmProvider  @relation("PrimaryProvider", fields: [primaryProviderId], references: [id])
-  primaryModel       LlmModel     @relation("PrimaryModel", fields: [primaryModelId], references: [id])
-  fallbackProvider   LlmProvider? @relation("FallbackProvider", fields: [fallbackProviderId], references: [id])
-  fallbackModel      LlmModel?    @relation("FallbackModel", fields: [fallbackModelId], references: [id])
+  primaryProvider  LlmProvider  @relation("PrimaryProvider", fields: [primaryProviderId], references: [id])
+  primaryModel     LlmModel     @relation("PrimaryModel", fields: [primaryModelId], references: [id])
+  fallbackProvider LlmProvider? @relation("FallbackProvider", fields: [fallbackProviderId], references: [id])
+  fallbackModel    LlmModel?    @relation("FallbackModel", fields: [fallbackModelId], references: [id])
 
   @@index([isEnabled])
   @@map("llm_task_routes")
@@ -351,9 +368,9 @@ model LlmCallLog {
   metadata      Json?
   createdAt     DateTime      @default(now())
 
-  provider      LlmProvider?  @relation(fields: [providerId], references: [id], onDelete: SetNull)
-  model         LlmModel?     @relation(fields: [modelId], references: [id], onDelete: SetNull)
-  contentItem   ContentItem?  @relation(fields: [contentItemId], references: [id], onDelete: SetNull)
+  provider    LlmProvider? @relation(fields: [providerId], references: [id], onDelete: SetNull)
+  model       LlmModel?    @relation(fields: [modelId], references: [id], onDelete: SetNull)
+  contentItem ContentItem? @relation(fields: [contentItemId], references: [id], onDelete: SetNull)
 
   @@index([taskType])
   @@index([status])
@@ -362,31 +379,84 @@ model LlmCallLog {
   @@map("llm_call_logs")
 }
 
-model BloggerConnection {
-  id                 String                  @id @default(cuid())
-  blogId             String?
-  name               String
-  status             BloggerConnectionStatus @default(not_configured)
-  bloggerBlogId      String?
-  bloggerBlogName    String?
-  bloggerBlogUrl     String?
-  bloggerBlogVerifiedAt DateTime?
-  connectedEmail     String?
-  scopes             String[]                @default([])
-  oauthClientIdRef   String?
-  clientSecretRef    String?
-  hasClientSecret    Boolean                 @default(false)
-  hasAccessToken     Boolean                 @default(false)
-  hasRefreshToken    Boolean                 @default(false)
-  tokenLast4         String?
-  lastTestedAt       DateTime?
-  lastError          String?
-  createdAt          DateTime                @default(now())
-  updatedAt          DateTime                @updatedAt
+model ContentDraftGenerationRun {
+  id                         String                          @id @default(cuid())
+  contentItemId              String
+  strategy                   String
+  status                     ContentDraftGenerationRunStatus @default(pending)
+  currentStepKey             String?
+  sectionKeys                Json
+  assembledCandidateMarkdown String?
+  finalCandidateMarkdown     String?
+  validationSummary          Json?
+  metadata                   Json?
+  createdAt                  DateTime                        @default(now())
+  updatedAt                  DateTime                        @updatedAt
+  completedAt                DateTime?
 
-  blog               Blog?                   @relation(fields: [blogId], references: [id], onDelete: SetNull)
-  oauthStates        BloggerOAuthState[]
-  secrets            BloggerConnectionSecret[]
+  contentItem ContentItem                  @relation(fields: [contentItemId], references: [id], onDelete: Cascade)
+  steps       ContentDraftGenerationStep[]
+
+  @@index([contentItemId])
+  @@index([strategy])
+  @@index([status])
+  @@index([currentStepKey])
+  @@index([createdAt])
+  @@map("content_draft_generation_runs")
+}
+
+model ContentDraftGenerationStep {
+  id             String                           @id @default(cuid())
+  runId          String
+  stepKey        String
+  sectionKey     String?
+  status         ContentDraftGenerationStepStatus @default(pending)
+  attempt        Int                              @default(1)
+  outputMarkdown String?
+  outputSummary  String?
+  promptHash     String?
+  responseHash   String?
+  latencyMs      Int?
+  errorCode      String?
+  metadata       Json?
+  createdAt      DateTime                         @default(now())
+  updatedAt      DateTime                         @updatedAt
+
+  run ContentDraftGenerationRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+
+  @@index([runId])
+  @@index([stepKey])
+  @@index([sectionKey])
+  @@index([status])
+  @@index([createdAt])
+  @@map("content_draft_generation_steps")
+}
+
+model BloggerConnection {
+  id                    String                  @id @default(cuid())
+  blogId                String?
+  name                  String
+  status                BloggerConnectionStatus @default(not_configured)
+  bloggerBlogId         String?
+  bloggerBlogName       String?
+  bloggerBlogUrl        String?
+  bloggerBlogVerifiedAt DateTime?
+  connectedEmail        String?
+  scopes                String[]                @default([])
+  oauthClientIdRef      String?
+  clientSecretRef       String?
+  hasClientSecret       Boolean                 @default(false)
+  hasAccessToken        Boolean                 @default(false)
+  hasRefreshToken       Boolean                 @default(false)
+  tokenLast4            String?
+  lastTestedAt          DateTime?
+  lastError             String?
+  createdAt             DateTime                @default(now())
+  updatedAt             DateTime                @updatedAt
+
+  blog        Blog?                     @relation(fields: [blogId], references: [id], onDelete: SetNull)
+  oauthStates BloggerOAuthState[]
+  secrets     BloggerConnectionSecret[]
 
   @@index([blogId])
   @@index([status])
@@ -414,8 +484,8 @@ model BloggerDraftApproval {
   createdAt                   DateTime                   @default(now())
   updatedAt                   DateTime                   @updatedAt
 
-  contentItem                 ContentItem                @relation(fields: [contentItemId], references: [id], onDelete: Cascade)
-  draftSaves                  BloggerDraftSave[]
+  contentItem ContentItem        @relation(fields: [contentItemId], references: [id], onDelete: Cascade)
+  draftSaves  BloggerDraftSave[]
 
   @@index([contentItemId])
   @@index([status])
@@ -425,31 +495,31 @@ model BloggerDraftApproval {
 }
 
 model BloggerDraftSave {
-  id                         String                 @id @default(cuid())
-  contentItemId              String
-  approvalId                 String
-  bloggerConnectionId        String
-  status                     BloggerDraftSaveStatus
-  snapshotHash               String
-  draftHtmlHash              String
-  targetBloggerBlogId        String
-  targetBloggerBlogName      String?
-  targetBloggerBlogUrl       String?
-  titleCandidate             String
-  bloggerPostId              String?
-  bloggerPostUrl             String?
-  bloggerPostPublishedAt     DateTime?
-  bloggerPostUpdatedAt       DateTime?
-  errorCode                  String?
-  errorMessage               String?
-  retryable                  Boolean                @default(false)
-  savedAt                    DateTime?
-  failedAt                   DateTime?
-  createdAt                  DateTime               @default(now())
-  updatedAt                  DateTime               @updatedAt
+  id                     String                 @id @default(cuid())
+  contentItemId          String
+  approvalId             String
+  bloggerConnectionId    String
+  status                 BloggerDraftSaveStatus
+  snapshotHash           String
+  draftHtmlHash          String
+  targetBloggerBlogId    String
+  targetBloggerBlogName  String?
+  targetBloggerBlogUrl   String?
+  titleCandidate         String
+  bloggerPostId          String?
+  bloggerPostUrl         String?
+  bloggerPostPublishedAt DateTime?
+  bloggerPostUpdatedAt   DateTime?
+  errorCode              String?
+  errorMessage           String?
+  retryable              Boolean                @default(false)
+  savedAt                DateTime?
+  failedAt               DateTime?
+  createdAt              DateTime               @default(now())
+  updatedAt              DateTime               @updatedAt
 
-  contentItem                ContentItem            @relation(fields: [contentItemId], references: [id], onDelete: Cascade)
-  approval                   BloggerDraftApproval   @relation(fields: [approvalId], references: [id], onDelete: Restrict)
+  contentItem ContentItem          @relation(fields: [contentItemId], references: [id], onDelete: Cascade)
+  approval    BloggerDraftApproval @relation(fields: [approvalId], references: [id], onDelete: Restrict)
 
   @@index([contentItemId])
   @@index([approvalId])
@@ -472,7 +542,7 @@ model BloggerConnectionSecret {
   createdAt      DateTime          @default(now())
   updatedAt      DateTime          @updatedAt
 
-  connection     BloggerConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  connection BloggerConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
 
   @@unique([connectionId, secretKind])
   @@index([connectionId])
@@ -482,16 +552,16 @@ model BloggerConnectionSecret {
 }
 
 model BloggerOAuthState {
-  id             String            @id @default(cuid())
-  connectionId   String
-  stateHash      String            @unique
-  redirectUri    String
-  scopes         String[]          @default([])
-  expiresAt      DateTime
-  consumedAt     DateTime?
-  createdAt      DateTime          @default(now())
+  id           String    @id @default(cuid())
+  connectionId String
+  stateHash    String    @unique
+  redirectUri  String
+  scopes       String[]  @default([])
+  expiresAt    DateTime
+  consumedAt   DateTime?
+  createdAt    DateTime  @default(now())
 
-  connection     BloggerConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  connection BloggerConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
 
   @@index([connectionId])
   @@index([expiresAt])

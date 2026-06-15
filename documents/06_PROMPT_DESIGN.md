@@ -162,3 +162,15 @@ Patch 9E-4C-2-hotfix2는 local sectioned draft의 final candidate가 validation�
 - metadata/log/UI에는 `safetyScrubApplied`, `safetyScrubCount`, `safetyScrubCodes` 같은 safe summary만 표시한다.
 - prompt 전문, raw response 전문, candidate 전문, scrub 전후 문장 전문은 저장하지 않는다.
 - remote/commercial one-shot draft generation path는 변경하지 않는다.
+
+## Patch 9E-4C-3A Local stepwise draft generation foundation
+
+Patch 9E-4C-3A는 Local LLM 장문 생성을 한 HTTP 요청 안에서 끝내는 방향을 중단하고, stepwise generation run 구조로 전환하기 위한 DB/repository foundation만 추가한다.
+
+- `local_sectioned_stepwise`는 skeleton, intro/body/conclusion sections, deterministic assembly, final polish를 각각 별도 요청으로 실행하는 후속 패치의 기본 방향이다.
+- 이번 패치에서는 prompt를 새로 실행하거나 API/UI를 추가하지 않는다.
+- 기존 `local_sectioned_multi_pass` single-request path는 legacy/debug 성격으로 유지하며 동작을 변경하지 않는다.
+- run/step table은 generation 상태, safe metadata, hash, latency, normalized Markdown fragment/output summary를 저장할 수 있다.
+- prompt 전문, raw provider response 전문, full candidate 전문, secret, token, encrypted value는 run/step metadata나 `llm_call_logs`에 저장하지 않는다.
+- `content_items.draftMarkdown` / `draftHtml` 반영은 후속 manual apply flow에서만 수행한다.
+- Blog post HTML template renderer는 Patch 9E-4D로 분리한다.

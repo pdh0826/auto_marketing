@@ -488,3 +488,28 @@ Patch 9E-4C-2-hotfix4는 Ollama cold-start/model-load 지연을 고려해 local 
 - local smoke가 다시 timeout되면 추가 timeout 연장보다 async/background job 설계로 전환한다.
 - prompt 전문, raw response 전문, candidate Markdown 전문, section fragment 전문, final polish 입력/출력 전문, API key, token, secret, encrypted value는 저장하지 않는다.
 - Blogger API, draft save, publish, scheduled publish, token refresh와는 무관하다.
+
+## Patch 9E-4C-3A local sectioned stepwise run foundation
+
+Patch 9E-4C-3A는 Local LLM 장문 생성을 single HTTP request에서 끝내려는 방향을 멈추고, persisted stepwise run 구조로 전환하기 위한 foundation을 추가한다.
+
+Design direction:
+
+- `one_shot_full_draft`: remote/commercial provider용 기존 경로로 유지한다.
+- `local_sectioned_multi_pass`: 기존 single-request local sectioned preview 경로이며 legacy/debug 성격으로 유지한다.
+- `local_sectioned_stepwise`: 후속 패치에서 skeleton, section, assemble, final polish를 각각 별도 request로 실행할 기본 local strategy다.
+
+Persistence:
+
+- `content_draft_generation_runs`는 content item별 run status, current step, section keys, assembled/final candidate, validation summary, safe metadata를 저장한다.
+- `content_draft_generation_steps`는 step status, attempt, normalized Markdown fragment, output summary, prompt/response hash, latency, safe error code, safe metadata를 저장한다.
+- step output은 기능상 preview/retry에 필요한 Markdown fragment로만 저장한다.
+- prompt 전문, raw provider response 전문, request/response body, full candidate 전문, API key, token, secret, encrypted value는 저장하지 않는다.
+
+Boundary:
+
+- Patch 9E-4C-3A는 schema/migration/repository only다.
+- Start/read/execute step API는 Patch 9E-4C-3B 이후로 분리한다.
+- Content detail UI는 Patch 9E-4C-3E 이후로 분리한다.
+- `content_items.draftMarkdown`/`draftHtml` 자동 저장은 금지하며 manual apply에서만 변경한다.
+- Blogger API, draft save, publish, scheduled publish, token refresh와는 무관하다.

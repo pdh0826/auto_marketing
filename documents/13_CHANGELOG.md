@@ -518,3 +518,25 @@ Policy:
 - No DB/schema or TaskRoute schema change.
 - No prompt full text, raw response, candidate Markdown, section fragment, final polish input/output, secret, token, or encrypted value logging.
 - No Blogger API read/write, draft save, publish, scheduled publish, token refresh, `posts.insert`, or `posts.update`.
+
+## Patch 9E-4C-3A: Local Stepwise Draft Generation Foundation
+
+Implemented after the local sectioned timeout hotfixes showed that long Local LLM generation should move away from one large HTTP request:
+
+- Added Prisma run/step status enums for persisted stepwise draft generation.
+- Added `ContentDraftGenerationRun` mapped to `content_draft_generation_runs`.
+- Added `ContentDraftGenerationStep` mapped to `content_draft_generation_steps`.
+- Added a migration that creates only the new enums, tables, indexes, foreign keys, and grants.
+- Added `src/lib/db/content-draft-generation-runs.ts` repository helpers for creating/listing/reading runs, creating/updating steps, completing runs, and cancelling runs.
+- Added safe metadata sanitization in the repository helper so prompt/raw response/body/token/secret/encrypted value and full content body keys are removed before metadata storage.
+- Added `local_sectioned_stepwise` to draft generation strategy types and labels for future API/UI patches.
+
+Policy:
+
+- Existing `POST /api/content-items/[id]/generate-draft` behavior is unchanged.
+- Existing `local_sectioned_multi_pass` single-request path is preserved as legacy/debug behavior.
+- No API route or UI was added in this patch.
+- No automatic `draftMarkdown` or `draftHtml` save.
+- No content item status, `qualityScore`, `publishedAt`, or `scheduledAt` mutation.
+- No prompt full text, raw response, request/response body, candidate Markdown, section fragment, secret, token, or encrypted value logging.
+- No Blogger API read/write, draft save, publish, scheduled publish, token refresh, `posts.insert`, or `posts.update`.

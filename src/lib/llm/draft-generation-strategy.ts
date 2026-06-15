@@ -1,6 +1,6 @@
 import type { LlmApiFormat, LlmInvocationMode, LlmProviderType } from "@/lib/llm/types";
 
-export type DraftGenerationStrategy = "one_shot_full_draft" | "local_sectioned_multi_pass";
+export type DraftGenerationStrategy = "one_shot_full_draft" | "local_sectioned_multi_pass" | "local_sectioned_stepwise";
 
 export type DraftGenerationStrategyReason =
   | "explicit_strategy"
@@ -73,7 +73,7 @@ export function resolveDraftGenerationStrategy(input: {
     strategyReason,
     isLocalLike,
     stepCount: 1,
-    plannedStepCount: strategy === "local_sectioned_multi_pass" ? 5 : 1,
+    plannedStepCount: strategy === "local_sectioned_stepwise" ? 7 : strategy === "local_sectioned_multi_pass" ? 5 : 1,
     sectionedGenerationImplemented: false,
     finalPolishImplemented: false,
     providerSummary: {
@@ -87,6 +87,9 @@ export function resolveDraftGenerationStrategy(input: {
 }
 
 export function getDraftGenerationStrategyLabel(strategy: DraftGenerationStrategy) {
+  if (strategy === "local_sectioned_stepwise") {
+    return "Local sectioned stepwise";
+  }
   if (strategy === "local_sectioned_multi_pass") {
     return "Local sectioned multi-pass";
   }
@@ -94,6 +97,9 @@ export function getDraftGenerationStrategyLabel(strategy: DraftGenerationStrateg
 }
 
 export function getDraftGenerationStrategyNotice(resolution: DraftGenerationStrategyResolution) {
+  if (resolution.strategy === "local_sectioned_stepwise") {
+    return "Local/small-model stepwise route detected. Draft generation should run one persisted step per request with manual candidate apply.";
+  }
   if (resolution.strategy === "local_sectioned_multi_pass") {
     return "Local/small-model route detected. Draft generation uses skeleton-first sectioned generation with a final polish fallback policy.";
   }
