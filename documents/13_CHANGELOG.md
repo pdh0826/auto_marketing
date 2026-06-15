@@ -588,3 +588,25 @@ Policy:
 - No content item status, `qualityScore`, `publishedAt`, or `scheduledAt` mutation.
 - No prompt full text, raw response, request/response body, output Markdown full text, skeleton/section fragment full text, candidate Markdown, secret, token, or encrypted value logging.
 - No Blogger API read/write, draft save, publish, scheduled publish, token refresh, `posts.insert`, or `posts.update`.
+
+## Patch 9E-4C-3C Smoke Stabilization: Local Ollama Stepwise Calls
+
+Implemented after the initial skeleton smoke reached the route but failed because the selected Ollama model did not return response bytes in time:
+
+- Changed stepwise Ollama generation from `stream:false` to `stream:true`.
+- Added separate overall, first-byte, and stream idle timeout handling.
+- Added `/api/tags` preflight before Ollama `/api/generate`.
+- Added safe request options diagnostics for step execution.
+- Reduced skeleton defaults to smaller smoke-friendly generation settings.
+- Added bounded section generation settings.
+- Added short `keep_alive` for Ollama stepwise calls.
+- Added safe error distinctions for model missing, first-byte timeout, idle timeout, overall timeout, network failure, empty response, stream parse failure, and stream provider error.
+- Added `scripts/smoke_9e4c3c_stepwise_local_ollama.mjs` as a read-only route/tags probe with optional short generate probe.
+
+Policy:
+
+- No model route is changed automatically.
+- No migration or schema change.
+- No content item `draftMarkdown`, `draftHtml`, status, `qualityScore`, `publishedAt`, or `scheduledAt` mutation.
+- No Blogger API read/write, draft save, publish, scheduled publish, token refresh, `posts.insert`, or `posts.update`.
+- No prompt full text, raw response full text, output Markdown full text, skeleton/section fragment full text, candidate Markdown, secret, token, or encrypted value logging.

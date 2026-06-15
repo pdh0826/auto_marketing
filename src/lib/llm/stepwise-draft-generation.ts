@@ -28,8 +28,14 @@ import { redactSensitiveText, safeErrorMessage } from "@/lib/llm/redaction";
 import { decryptSecret } from "@/lib/llm/secrets";
 
 const STEPWISE_STEP_TIMEOUT_SECONDS = 600;
-const SKELETON_MAX_TOKENS = 900;
-const SECTION_MAX_TOKENS = 1400;
+const STEPWISE_OLLAMA_FIRST_BYTE_TIMEOUT_SECONDS = 180;
+const STEPWISE_OLLAMA_IDLE_TIMEOUT_SECONDS = 120;
+const STEPWISE_OLLAMA_KEEP_ALIVE = "30s";
+const STEPWISE_OLLAMA_PREFLIGHT_TIMEOUT_SECONDS = 10;
+const SKELETON_MAX_TOKENS = 360;
+const SECTION_MAX_TOKENS = 900;
+const SKELETON_NUM_CTX = 2048;
+const SECTION_NUM_CTX = 4096;
 
 export interface ExecuteStepwiseDraftGenerationStepInput {
   contentItemId: string;
@@ -55,16 +61,31 @@ interface ProviderCallResult {
   inputTokens: number | null;
   outputTokens: number | null;
   responseSummary: string;
+  requestOptionsSummary: StepwiseRequestOptionsSummary;
+}
+
+interface StepwiseRequestOptionsSummary {
+  apiFormat: string;
+  stream: boolean;
+  timeoutSeconds: number;
+  firstByteTimeoutSeconds: number | null;
+  idleTimeoutSeconds: number | null;
+  numPredict: number | null;
+  numCtx: number | null;
+  keepAlive: string | null;
+  inputLength: number;
 }
 
 class ProviderCallError extends Error {
   responseSummary: string;
   latencyMs: number;
+  requestOptionsSummary: StepwiseRequestOptionsSummary | null;
 
-  constructor(message: string, responseSummary: string, latencyMs: number) {
+  constructor(message: string, responseSummary: string, latencyMs: number, requestOptionsSummary: StepwiseRequestOptionsSummary | null = null) {
     super(message);
     this.responseSummary = responseSummary;
     this.latencyMs = latencyMs;
+    this.requestOptionsSummary = requestOptionsSummary;
   }
 }
 
@@ -180,7 +201,15 @@ export async function executeStepwiseDraftGenerationStep(input: ExecuteStepwiseD
   const promptHash = hashText(`${prompt.system}\n${prompt.user}\n${prompt.outputFormat}`);
 
   try {
-    const result = await callProvider(provider, model.name, prompt, route.temperature, getMaxTokensForStep(input.stepKey, route.maxTokens), STEPWISE_STEP_TIMEOUT_SECONDS);
+    const result = await callProvider(
+      provider,
+      model.name,
+      prompt,
+      route.temperature,
+      getMaxTokensForStep(input.stepKey, route.maxTokens),
+      STEPWISE_STEP_TIMEOUT_SECONDS,
+      input.stepKey
+    );
     const normalizedOutput = normalizeStepOutput(input.stepKey, result.text);
     const outputSummary = summarizeStepOutput(input.stepKey, normalizedOutput);
     const responseHash = hashText(normalizedOutput);
@@ -198,6 +227,7 @@ export async function executeStepwiseDraftGenerationStep(input: ExecuteStepwiseD
         strategy: LOCAL_SECTIONED_STEPWISE_STRATEGY,
         attempt,
         timeoutSeconds: STEPWISE_STEP_TIMEOUT_SECONDS,
+        requestOptionsSummary: toRequestOptionsJson(result.requestOptionsSummary),
         responseSummary: result.responseSummary,
         outputLength: normalizedOutput.length,
         outputSummaryLength: outputSummary.length,
@@ -225,6 +255,7 @@ export async function executeStepwiseDraftGenerationStep(input: ExecuteStepwiseD
         responseHash,
         outputLength: normalizedOutput.length,
         outputSummaryLength: outputSummary.length,
+        requestOptionsSummary: result.requestOptionsSummary,
         provider,
         modelName: model.displayName ?? model.name
       }
@@ -266,6 +297,7 @@ export async function executeStepwiseDraftGenerationStep(input: ExecuteStepwiseD
         strategy: LOCAL_SECTIONED_STEPWISE_STRATEGY,
         attempt,
         timeoutSeconds: STEPWISE_STEP_TIMEOUT_SECONDS,
+        requestOptionsSummary: toRequestOptionsJson(providerError?.requestOptionsSummary ?? null),
         promptHash,
         responseSummary: providerError?.responseSummary ?? "step_provider_call_failed"
       }
@@ -303,6 +335,7 @@ export async function executeStepwiseDraftGenerationStep(input: ExecuteStepwiseD
         responseHash: null,
         outputLength: 0,
         outputSummaryLength: 0,
+        requestOptionsSummary: providerError?.requestOptionsSummary ?? null,
         provider,
         modelName: model.displayName ?? model.name
       }
@@ -577,14 +610,15 @@ async function callProvider(
   prompt: DraftPromptPreview,
   temperature: number | null,
   maxTokens: number | null,
-  timeoutSeconds: number
+  timeoutSeconds: number,
+  stepKey: string
 ) {
   if (provider.apiFormat === "openai_compatible") {
     return callOpenAiCompatible(provider, model, prompt, temperature, maxTokens, timeoutSeconds);
   }
 
   if (provider.apiFormat === "ollama_compatible") {
-    return callOllamaCompatible(provider, model, prompt, temperature, maxTokens, timeoutSeconds);
+    return callOllamaCompatible(provider, model, prompt, temperature, maxTokens, timeoutSeconds, stepKey);
   }
 
   throw new ProviderCallError("unsupported_stepwise_provider_api_format", "unsupported_api_format", 0);
@@ -602,6 +636,17 @@ async function callOpenAiCompatible(
   const baseUrl = requireBaseUrl(provider.baseUrl);
   const tokenParameter = getOpenAiCompletionTokenParameter(model);
   const apiKey = getOptionalProviderApiKey(provider);
+  const requestOptionsSummary = buildRequestOptionsSummary({
+    apiFormat: provider.apiFormat,
+    stream: false,
+    timeoutSeconds,
+    firstByteTimeoutSeconds: null,
+    idleTimeoutSeconds: null,
+    numPredict: maxTokens ?? SECTION_MAX_TOKENS,
+    numCtx: null,
+    keepAlive: null,
+    inputLength: getPromptInputLength(prompt)
+  });
   const response = await fetchWithTimeout(
     joinUrl(baseUrl, provider.endpointPath || "/v1/chat/completions"),
     {
@@ -635,7 +680,8 @@ async function callOpenAiCompatible(
     latencyMs,
     inputTokens: extractUsageToken(body, "prompt_tokens"),
     outputTokens: extractUsageToken(body, "completion_tokens"),
-    responseSummary: "openai_chat_completion_received"
+    responseSummary: "openai_chat_completion_received",
+    requestOptionsSummary
   };
 }
 
@@ -645,42 +691,199 @@ async function callOllamaCompatible(
   prompt: DraftPromptPreview,
   temperature: number | null,
   maxTokens: number | null,
-  timeoutSeconds: number
+  timeoutSeconds: number,
+  stepKey: string
 ): Promise<ProviderCallResult> {
   const startedAt = Date.now();
   const baseUrl = requireBaseUrl(provider.baseUrl);
-  const response = await fetchWithTimeout(
-    joinUrl(baseUrl, provider.endpointPath || "/api/generate"),
+  const endpoint = joinUrl(baseUrl, provider.endpointPath || "/api/generate");
+  const numPredict = maxTokens ?? getDefaultNumPredictForStep(stepKey);
+  const numCtx = getNumCtxForStep(stepKey);
+  const requestOptionsSummary = buildRequestOptionsSummary({
+    apiFormat: provider.apiFormat,
+    stream: true,
+    timeoutSeconds,
+    firstByteTimeoutSeconds: STEPWISE_OLLAMA_FIRST_BYTE_TIMEOUT_SECONDS,
+    idleTimeoutSeconds: STEPWISE_OLLAMA_IDLE_TIMEOUT_SECONDS,
+    numPredict,
+    numCtx,
+    keepAlive: STEPWISE_OLLAMA_KEEP_ALIVE,
+    inputLength: getPromptInputLength(prompt)
+  });
+
+  await preflightOllamaModel({
+    baseUrl,
+    model,
+    requestOptionsSummary
+  });
+
+  const result = await fetchOllamaStream(
+    endpoint,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         model,
         prompt: `${prompt.system}\n\nInput:\n${prompt.user}\n\nOutput format:\n${prompt.outputFormat}`,
-        stream: false,
+        stream: true,
+        keep_alive: STEPWISE_OLLAMA_KEEP_ALIVE,
         options: {
           temperature: temperature ?? 0.2,
-          num_predict: maxTokens ?? SECTION_MAX_TOKENS
+          num_predict: numPredict,
+          num_ctx: numCtx
         }
       })
     },
-    timeoutSeconds
+    requestOptionsSummary
   );
 
-  const body = await readJsonOrText(response);
-  const latencyMs = Date.now() - startedAt;
-
-  if (!response.ok) {
-    throw new ProviderCallError(safeHttpFailureMessage("Ollama-compatible", response.status), summarizeHttpFailure("ollama_compatible", response.status), latencyMs);
-  }
-
   return {
-    text: extractOllamaText(body),
-    latencyMs,
+    text: result.text,
+    latencyMs: Date.now() - startedAt,
     inputTokens: null,
     outputTokens: null,
-    responseSummary: "ollama_generate_received"
+    responseSummary: result.responseSummary,
+    requestOptionsSummary
   };
+}
+
+async function preflightOllamaModel(input: {
+  baseUrl: string;
+  model: string;
+  requestOptionsSummary: StepwiseRequestOptionsSummary;
+}) {
+  const tagsUrl = joinUrl(input.baseUrl, "/api/tags");
+  const response = await fetchWithTimeout(tagsUrl, { method: "GET" }, STEPWISE_OLLAMA_PREFLIGHT_TIMEOUT_SECONDS, input.requestOptionsSummary);
+  const body = await readJsonOrText(response);
+
+  if (!response.ok) {
+    throw new ProviderCallError("provider_tags_unreachable", "provider_tags_unreachable", 0, input.requestOptionsSummary);
+  }
+
+  const models = body && typeof body === "object" && "models" in body ? (body as { models?: Array<{ name?: unknown; model?: unknown }> }).models : null;
+  const names = Array.isArray(models)
+    ? models.map((item) => (typeof item.name === "string" ? item.name : typeof item.model === "string" ? item.model : null)).filter((name): name is string => Boolean(name))
+    : [];
+  if (!names.includes(input.model)) {
+    throw new ProviderCallError("provider_model_not_found", "provider_model_not_found", 0, input.requestOptionsSummary);
+  }
+}
+
+async function fetchOllamaStream(url: string, init: RequestInit, requestOptionsSummary: StepwiseRequestOptionsSummary) {
+  const controller = new AbortController();
+  let timeoutKind: "provider_timeout" | "provider_first_byte_timeout" | "provider_idle_timeout" = "provider_timeout";
+  const overallTimeout = setTimeout(() => {
+    timeoutKind = "provider_timeout";
+    controller.abort();
+  }, requestOptionsSummary.timeoutSeconds * 1000);
+  const firstByteTimeout = setTimeout(() => {
+    timeoutKind = "provider_first_byte_timeout";
+    controller.abort();
+  }, (requestOptionsSummary.firstByteTimeoutSeconds ?? requestOptionsSummary.timeoutSeconds) * 1000);
+  let idleTimeout: ReturnType<typeof setTimeout> | null = null;
+
+  const resetIdleTimeout = () => {
+    if (idleTimeout) {
+      clearTimeout(idleTimeout);
+    }
+    if (requestOptionsSummary.idleTimeoutSeconds) {
+      idleTimeout = setTimeout(() => {
+        timeoutKind = "provider_idle_timeout";
+        controller.abort();
+      }, requestOptionsSummary.idleTimeoutSeconds * 1000);
+    }
+  };
+
+  try {
+    const response = await fetch(url, { ...init, signal: controller.signal });
+    clearTimeout(firstByteTimeout);
+
+    if (!response.ok) {
+      throw new ProviderCallError(
+        safeHttpFailureMessage("Ollama-compatible", response.status),
+        summarizeHttpFailure("ollama_compatible", response.status),
+        0,
+        requestOptionsSummary
+      );
+    }
+
+    if (!response.body) {
+      throw new ProviderCallError("provider_empty_response", "provider_empty_response", 0, requestOptionsSummary);
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+    let output = "";
+    resetIdleTimeout();
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) {
+        break;
+      }
+      resetIdleTimeout();
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split(/\r?\n/);
+      buffer = lines.pop() ?? "";
+      for (const line of lines) {
+        const parsed = parseOllamaStreamLine(line, requestOptionsSummary);
+        output += parsed.response;
+      }
+    }
+
+    const finalChunk = decoder.decode();
+    if (finalChunk) {
+      buffer += finalChunk;
+    }
+    if (buffer.trim()) {
+      output += parseOllamaStreamLine(buffer, requestOptionsSummary).response;
+    }
+
+    if (!output.trim()) {
+      throw new ProviderCallError("provider_empty_response", "provider_empty_response", 0, requestOptionsSummary);
+    }
+
+    return {
+      text: output,
+      responseSummary: "ollama_stream_generate_received"
+    };
+  } catch (error) {
+    if (error instanceof ProviderCallError) {
+      throw error;
+    }
+    if (error instanceof Error && error.name === "AbortError") {
+      throw new ProviderCallError(timeoutKind, timeoutKind, requestOptionsSummary.timeoutSeconds * 1000, requestOptionsSummary);
+    }
+    throw new ProviderCallError("provider_network_error", "provider_network_error", 0, requestOptionsSummary);
+  } finally {
+    clearTimeout(overallTimeout);
+    clearTimeout(firstByteTimeout);
+    if (idleTimeout) {
+      clearTimeout(idleTimeout);
+    }
+  }
+}
+
+function parseOllamaStreamLine(line: string, requestOptionsSummary: StepwiseRequestOptionsSummary) {
+  const trimmed = line.trim();
+  if (!trimmed) {
+    return { response: "" };
+  }
+  try {
+    const parsed = JSON.parse(trimmed) as { response?: unknown; error?: unknown };
+    if (typeof parsed.error === "string" && parsed.error.trim()) {
+      throw new ProviderCallError("provider_stream_error", "provider_stream_error", 0, requestOptionsSummary);
+    }
+    return {
+      response: typeof parsed.response === "string" ? parsed.response : ""
+    };
+  } catch (error) {
+    if (error instanceof ProviderCallError) {
+      throw error;
+    }
+    throw new ProviderCallError("provider_stream_parse_error", "provider_stream_parse_error", 0, requestOptionsSummary);
+  }
 }
 
 async function recordStepwiseDraftLog(input: {
@@ -702,6 +905,7 @@ async function recordStepwiseDraftLog(input: {
     responseHash: string | null;
     outputLength: number;
     outputSummaryLength: number;
+    requestOptionsSummary: StepwiseRequestOptionsSummary | null;
     provider: ProviderWithSecrets;
     modelName: string | null;
   };
@@ -727,6 +931,7 @@ async function recordStepwiseDraftLog(input: {
       promptHash: input.metadata.promptHash,
       responseHash: input.metadata.responseHash,
       timeoutSeconds: STEPWISE_STEP_TIMEOUT_SECONDS,
+      requestOptionsSummary: input.metadata.requestOptionsSummary,
       responseSummary: input.metadata.responseSummary,
       outputLength: input.metadata.outputLength,
       outputSummaryLength: input.metadata.outputSummaryLength,
@@ -735,6 +940,8 @@ async function recordStepwiseDraftLog(input: {
         providerType: input.metadata.provider.providerType,
         invocationMode: input.metadata.provider.invocationMode,
         apiFormat: input.metadata.provider.apiFormat,
+        baseUrlHostOnly: getBaseUrlHostOnly(input.metadata.provider.baseUrl),
+        endpointPath: input.metadata.provider.endpointPath,
         modelName: input.metadata.modelName
       },
       stepExecutionImplemented: true,
@@ -769,16 +976,16 @@ function getOptionalProviderApiKey(provider: ProviderWithSecrets) {
   return apiKeySecret ? decryptSecret(apiKeySecret.encryptedValue) : null;
 }
 
-async function fetchWithTimeout(url: string, init: RequestInit, timeoutSeconds: number) {
+async function fetchWithTimeout(url: string, init: RequestInit, timeoutSeconds: number, requestOptionsSummary: StepwiseRequestOptionsSummary | null = null) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutSeconds * 1000);
   try {
     return await fetch(url, { ...init, signal: controller.signal });
   } catch (error) {
     if (error instanceof Error && error.name === "AbortError") {
-      throw new ProviderCallError("provider_timeout", "provider_timeout", timeoutSeconds * 1000);
+      throw new ProviderCallError("provider_timeout", "provider_timeout", timeoutSeconds * 1000, requestOptionsSummary);
     }
-    throw new ProviderCallError("provider_network_error", "provider_network_error", 0);
+    throw new ProviderCallError("provider_network_error", "provider_network_error", 0, requestOptionsSummary);
   } finally {
     clearTimeout(timeout);
   }
@@ -803,14 +1010,6 @@ function extractOpenAiText(body: unknown) {
     throw new ProviderCallError("provider_empty_response", "provider_empty_response", 0);
   }
   return content;
-}
-
-function extractOllamaText(body: unknown) {
-  const response = body && typeof body === "object" && "response" in body ? (body as { response?: unknown }).response : null;
-  if (typeof response !== "string" || !response.trim()) {
-    throw new ProviderCallError("provider_empty_response", "provider_empty_response", 0);
-  }
-  return response;
 }
 
 function extractUsageToken(body: unknown, key: "prompt_tokens" | "completion_tokens") {
@@ -859,6 +1058,50 @@ function summarizeHttpFailure(apiFormat: string, status: number) {
     return "provider_server_error";
   }
   return redactSensitiveText("provider_http_error");
+}
+
+function buildRequestOptionsSummary(input: StepwiseRequestOptionsSummary): StepwiseRequestOptionsSummary {
+  return input;
+}
+
+function toRequestOptionsJson(value: StepwiseRequestOptionsSummary | null): Prisma.InputJsonObject | null {
+  if (!value) {
+    return null;
+  }
+  return {
+    apiFormat: value.apiFormat,
+    stream: value.stream,
+    timeoutSeconds: value.timeoutSeconds,
+    firstByteTimeoutSeconds: value.firstByteTimeoutSeconds,
+    idleTimeoutSeconds: value.idleTimeoutSeconds,
+    numPredict: value.numPredict,
+    numCtx: value.numCtx,
+    keepAlive: value.keepAlive,
+    inputLength: value.inputLength
+  };
+}
+
+function getPromptInputLength(prompt: DraftPromptPreview) {
+  return prompt.system.length + prompt.user.length + prompt.outputFormat.length;
+}
+
+function getDefaultNumPredictForStep(stepKey: string) {
+  return stepKey === "skeleton" ? SKELETON_MAX_TOKENS : SECTION_MAX_TOKENS;
+}
+
+function getNumCtxForStep(stepKey: string) {
+  return stepKey === "skeleton" ? SKELETON_NUM_CTX : SECTION_NUM_CTX;
+}
+
+function getBaseUrlHostOnly(value: string | null) {
+  if (!value) {
+    return null;
+  }
+  try {
+    return new URL(value).host;
+  } catch {
+    return "invalid_url";
+  }
 }
 
 function stripCodeFences(value: string) {

@@ -38,6 +38,7 @@ latest committed baseline before Patch 9E-4C-3C: 3cb3fbc Add stepwise draft gene
 - Local stepwise draft generation DB schema/repository foundation
 - Local stepwise draft generation start/read API
 - Local stepwise draft generation skeleton/section step execution API
+- Local Ollama stepwise smoke stabilization for skeleton/section execution
 
 ## Current Blogger State
 
@@ -93,6 +94,10 @@ latest committed baseline before Patch 9E-4C-3C: 3cb3fbc Add stepwise draft gene
 - Successful step output is stored only on `content_draft_generation_steps` as normalized Markdown fragment plus short summary/hash/latency metadata.
 - Step execution may create `llm_call_logs`, but logs contain only safe step metadata and hashes, not prompt/raw response/output Markdown.
 - Patch 9E-4C-3C does not add assembly, final polish, cancel API, UI, or content item auto-apply.
+- Patch 9E-4C-3C smoke stabilization switches stepwise Ollama generation to streaming responses with first-byte/idle/overall timeout diagnostics.
+- Stepwise Ollama calls preflight `/api/tags` and fail with safe codes such as `provider_model_not_found`, `provider_first_byte_timeout`, `provider_idle_timeout`, or `provider_timeout`.
+- Skeleton smoke defaults are intentionally small (`num_predict=360`, `num_ctx=2048`) and use short `keep_alive=30s`.
+- `scripts/smoke_9e4c3c_stepwise_local_ollama.mjs` can check the configured local route and selected Ollama model without mutating content items or Blogger data.
 
 ## Next Patch Candidate
 
@@ -110,6 +115,7 @@ Recommended scope:
 - Add final polish API as a separate one-step request, with assembled candidate fallback on failure.
 - Re-run FAQ/media/H1/safety guards after assembly/final polish.
 - Store assembled/final candidate on the run, but do not auto-apply to `content_items`.
+- Before starting 9E-4C-3D, confirm at least skeleton and one section can complete with the selected local model or deliberately switch the local `content_draft` route/model through an approved DB update.
 - UI should remain out of scope until 9E-4C-3E.
 - Keep existing `generate-draft` route unchanged.
 - Keep commercial/high-performance remote providers on the existing one-shot full draft path.

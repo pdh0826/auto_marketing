@@ -630,3 +630,16 @@ npm run build
 - 이번 패치는 assemble/final polish/cancel API와 UI를 추가하지 않는다.
 - 자동 `content_items.draftMarkdown`/`draftHtml` 저장, status/qualityScore/publishedAt/scheduledAt 변경, Blogger API/draft save/publish/token refresh는 발생하지 않는다.
 - smoke는 migration 적용 여부 확인 후 skeleton 1회, skeleton 성공 시 section 1개까지만 수행하고 반복 실행하지 않는다.
+
+## Patch 9E-4C-3C-smoke Local Ollama 안정화 검증
+
+- Stepwise Ollama 호출은 `stream:true`를 사용해 first byte timeout, idle timeout, overall timeout을 분리해야 한다.
+- Skeleton step 기본 생성량은 장문 생성이 아니라 구조 초안이므로 작은 `num_predict`와 `num_ctx`를 사용해야 한다.
+- Ollama 호출 전 `/api/tags` preflight로 daemon reachable 및 route model 존재 여부를 확인해야 한다.
+- 실패 error code는 `provider_timeout`, `provider_first_byte_timeout`, `provider_idle_timeout`, `provider_network_error`, `provider_model_not_found`, `provider_empty_response`처럼 구분되어야 한다.
+- step/run metadata와 `llm_call_logs.metadata`에는 `requestOptionsSummary`, provider safe summary, hash, length, response summary만 저장해야 한다.
+- prompt 전문, raw response 전문, outputMarkdown 전문, candidate 전문, skeleton/section fragment 전문, secret/token/encryptedValue는 저장하지 않아야 한다.
+- `scripts/smoke_9e4c3c_stepwise_local_ollama.mjs`는 기본적으로 route와 `/api/tags`를 확인하는 read-only helper로 동작한다.
+- `--probe-generate` 옵션은 짧은 streaming generate probe만 수행하며 content item, Blogger table, draft generation run을 변경하지 않는다.
+- 실제 step smoke는 run 생성, skeleton step 1회, content item hash/status 불변, Blogger count 불변, log redaction 확인 순서로 수행한다.
+- selected model이 first-byte timeout을 반복하면 route/model 변경 또는 Ollama runner 정리 같은 운영 조치를 먼저 수행하고, timeout 무제한 연장으로 해결하지 않는다.

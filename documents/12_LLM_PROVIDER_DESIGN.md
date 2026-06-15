@@ -574,3 +574,35 @@ Boundary:
 - No UI.
 - No `content_items.draftMarkdown`/`draftHtml` mutation.
 - Blogger API, draft save, publish, scheduled publish, and token refresh remain out of scope.
+
+### Patch 9E-4C-3C smoke stabilization for local Ollama
+
+The initial 9E-4C-3C smoke showed the selected Ollama model could keep `/api/generate` open for minutes without response bytes. The stepwise path now treats this as an operationally diagnosable provider condition rather than just waiting longer.
+
+Ollama step request policy:
+
+- Stepwise Ollama generation uses `stream:true`.
+- Skeleton defaults are intentionally small:
+  - `num_predict`: 360
+  - `num_ctx`: 2048
+- Section defaults are still bounded:
+  - `num_predict`: 900
+  - `num_ctx`: 4096
+- `keep_alive` defaults to `30s` to reduce long GPU/model occupancy after a smoke call.
+- Overall step timeout remains 600 seconds.
+- First-byte timeout is 180 seconds.
+- Stream idle timeout is 120 seconds.
+
+Preflight and diagnostics:
+
+- Before `/api/generate`, stepwise Ollama checks `/api/tags`.
+- Missing model fails as `provider_model_not_found`.
+- First-byte stall fails as `provider_first_byte_timeout`.
+- Stream stalls after bytes begin fail as `provider_idle_timeout`.
+- Safe metadata includes request options summary, provider/model safe summary, hashes, output length, and response summary.
+- Safe metadata never includes prompt text, raw response text, output Markdown full text, candidate full text, tokens, secrets, or encrypted values.
+
+Smoke helper:
+
+- `scripts/smoke_9e4c3c_stepwise_local_ollama.mjs` checks the configured `content_draft` primary route and Ollama model availability.
+- `--probe-generate` performs only a short streaming generate probe and does not mutate content items, generation runs, Blogger tables, or draft fields.
