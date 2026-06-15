@@ -716,3 +716,15 @@ npm run build
 - UI 저장은 2-step 명시 승인 guard를 사용한다: 첫 클릭은 저장 확인 대기 상태를 표시하고, 두 번째 클릭에서만 `apply-html`을 호출한다.
 - 저장 성공 후 HTML candidate source는 saved/applied 상태로 표시되고, Quality Dry Run / Publish Readiness / Blogger Draft Payload Preview 재실행 및 draft approval stale 가능성을 안내해야 한다.
 - 저장 smoke에서는 `draftHtml` hash만 변경되고 `draftMarkdown`, status, `qualityScore`, `publishedAt`, `scheduledAt`, Blogger tables, `llm_call_logs`는 변경되지 않아야 한다.
+
+## Patch 9E-4G-1 Saved draftHtml readiness recheck / Blogger draft save preflight 검증
+
+- `POST /api/content-items/[id]/blogger-draft-save-preflight`는 저장된 `draftHtml`만 기준으로 HTML validation, draft payload preview, approval snapshot match, publish-readiness summary를 다시 계산해야 한다.
+- 응답에는 `canSaveDraft`, `blockingReasons`, `warnings`, `htmlHashPrefix`, `htmlLength`, selected blog summary, connection/token presence summary, approval snapshot status, draft payload summary, side-effect summary가 포함되어야 한다.
+- side-effect summary는 `bloggerApiWrite=false`, `bloggerDraftSave=false`, `publish=false`, `scheduledPublish=false`, `tokenRefresh=false`, `llmCall=false`, `contentItemMutation=false`여야 한다.
+- Blogger 연결이 없거나 verified selected blog가 없거나 active approval snapshot match가 없으면 `canSaveDraft=false`와 safe blocking reason을 반환해야 한다.
+- UI는 Quality Dry Run, Publish Readiness, Blogger Draft Payload Preview, Draft Save Preflight를 저장된 `draftHtml` 기준 재확인 흐름으로 보여야 한다.
+- Blogger Draft 저장 버튼은 approval 조건뿐 아니라 Draft Save Preflight 통과 전에는 disabled 상태여야 한다.
+- `apply-html` 성공 후 기존 Quality Dry Run, Publish Readiness, Blogger Draft Payload Preview, Draft Save Preflight 결과는 stale/clear 처리되어야 한다.
+- preflight 호출 전후 `content_items.draftMarkdown`/`draftHtml`, status, `qualityScore`, `publishedAt`, `scheduledAt`, Blogger tables, `llm_call_logs`는 변경되지 않아야 한다.
+- preflight는 prompt/raw response/full `draftHtml`, access token, refresh token, encrypted value, raw Blogger response/error body를 반환하지 않아야 한다.

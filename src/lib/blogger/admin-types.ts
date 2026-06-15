@@ -250,3 +250,77 @@ export interface BloggerDraftPayloadPreview {
   publishImplemented: false;
   tokenRefreshImplemented: false;
 }
+
+export interface BloggerDraftSavePreflight {
+  ok: boolean;
+  canSaveDraft: boolean;
+  blockingReasons: string[];
+  warnings: string[];
+  htmlHash: string;
+  htmlHashPrefix: string;
+  htmlLength: number;
+  htmlValidation: {
+    ok: boolean;
+    errorCount: number;
+    warningCount: number;
+    unsafePatternCount: number;
+  };
+  qualitySummary: {
+    grade: "pass" | "warn" | "fail";
+    scorePreview: number;
+    requiredFailCount: number;
+    contentReady: boolean;
+  };
+  publishReadinessSummary: {
+    ready: boolean;
+    contentReady: boolean;
+    publishReady: boolean;
+    stage: string;
+    blockingIssueCount: number;
+    warningCount: number;
+  };
+  selectedBlogSummary: {
+    selected: boolean;
+    id: string | null;
+    name: string | null;
+    url: string | null;
+    verifiedAt: string | null;
+  };
+  bloggerConnectionSummary: {
+    connectionCount: number;
+    status: BloggerConnectionStatus;
+    connectionId: string | null;
+    connectedEmail: string | null;
+    hasClientSecret: boolean;
+    hasAccessToken: boolean;
+    hasRefreshToken: boolean;
+    accessTokenExpiresAt: string | null;
+    tokenRefreshImplemented: false;
+    secretMaterialReturned: false;
+  };
+  approvalSnapshotStatus: {
+    status: BloggerDraftManualApprovalStatus;
+    approvalId: string | null;
+    approvalMatchesCurrentPreview: boolean;
+    currentSnapshotHashPrefix: string | null;
+    currentDraftHtmlHashPrefix: string | null;
+    approvedAt: string | null;
+    stale: boolean;
+    requiresReapproval: boolean;
+  };
+  draftPayloadPreviewSummary: {
+    draftPayloadReady: boolean;
+    blockingIssues: string[];
+    warnings: string[];
+    titleCandidate: string | null;
+  };
+  sideEffectSummary: {
+    bloggerApiWrite: false;
+    bloggerDraftSave: false;
+    publish: false;
+    scheduledPublish: false;
+    tokenRefresh: false;
+    llmCall: false;
+    contentItemMutation: false;
+  };
+}

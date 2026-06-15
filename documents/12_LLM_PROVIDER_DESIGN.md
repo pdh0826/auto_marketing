@@ -708,4 +708,15 @@ Boundary:
 - The route returns safe apply summary metadata only: source, validation status, HTML length, unsafe pattern count, applied field, and side-effect false flags.
 - The UI keeps `draftHtml에 반영` disabled until a current HTML candidate validation has passed and the candidate is not dirty.
 - The UI uses a 2-step explicit confirmation guard: the first click arms the save and the second click calls `apply-html`.
+
+## Patch 9E-4G-1 saved draftHtml readiness recheck and Blogger draft save preflight
+
+Patch 9E-4G-1 adds a read-only preflight gate before any future Blogger draft save attempt.
+
+- `POST /api/content-items/[id]/blogger-draft-save-preflight` does not use the LLM provider abstraction.
+- The route recomputes saved `draftHtml` validation, draft payload preview, approval snapshot match, and publish-readiness summary.
+- Safe response metadata is limited to readiness booleans/counts, short hashes, selected blog metadata, connection/token presence booleans, approval status, blocking reasons, warnings, and side-effect flags.
+- The route does not mutate `content_items`, Blogger tables, approvals, draft saves, or `llm_call_logs`.
+- The route does not call Blogger write APIs, Blogger draft save, publish, scheduled publish, token refresh, or LLM providers.
+- Full `draftHtml`, prompt text, raw model responses, token values, encrypted values, and raw Blogger response/error bodies are not returned or logged.
 - Blogger API, draft save, publish, scheduled publish, token refresh, LLM calls, and `llm_call_logs` remain out of scope.

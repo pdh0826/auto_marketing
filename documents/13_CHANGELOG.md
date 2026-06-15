@@ -723,3 +723,22 @@ Policy:
 - No content item status, `qualityScore`, `publishedAt`, or `scheduledAt` mutation.
 - No LLM call or `llm_call_logs` creation.
 - No Blogger API read/write, draft save, publish, scheduled publish, token refresh, `posts.insert`, or `posts.update`.
+
+## Patch 9E-4G-1: Saved draftHtml Readiness Recheck and Draft Save Preflight
+
+Implemented after Patch 9E-4F:
+
+- Added `POST /api/content-items/[id]/blogger-draft-save-preflight`.
+- The preflight recomputes saved `draftHtml` validation, Blogger draft payload preview, current approval snapshot hash, and publish-readiness summary.
+- Added safe connection, selected blog, token metadata presence, approval snapshot, blocking reason, warning, HTML hash prefix, and side-effect summaries.
+- Added content detail UI controls for running Draft Save Preflight next to Blogger Draft Payload Preview.
+- Blogger Draft save buttons now also require the latest preflight result to pass before enabling.
+- Manual `draftHtml` apply success clears stale preflight results and asks the user to rerun Quality Dry Run, Publish Readiness, Blogger Draft Payload Preview, and Draft Save Preflight.
+
+Policy:
+
+- Preflight is read-only and does not call Blogger write APIs.
+- No Blogger draft save, publish, scheduled publish, token refresh, `posts.insert`, or `posts.update`.
+- No LLM call or `llm_call_logs` creation.
+- No `content_items` mutation, including `draftMarkdown`, `draftHtml`, status, `qualityScore`, `publishedAt`, or `scheduledAt`.
+- Secret material, encrypted values, raw Blogger responses, prompt text, and full `draftHtml` are not returned.

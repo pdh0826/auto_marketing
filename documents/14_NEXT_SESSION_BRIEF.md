@@ -119,10 +119,15 @@ latest committed baseline before Patch 9E-4C-3C: 3cb3fbc Add stepwise draft gene
 - `POST /api/content-items/[id]/apply-html` still revalidates server-side and writes only `content_items.draftHtml`.
 - The content detail UI shows safe apply summary metadata and confirms Blogger/LLM/publish/token side effects remain false.
 - Manual `draftHtml` save now uses an in-page 2-step confirmation guard before calling `apply-html`.
+- Patch 9E-4G-1 adds a read-only Blogger Draft Save Preflight route and UI.
+- `POST /api/content-items/[id]/blogger-draft-save-preflight` recomputes saved `draftHtml` validation, draft payload preview, current approval snapshot match, and publish-readiness summary.
+- Draft Save Preflight returns only safe metadata: short hashes, counts, blocking reasons, warnings, selected blog summary, connection/token presence booleans, approval status, and side-effect flags.
+- The content detail Blogger Draft save button now requires a passing preflight result in addition to existing payload approval guards.
+- Preflight does not mutate content items, create `llm_call_logs`, call Blogger APIs, save Blogger drafts, publish, schedule publish, or refresh tokens.
 
 ## Next Patch Candidate
 
-Patch 9E-4G 후보: Saved draftHtml quality/readiness recheck after manual apply.
+Patch 9E-4G-2 후보: Blogger draft save execution readiness after passing Draft Save Preflight.
 
 Alternative candidates:
 
@@ -130,13 +135,14 @@ Alternative candidates:
 
 Recommended scope:
 
-- Re-run and verify Quality Dry Run, Publish Readiness, and Blogger Draft Payload Preview after manually saved `draftHtml`.
-- Confirm existing Blogger draft approval snapshots become stale when `draftHtml` changes.
-- Keep Blogger draft save/publish/token refresh out of scope unless Patch 9E-5 readiness is selected.
+- Re-run and verify saved `draftHtml` Quality Dry Run, Publish Readiness, Blogger Draft Payload Preview, and Blogger Draft Save Preflight.
+- Confirm preflight blocks missing Blogger connection, missing verified selected blog, missing/expired token, missing active approval, stale approval, HTML validation failures, and content readiness failures.
+- Only consider actual Blogger draft save after the user explicitly approves a live test blog write.
+- Keep publish, scheduled publish, token refresh, and posts.update out of scope.
 - Keep automatic `draftHtml`, status, qualityScore, Blogger draft save, and publish out of scope unless separately requested.
 - Keep existing `generate-draft` route unchanged.
 - Keep commercial/high-performance remote providers on the existing one-shot full draft path.
-- Keep Blogger OAuth/live draft save out of scope unless Patch 9E-5 is selected.
+- Keep Blogger OAuth/live draft save out of scope unless explicitly selected.
 
 ## Do Not Start With
 
@@ -163,11 +169,11 @@ AGENTS.md와 documents/ 폴더의 관련 문서를 먼저 읽어줘.
 현재 프로젝트 상태를 점검하고 Patch 9E-4G 작업계획을 제안해줘.
 
 목표:
-- Patch 9E-4F의 manual draftHtml apply guard hardening 구현 상태를 확인한다.
-- 저장된 `draftHtml` 기준 Quality Dry Run / Publish Readiness / Blogger Draft Payload Preview 재확인 흐름을 설계한다.
-- `draftHtml` 변경 후 기존 Blogger draft approval snapshot stale 정책을 확인한다.
-- content item status/qualityScore/publishedAt/scheduledAt 자동 변경, Blogger API write, LLM 호출은 금지한다.
-- Blogger OAuth/live draft save는 Patch 9E-5 후보로 분리한다.
+- Patch 9E-4G-1의 saved draftHtml readiness recheck / Blogger Draft Save Preflight 구현 상태를 확인한다.
+- 저장된 `draftHtml` 기준 Quality Dry Run / Publish Readiness / Blogger Draft Payload Preview / Draft Save Preflight 결과를 점검한다.
+- 실제 Blogger draft save를 진행할 경우 live test blog 사용자 승인, active approval snapshot match, verified selected blog, access token 상태를 다시 확인한다.
+- content item status/qualityScore/publishedAt/scheduledAt 자동 변경, Blogger publish/scheduled publish/token refresh, LLM 호출은 금지한다.
+- 실제 live draft save는 별도 승인 후 Patch 9E-4G-2 또는 Patch 9E-5 후보로 분리한다.
 
 아직 구현하지 말고 계획만 작성해줘.
 ```
