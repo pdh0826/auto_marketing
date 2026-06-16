@@ -882,3 +882,16 @@ Safety guard:
 - UI는 requiredBeforePublish, requiredBeforeScheduledPublish, proposed publish approval snapshot fields를 표시해야 한다.
 - Publish Readiness는 계속 `ready=false`, `contentReady=true`, `publishReady=false`, `stage=draft_saved_publish_not_implemented`, `metadata.bloggerDraftSaved=true`를 유지해야 한다.
 - 9E-6B 구현/스모크 중에는 Blogger API write, additional draft save, `posts.update`, publish/scheduled publish, token refresh, LLM 호출, DB/schema/content item mutation이 발생하지 않아야 한다.
+
+## Patch 9E-6C Publish approval snapshot preview 검증
+
+- `POST /api/content-items/[id]/publish-approval-preview`는 read-only snapshot/hash preview여야 한다.
+- 응답은 `canCreatePublishApproval=false`, `canPublish=false`, `canSchedulePublish=false`를 유지해야 한다.
+- `blockingReasons`에는 `publish_approval_persistence_not_implemented`, `publish_not_implemented`, `scheduled_publish_not_implemented`가 포함되어야 한다.
+- 현재 token expiry metadata가 만료 상태이면 `access_token_expired_reauth_required`도 포함되어야 한다.
+- `approvalSnapshotPreview`에는 content item id/status, draft hashes, target Blogger blog id, Blogger post id, publishMode, tokenState가 safe metadata로 표시되어야 한다.
+- `approvalSnapshotHashPreview`는 non-empty SHA-256 hex string이어야 하지만 DB에 저장된 approval hash로 표시하면 안 된다.
+- `sideEffectSummary`는 `bloggerApiWrite=false`, `bloggerPublish=false`, `bloggerScheduledPublish=false`, `bloggerPostsUpdate=false`, `bloggerDraftSave=false`, `tokenRefresh=false`, `llmCall=false`, `contentItemMutation=false`, `dbWrite=false`, `approvalPersistence=false`여야 한다.
+- Content Detail UI는 Publish Approval Snapshot Preview 버튼과 결과 블록을 보여야 하며, publish approval 생성/publish/scheduled publish 실행 버튼을 활성화하면 안 된다.
+- UI는 requiredBeforeApprovalPersistence를 표시해야 한다.
+- 9E-6C 구현/스모크 중에는 publish approval insert/update, Blogger API write, additional draft save, `posts.update`, publish/scheduled publish, token refresh, LLM 호출, DB/schema/content item mutation이 발생하지 않아야 한다.

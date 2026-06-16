@@ -782,3 +782,13 @@ Patch 9E-6B is a Blogger publish preflight dry-run and approval model design pat
 - It keeps `canPublish=false`, `canSchedulePublish=false`, and all side-effect flags false.
 - No LLM provider is invoked and no `llm_call_logs` row is created.
 - No prompt, raw response, candidate text, Blogger token, encrypted value, raw Blogger response, or full draft HTML is stored in metadata.
+
+## Patch 9E-6C publish approval snapshot preview boundary
+
+Patch 9E-6C is a read-only publish approval snapshot/hash preview patch, not an LLM routing change.
+
+- `POST /api/content-items/[id]/publish-approval-preview` must not call LLM providers.
+- The snapshot preview includes only non-secret deterministic metadata and content hashes.
+- `approvalSnapshotHashPreview` is computed locally from the preview payload; it is not an LLM output and is not persisted.
+- No `llm_call_logs` row is created.
+- Prompt text, raw responses, candidate text, Blogger tokens, encrypted values, raw Blogger responses, and full draft HTML remain outside UI/log metadata.

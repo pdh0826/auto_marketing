@@ -381,3 +381,61 @@ export interface PublishPreflightDryRun {
   proposedPublishApprovalSnapshotFields: string[];
   sideEffectSummary: PublishPreflightSideEffectSummary;
 }
+
+export type PublishApprovalTokenState = "expired_reauth_required" | "unknown" | "valid_not_verified";
+export type PublishApprovalMode = "publish" | "scheduled_publish";
+
+export interface PublishApprovalPreviewSideEffectSummary {
+  bloggerApiWrite: false;
+  bloggerPublish: false;
+  bloggerScheduledPublish: false;
+  bloggerPostsUpdate: false;
+  bloggerDraftSave: false;
+  tokenRefresh: false;
+  llmCall: false;
+  contentItemMutation: false;
+  dbWrite: false;
+  approvalPersistence: false;
+}
+
+export interface PublishApprovalSnapshotPreview {
+  contentItemId: string;
+  contentStatus: string | null;
+  draftMarkdownHash: string;
+  draftHtmlHash: string;
+  draftHtmlLength: number;
+  titleCandidate: string | null;
+  targetBloggerBlogId: string | null;
+  targetBloggerBlogName: string | null;
+  targetBloggerBlogUrl: string | null;
+  bloggerPostId: string | null;
+  bloggerDraftSavedAt: string | null;
+  bloggerDraftApprovalId: string | null;
+  bloggerDraftApprovalSnapshotHash: string | null;
+  approvalMatchesCurrentPreview: boolean | null;
+  publishMode: PublishApprovalMode;
+  scheduledAt: string | null;
+  timezone: string | null;
+  rollbackAcknowledged: false;
+  sideEffectSummaryAcknowledged: false;
+  tokenState: PublishApprovalTokenState;
+  tokenStateCheckedAt: string;
+}
+
+export interface PublishApprovalPreview {
+  contentItemId: string;
+  checkedAt: string;
+  canCreatePublishApproval: false;
+  canPublish: false;
+  canSchedulePublish: false;
+  blockingReasons: string[];
+  warnings: string[];
+  approvalSnapshotPreview: PublishApprovalSnapshotPreview;
+  approvalSnapshotHashPreview: string;
+  hashAlgorithm: "sha256";
+  canonicalization: string;
+  requiredBeforeApprovalPersistence: string[];
+  requiredBeforePublish: string[];
+  requiredBeforeScheduledPublish: string[];
+  sideEffectSummary: PublishApprovalPreviewSideEffectSummary;
+}

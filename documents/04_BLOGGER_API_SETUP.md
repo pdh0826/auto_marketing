@@ -282,3 +282,31 @@ Current expected behavior:
 The dry-run summarizes the already saved Blogger draft state: target blog id/name/url, Blogger post id, draft saved timestamp, current draft approval status/match, draft hash prefix, duplicate save protection, and token expiry state.
 
 Before real publish can be implemented, a later patch must define a publish approval snapshot, rollback acknowledgement, side-effect acknowledgement, token freshness policy, Blogger write audit policy, and local `content_items.status`/`publishedAt` mutation ordering.
+
+## Patch 9E-6C Publish approval snapshot preview
+
+Patch 9E-6C adds a read-only publish approval snapshot preview API and Content Detail UI block.
+
+Route:
+
+```text
+POST /api/content-items/[id]/publish-approval-preview
+```
+
+This route does not persist approval. It does not call Blogger. It does not publish, schedule, update, insert, save another draft, refresh tokens, call LLMs, or mutate DB rows.
+
+Current expected behavior:
+
+- `canCreatePublishApproval=false`
+- `canPublish=false`
+- `canSchedulePublish=false`
+- `blockingReasons` includes `publish_approval_persistence_not_implemented`
+- `blockingReasons` includes `publish_not_implemented`
+- `blockingReasons` includes `scheduled_publish_not_implemented`
+- if safe token expiry metadata is expired, `blockingReasons` includes `access_token_expired_reauth_required`
+- `approvalSnapshotHashPreview` is a non-empty SHA-256 preview hash
+- `sideEffectSummary` fields are all false, including `dbWrite=false` and `approvalPersistence=false`
+
+The snapshot preview contains non-secret fields only: content id/status, draft content hashes, title candidate, target Blogger blog safe metadata, Blogger post id, draft saved timestamp, draft approval id/hash, approval match status, publish mode, optional schedule fields, acknowledgement placeholders, and safe token state.
+
+`approvalSnapshotHashPreview` is not a stored approval hash and does not mean publish approval was created.

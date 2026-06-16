@@ -181,3 +181,13 @@ Patch 9E-6B 완료:
 - access token expired 상태는 publish/scheduled publish 전 OAuth 재연결 필요 blocker로 표시
 - 향후 publish approval snapshot field 후보 문서화
 - Blogger publish/scheduled publish/write, token refresh, DB schema/migration, content item mutation은 구현하지 않음
+
+Patch 9E-6C 완료:
+
+- `POST /api/content-items/[id]/publish-approval-preview` read-only snapshot preview API 추가
+- Content Detail에 Publish Approval Snapshot Preview UI 추가
+- non-secret approval snapshot preview와 `approvalSnapshotHashPreview` 표시
+- `canCreatePublishApproval=false`, `canPublish=false`, `canSchedulePublish=false` 유지
+- `publish_approval_persistence_not_implemented`, publish/scheduled not implemented, token expired blocker 표시
+- side-effect all false 유지, `dbWrite=false`, `approvalPersistence=false` 표시
+- publish approval persistence, Blogger write, publish/scheduled publish, DB schema/migration, content item mutation은 구현하지 않음

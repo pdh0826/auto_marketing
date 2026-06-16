@@ -56,9 +56,11 @@
 - Blogger `posts.insert?isDraft=true` 기반 draft save 1회 live 검증
 - Post-save duplicate protection, token-expired reauth guidance, update/retry policy planning
 - Publish preflight dry-run과 future publish approval snapshot field 설계
+- Publish approval snapshot/hash preview
 
 아직 구현하지 않음:
 
+- Publish approval persistence
 - Blogger publish
 - Scheduled publish
 - `posts.update`

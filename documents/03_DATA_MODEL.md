@@ -485,3 +485,17 @@ Patch 9E-6B adds a read-only publish preflight response model, not a schema chan
 - Duplicate draft save protection may appear as warning/summary, but it is a draft-save safety state and does not grant publish permission.
 
 Future publish approval snapshot fields should include `contentItemId`, `contentStatus`, `draftMarkdownHash`, `draftHtmlHash`, `draftHtmlLength`, `titleCandidate`, target Blogger blog safe metadata, `bloggerPostId`, `bloggerDraftSavedAt`, draft approval id/hash, approval match status, `publishMode`, `scheduledAt`, `timezone`, `requestedBy`, `approvalCreatedAt`, `rollbackAcknowledged`, `sideEffectSummaryAcknowledged`, and `tokenStateCheckedAt`.
+
+## Patch 9E-6C Publish approval snapshot preview data model
+
+Patch 9E-6C adds a read-only publish approval snapshot preview model, not persistence.
+
+- No publish approval table, migration, enum, or insert/update route is added.
+- `POST /api/content-items/[id]/publish-approval-preview` reads existing content item, Blogger draft save, draft approval, and safe token expiry metadata.
+- The preview includes only non-secret fields.
+- `approvalSnapshotHashPreview` is computed from deterministic canonical JSON and SHA-256, but it is not stored in DB and is not an approval record.
+- `draftMarkdownHash` and `draftHtmlHash` are content hash previews used to show what the user would approve.
+- `canCreatePublishApproval=false`, `canPublish=false`, and `canSchedulePublish=false` remain fixed.
+- `sideEffectSummary` is all false, including `dbWrite=false` and `approvalPersistence=false`.
+
+Before publish approval persistence can be implemented, decide whether to add a dedicated table or extend an existing table, how to store canonical snapshot fields and hash, how to capture rollback and side-effect acknowledgements, how to store token state checked time, how approval expiry/invalidation works when draft HTML/title/blog/post changes, how publish attempts link to approval id, how partial failures are audited, and how raw Blogger responses/tokens remain redacted.

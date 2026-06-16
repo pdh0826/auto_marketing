@@ -982,3 +982,24 @@ Not implemented:
 - content item status, `publishedAt`, `scheduledAt`, `qualityScore`, `draftHtml`, or `draftMarkdown` mutation
 - DB schema/migration changes
 - LLM calls or `llm_call_logs`
+
+## Patch 9E-6C: Blogger Publish Approval Snapshot Preview
+
+Implemented after Patch 9E-6B:
+
+- Added `POST /api/content-items/[id]/publish-approval-preview` as a read-only snapshot preview route.
+- Added `src/lib/content/publish-approval-preview.ts` to build non-secret approval snapshot preview and SHA-256 hash preview.
+- Added Content Detail UI for Publish Approval Snapshot Preview.
+- The preview reports `canCreatePublishApproval=false`, `canPublish=false`, and `canSchedulePublish=false`.
+- The preview reports `publish_approval_persistence_not_implemented` plus publish/scheduled publish not implemented blockers.
+- Expired access token metadata is surfaced as `expired_reauth_required` token state and `access_token_expired_reauth_required`; no token refresh is performed.
+- Snapshot hash preview is displayed as not persisted and not an approval record.
+
+Not implemented:
+
+- publish approval persistence, table, migration, insert, or update
+- Blogger publish or scheduled publish
+- Blogger API write, `posts.update`, `posts.insert`, or additional draft save
+- token refresh or token endpoint call
+- content item status, `publishedAt`, `scheduledAt`, `qualityScore`, `draftHtml`, or `draftMarkdown` mutation
+- LLM calls or `llm_call_logs`
