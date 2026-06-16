@@ -55,3 +55,4 @@ Google Blogger 기반 블로그를 여러 개 운영하면서, 블로그별 주�
 - 저장된 Blogger draft는 publish-ready가 아니며, `publishReady=false`와 top-level `ready=false`는 의도적으로 유지한다.
 - Publish, scheduled publish, `posts.update`, token refresh, automatic status transition, `publishedAt`/`scheduledAt` mutation은 아직 구현하지 않았다.
 - Publish/scheduled publish는 별도 approval, preflight, side-effect summary, audit, rollback 안내 정책을 설계한 뒤에만 구현한다.
+- Publish preflight dry-run은 read-only로 추가되었으며 `canPublish=false`, `canSchedulePublish=false`, side-effect all false를 유지한다.

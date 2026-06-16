@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import type { BloggerDraftPayloadPreview, BloggerDraftSaveAdmin, BloggerDraftSavePreflight } from "@/lib/blogger/admin-types";
+import type { BloggerDraftPayloadPreview, BloggerDraftSaveAdmin, BloggerDraftSavePreflight, PublishPreflightDryRun } from "@/lib/blogger/admin-types";
 import type { BlogPostTemplatePreviewResult, BlogPostTemplatePreviewSource } from "@/lib/blog-renderer/blog-post-template-renderer";
 import type { ContentAssetAdmin } from "@/lib/content/asset-types";
 import type { ContentItemAdmin } from "@/lib/content/admin-types";
@@ -252,6 +252,7 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
   const [qualityPreviewResult, setQualityPreviewResult] = useState<HtmlQualityPreviewResult | null>(null);
   const [qualityRepairPreviewResult, setQualityRepairPreviewResult] = useState<HtmlQualityRepairPreviewResult | null>(null);
   const [publishReadinessResult, setPublishReadinessResult] = useState<PublishReadinessResult | null>(null);
+  const [publishPreflightResult, setPublishPreflightResult] = useState<PublishPreflightDryRun | null>(null);
   const [bloggerDraftPreviewResult, setBloggerDraftPreviewResult] = useState<BloggerDraftPayloadPreview | null>(null);
   const [bloggerDraftSavePreflightResult, setBloggerDraftSavePreflightResult] = useState<BloggerDraftSavePreflight | null>(null);
   const [stepwiseRuns, setStepwiseRuns] = useState<StepwiseDraftGenerationRunSummary[]>([]);
@@ -299,6 +300,7 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
   const [runningQualityRepairPreview, setRunningQualityRepairPreview] = useState(false);
   const [validatingQualityRepairCandidate, setValidatingQualityRepairCandidate] = useState(false);
   const [runningPublishReadiness, setRunningPublishReadiness] = useState(false);
+  const [runningPublishPreflight, setRunningPublishPreflight] = useState(false);
   const [runningBloggerDraftPreview, setRunningBloggerDraftPreview] = useState(false);
   const [runningBloggerDraftSavePreflight, setRunningBloggerDraftSavePreflight] = useState(false);
   const [approvingBloggerDraft, setApprovingBloggerDraft] = useState(false);
@@ -320,6 +322,7 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
   const [qualityPreviewError, setQualityPreviewError] = useState<string | null>(null);
   const [qualityRepairPreviewError, setQualityRepairPreviewError] = useState<string | null>(null);
   const [publishReadinessError, setPublishReadinessError] = useState<string | null>(null);
+  const [publishPreflightError, setPublishPreflightError] = useState<string | null>(null);
   const [bloggerDraftPreviewError, setBloggerDraftPreviewError] = useState<string | null>(null);
   const [bloggerDraftSavePreflightError, setBloggerDraftSavePreflightError] = useState<string | null>(null);
   const [bloggerDraftSaveError, setBloggerDraftSaveError] = useState<string | null>(null);
@@ -343,6 +346,7 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
   const canRunQualityPreview = Boolean(contentItem?.draftHtml && !runningQualityPreview);
   const canRunQualityRepairPreview = Boolean((contentItem?.draftMarkdown || contentItem?.draftHtml) && !runningQualityRepairPreview);
   const canRunPublishReadiness = Boolean(!runningPublishReadiness);
+  const canRunPublishPreflight = Boolean(!runningPublishPreflight);
   const canRunBloggerDraftPreview = Boolean(!runningBloggerDraftPreview);
   const canRunBloggerDraftSavePreflight = Boolean(!runningBloggerDraftSavePreflight);
   const canApproveBloggerDraftPayload = Boolean(
@@ -1120,6 +1124,25 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
     }
   }
 
+  async function runPublishPreflight() {
+    setNotice(null);
+    setPublishPreflightError(null);
+    setRunningPublishPreflight(true);
+
+    try {
+      const result = await requestJson<ApiResult<PublishPreflightDryRun>>(`/api/content-items/${contentItemId}/publish-preflight`, {
+        method: "POST",
+        body: JSON.stringify({})
+      });
+      setPublishPreflightResult(result.data);
+      setNotice("Publish preflight dry-run을 완료했습니다. publish, scheduled publish, Blogger write, token refresh, LLM 호출, DB 저장은 수행하지 않았습니다.");
+    } catch (caught) {
+      setPublishPreflightError(caught instanceof Error ? caught.message : "Publish preflight dry-run에 실패했습니다.");
+    } finally {
+      setRunningPublishPreflight(false);
+    }
+  }
+
   async function runBloggerDraftPreview() {
     setNotice(null);
     setBloggerDraftPreviewError(null);
@@ -1480,14 +1503,22 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
             </div>
 
             {publishReadinessError ? <div className="notice error">{publishReadinessError}</div> : null}
+            {publishPreflightError ? <div className="notice error">{publishPreflightError}</div> : null}
 
             <div className="form-actions">
               <button className="button" type="button" disabled={!canRunPublishReadiness} onClick={() => void runPublishReadiness()}>
                 {runningPublishReadiness ? "Readiness Check 실행 중" : "Publish Readiness Check"}
               </button>
+              <button className="button secondary" type="button" disabled={!canRunPublishPreflight} onClick={() => void runPublishPreflight()}>
+                {runningPublishPreflight ? "Publish Preflight Dry-run 실행 중" : "Publish Preflight Dry-run"}
+              </button>
               <button className="button secondary" type="button" disabled>
                 Publish는 후속 패치에서 연결 예정
               </button>
+            </div>
+            <div className="notice">
+              Publish preflight dry-run은 실제 발행을 수행하지 않습니다. 이 점검은 read-only이며 Blogger API write, publish, scheduled publish, token refresh, DB mutation,
+              LLM call을 수행하지 않습니다.
             </div>
 
             {publishReadinessResult ? (
@@ -1615,6 +1646,94 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
               </>
             ) : (
               <div className="notice">Publish Readiness Check를 실행하면 발행 준비 gate 결과가 화면에만 생성됩니다.</div>
+            )}
+
+            {publishPreflightResult ? (
+              <div className="read-block">
+                <h3>Publish Preflight Dry-run</h3>
+                <div className="notice warning">
+                  <strong>Publish / Scheduled Publish are not implemented</strong>
+                  <p>
+                    canPublish: {publishPreflightResult.canPublish ? "yes" : "no"} / canSchedulePublish:{" "}
+                    {publishPreflightResult.canSchedulePublish ? "yes" : "no"}
+                  </p>
+                  <p>
+                    publish/scheduled publish는 아직 구현되지 않았고, OAuth 재연결과 별도 publish approval/preflight 설계가 필요합니다.
+                  </p>
+                  <p>이 dry-run은 token refresh를 수행하지 않으며 Blogger write, DB mutation, LLM call을 수행하지 않았습니다.</p>
+                </div>
+                {publishPreflightResult.publishPreflightSummary.accessTokenExpired ? (
+                  <div className="notice warning">
+                    <strong>Access token expired</strong>
+                    <p>Access token이 만료되어 향후 Blogger write 전 OAuth 재연결이 필요합니다. 이 dry-run은 token refresh를 수행하지 않습니다.</p>
+                    <div className="form-actions">
+                      <Link className="button secondary" href="/settings/blogger">
+                        Blogger 설정에서 OAuth 재연결 확인
+                      </Link>
+                    </div>
+                  </div>
+                ) : null}
+                <div className="detail-grid">
+                  <DetailItem label="Checked At" value={formatDate(publishPreflightResult.checkedAt)} />
+                  <DetailItem label="Can Publish" value={publishPreflightResult.canPublish ? "yes" : "no"} />
+                  <DetailItem label="Can Schedule Publish" value={publishPreflightResult.canSchedulePublish ? "yes" : "no"} />
+                  <DetailItem label="Blogger Draft Saved" value={publishPreflightResult.publishPreflightSummary.bloggerDraftSaved ? "yes" : "no"} />
+                  <DetailItem label="Blogger Blog ID" value={publishPreflightResult.publishPreflightSummary.bloggerBlogId ?? "-"} />
+                  <DetailItem label="Blogger Blog Name" value={publishPreflightResult.publishPreflightSummary.bloggerBlogName ?? "-"} />
+                  <DetailItem label="Blogger Post ID" value={publishPreflightResult.publishPreflightSummary.bloggerPostId ?? "-"} />
+                  <DetailItem
+                    label="Blogger Draft Saved At"
+                    value={
+                      publishPreflightResult.publishPreflightSummary.bloggerDraftSavedAt
+                        ? formatDate(publishPreflightResult.publishPreflightSummary.bloggerDraftSavedAt)
+                        : "-"
+                    }
+                  />
+                  <DetailItem label="Manual Approval" value={publishPreflightResult.publishPreflightSummary.manualApprovalStatus} />
+                  <DetailItem label="Approval Match" value={publishPreflightResult.publishPreflightSummary.approvalMatchesCurrentPreview ? "yes" : "no"} />
+                  <DetailItem label="Approval Snapshot" value={publishPreflightResult.publishPreflightSummary.bloggerDraftApprovalSnapshotHash ?? "-"} />
+                  <DetailItem label="draftHtml Hash" value={publishPreflightResult.publishPreflightSummary.draftHtmlHashPrefix ?? "-"} />
+                  <DetailItem label="Title Candidate" value={publishPreflightResult.publishPreflightSummary.titleCandidate ?? "-"} />
+                  <DetailItem label="Access Token Expired" value={publishPreflightResult.publishPreflightSummary.accessTokenExpired ? "yes" : "no"} />
+                  <DetailItem
+                    label="Duplicate Save Protection"
+                    value={publishPreflightResult.publishPreflightSummary.duplicateSaveProtectionActive ? "active" : "not active"}
+                  />
+                  <DetailItem label="Publish Implemented" value={String(publishPreflightResult.publishPreflightSummary.publishImplemented)} />
+                  <DetailItem label="Scheduled Publish Implemented" value={String(publishPreflightResult.publishPreflightSummary.scheduledPublishImplemented)} />
+                  <DetailItem label="Publish Approval Implemented" value={String(publishPreflightResult.publishPreflightSummary.publishApprovalImplemented)} />
+                </div>
+                <PublishPreflightActionItems result={publishPreflightResult} />
+                <ValidationList title="Publish Preflight Blocking Reasons" items={publishPreflightResult.blockingReasons} emptyText="blocking reason이 없습니다." isError />
+                <ValidationList title="Publish Preflight Warnings" items={publishPreflightResult.warnings} emptyText="warning이 없습니다." isWarning />
+                <ValidationList title="Required Before Publish" items={publishPreflightResult.requiredBeforePublish} emptyText="publish 전 필수 항목이 없습니다." />
+                <ValidationList
+                  title="Required Before Scheduled Publish"
+                  items={publishPreflightResult.requiredBeforeScheduledPublish}
+                  emptyText="scheduled publish 전 필수 항목이 없습니다."
+                />
+                <ValidationList
+                  title="Proposed Publish Approval Snapshot Fields"
+                  items={publishPreflightResult.proposedPublishApprovalSnapshotFields}
+                  emptyText="snapshot field 후보가 없습니다."
+                />
+                <div className="detail-grid">
+                  <DetailItem label="Blogger API Write" value={String(publishPreflightResult.sideEffectSummary.bloggerApiWrite)} />
+                  <DetailItem label="Blogger Publish" value={String(publishPreflightResult.sideEffectSummary.bloggerPublish)} />
+                  <DetailItem label="Blogger Scheduled Publish" value={String(publishPreflightResult.sideEffectSummary.bloggerScheduledPublish)} />
+                  <DetailItem label="Blogger posts.update" value={String(publishPreflightResult.sideEffectSummary.bloggerPostsUpdate)} />
+                  <DetailItem label="Blogger Draft Save" value={String(publishPreflightResult.sideEffectSummary.bloggerDraftSave)} />
+                  <DetailItem label="Token Refresh" value={String(publishPreflightResult.sideEffectSummary.tokenRefresh)} />
+                  <DetailItem label="LLM Call" value={String(publishPreflightResult.sideEffectSummary.llmCall)} />
+                  <DetailItem label="Content Item Mutation" value={String(publishPreflightResult.sideEffectSummary.contentItemMutation)} />
+                </div>
+                <div className="notice">
+                  Duplicate save protection은 draft save 안전장치이며 publish 실행 권한을 의미하지 않습니다. publish approval table/schema/migration은 이번 패치에서
+                  만들지 않습니다.
+                </div>
+              </div>
+            ) : (
+              <div className="notice">Publish Preflight Dry-run을 실행하면 발행 전용 read-only 점검 결과가 화면에만 생성됩니다.</div>
             )}
           </section>
 
@@ -3956,6 +4075,24 @@ function BloggerDraftSaveActionItems({ result }: { result: BloggerDraftSavePrefl
   );
 }
 
+function PublishPreflightActionItems({ result }: { result: PublishPreflightDryRun }) {
+  const items = result.blockingReasons.map((reason) => getPublishPreflightActionItem(reason));
+  const dedupedItems = items.filter((item, index) => items.findIndex((candidate) => candidate.action === item.action && candidate.label === item.label) === index);
+
+  return (
+    <div className="notice warning">
+      <strong>Publish Preflight Next Actions</strong>
+      <ul>
+        {dedupedItems.map((item) => (
+          <li key={item.reason}>
+            <strong>{item.label}</strong>: {item.action} <span className="muted">({item.reason})</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 function BloggerDraftUpdateRetryPolicyNotice() {
   return (
     <div className="notice">
@@ -4098,6 +4235,84 @@ function getBloggerDraftSaveActionItem(reason: string) {
     reason,
     label: "Readiness check",
     action: "관련 readiness 결과를 확인하고 blocking issue를 해결하세요."
+  };
+}
+
+function getPublishPreflightActionItem(reason: string) {
+  if (reason === "publish_not_implemented") {
+    return {
+      reason,
+      label: "Publish implementation",
+      action: "Blogger publish 실행 route와 사용자 승인 flow는 아직 구현하지 않습니다. 별도 승인된 패치에서만 추가하세요."
+    };
+  }
+  if (reason === "scheduled_publish_not_implemented") {
+    return {
+      reason,
+      label: "Scheduled publish implementation",
+      action: "예약 발행은 timezone, scheduledAt, cancel/update 정책을 먼저 승인한 뒤 별도 패치에서 설계하세요."
+    };
+  }
+  if (reason === "access_token_expired_reauth_required") {
+    return {
+      reason,
+      label: "Blogger OAuth 재연결 필요",
+      action: "Access token이 만료되었습니다. 향후 Blogger write 전 설정 > Blogger에서 OAuth 재연결을 확인하세요. 이 dry-run은 token refresh를 수행하지 않습니다."
+    };
+  }
+  if (reason === "publish_approval_not_implemented") {
+    return {
+      reason,
+      label: "Publish approval",
+      action: "발행 전용 approval snapshot, rollback acknowledgement, side-effect summary acknowledgement 모델을 먼저 구현해야 합니다."
+    };
+  }
+  if (reason === "content_item_mutation_policy_not_implemented") {
+    return {
+      reason,
+      label: "Local mutation policy",
+      action: "publish 성공 후 content_items.status/publishedAt 또는 scheduledAt을 언제 바꿀지 별도 정책 승인이 필요합니다."
+    };
+  }
+  if (reason === "blogger_draft_not_saved") {
+    return {
+      reason,
+      label: "Blogger draft",
+      action: "publish 전에는 guarded Blogger draft save 성공 기록과 Blogger post id가 필요합니다."
+    };
+  }
+  if (reason === "blogger_draft_post_id_missing") {
+    return {
+      reason,
+      label: "Blogger post id",
+      action: "저장된 Blogger draft의 post id safe metadata가 있어야 publish target을 특정할 수 있습니다."
+    };
+  }
+  if (reason === "blogger_blog_id_missing") {
+    return {
+      reason,
+      label: "Blogger blog id",
+      action: "검증된 target Blogger blog id가 필요합니다."
+    };
+  }
+  if (reason === "manual_approval_missing") {
+    return {
+      reason,
+      label: "Manual approval",
+      action: "현재 draft payload preview와 일치하는 manual approval snapshot이 필요합니다."
+    };
+  }
+  if (reason === "approval_snapshot_mismatch") {
+    return {
+      reason,
+      label: "Approval snapshot",
+      action: "draftHtml, title, target blog가 바뀌었을 수 있습니다. draft payload preview와 approval을 다시 생성하세요."
+    };
+  }
+  return {
+    reason,
+    label: "Publish preflight",
+    action: "관련 publish preflight blocker를 확인하고 후속 설계 패치에서 해결하세요."
   };
 }
 

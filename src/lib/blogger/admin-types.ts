@@ -334,3 +334,50 @@ export interface BloggerDraftSavePreflight {
     contentItemMutation: false;
   };
 }
+
+export interface PublishPreflightSideEffectSummary {
+  bloggerApiWrite: false;
+  bloggerPublish: false;
+  bloggerScheduledPublish: false;
+  bloggerPostsUpdate: false;
+  bloggerDraftSave: false;
+  tokenRefresh: false;
+  llmCall: false;
+  contentItemMutation: false;
+}
+
+export interface PublishPreflightSummary {
+  bloggerDraftSaved: boolean;
+  bloggerBlogId: string | null;
+  bloggerBlogName: string | null;
+  bloggerBlogUrl: string | null;
+  bloggerPostId: string | null;
+  bloggerDraftSavedAt: string | null;
+  bloggerDraftApprovalId: string | null;
+  bloggerDraftApprovalSnapshotHash: string | null;
+  draftHtmlHashPrefix: string | null;
+  titleCandidate: string | null;
+  manualApprovalStatus: BloggerDraftManualApprovalStatus;
+  approvalMatchesCurrentPreview: boolean;
+  accessTokenExpired: boolean;
+  duplicateSaveProtectionActive: boolean;
+  publishImplemented: false;
+  scheduledPublishImplemented: false;
+  publishApprovalImplemented: false;
+  canPublish: false;
+  canSchedulePublish: false;
+}
+
+export interface PublishPreflightDryRun {
+  contentItemId: string;
+  checkedAt: string;
+  canPublish: false;
+  canSchedulePublish: false;
+  blockingReasons: string[];
+  warnings: string[];
+  publishPreflightSummary: PublishPreflightSummary;
+  requiredBeforePublish: string[];
+  requiredBeforeScheduledPublish: string[];
+  proposedPublishApprovalSnapshotFields: string[];
+  sideEffectSummary: PublishPreflightSideEffectSummary;
+}

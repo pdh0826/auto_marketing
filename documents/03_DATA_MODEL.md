@@ -471,3 +471,17 @@ Patch 9E-4A는 schema를 변경하지 않는다.
 - `content_items.qualityScore`, status, `publishedAt`, `scheduledAt`은 변경하지 않는다.
 - `llm_call_logs`, `quality_checks`, Blogger draft save 관련 테이블은 변경하지 않는다.
 - 사용자가 기존 `apply-html`을 명시적으로 실행할 때만 `draftHtml` 저장이 가능하다.
+
+## Patch 9E-6B Publish preflight dry-run data model
+
+Patch 9E-6B adds a read-only publish preflight response model, not a schema change.
+
+- No publish approval table, migration, enum, or content item column is added.
+- `POST /api/content-items/[id]/publish-preflight` reads existing content item, Blogger connection safe metadata, draft approval, draft save, and token expiry metadata.
+- The response keeps `canPublish=false` and `canSchedulePublish=false`.
+- `sideEffectSummary` is all false: no Blogger write, no publish, no scheduled publish, no `posts.update`, no draft save, no token refresh, no LLM call, and no content item mutation.
+- Current required blockers include `publish_not_implemented`, `scheduled_publish_not_implemented`, `publish_approval_not_implemented`, and `content_item_mutation_policy_not_implemented`.
+- If safe access token expiry metadata is past, `access_token_expired_reauth_required` is also a blocker.
+- Duplicate draft save protection may appear as warning/summary, but it is a draft-save safety state and does not grant publish permission.
+
+Future publish approval snapshot fields should include `contentItemId`, `contentStatus`, `draftMarkdownHash`, `draftHtmlHash`, `draftHtmlLength`, `titleCandidate`, target Blogger blog safe metadata, `bloggerPostId`, `bloggerDraftSavedAt`, draft approval id/hash, approval match status, `publishMode`, `scheduledAt`, `timezone`, `requestedBy`, `approvalCreatedAt`, `rollbackAcknowledged`, `sideEffectSummaryAcknowledged`, and `tokenStateCheckedAt`.

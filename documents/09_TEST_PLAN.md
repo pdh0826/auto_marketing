@@ -868,3 +868,17 @@ Safety guard:
 - Draft Save Preflight는 계속 `canSaveDraft=false`, `blogger_draft_already_saved_for_approval`, `access_token_expired_reauth_required`, side-effect all false를 유지해야 한다.
 - Publish readiness는 계속 `ready=false`, `contentReady=true`, `publishReady=false`, `stage=draft_saved_publish_not_implemented`, `metadata.bloggerDraftSaved=true`를 유지해야 한다.
 - 9E-6A 구현/스모크 중에는 Blogger API write, additional draft save, `posts.update`, publish/scheduled publish, token refresh, LLM 호출, DB/schema/content item mutation이 발생하지 않아야 한다.
+
+## Patch 9E-6B Publish preflight dry-run 검증
+
+- `POST /api/content-items/[id]/publish-preflight`는 read-only dry-run이어야 한다.
+- 응답은 `canPublish=false`, `canSchedulePublish=false`를 유지해야 한다.
+- `blockingReasons`에는 `publish_not_implemented`, `scheduled_publish_not_implemented`, `publish_approval_not_implemented`, `content_item_mutation_policy_not_implemented`가 포함되어야 한다.
+- 현재 token expiry metadata가 만료 상태이면 `access_token_expired_reauth_required`도 포함되어야 한다.
+- 성공한 Blogger draft save가 있으면 `publishPreflightSummary.bloggerDraftSaved=true`, `bloggerPostId`와 target blog safe metadata가 표시되어야 한다.
+- duplicate save protection은 warning/summary로 표시할 수 있지만 publish permission으로 해석하면 안 된다.
+- `sideEffectSummary`는 `bloggerApiWrite=false`, `bloggerPublish=false`, `bloggerScheduledPublish=false`, `bloggerPostsUpdate=false`, `bloggerDraftSave=false`, `tokenRefresh=false`, `llmCall=false`, `contentItemMutation=false`여야 한다.
+- Content Detail UI는 Publish Preflight Dry-run 버튼과 결과 블록을 보여야 하며, publish/scheduled publish 실행 버튼을 활성화하면 안 된다.
+- UI는 requiredBeforePublish, requiredBeforeScheduledPublish, proposed publish approval snapshot fields를 표시해야 한다.
+- Publish Readiness는 계속 `ready=false`, `contentReady=true`, `publishReady=false`, `stage=draft_saved_publish_not_implemented`, `metadata.bloggerDraftSaved=true`를 유지해야 한다.
+- 9E-6B 구현/스모크 중에는 Blogger API write, additional draft save, `posts.update`, publish/scheduled publish, token refresh, LLM 호출, DB/schema/content item mutation이 발생하지 않아야 한다.

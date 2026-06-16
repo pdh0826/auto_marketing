@@ -960,3 +960,25 @@ Policy:
 - No scheduled publish implementation.
 - No Blogger publish call, Blogger write, additional draft save, `posts.update`, token refresh, LLM call, schema change, migration, or content item mutation.
 - Existing Draft Save Preflight and Publish Readiness semantics remain unchanged.
+
+## Patch 9E-6B: Blogger Publish Preflight Dry-run
+
+Implemented after Patch 9E-6A:
+
+- Added `POST /api/content-items/[id]/publish-preflight` as a read-only dry-run route.
+- Added `src/lib/content/publish-preflight.ts` to build the safe publish preflight response model.
+- Added Content Detail UI for Publish Preflight Dry-run results.
+- The dry-run reports `canPublish=false` and `canSchedulePublish=false`.
+- The dry-run reports not-implemented blockers for publish, scheduled publish, publish approval, and local content mutation policy.
+- Expired access token metadata is surfaced as `access_token_expired_reauth_required`; no token refresh is performed.
+- Existing Blogger draft save, target blog, Blogger post id, approval match, draft hash prefix, and duplicate save protection state are summarized as safe metadata.
+- Proposed publish approval snapshot fields are listed for a later schema/approval patch.
+
+Not implemented:
+
+- Blogger publish or scheduled publish
+- Blogger API write, `posts.update`, `posts.insert`, or additional draft save
+- token refresh or token endpoint call
+- content item status, `publishedAt`, `scheduledAt`, `qualityScore`, `draftHtml`, or `draftMarkdown` mutation
+- DB schema/migration changes
+- LLM calls or `llm_call_logs`

@@ -171,3 +171,13 @@ Patch 9E-6A 완료:
 - token expired 상태에서는 publish/scheduled publish보다 OAuth 재연결이 우선이라는 정책 유지
 - `posts.update`/retry 정책과 publish 정책을 분리
 - Blogger publish/scheduled publish route, Blogger write, token refresh, DB schema/migration은 구현하지 않음
+
+Patch 9E-6B 완료:
+
+- `POST /api/content-items/[id]/publish-preflight` read-only dry-run API 추가
+- Content Detail에 Publish Preflight Dry-run UI 추가
+- `canPublish=false`, `canSchedulePublish=false`, `publishReady=false`, top-level `ready=false` 유지
+- publish/scheduled publish not implemented, publish approval not implemented, content item mutation policy not implemented blocker 표시
+- access token expired 상태는 publish/scheduled publish 전 OAuth 재연결 필요 blocker로 표시
+- 향후 publish approval snapshot field 후보 문서화
+- Blogger publish/scheduled publish/write, token refresh, DB schema/migration, content item mutation은 구현하지 않음

@@ -772,3 +772,13 @@ Patch 9E-6A is a Blogger publish/scheduled publish policy and UX patch, not an L
 - No LLM provider is invoked and no `llm_call_logs` row is created.
 - No Blogger publish call, scheduled publish call, `posts.update`, additional draft save, token refresh, content item status/timestamp mutation, schema change, or migration occurs.
 - Prompt text, raw LLM responses, Blogger tokens, encrypted values, raw Blogger responses, and full draft HTML remain outside UI/log metadata.
+
+## Patch 9E-6B publish preflight dry-run boundary
+
+Patch 9E-6B is a Blogger publish preflight dry-run and approval model design patch, not an LLM routing change.
+
+- `POST /api/content-items/[id]/publish-preflight` is read-only.
+- The dry-run summarizes saved draft, approval, token expiry, and future publish approval requirements.
+- It keeps `canPublish=false`, `canSchedulePublish=false`, and all side-effect flags false.
+- No LLM provider is invoked and no `llm_call_logs` row is created.
+- No prompt, raw response, candidate text, Blogger token, encrypted value, raw Blogger response, or full draft HTML is stored in metadata.

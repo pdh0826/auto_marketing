@@ -5,7 +5,7 @@
 ```text
 repo: ~/blog-growth-agent
 branch: master
-latest committed baseline before Patch 9E-6A: 7f1a1b4 Clarify Blogger draft update retry policy
+latest committed baseline before Patch 9E-6B: e9ba8a4 Clarify Blogger publish scheduling policy
 milestone: Stepwise draft -> publish-ready HTML -> manual draftHtml apply -> Blogger OAuth/blog selection -> approval -> Blogger draft save 1회 성공
 ```
 
@@ -43,6 +43,7 @@ The current completed path is:
 - Automatic token refresh is not implemented.
 - Draft update/retry policy is planning-only: successful same-approval saves are not retried, and `posts.update` is not implemented.
 - Publish/scheduled publish policy is planning-only: saved Blogger draft is not publish-ready, and `publishReady=false`/top-level `ready=false` remain intentional.
+- Publish preflight dry-run is read-only: `canPublish=false`, `canSchedulePublish=false`, side-effect flags all false, and publish/scheduled publish remain not implemented.
 - `content_items.status`, `publishedAt`, `scheduledAt`, `qualityScore`, and `draftHtml` are not changed by publish-readiness or policy UI.
 
 ## Next Patch Priorities
@@ -57,15 +58,15 @@ B. **Patch 9E-5D: posts.update preflight/approval design**
 - Design update target identity, update approval snapshot, rollback warning, and side-effect summary before any `posts.update` implementation.
 - Keep retry limited to recorded retryable failures where Blogger draft creation is not known to have succeeded.
 
-C. **Patch 9E-6B: publish preflight/approval design**
-
-- Design publish target identity, manual publish approval, rollback acknowledgement, and `sideEffectSummary.publish=true`.
-- Design local `status`/`publishedAt` mutation order and partial failure handling without implementing publish.
-
-D. **Patch 9E-6C: scheduled publish preflight/approval design**
+C. **Patch 9E-6C: scheduled publish preflight/approval design**
 
 - Design `scheduledAt`, timezone, cancellation/update, local `status`/`scheduledAt` mutation, and `sideEffectSummary.scheduledPublish=true`.
 - Do not implement scheduled publish until design is explicitly approved.
+
+D. **Patch 9E-6D: publish approval schema/design**
+
+- Decide whether to add a publish approval table and how to snapshot Blogger draft save, draft hash, target blog/post id, rollback acknowledgement, side-effect acknowledgement, and token state.
+- Keep real Blogger publish execution out of scope until the approval model is explicitly approved.
 
 General boundary:
 
@@ -137,6 +138,7 @@ Expected preflight condition after the successful save:
 - 9E-5A clarified token-expired readiness UX and token refresh design boundaries without implementing refresh.
 - 9E-5B documented and surfaced Blogger draft update/retry policy planning without implementing `posts.update` or retry execution.
 - 9E-6A documented and surfaced publish/scheduled publish policy planning without implementing publish, scheduling, or local status/timestamp mutation.
+- 9E-6B added read-only publish preflight dry-run API/UI and documented the future publish approval snapshot model while keeping `canPublish=false`, `canSchedulePublish=false`, and all side-effect flags false.
 
 ## Closeout Safety Notes
 

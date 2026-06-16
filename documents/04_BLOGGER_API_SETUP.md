@@ -255,3 +255,30 @@ Future local mutation design must decide:
 4. Whether to create a pending state before Blogger write or update the DB only after success.
 5. How to keep raw Blogger responses, tokens, and full HTML out of logs/audit metadata.
 6. Whether `posts.update` is allowed after publish or scheduled publish.
+
+## Patch 9E-6B Publish preflight dry-run
+
+Patch 9E-6B adds a read-only publish preflight dry-run API and Content Detail UI block.
+
+Route:
+
+```text
+POST /api/content-items/[id]/publish-preflight
+```
+
+This route does not call Blogger. It does not publish, schedule, update, insert, save another draft, refresh tokens, call LLMs, or mutate DB rows.
+
+Current expected behavior:
+
+- `canPublish=false`
+- `canSchedulePublish=false`
+- `blockingReasons` includes `publish_not_implemented`
+- `blockingReasons` includes `scheduled_publish_not_implemented`
+- `blockingReasons` includes `publish_approval_not_implemented`
+- `blockingReasons` includes `content_item_mutation_policy_not_implemented`
+- if safe token expiry metadata is expired, `blockingReasons` includes `access_token_expired_reauth_required`
+- `sideEffectSummary` fields are all false
+
+The dry-run summarizes the already saved Blogger draft state: target blog id/name/url, Blogger post id, draft saved timestamp, current draft approval status/match, draft hash prefix, duplicate save protection, and token expiry state.
+
+Before real publish can be implemented, a later patch must define a publish approval snapshot, rollback acknowledgement, side-effect acknowledgement, token freshness policy, Blogger write audit policy, and local `content_items.status`/`publishedAt` mutation ordering.
