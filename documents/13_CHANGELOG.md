@@ -778,3 +778,20 @@ Policy:
 - No OAuth start/callback is invoked automatically.
 - No Blogger API write, draft save, publish, scheduled publish, `posts.insert`, or `posts.update`.
 - No LLM call, `llm_call_logs` creation, schema change, migration, or content item mutation.
+
+## Patch 9E-4G-2a: Blogger Draft Save UI Gate Activation Fix
+
+Implemented after Patch 9E-4G-1c:
+
+- Changed the content detail Blogger Draft save button to use the latest Draft Save Preflight result as the source of truth for UI activation.
+- The button now requires `canSaveDraft=true`, zero blocking reasons, ready draft payload, matching approved snapshot, and no same-approval successful save.
+- The UI no longer depends on top-level publish-readiness `ready=true` for draft save activation.
+- Added in-page 2-step confirmation before calling the existing guarded Blogger draft save route.
+- Added copy clarifying that the save action creates one Blogger draft post and does not publish, schedule publish, update posts, or refresh tokens.
+- After successful UI save, the preflight state is marked as duplicate-blocked to prevent another click for the same approval.
+
+Policy:
+
+- No automatic draft save.
+- No publish, scheduled publish, posts.update, token refresh, LLM call, schema change, or content item mutation.
+- Blogger write remains possible only through the explicit user-clicked save button after preflight passes.

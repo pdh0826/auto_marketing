@@ -752,3 +752,15 @@ npm run build
 - preflight 응답은 `hasClientSecretRef`, `clientSecretConfigured`, `encryptedClientSecretStored`, `secretMaterialReturned=false` 같은 safe diagnostic boolean만 반환해야 한다.
 - Content detail UI는 “draft not saved yet”을 첫 save 전 expected state로 표시하고, duplicate blocker는 same-approval success가 있을 때만 표시해야 한다.
 - token refresh, OAuth start, Blogger draft save, Blogger API write, publish/scheduled publish, LLM 호출은 발생하지 않아야 한다.
+
+## Patch 9E-4G-2a Blogger draft save UI gate activation 검증
+
+- Content detail의 “Blogger Draft 저장” 버튼은 최신 Draft Save Preflight 결과가 통과했을 때 활성화되어야 한다.
+- 활성 조건은 `canSaveDraft=true`, `blockingReasons=[]`, `draftPayloadReady=true`, approval snapshot approved/match, same-approval successful save 없음, 현재 저장 중 아님이어야 한다.
+- `publishReadiness.ready=false`는 draft save 버튼을 비활성화하지 않아야 한다.
+- `quality_grade` warning은 draft save 버튼을 비활성화하지 않아야 한다.
+- 버튼 주변에는 preflight 통과 후 활성화, draft post 1개 생성, publish/scheduled publish/posts.update/token refresh 미실행 안내가 보여야 한다.
+- UI는 실제 save route 호출 전에 2-step confirmation을 사용해야 한다.
+- Codex smoke에서는 사용자 명시 승인 없이 “Blogger Draft 저장” 확정 클릭을 하지 않는다.
+- save 성공 후에는 post id/draft URL이 있으면 표시하고, 같은 approval 중복 저장이 막히도록 UI state를 갱신해야 한다.
+- save 실패 시 safe error만 표시하고 token/client secret/encrypted value/raw Blogger response/full draftHtml은 노출하지 않아야 한다.

@@ -274,6 +274,7 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
   const [htmlCandidateValidation, setHtmlCandidateValidation] = useState<HtmlCandidateValidationResult | null>(null);
   const [lastHtmlApplySummary, setLastHtmlApplySummary] = useState<HtmlApplySummary | null>(null);
   const [htmlApplyConfirmationPending, setHtmlApplyConfirmationPending] = useState(false);
+  const [bloggerDraftSaveConfirmationPending, setBloggerDraftSaveConfirmationPending] = useState(false);
   const [qualityRepairCandidateText, setQualityRepairCandidateText] = useState("");
   const [qualityRepairEditMode, setQualityRepairEditMode] = useState(false);
   const [qualityRepairDirty, setQualityRepairDirty] = useState(false);
@@ -349,11 +350,13 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
   );
   const canRevokeBloggerDraftApproval = Boolean(bloggerDraftPreviewResult?.approvalSummary.approval?.status === "approved" && !revokingBloggerDraftApproval);
   const canSaveBloggerDraft = Boolean(
-    bloggerDraftPreviewResult?.draftPayloadReady &&
-      bloggerDraftPreviewResult.approvalSummary.approvalStatus === "approved" &&
-      bloggerDraftPreviewResult.approvalSummary.approvalMatchesCurrentPreview &&
-      bloggerDraftSavePreflightResult?.canSaveDraft &&
-      !bloggerDraftPreviewResult.draftSaveSummary.draftSaved &&
+    bloggerDraftSavePreflightResult?.canSaveDraft === true &&
+      bloggerDraftSavePreflightResult.blockingReasons.length === 0 &&
+      bloggerDraftSavePreflightResult.approvalSnapshotStatus.status === "approved" &&
+      bloggerDraftSavePreflightResult.approvalSnapshotStatus.approvalMatchesCurrentPreview &&
+      bloggerDraftSavePreflightResult.draftPayloadPreviewSummary.draftPayloadReady &&
+      !bloggerDraftSavePreflightResult.draftSavePreflightSummary.successfulSaveForCurrentApproval &&
+      !bloggerDraftSavePreflightResult.draftSavePreflightSummary.duplicateSaveBlocked &&
       !savingBloggerDraft
   );
   const stepwiseBusy = Boolean(loadingStepwiseRuns || creatingStepwiseRun || executingStepwiseStepKey || assemblingStepwiseRun || finalPolishingStepwiseRun);
@@ -749,6 +752,7 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
       setPublishReadinessResult(null);
       setBloggerDraftPreviewResult(null);
       setBloggerDraftSavePreflightResult(null);
+      setBloggerDraftSaveConfirmationPending(false);
       setDraftHtmlPostApplyNotice(true);
       setNotice(
         "draftHtml을 수동 반영했습니다. Quality Dry Run / Publish Readiness / Blogger Draft Payload Preview / Blogger Draft Save Preflight를 다시 실행하고, Blogger draft save 전 재승인하세요."
@@ -1117,6 +1121,7 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
         body: JSON.stringify({})
       });
       setBloggerDraftPreviewResult(result.data);
+      setBloggerDraftSaveConfirmationPending(false);
       setNotice("Blogger draft payload preview를 생성했습니다. DB에는 저장하지 않았고 Blogger API를 호출하지 않았습니다.");
     } catch (caught) {
       setBloggerDraftPreviewError(caught instanceof Error ? caught.message : "Blogger draft payload preview에 실패했습니다.");
@@ -1137,6 +1142,7 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
         body: JSON.stringify({})
       });
       setBloggerDraftSavePreflightResult(result.data);
+      setBloggerDraftSaveConfirmationPending(false);
       setNotice(
         result.data.canSaveDraft
           ? "Blogger draft save preflight가 통과되었습니다. 이 단계에서는 Blogger API write, draft save, publish, token refresh를 실행하지 않았습니다."
@@ -1170,6 +1176,7 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
         body: JSON.stringify({})
       });
       setBloggerDraftPreviewResult((current) => (current ? { ...current, approvalSummary: result.data.approvalSummary } : current));
+      setBloggerDraftSaveConfirmationPending(false);
       setNotice("현재 Blogger draft payload preview snapshot을 승인했습니다. Blogger draft save는 수행하지 않았습니다.");
     } catch (caught) {
       setBloggerDraftPreviewError(caught instanceof Error ? caught.message : "Blogger draft payload approval에 실패했습니다.");
@@ -1199,6 +1206,7 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
         method: "DELETE"
       });
       setBloggerDraftPreviewResult((current) => (current ? { ...current, approvalSummary: result.data.approvalSummary } : current));
+      setBloggerDraftSaveConfirmationPending(false);
       setNotice("Blogger draft payload approval을 취소했습니다. Blogger API는 호출하지 않았습니다.");
     } catch (caught) {
       setBloggerDraftPreviewError(caught instanceof Error ? caught.message : "Blogger draft payload approval 취소에 실패했습니다.");
@@ -1212,8 +1220,17 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
     setBloggerDraftPreviewError(null);
     setBloggerDraftSaveError(null);
 
-    const confirmed = window.confirm("실제 Blogger test blog에 draft post가 생성됩니다. publish는 수행하지 않습니다. 계속할까요?");
-    if (!confirmed) {
+    if (!canSaveBloggerDraft) {
+      setBloggerDraftSaveConfirmationPending(false);
+      setBloggerDraftSaveError("Draft Save Preflight가 통과하고 current approval snapshot이 일치할 때만 Blogger Draft 저장을 실행할 수 있습니다.");
+      return;
+    }
+
+    if (!bloggerDraftSaveConfirmationPending) {
+      setBloggerDraftSaveConfirmationPending(true);
+      setNotice(
+        "Blogger draft 저장 확인 단계입니다. 이 버튼은 실제 Blogger test blog에 draft post 1개를 생성합니다. publish/scheduled publish/posts.update/token refresh는 실행하지 않습니다. 저장하려면 같은 버튼을 한 번 더 누르세요."
+      );
       return;
     }
 
@@ -1237,8 +1254,31 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
           }
         };
       });
-      setNotice("Blogger draft가 생성되었습니다. publish/scheduled publish는 수행하지 않았습니다.");
+      setBloggerDraftSavePreflightResult((current) => {
+        if (!current || result.data.draftSave?.status !== "success") {
+          return current;
+        }
+        return {
+          ...current,
+          ok: false,
+          canSaveDraft: false,
+          blockingReasons: Array.from(new Set([...current.blockingReasons, "blogger_draft_already_saved_for_approval"])),
+          draftSavePreflightSummary: {
+            ...current.draftSavePreflightSummary,
+            draftNotSavedYetExpected: false,
+            successfulSaveForCurrentApproval: true,
+            duplicateSaveBlocked: true
+          }
+        };
+      });
+      setBloggerDraftSaveConfirmationPending(false);
+      setNotice(
+        `Blogger draft가 생성되었습니다. publish=false, scheduledPublish=false입니다. Post ID: ${result.data.draftSave?.bloggerPostId ?? "-"} / Draft URL: ${
+          result.data.draftSave?.bloggerPostUrl ?? "-"
+        }`
+      );
     } catch (caught) {
+      setBloggerDraftSaveConfirmationPending(false);
       const apiError = caught instanceof Error ? (caught as ApiErrorWithData) : null;
       const draftSave = apiError?.data?.draftSave ?? null;
       setBloggerDraftSaveError(buildBloggerDraftSaveErrorMessage(apiError?.message ?? "Blogger draft 저장에 실패했습니다.", draftSave));
@@ -1519,9 +1559,19 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
                 {runningBloggerDraftSavePreflight ? "Draft Save Preflight 실행 중" : "Draft Save Preflight"}
               </button>
               <button className="button secondary" type="button" disabled={!canSaveBloggerDraft} onClick={() => void saveBloggerDraft()}>
-                {savingBloggerDraft ? "Blogger Draft 저장 중" : "Blogger Draft 저장"}
+                {formatBloggerDraftSaveButtonLabel(savingBloggerDraft, bloggerDraftSaveConfirmationPending)}
               </button>
             </div>
+            <div className="notice">
+              Preflight 통과 후에만 Blogger Draft 저장 버튼이 활성화됩니다. 이 버튼은 Blogger draft post 1개를 생성합니다. publish, scheduled publish, posts.update,
+              token refresh는 실행하지 않습니다.
+            </div>
+            {bloggerDraftSaveConfirmationPending ? (
+              <div className="notice warning">
+                Blogger draft 저장 확인 대기 중입니다. 같은 버튼을 한 번 더 누르면 guarded save route가 Blogger draft post 1개를 생성합니다. publish/scheduled
+                publish/posts.update/token refresh는 실행하지 않습니다.
+              </div>
+            ) : null}
             {!bloggerDraftSavePreflightResult ? (
               <div className="notice warning">Blogger Draft 저장 버튼은 Draft Save Preflight가 통과하기 전까지 비활성화됩니다.</div>
             ) : !bloggerDraftSavePreflightResult.canSaveDraft ? (
@@ -1776,7 +1826,7 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
                     {revokingBloggerDraftApproval ? "승인 취소 중" : "승인 취소"}
                   </button>
                   <button className="button secondary" type="button" disabled={!canSaveBloggerDraft} onClick={() => void saveBloggerDraft()}>
-                    {savingBloggerDraft ? "Blogger Draft 저장 중" : "Blogger Draft 저장"}
+                    {formatBloggerDraftSaveButtonLabel(savingBloggerDraft, bloggerDraftSaveConfirmationPending)}
                   </button>
                 </div>
                 {!bloggerDraftSavePreflightResult?.canSaveDraft ? (
@@ -3426,6 +3476,16 @@ function formatHtmlApplyButtonLabel(applying: boolean, confirmationPending: bool
     return "draftHtml 저장 확정";
   }
   return "draftHtml에 반영";
+}
+
+function formatBloggerDraftSaveButtonLabel(saving: boolean, confirmationPending: boolean) {
+  if (saving) {
+    return "Blogger Draft 저장 중";
+  }
+  if (confirmationPending) {
+    return "Blogger Draft 저장 확정";
+  }
+  return "Blogger Draft 저장";
 }
 
 function formatDraftCandidateSource(source: DraftCandidateSource) {

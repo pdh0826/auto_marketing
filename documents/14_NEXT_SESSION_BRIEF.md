@@ -131,10 +131,14 @@ latest committed baseline before Patch 9E-4C-3C: 3cb3fbc Add stepwise draft gene
 - `blogger_draft_saved` is no longer a first-draft-save blocker; same-approval duplicate saves use `blogger_draft_already_saved_for_approval`.
 - Expired access tokens block preflight with `access_token_expired_reauth_required`; token refresh is still not implemented.
 - Env-backed `clientSecretRef` can satisfy client secret readiness through safe boolean diagnostics without returning secret material.
+- Patch 9E-4G-2a fixes the content detail Blogger Draft save UI activation gate.
+- The save button now activates from the latest passing Draft Save Preflight result rather than publish-readiness top-level readiness.
+- The UI uses an in-page 2-step confirmation before calling the existing guarded Blogger draft save route.
+- Codex smoke should verify the enabled button but should not click the final save confirmation without explicit user approval.
 
 ## Next Patch Candidate
 
-Patch 9E-4G-2 후보: Blogger draft save execution readiness after passing Draft Save Preflight.
+Patch 9E-4G-2 후보: user-approved one-time Blogger draft save from the web UI.
 
 Alternative candidates:
 
@@ -146,7 +150,7 @@ Recommended scope:
 - Confirm preflight blocks missing Blogger connection, missing verified selected blog, missing/expired token, missing active approval, stale approval, HTML validation failures, and content readiness failures.
 - Use the 9E-4G-1b checklist/action items to clear blockers before any live write attempt.
 - If preflight is blocked by `access_token_expired_reauth_required`, manually re-run OAuth before considering draft save.
-- Only consider actual Blogger draft save after the user explicitly approves a live test blog write.
+- Only perform actual Blogger draft save after the user explicitly approves a live test blog write in the UI.
 - Keep publish, scheduled publish, token refresh, and posts.update out of scope.
 - Keep automatic `draftHtml`, status, qualityScore, Blogger draft save, and publish out of scope unless separately requested.
 - Keep existing `generate-draft` route unchanged.
