@@ -830,3 +830,14 @@ Safety guard:
 - Blogger blog id와 draft post id가 있으면 관리자 edit/preview 링크가 표시되어야 한다.
 - Publish Readiness Check, Draft Save Preflight, UI 확인 중 Blogger API write, 추가 draft save, publish/scheduled publish, `posts.update`, token refresh, LLM 호출, DB 저장은 발생하지 않아야 한다.
 - DB guard 기대값은 session closeout baseline과 동일해야 한다: `blogger_draft_saves=1`, `blogger_draft_approvals=1`, `llm_call_logs=22`, content item status `planned`, draft hashes unchanged.
+
+## Patch 9E-5A Blogger token refresh readiness/design 검증
+
+- Draft Save Preflight가 `access_token_expired_reauth_required`를 반환하면 UI가 Blogger OAuth 재연결 필요를 명확히 안내해야 한다.
+- 안내는 이미 저장된 Blogger draft가 유지되고 같은 approval의 duplicate save protection이 계속 동작한다고 설명해야 한다.
+- 안내는 다음 Blogger write 전 OAuth 재연결이 필요하다고 말해야 하며, 자동 token refresh가 구현된 것처럼 표현하면 안 된다.
+- `/settings/blogger`로 이동하는 재연결 확인 링크는 허용되지만 OAuth start/token endpoint/refresh endpoint를 자동 호출하면 안 된다.
+- UI/API/log/test output에는 access token, refresh token, client secret, encrypted value, raw OAuth response가 노출되지 않아야 한다.
+- Preflight side effect summary는 `tokenRefresh=false`, `bloggerApiWrite=false`, `bloggerDraftSave=false`, `publish=false`, `scheduledPublish=false`, `llmCall=false`, `contentItemMutation=false`를 유지해야 한다.
+- Publish readiness는 계속 `ready=false`, `publishReady=false`, `stage=draft_saved_publish_not_implemented`, `metadata.bloggerDraftSaved=true`를 유지해야 한다.
+- DB guard 기대값은 변경 전과 동일해야 한다: `blogger_draft_saves=1`, `blogger_draft_approvals=1`, `llm_call_logs=22`, content item status `planned`, draft hashes unchanged.

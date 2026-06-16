@@ -741,3 +741,14 @@ Patch 9E-4G-1c refines read-only Blogger draft save preflight classification wit
 - Env-backed client secret configuration is reported through safe booleans and does not require an encrypted client-secret row when `clientSecretRef` is resolvable.
 - This patch does not invoke LLM providers, create `llm_call_logs`, refresh tokens, start OAuth automatically, call Blogger APIs, or mutate content items.
 - Blogger API, draft save, publish, scheduled publish, token refresh, LLM calls, and `llm_call_logs` remain out of scope.
+
+## Patch 9E-5A Blogger token expiry readiness boundary
+
+Patch 9E-5A is a Blogger OAuth/token readiness UX and design patch, not an LLM routing change.
+
+- `access_token_expired_reauth_required` is surfaced as a Blogger readiness blocker.
+- The UI guides the user toward OAuth re-connection before a future Blogger write.
+- Automatic token refresh is still not implemented.
+- No refresh token is used, no token endpoint is called, and no Blogger write is triggered.
+- No LLM provider is invoked and no `llm_call_logs` row is created.
+- Token/secret/raw OAuth response values remain outside UI, logs, docs, and test output.

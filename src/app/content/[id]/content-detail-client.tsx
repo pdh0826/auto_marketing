@@ -1572,7 +1572,17 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
                   ) : null}
                   {postSaveAccessTokenExpired ? (
                     <div className="notice warning">
-                      Access token이 만료되어 향후 Blogger draft save 전 OAuth 재연결이 필요합니다. token refresh 자동 구현은 이번 패치 범위가 아닙니다.
+                      <strong>Blogger OAuth 재연결 필요</strong>
+                      <p>
+                        Blogger access token이 만료되어 향후 Blogger write 전에 OAuth 재연결이 필요합니다. 이미 저장된 Blogger draft는 유지되며, 같은 approval에 대한
+                        중복 저장은 계속 차단됩니다.
+                      </p>
+                      <p>자동 token refresh는 아직 구현되지 않았고, 이 화면은 재연결 안내와 readiness 상태만 제공합니다.</p>
+                      <div className="form-actions">
+                        <Link className="button secondary" href="/settings/blogger">
+                          Blogger 설정에서 OAuth 재연결 확인
+                        </Link>
+                      </div>
                     </div>
                   ) : null}
                   {publishReadinessDraftAdminLinks ? (
@@ -1785,9 +1795,21 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
                   <DetailItem label="Duplicate Save Blocked" value={bloggerDraftSavePreflightResult.draftSavePreflightSummary.duplicateSaveBlocked ? "yes" : "no"} />
                 </div>
                 {bloggerDraftSavePreflightResult.bloggerConnectionSummary.accessTokenExpired ? (
-                  <div className="notice error">
-                    <strong>Access token expired</strong>
-                    <p>Access token이 만료되었습니다. Blogger draft save 전 Blogger OAuth 연결을 다시 실행하세요. token refresh는 아직 구현하지 않습니다.</p>
+                  <div className="notice warning">
+                    <strong>Blogger access token expired</strong>
+                    <p>
+                      현재 Blogger access token이 만료되어 추가 Blogger draft save는 불가능합니다. 이미 저장된 Blogger draft는 유지되며, 같은 approval에 대한 duplicate
+                      protection도 계속 동작합니다.
+                    </p>
+                    <p>
+                      다음 Blogger write를 하려면 Blogger OAuth 재연결이 필요합니다. 자동 token refresh는 아직 구현하지 않았고, 이 preflight는 token refresh나 Blogger
+                      write를 수행하지 않습니다.
+                    </p>
+                    <div className="form-actions">
+                      <Link className="button secondary" href="/settings/blogger">
+                        Blogger 설정에서 OAuth 재연결 확인
+                      </Link>
+                    </div>
                   </div>
                 ) : null}
                 {bloggerDraftSavePreflightResult.draftSavePreflightSummary.draftNotSavedYetExpected ? (
@@ -3943,8 +3965,8 @@ function getBloggerDraftSaveActionItem(reason: string) {
   if (reason === "access_token_expired_reauth_required") {
     return {
       reason,
-      label: "Access token expired",
-      action: "Access token expired. Re-run OAuth connection before Blogger draft save."
+      label: "Blogger OAuth 재연결 필요",
+      action: "Access token이 만료되었습니다. 이미 저장된 draft는 유지되며, 다음 Blogger write 전 설정 > Blogger에서 OAuth 재연결을 확인하세요. 자동 token refresh는 아직 구현하지 않습니다."
     };
   }
   if (reason === "blogger_blog_selection" || reason === "blogger_blog_not_verified") {

@@ -166,3 +166,30 @@ Publish readiness:
 - successful draft save가 있으면 draft saved check는 pass할 수 있다.
 - `publishReady=false`, top-level `ready=false`는 유지한다.
 - publish/scheduled publish는 후속 패치 범위다.
+
+## Patch 9E-5A Blogger token refresh readiness/design
+
+Patch 9E-5A는 자동 token refresh 구현이 아니라 access token 만료 상태에 대한 readiness/design 및 UX 정리다.
+
+Current behavior:
+
+- `access_token_expired_reauth_required` means the stored Blogger access token is expired and a future Blogger write must not proceed.
+- Draft Save Preflight keeps `canSaveDraft=false` while this blocker is present.
+- Already saved Blogger drafts remain in Blogger and are not changed by the expired token state.
+- Duplicate save protection for the same approval remains active with `blogger_draft_already_saved_for_approval`.
+- The safe next action is OAuth re-connection through the existing Blogger settings flow.
+- Automatic token refresh is not implemented and must not be implied by UI copy.
+
+Security policy:
+
+- Refresh token, access token, client secret, encrypted value, and raw OAuth response bodies must not be displayed in UI, logs, docs, or test output.
+- Preflight responses may expose safe booleans such as token presence/expired status and `tokenRefreshImplemented=false`, but not secret material.
+- `sideEffectSummary.tokenRefresh` must remain `false` until a later patch explicitly implements a refresh operation.
+
+Before implementing token refresh in a later patch, decide:
+
+1. Whether refresh should run automatically during preflight, only from a user-clicked reconnect/refresh action, or only immediately before a guarded write.
+2. How to audit refresh attempts without storing raw token responses.
+3. How to prevent duplicate refresh attempts and handle clock skew around expiry.
+4. How refresh failure falls back to OAuth re-authorization.
+5. Whether a refreshed token still requires a fresh Draft Save Preflight before Blogger write.

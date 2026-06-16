@@ -904,3 +904,20 @@ Policy:
 - UI/readiness display only.
 - No Blogger API write, additional draft save, publish, scheduled publish, `posts.update`, token refresh, LLM call, schema change, migration, or content item mutation.
 - `publishReady=false` and top-level `ready=false` remain the server semantics until publish is explicitly designed and implemented later.
+
+## Patch 9E-5A: Blogger Token Refresh Readiness/Design
+
+Implemented after Patch 9E-4H:
+
+- Clarified the content detail UX for `access_token_expired_reauth_required`.
+- The UI now explains that the stored Blogger access token is expired and that future Blogger writes require OAuth re-connection.
+- The UI separates token expiry from the already saved Blogger draft: the existing draft remains intact and same-approval duplicate-save protection remains active.
+- Added `/settings/blogger` navigation from token-expired readiness notices.
+- Documented token refresh readiness policy and required decisions before implementing refresh.
+- Kept Draft Save Preflight and Publish Readiness semantics unchanged: expired token keeps `canSaveDraft=false`; post-save publish readiness remains `ready=false`, `publishReady=false`.
+
+Policy:
+
+- No automatic token refresh implementation.
+- No refresh token use, token endpoint call, OAuth token exchange call, Blogger write, additional draft save, publish, scheduled publish, `posts.update`, LLM call, schema change, migration, or content item mutation.
+- Access token, refresh token, client secret, encrypted value, and raw OAuth response remain redacted and are not exposed in UI/docs/logs/test output.
