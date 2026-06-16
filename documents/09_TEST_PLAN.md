@@ -817,3 +817,16 @@ Safety guard:
 - Do not call publish, scheduled publish, `posts.update`, token refresh, or LLM in closeout/readiness UX patches.
 - Do not mutate content item status, `qualityScore`, `publishedAt`, or `scheduledAt`.
 - Do not read, print, modify, or stage `.env.local`, `.env.local.backup*`, token files, client secrets, encrypted values, or secret backup files.
+
+## Patch 9E-4H Post-save publish-readiness UX refresh 검증
+
+- Publish Readiness Check 실행 후 `Post-save Publish Readiness Status` 블록이 보여야 한다.
+- Blogger draft save 성공 기록이 있으면 “초안 저장 완료, 발행 구현 전” 상태로 표시해야 한다.
+- Blogger Draft Saved, Blogger Draft Post ID, Blogger Draft Saved At, Manual Approval Match가 표시되어야 한다.
+- Draft Save Preflight를 실행해 duplicate blocker가 확인된 경우 Duplicate Save Protection은 protective state로 표시되어야 한다.
+- `publishReady=false`와 top-level `ready=false`가 명확히 보여야 한다.
+- Publish, Scheduled Publish, `posts.update`, Token Refresh는 `not implemented`로 표시되어야 한다.
+- Access token 만료 blocker가 preflight에 있으면 향후 Blogger write 전 OAuth 재연결이 필요하고 token refresh 자동 구현은 범위 밖이라는 안내가 보여야 한다.
+- Blogger blog id와 draft post id가 있으면 관리자 edit/preview 링크가 표시되어야 한다.
+- Publish Readiness Check, Draft Save Preflight, UI 확인 중 Blogger API write, 추가 draft save, publish/scheduled publish, `posts.update`, token refresh, LLM 호출, DB 저장은 발생하지 않아야 한다.
+- DB guard 기대값은 session closeout baseline과 동일해야 한다: `blogger_draft_saves=1`, `blogger_draft_approvals=1`, `llm_call_logs=22`, content item status `planned`, draft hashes unchanged.

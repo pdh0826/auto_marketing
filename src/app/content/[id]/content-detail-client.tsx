@@ -365,6 +365,12 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
     null;
   const latestSuccessfulBloggerDraftAdminLinks = buildBloggerDraftAdminLinks(latestSuccessfulBloggerDraftSave);
   const latestSuccessfulBloggerDraftUrlLooksLikeHome = looksLikeBloggerBlogHomeUrl(latestSuccessfulBloggerDraftSave);
+  const publishReadinessDraftAdminLinks = buildBloggerDraftAdminLinksFromIds(
+    publishReadinessResult?.metadata.bloggerBlogId ?? null,
+    publishReadinessResult?.metadata.bloggerDraftPostId ?? null
+  );
+  const postSaveDuplicateProtectionActive = Boolean(bloggerDraftSavePreflightResult?.draftSavePreflightSummary.duplicateSaveBlocked);
+  const postSaveAccessTokenExpired = Boolean(bloggerDraftSavePreflightResult?.blockingReasons.includes("access_token_expired_reauth_required"));
   const stepwiseBusy = Boolean(loadingStepwiseRuns || creatingStepwiseRun || executingStepwiseStepKey || assemblingStepwiseRun || finalPolishingStepwiseRun);
   const canCreateStepwiseRun = Boolean(contentItem?.planJson && !creatingStepwiseRun);
   const canAssembleStepwiseRun = Boolean(selectedStepwiseRun && !stepwiseBusy && getMissingStepwiseSectionKeys(selectedStepwiseRun).length === 0);
@@ -1522,6 +1528,66 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
                   <DetailItem label="Blogger Draft Post ID" value={publishReadinessResult.metadata.bloggerDraftPostId ?? "-"} />
                   <DetailItem label="Blogger Draft URL" value={publishReadinessResult.metadata.bloggerDraftUrl ?? "-"} />
                   <DetailItem label="Blogger Draft Saved At" value={publishReadinessResult.metadata.bloggerDraftSavedAt ? formatDate(publishReadinessResult.metadata.bloggerDraftSavedAt) : "-"} />
+                </div>
+                <div className="read-block">
+                  <h3>Post-save Publish Readiness Status</h3>
+                  <div className={publishReadinessResult.metadata.bloggerDraftSaved ? "notice" : "notice warning"}>
+                    <strong>{publishReadinessResult.metadata.bloggerDraftSaved ? "Blogger draft save 완료" : "Blogger draft save 미완료"}</strong>
+                    {publishReadinessResult.metadata.bloggerDraftSaved ? (
+                      <>
+                        <p>
+                          Blogger draft save는 완료되었습니다. 이 상태는 publish-ready가 아니라 “초안 저장 완료, 발행 구현 전” 상태입니다.
+                        </p>
+                        <p>같은 approval에 대한 추가 Blogger draft save는 duplicate protection으로 차단됩니다.</p>
+                        <p>publish/scheduled publish/posts.update/token refresh는 아직 구현하지 않습니다.</p>
+                      </>
+                    ) : (
+                      <p>
+                        아직 Blogger draft save 성공 기록이 없습니다. Publish Readiness는 화면상 preview이며, 실제 draft save는 Draft Payload Preview + Manual Approval +
+                        Draft Save Preflight 이후 별도 승인으로만 수행됩니다.
+                      </p>
+                    )}
+                  </div>
+                  <div className="detail-grid">
+                    <DetailItem label="Blogger Draft Saved" value={publishReadinessResult.metadata.bloggerDraftSaved ? "yes" : "no"} />
+                    <DetailItem label="Blogger Draft Post ID" value={publishReadinessResult.metadata.bloggerDraftPostId ?? "-"} />
+                    <DetailItem
+                      label="Blogger Draft Saved At"
+                      value={publishReadinessResult.metadata.bloggerDraftSavedAt ? formatDate(publishReadinessResult.metadata.bloggerDraftSavedAt) : "-"}
+                    />
+                    <DetailItem label="Manual Approval Match" value={publishReadinessResult.metadata.bloggerDraftApprovalMatchesCurrentPreview ? "yes" : "no"} />
+                    <DetailItem label="Duplicate Save Protection" value={postSaveDuplicateProtectionActive ? "active" : "run Draft Save Preflight to confirm"} />
+                    <DetailItem label="Publish Ready" value={publishReadinessResult.publishReady ? "yes" : "no"} />
+                    <DetailItem label="Top-level Ready" value={publishReadinessResult.ready ? "yes" : "no"} />
+                    <DetailItem label="Publish" value="not implemented" />
+                    <DetailItem label="Scheduled Publish" value="not implemented" />
+                    <DetailItem label="posts.update" value="not implemented" />
+                    <DetailItem label="Token Refresh" value="not implemented" />
+                  </div>
+                  {postSaveDuplicateProtectionActive ? (
+                    <div className="notice">
+                      <strong>Duplicate save protection is active.</strong>
+                      <p>현재 approval snapshot으로 이미 성공한 Blogger draft가 있어 같은 approval로는 다시 저장하지 않습니다.</p>
+                    </div>
+                  ) : null}
+                  {postSaveAccessTokenExpired ? (
+                    <div className="notice warning">
+                      Access token이 만료되어 향후 Blogger draft save 전 OAuth 재연결이 필요합니다. token refresh 자동 구현은 이번 패치 범위가 아닙니다.
+                    </div>
+                  ) : null}
+                  {publishReadinessDraftAdminLinks ? (
+                    <div className="form-actions">
+                      <a className="button secondary" href={publishReadinessDraftAdminLinks.editUrl} target="_blank" rel="noreferrer">
+                        Blogger 관리자에서 초안 편집 열기
+                      </a>
+                      <a className="button secondary" href={publishReadinessDraftAdminLinks.previewUrl} target="_blank" rel="noreferrer">
+                        Blogger 초안 미리보기 열기
+                      </a>
+                    </div>
+                  ) : null}
+                  <div className="notice">
+                    이 상태 블록은 Publish Readiness preview입니다. Blogger API write, publish, scheduled publish, posts.update, token refresh, LLM 호출, DB 저장을 수행하지 않습니다.
+                  </div>
                 </div>
                 <PublishReadinessSummary result={publishReadinessResult} />
                 <PublishReadinessTable checks={publishReadinessResult.checks} />
@@ -3312,12 +3378,20 @@ function buildBloggerDraftAdminLinks(draftSave: BloggerDraftSaveAdmin | null) {
     return null;
   }
 
-  const blogId = encodeURIComponent(draftSave.targetBloggerBlogId);
-  const postId = encodeURIComponent(draftSave.bloggerPostId);
+  return buildBloggerDraftAdminLinksFromIds(draftSave.targetBloggerBlogId, draftSave.bloggerPostId);
+}
+
+function buildBloggerDraftAdminLinksFromIds(blogId: string | null, postId: string | null) {
+  if (!blogId || !postId) {
+    return null;
+  }
+
+  const encodedBlogId = encodeURIComponent(blogId);
+  const encodedPostId = encodeURIComponent(postId);
 
   return {
-    editUrl: `https://www.blogger.com/blog/post/edit/${blogId}/${postId}`,
-    previewUrl: `https://www.blogger.com/blog/post/edit/preview/${blogId}/${postId}`
+    editUrl: `https://www.blogger.com/blog/post/edit/${encodedBlogId}/${encodedPostId}`,
+    previewUrl: `https://www.blogger.com/blog/post/edit/preview/${encodedBlogId}/${encodedPostId}`
   };
 }
 

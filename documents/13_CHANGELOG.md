@@ -885,3 +885,22 @@ Security/redaction policy confirmed:
 
 - No access token, refresh token, client secret, encrypted value, raw Blogger response body, full `draftHtml`, prompt full text, raw LLM response, or generated candidate full text is exposed in admin DTOs/log metadata.
 - `.env.local`, `.env.local.backup*`, and secret backup files must not be read, modified, printed, or staged.
+
+## Patch 9E-4H: Post-save Publish Readiness UX Refresh
+
+Implemented after the 2026-06-16 closeout milestone:
+
+- Improved the content detail Publish Readiness Gate with a post-save status block.
+- The UI now separates “Blogger draft save 완료” from actual publish readiness.
+- Blogger draft saved state, post id, saved time, manual approval match, duplicate-save protection, and implementation status are shown together.
+- Publish Ready and top-level Ready remain visibly false after draft save.
+- The UI explains that this is “초안 저장 완료, 발행 구현 전” rather than publish-ready.
+- Duplicate save protection is shown as a protective post-save state, not a failure.
+- If preflight reports `access_token_expired_reauth_required`, the UI explains that OAuth re-connection is needed before a future Blogger write and that automatic token refresh is not implemented.
+- Blogger admin edit/preview links can be derived from publish-readiness metadata when blog id and post id are available.
+
+Policy:
+
+- UI/readiness display only.
+- No Blogger API write, additional draft save, publish, scheduled publish, `posts.update`, token refresh, LLM call, schema change, migration, or content item mutation.
+- `publishReady=false` and top-level `ready=false` remain the server semantics until publish is explicitly designed and implemented later.
