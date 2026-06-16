@@ -310,3 +310,28 @@ Current expected behavior:
 The snapshot preview contains non-secret fields only: content id/status, draft content hashes, title candidate, target Blogger blog safe metadata, Blogger post id, draft saved timestamp, draft approval id/hash, approval match status, publish mode, optional schedule fields, acknowledgement placeholders, and safe token state.
 
 `approvalSnapshotHashPreview` is not a stored approval hash and does not mean publish approval was created.
+
+## Patch 9E-6D Publish approval persistence policy
+
+Patch 9E-6D documents the approval persistence policy before any real approval table or Blogger publish implementation.
+
+This patch does not add a route, table, migration, token refresh flow, Blogger API write, publish call, scheduled publish call, `posts.update`, `posts.insert`, or additional draft save.
+
+Future publish approval persistence must require:
+
+- A verified saved Blogger draft record with Blogger post id and target blog safe metadata.
+- A current Blogger draft approval snapshot match.
+- A deterministic publish approval snapshot and hash.
+- Explicit rollback acknowledgement.
+- Explicit side-effect summary acknowledgement.
+- Token state checked at approval time and rechecked before any later publish write.
+- Approval invalidation rules for content hash, title, blog, post, schedule, timezone, token state, and status changes.
+- A separate publish execution audit record for any later Blogger publish attempt.
+
+Future publish execution remains separate:
+
+- A stored publish approval should only authorize a later publish preflight; it should not publish by itself.
+- Immediate publish and scheduled publish must show different side-effect summaries.
+- Scheduled publish must include `scheduledAt` and timezone in the approval snapshot.
+- Token refresh is still not implemented and must not be called implicitly.
+- Raw Blogger responses, raw error bodies, access tokens, refresh tokens, client secrets, encrypted values, and full HTML must remain redacted.

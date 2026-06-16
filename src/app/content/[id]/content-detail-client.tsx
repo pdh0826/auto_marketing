@@ -1864,6 +1864,7 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
                   items={publishApprovalPreviewResult.requiredBeforeApprovalPersistence}
                   emptyText="approval persistence 전 필수 항목이 없습니다."
                 />
+                <PublishApprovalPersistencePolicyNotice />
                 <ValidationList title="Required Before Publish" items={publishApprovalPreviewResult.requiredBeforePublish} emptyText="publish 전 필수 항목이 없습니다." />
                 <ValidationList
                   title="Required Before Scheduled Publish"
@@ -4261,6 +4262,72 @@ function PublishApprovalPreviewActionItems({ result }: { result: PublishApproval
           </li>
         ))}
       </ul>
+    </div>
+  );
+}
+
+function PublishApprovalPersistencePolicyNotice() {
+  return (
+    <div className="notice warning">
+      <strong>Publish Approval Persistence Policy</strong>
+      <p>
+        현재 화면의 approval snapshot/hash는 preview-only입니다. publish approval table, schema, migration, insert/update route는 아직 구현되지 않았고 DB에 저장되지
+        않습니다.
+      </p>
+      <p>
+        향후 publish approval은 immutable snapshot으로 저장되어야 하며, 저장된 approval이 있어도 publish 실행은 별도 preflight와 사용자 명시 승인 후에만 허용됩니다.
+      </p>
+      <div className="detail-grid">
+        <DetailItem label="Approval Persistence" value="not implemented" />
+        <DetailItem label="Schema / Migration" value="not implemented" />
+        <DetailItem label="Snapshot Hash" value="preview only, not stored" />
+        <DetailItem label="Invalidation Policy" value="planning only" />
+        <DetailItem label="Rollback Acknowledgement" value="required before persistence" />
+        <DetailItem label="Side-effect Acknowledgement" value="required before persistence" />
+        <DetailItem label="Publish Execution" value="separate future step" />
+        <DetailItem label="DB Write" value="false" />
+      </div>
+      <ValidationList
+        title="Publish Approval Persistence Design Gates"
+        items={[
+          "Dedicated publish approval table or approved existing-table extension",
+          "Frozen canonical snapshot field list and hash algorithm",
+          "Immutable approval snapshot with created/invalidated lifecycle",
+          "Rollback acknowledgement capture before approval creation",
+          "Side-effect summary acknowledgement capture before approval creation",
+          "Token state checkedAt persistence policy",
+          "Publish execution attempt audit model linked to approval id",
+          "Partial failure handling policy for Blogger success plus local DB failure"
+        ]}
+        emptyText="policy gate가 없습니다."
+      />
+      <ValidationList
+        title="Approval Invalidation Triggers"
+        items={[
+          "draftHtml hash changes",
+          "draftMarkdown hash changes",
+          "title candidate changes",
+          "target Blogger blog changes",
+          "Blogger draft post id changes",
+          "Blogger draft is changed by a future posts.update flow",
+          "scheduledAt or timezone changes",
+          "content status changes",
+          "token state becomes expired before publish",
+          "newer approval supersedes the current approval"
+        ]}
+        emptyText="invalidation trigger가 없습니다."
+      />
+      <ValidationList
+        title="Required Manual Acknowledgements"
+        items={[
+          "Blogger publish changes external service state and rollback is not automatic",
+          "Content item status/timestamp mutation policy is separate and not implemented",
+          "Publish side-effect summary must be acknowledged before approval persistence",
+          "Snapshot hash, blog id, post id, and draft hashes must be reviewed before approval",
+          "Token state must be checked again before any future publish write"
+        ]}
+        emptyText="acknowledgement가 없습니다."
+      />
     </div>
   );
 }

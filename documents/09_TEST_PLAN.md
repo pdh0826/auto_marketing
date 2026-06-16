@@ -895,3 +895,16 @@ Safety guard:
 - Content Detail UI는 Publish Approval Snapshot Preview 버튼과 결과 블록을 보여야 하며, publish approval 생성/publish/scheduled publish 실행 버튼을 활성화하면 안 된다.
 - UI는 requiredBeforeApprovalPersistence를 표시해야 한다.
 - 9E-6C 구현/스모크 중에는 publish approval insert/update, Blogger API write, additional draft save, `posts.update`, publish/scheduled publish, token refresh, LLM 호출, DB/schema/content item mutation이 발생하지 않아야 한다.
+
+## Patch 9E-6D Publish approval persistence policy/schema plan 검증
+
+- Content Detail UI는 Publish Approval Snapshot Preview 결과 안에 `Publish Approval Persistence Policy` 안내를 표시해야 한다.
+- UI는 approval persistence, schema/migration, approval DB write가 `not implemented` 또는 planning-only임을 보여야 한다.
+- UI는 snapshot hash가 preview-only이며 DB에 저장된 approval hash가 아님을 보여야 한다.
+- UI는 immutable snapshot, invalidation triggers, rollback acknowledgement, side-effect acknowledgement, token state checkedAt, publish attempt audit model이 approval persistence 전 필요하다고 표시해야 한다.
+- UI는 draft hash, title, target blog, Blogger post id, schedule/timezone, content status, token state 변경이 approval을 stale 또는 invalidated 상태로 만들어야 한다고 안내해야 한다.
+- `POST /api/content-items/[id]/publish-approval-preview` 응답은 계속 `canCreatePublishApproval=false`, `canPublish=false`, `canSchedulePublish=false`, `approvalPersistence=false`, `dbWrite=false`를 유지해야 한다.
+- `POST /api/content-items/[id]/publish-preflight` 응답은 계속 `canPublish=false`, `canSchedulePublish=false`를 유지해야 한다.
+- Publish Readiness는 계속 `ready=false`, `contentReady=true`, `publishReady=false`, `stage=draft_saved_publish_not_implemented`, `metadata.bloggerDraftSaved=true`를 유지해야 한다.
+- 9E-6D 구현/스모크 중에는 Prisma schema/migration 변경, publish approval insert/update, Blogger API write, additional draft save, `posts.update`, publish/scheduled publish, token refresh, token endpoint call, LLM 호출, DB write/mutation, content item mutation이 발생하지 않아야 한다.
+- DB guard 기대값은 기존 post-save baseline과 같아야 한다: `blogger_draft_saves=1`, `blogger_draft_approvals=1`, `llm_call_logs=22`, content item status `planned`, draft hashes unchanged.

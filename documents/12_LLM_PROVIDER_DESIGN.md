@@ -792,3 +792,13 @@ Patch 9E-6C is a read-only publish approval snapshot/hash preview patch, not an 
 - `approvalSnapshotHashPreview` is computed locally from the preview payload; it is not an LLM output and is not persisted.
 - No `llm_call_logs` row is created.
 - Prompt text, raw responses, candidate text, Blogger tokens, encrypted values, raw Blogger responses, and full draft HTML remain outside UI/log metadata.
+
+## Patch 9E-6D publish approval persistence policy boundary
+
+Patch 9E-6D is a publish approval persistence policy/schema planning patch, not an LLM routing change.
+
+- The patch adds no LLM provider call and creates no `llm_call_logs` row.
+- Approval persistence planning uses existing snapshot/hash metadata only.
+- The UI and docs describe future immutable approval persistence, invalidation, acknowledgement, token checkedAt, and publish attempt audit requirements.
+- No prompt text, raw model response, generated candidate text, Blogger token, encrypted value, raw Blogger response, raw Blogger error body, or full draft HTML is stored in metadata.
+- Future publish approval persistence must remain independent from content generation and must not call an LLM when creating or invalidating approval records.

@@ -191,3 +191,12 @@ Patch 9E-6C 완료:
 - `publish_approval_persistence_not_implemented`, publish/scheduled not implemented, token expired blocker 표시
 - side-effect all false 유지, `dbWrite=false`, `approvalPersistence=false` 표시
 - publish approval persistence, Blogger write, publish/scheduled publish, DB schema/migration, content item mutation은 구현하지 않음
+
+Patch 9E-6D 완료:
+
+- Publish Approval Snapshot Preview UI에 approval persistence policy 안내 추가
+- approval persistence가 아직 table/schema/migration/route/DB write가 아님을 명확히 표시
+- 향후 publish approval은 immutable snapshot, deterministic hash, rollback acknowledgement, side-effect acknowledgement, token state checkedAt, invalidation policy, publish attempt audit가 필요하다고 문서화
+- draft/content/blog/post/schedule/timezone/token/status 변경 시 approval이 stale 또는 invalidated가 되어야 한다는 정책 문서화
+- stored publish approval과 실제 publish execution은 별도 단계이며 publish/scheduled publish는 후속 승인 전 구현하지 않음
+- Blogger publish/scheduled publish/write, token refresh, posts.update, additional draft save, DB schema/migration, content item mutation, LLM 호출은 구현하지 않음

@@ -499,3 +499,77 @@ Patch 9E-6C adds a read-only publish approval snapshot preview model, not persis
 - `sideEffectSummary` is all false, including `dbWrite=false` and `approvalPersistence=false`.
 
 Before publish approval persistence can be implemented, decide whether to add a dedicated table or extend an existing table, how to store canonical snapshot fields and hash, how to capture rollback and side-effect acknowledgements, how to store token state checked time, how approval expiry/invalidation works when draft HTML/title/blog/post changes, how publish attempts link to approval id, how partial failures are audited, and how raw Blogger responses/tokens remain redacted.
+
+## Patch 9E-6D Publish approval persistence policy and schema plan
+
+Patch 9E-6D is a schema planning patch only. It adds no Prisma model, migration, enum, table, column, insert route, update route, or approval persistence write.
+
+Recommended future model:
+
+- Add a dedicated `blogger_publish_approvals` table rather than overloading draft approval records.
+- Keep every approval immutable after creation.
+- Store only non-secret snapshot metadata and a deterministic snapshot hash.
+- Link publish execution attempts to a publish approval id in a separate audit model.
+- Keep immediate publish approval and scheduled publish approval in the same model only if `publishMode`, `scheduledAt`, and `timezone` are part of the immutable snapshot.
+
+Recommended future fields:
+
+- `id`
+- `contentItemId`
+- `bloggerConnectionId`
+- `bloggerDraftSaveId`
+- `bloggerDraftApprovalId`
+- `targetBloggerBlogId`
+- `targetBloggerBlogName`
+- `targetBloggerBlogUrl`
+- `bloggerPostId`
+- `draftMarkdownHash`
+- `draftHtmlHash`
+- `draftHtmlLength`
+- `titleCandidate`
+- `publishMode`
+- `scheduledAt`
+- `timezone`
+- `snapshotJson`
+- `snapshotHash`
+- `hashAlgorithm`
+- `canonicalization`
+- `rollbackAcknowledged`
+- `sideEffectSummaryAcknowledged`
+- `tokenState`
+- `tokenStateCheckedAt`
+- `status`
+- `createdBy`
+- `createdAt`
+- `invalidatedAt`
+- `invalidatedReason`
+- `supersededByApprovalId`
+
+Recommended future statuses:
+
+- `approved_for_publish`
+- `approved_for_schedule`
+- `invalidated`
+- `used_for_publish_attempt`
+- `used_for_schedule_attempt`
+- `cancelled`
+
+Invalidation policy:
+
+- Invalidate or supersede approval when `draftHtml` hash, `draftMarkdown` hash, title candidate, target blog id, Blogger post id, `scheduledAt`, timezone, or content item status changes.
+- Invalidate or block use when token state becomes expired before publish.
+- Invalidate or supersede when a newer approval is created for the same content item and publish mode.
+- A future `posts.update` flow must invalidate the old publish approval unless the update has its own approval chain and snapshot hash.
+
+Acknowledgement policy:
+
+- Approval creation must capture rollback acknowledgement.
+- Approval creation must capture side-effect summary acknowledgement.
+- The acknowledged side-effect summary for real publish must not be all false; it must clearly distinguish publish, scheduled publish, `posts.update`, token refresh, and content item mutation.
+- Approval persistence alone must not execute publish or scheduled publish.
+
+Audit policy:
+
+- Publish execution attempts should be stored separately from approvals.
+- Attempt records should link to approval id, Blogger post id, publish mode, safe status, safe error code/message, and local content mutation outcome.
+- Raw Blogger response body, raw Blogger error body, access token, refresh token, client secret, encrypted value, and full `draftHtml` must not be stored.

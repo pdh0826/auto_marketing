@@ -67,7 +67,7 @@
 - Token refresh
 - Automatic `content_items.status`, `qualityScore`, `publishedAt`, `scheduledAt` mutation
 
-Publish/scheduled publish는 별도 approval, preflight, side-effect summary, audit, rollback 안내, token 상태 정책이 설계되기 전까지 구현하지 않는다.
+Publish approval persistence는 별도 table/schema/migration/DB write 없이 planning-only로 문서화된 상태다. Publish/scheduled publish는 별도 approval persistence, preflight, side-effect summary, audit, rollback 안내, token 상태 정책이 설계되기 전까지 구현하지 않는다.
 
 ## 초기 제외 기능
 

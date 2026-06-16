@@ -1003,3 +1003,24 @@ Not implemented:
 - token refresh or token endpoint call
 - content item status, `publishedAt`, `scheduledAt`, `qualityScore`, `draftHtml`, or `draftMarkdown` mutation
 - LLM calls or `llm_call_logs`
+
+## Patch 9E-6D: Publish Approval Persistence Policy and Schema Plan
+
+Implemented after Patch 9E-6C:
+
+- Added Content Detail UI guidance for publish approval persistence policy.
+- Clarified that the current approval snapshot/hash remains preview-only and is not a DB-stored approval.
+- Documented future approval persistence requirements: immutable snapshot, deterministic hash, rollback acknowledgement, side-effect acknowledgement, token state checkedAt, invalidation policy, and publish attempt audit linkage.
+- Documented invalidation triggers for draft hash, title, target blog, Blogger post id, schedule/timezone, content status, token state, newer approval, and future `posts.update` flows.
+- Documented a recommended dedicated future `blogger_publish_approvals` table and safe non-secret field set.
+- Kept stored approval and actual publish execution as separate future steps.
+
+Not implemented:
+
+- publish approval persistence, table, migration, insert, or update
+- Blogger publish or scheduled publish
+- Blogger API write, `posts.update`, `posts.insert`, or additional draft save
+- token refresh or token endpoint call
+- content item status, `publishedAt`, `scheduledAt`, `qualityScore`, `draftHtml`, or `draftMarkdown` mutation
+- DB write/mutation
+- LLM calls or `llm_call_logs`
