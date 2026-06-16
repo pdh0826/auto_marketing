@@ -127,6 +127,10 @@ latest committed baseline before Patch 9E-4C-3C: 3cb3fbc Add stepwise draft gene
 - Patch 9E-4G-1b improves Draft Save Preflight UX/readiness guidance.
 - Content detail now maps blocking reasons to next actions, shows a readiness checklist, links to `/settings/blogger` when no Blogger connection exists, and keeps the Blogger Draft save button disabled until preflight passes.
 - 9E-4G-1b does not change preflight server behavior, mutate content items, create `llm_call_logs`, call Blogger APIs, start OAuth automatically, save drafts, publish, schedule publish, or refresh tokens.
+- Patch 9E-4G-1c refines Draft Save Preflight blocker classification.
+- `blogger_draft_saved` is no longer a first-draft-save blocker; same-approval duplicate saves use `blogger_draft_already_saved_for_approval`.
+- Expired access tokens block preflight with `access_token_expired_reauth_required`; token refresh is still not implemented.
+- Env-backed `clientSecretRef` can satisfy client secret readiness through safe boolean diagnostics without returning secret material.
 
 ## Next Patch Candidate
 
@@ -141,6 +145,7 @@ Recommended scope:
 - Re-run and verify saved `draftHtml` Quality Dry Run, Publish Readiness, Blogger Draft Payload Preview, and Blogger Draft Save Preflight.
 - Confirm preflight blocks missing Blogger connection, missing verified selected blog, missing/expired token, missing active approval, stale approval, HTML validation failures, and content readiness failures.
 - Use the 9E-4G-1b checklist/action items to clear blockers before any live write attempt.
+- If preflight is blocked by `access_token_expired_reauth_required`, manually re-run OAuth before considering draft save.
 - Only consider actual Blogger draft save after the user explicitly approves a live test blog write.
 - Keep publish, scheduled publish, token refresh, and posts.update out of scope.
 - Keep automatic `draftHtml`, status, qualityScore, Blogger draft save, and publish out of scope unless separately requested.
@@ -173,9 +178,10 @@ AGENTS.md와 documents/ 폴더의 관련 문서를 먼저 읽어줘.
 현재 프로젝트 상태를 점검하고 Patch 9E-4G 작업계획을 제안해줘.
 
 목표:
-- Patch 9E-4G-1/1b의 saved draftHtml readiness recheck / Blogger Draft Save Preflight UX 구현 상태를 확인한다.
+- Patch 9E-4G-1/1b/1c의 saved draftHtml readiness recheck / Blogger Draft Save Preflight UX와 blocker classification 구현 상태를 확인한다.
 - 저장된 `draftHtml` 기준 Quality Dry Run / Publish Readiness / Blogger Draft Payload Preview / Draft Save Preflight 결과를 점검한다.
 - preflight checklist와 action item이 현재 blocker를 정확히 안내하는지 확인한다.
+- expired access token이면 OAuth를 사용자가 직접 다시 실행해야 하며 token refresh는 구현하지 않는다.
 - 실제 Blogger draft save를 진행할 경우 live test blog 사용자 승인, active approval snapshot match, verified selected blog, access token 상태를 다시 확인한다.
 - content item status/qualityScore/publishedAt/scheduledAt 자동 변경, Blogger publish/scheduled publish/token refresh, LLM 호출은 금지한다.
 - 실제 live draft save는 별도 승인 후 Patch 9E-4G-2 또는 Patch 9E-5 후보로 분리한다.

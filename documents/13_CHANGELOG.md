@@ -761,3 +761,20 @@ Policy:
 - No LLM call or `llm_call_logs` creation.
 - No `content_items` mutation, including `draftMarkdown`, `draftHtml`, status, `qualityScore`, `publishedAt`, or `scheduledAt`.
 - No schema or migration change.
+
+## Patch 9E-4G-1c: Draft Save Preflight Blocker Classification
+
+Implemented after Patch 9E-4G-1b:
+
+- Changed draft-save preflight classification so `blogger_draft_saved` from publish-readiness no longer blocks the first Blogger draft save attempt.
+- Added same-approval duplicate-save detection with `blogger_draft_already_saved_for_approval`.
+- Promoted expired access tokens to a true preflight blocker: `access_token_expired_reauth_required`.
+- Added safe client secret diagnostics for env-backed `clientSecretRef` use: `hasClientSecretRef`, `clientSecretConfigured`, and `encryptedClientSecretStored`.
+- Updated content detail guidance to show expired-token reauth guidance, duplicate-save guidance, and “draft not saved yet” as an expected first-save state.
+
+Policy:
+
+- No token refresh implementation.
+- No OAuth start/callback is invoked automatically.
+- No Blogger API write, draft save, publish, scheduled publish, `posts.insert`, or `posts.update`.
+- No LLM call, `llm_call_logs` creation, schema change, migration, or content item mutation.

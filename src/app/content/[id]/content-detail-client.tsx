@@ -1577,8 +1577,11 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
                   <DetailItem label="Connection Count" value={String(bloggerDraftSavePreflightResult.bloggerConnectionSummary.connectionCount)} />
                   <DetailItem label="Connection Status" value={bloggerDraftSavePreflightResult.bloggerConnectionSummary.status} />
                   <DetailItem label="Connected Email" value={bloggerDraftSavePreflightResult.bloggerConnectionSummary.connectedEmail ?? "-"} />
-                  <DetailItem label="Has Client Secret" value={bloggerDraftSavePreflightResult.bloggerConnectionSummary.hasClientSecret ? "yes" : "no"} />
+                  <DetailItem label="Has Client Secret Ref" value={bloggerDraftSavePreflightResult.bloggerConnectionSummary.hasClientSecretRef ? "yes" : "no"} />
+                  <DetailItem label="Client Secret Configured" value={bloggerDraftSavePreflightResult.bloggerConnectionSummary.clientSecretConfigured ? "yes" : "no"} />
+                  <DetailItem label="Encrypted Client Secret Stored" value={bloggerDraftSavePreflightResult.bloggerConnectionSummary.encryptedClientSecretStored ? "yes" : "no"} />
                   <DetailItem label="Has Access Token" value={bloggerDraftSavePreflightResult.bloggerConnectionSummary.hasAccessToken ? "yes" : "no"} />
+                  <DetailItem label="Access Token Expired" value={bloggerDraftSavePreflightResult.bloggerConnectionSummary.accessTokenExpired ? "yes" : "no"} />
                   <DetailItem label="Token Refresh" value={bloggerDraftSavePreflightResult.bloggerConnectionSummary.tokenRefreshImplemented ? "implemented" : "not implemented"} />
                   <DetailItem label="Selected Blog" value={bloggerDraftSavePreflightResult.selectedBlogSummary.selected ? "yes" : "no"} />
                   <DetailItem label="Selected Blog ID" value={bloggerDraftSavePreflightResult.selectedBlogSummary.id ?? "-"} />
@@ -1594,7 +1597,31 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
                   <DetailItem label="Current draftHtml Hash" value={bloggerDraftSavePreflightResult.approvalSnapshotStatus.currentDraftHtmlHashPrefix ?? "-"} />
                   <DetailItem label="Payload Ready" value={bloggerDraftSavePreflightResult.draftPayloadPreviewSummary.draftPayloadReady ? "yes" : "no"} />
                   <DetailItem label="Title Candidate" value={bloggerDraftSavePreflightResult.draftPayloadPreviewSummary.titleCandidate ?? "-"} />
+                  <DetailItem label="Draft Not Saved Yet" value={bloggerDraftSavePreflightResult.draftSavePreflightSummary.draftNotSavedYetExpected ? "expected" : "no"} />
+                  <DetailItem
+                    label="Successful Save For Approval"
+                    value={bloggerDraftSavePreflightResult.draftSavePreflightSummary.successfulSaveForCurrentApproval ? "yes" : "no"}
+                  />
+                  <DetailItem label="Duplicate Save Blocked" value={bloggerDraftSavePreflightResult.draftSavePreflightSummary.duplicateSaveBlocked ? "yes" : "no"} />
                 </div>
+                {bloggerDraftSavePreflightResult.bloggerConnectionSummary.accessTokenExpired ? (
+                  <div className="notice error">
+                    <strong>Access token expired</strong>
+                    <p>Access token이 만료되었습니다. Blogger draft save 전 Blogger OAuth 연결을 다시 실행하세요. token refresh는 아직 구현하지 않습니다.</p>
+                  </div>
+                ) : null}
+                {bloggerDraftSavePreflightResult.draftSavePreflightSummary.draftNotSavedYetExpected ? (
+                  <div className="notice">
+                    <strong>Draft not saved yet</strong>
+                    <p>아직 Blogger draft save 성공 기록이 없는 것은 첫 draft save 전 정상 상태입니다. 이 상태만으로는 draft-save preflight를 막지 않습니다.</p>
+                  </div>
+                ) : null}
+                {bloggerDraftSavePreflightResult.draftSavePreflightSummary.duplicateSaveBlocked ? (
+                  <div className="notice error">
+                    <strong>Duplicate draft save blocked</strong>
+                    <p>현재 approval snapshot으로 이미 성공한 Blogger draft save가 있어 중복 저장을 막았습니다.</p>
+                  </div>
+                ) : null}
                 {bloggerDraftSavePreflightResult.approvalSnapshotStatus.requiresReapproval ? (
                   <div className="notice warning">
                     <strong>Manual approval 재확인이 필요합니다.</strong>
@@ -3549,6 +3576,17 @@ function BloggerDraftSaveReadinessChecklist({
           : "설정 > Blogger에서 연결을 먼저 완료하세요."
     },
     {
+      key: "access-token",
+      label: "Access token usable",
+      status: result.bloggerConnectionSummary.hasAccessToken && !result.bloggerConnectionSummary.accessTokenExpired ? "pass" : "fail",
+      message:
+        result.bloggerConnectionSummary.hasAccessToken && !result.bloggerConnectionSummary.accessTokenExpired
+          ? "Access token이 draft save preflight에서 사용 가능한 상태입니다."
+          : result.bloggerConnectionSummary.accessTokenExpired
+            ? "Access token이 만료되었습니다. Blogger OAuth 연결을 다시 실행하세요."
+            : "Blogger OAuth access token이 필요합니다."
+    },
+    {
       key: "blog-selection",
       label: "Blog selected",
       status: result.selectedBlogSummary.selected ? "pass" : "fail",
@@ -3581,7 +3619,9 @@ function BloggerDraftSaveReadinessChecklist({
         ? "현재 preview 기준 draft save 성공 기록이 있습니다."
         : result.canSaveDraft
           ? "Draft save를 시도할 수 있는 상태입니다."
-          : "아직 draft save 성공 기록이 없거나 현재 approval과 일치하지 않습니다."
+          : result.draftSavePreflightSummary.duplicateSaveBlocked
+            ? "현재 approval snapshot으로 이미 성공한 draft save가 있어 중복 저장을 막습니다."
+            : "아직 draft save 성공 기록이 없는 것은 첫 저장 전 정상 상태이며, 다른 blocker를 먼저 해결하세요."
     }
   ];
 
@@ -3654,11 +3694,25 @@ function getBloggerDraftSaveActionItem(reason: string) {
       action: "Blogger connection 상태를 확인하고 필요하면 다시 연결하세요."
     };
   }
-  if (reason === "blogger_client_secret_missing" || reason === "blogger_access_token_missing") {
+  if (reason === "blogger_client_secret_missing") {
     return {
       reason,
-      label: "Blogger token/secret",
-      action: "Blogger 설정에서 client secret과 OAuth token 상태를 확인하세요."
+      label: "Blogger client secret",
+      action: "Blogger 설정의 clientSecretRef가 서버 env에서 해석 가능한지 확인하세요. secret 값은 화면에 표시하지 않습니다."
+    };
+  }
+  if (reason === "blogger_access_token_missing") {
+    return {
+      reason,
+      label: "Blogger access token",
+      action: "Blogger OAuth 연결을 다시 실행해 access token을 저장하세요."
+    };
+  }
+  if (reason === "access_token_expired_reauth_required") {
+    return {
+      reason,
+      label: "Access token expired",
+      action: "Access token expired. Re-run OAuth connection before Blogger draft save."
     };
   }
   if (reason === "blogger_blog_selection" || reason === "blogger_blog_not_verified") {
@@ -3689,11 +3743,18 @@ function getBloggerDraftSaveActionItem(reason: string) {
       action: "Draft Payload Preview를 다시 실행하고 blocking issue를 해결하세요."
     };
   }
+  if (reason === "blogger_draft_already_saved_for_approval") {
+    return {
+      reason,
+      label: "Duplicate draft save",
+      action: "현재 approval snapshot으로 이미 성공한 Blogger draft가 있어 중복 저장을 막았습니다."
+    };
+  }
   if (reason === "blogger_draft_saved") {
     return {
       reason,
-      label: "Draft saved check",
-      action: "아직 draft save 성공 기록이 없거나 현재 approval과 일치하지 않습니다."
+      label: "Publish readiness draft saved check",
+      action: "draft save 전에는 정상적으로 미완료일 수 있습니다. draft-save preflight blocker로 표시되면 분류를 확인하세요."
     };
   }
   if (reason === "draft_html_missing" || reason === "draft_html_validation_failed") {

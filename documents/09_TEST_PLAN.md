@@ -741,3 +741,14 @@ npm run build
 - connectionCount=0 상태에서 `/settings/blogger` 링크가 보이고 OAuth start를 자동 호출하지 않아야 한다.
 - 실제 Blogger Draft 저장 버튼은 `canSaveDraft=false`일 때 disabled 상태를 유지해야 한다.
 - UX 패치 전후 `content_items.draftMarkdown`/`draftHtml`, status, `qualityScore`, `publishedAt`, `scheduledAt`, Blogger tables, `llm_call_logs`는 변경되지 않아야 한다.
+
+## Patch 9E-4G-1c Draft save preflight blocker classification 검증
+
+- `blogger_draft_saved`는 publish-readiness check로 남을 수 있지만 first Blogger draft save를 위한 preflight blocker에는 포함하지 않아야 한다.
+- 같은 active approval에 successful Blogger draft save가 이미 있으면 `blogger_draft_already_saved_for_approval`로 중복 저장을 차단해야 한다.
+- access token이 만료되어 있고 token refresh가 구현되지 않았으면 `access_token_expired_reauth_required`를 blocking reason으로 반환해야 한다.
+- expired token은 warning만으로 처리하지 않고 `canSaveDraft=false`를 만들어야 한다.
+- env-backed `clientSecretRef`가 서버에서 해석 가능하면 encrypted `oauth_client_secret` row가 없어도 `blogger_client_secret_missing`을 반환하지 않아야 한다.
+- preflight 응답은 `hasClientSecretRef`, `clientSecretConfigured`, `encryptedClientSecretStored`, `secretMaterialReturned=false` 같은 safe diagnostic boolean만 반환해야 한다.
+- Content detail UI는 “draft not saved yet”을 첫 save 전 expected state로 표시하고, duplicate blocker는 same-approval success가 있을 때만 표시해야 한다.
+- token refresh, OAuth start, Blogger draft save, Blogger API write, publish/scheduled publish, LLM 호출은 발생하지 않아야 한다.

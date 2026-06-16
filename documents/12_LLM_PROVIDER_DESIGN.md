@@ -730,4 +730,14 @@ Patch 9E-4G-1b is a UI/readiness guidance patch on top of the preflight gate.
 - It keeps the actual Blogger Draft save button disabled until preflight passes.
 - It keeps all preflight side-effect flags visible as false and does not mutate `content_items` or Blogger tables.
 - It does not call Blogger API write, draft save, publish, scheduled publish, token refresh, or OAuth start automatically.
+
+## Patch 9E-4G-1c draft save preflight blocker classification
+
+Patch 9E-4G-1c refines read-only Blogger draft save preflight classification without changing LLM routing.
+
+- `blogger_draft_saved` is filtered out of draft-save preflight blockers because “not saved yet” is expected before the first draft save.
+- Duplicate draft save prevention uses `blogger_draft_already_saved_for_approval` only when a successful save already exists for the active approval.
+- Expired access tokens are classified as `access_token_expired_reauth_required` blockers while token refresh remains unimplemented.
+- Env-backed client secret configuration is reported through safe booleans and does not require an encrypted client-secret row when `clientSecretRef` is resolvable.
+- This patch does not invoke LLM providers, create `llm_call_logs`, refresh tokens, start OAuth automatically, call Blogger APIs, or mutate content items.
 - Blogger API, draft save, publish, scheduled publish, token refresh, LLM calls, and `llm_call_logs` remain out of scope.

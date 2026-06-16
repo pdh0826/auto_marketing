@@ -9,10 +9,13 @@ import { buildPublishReadiness } from "@/lib/content/publish-readiness";
 import { getActiveBloggerDraftApproval, getLatestBloggerDraftApproval, toBloggerDraftApprovalAdmin } from "@/lib/db/blogger-draft-approvals";
 import { getBloggerConnectionSecretStatus } from "@/lib/db/blogger-connection-secrets";
 import { listBloggerConnectionsForBlog } from "@/lib/db/blogger-connections";
+import { getSuccessfulBloggerDraftSaveByApproval } from "@/lib/db/blogger-draft-saves";
 import { prisma } from "@/lib/db/client";
 import { safeErrorMessage } from "@/lib/llm/redaction";
 
 export const runtime = "nodejs";
+
+const CLIENT_SECRET_ENV_KEY_PATTERN = /^[A-Z][A-Z0-9_]*$/;
 
 interface RouteContext {
   params: {
@@ -47,6 +50,7 @@ export async function POST(_request: Request, { params }: RouteContext) {
     const currentHashes = buildBloggerDraftApprovalSnapshotHashes(payloadPreview, safeContentItem.draftHtml);
     const activeApproval = await getActiveBloggerDraftApproval(safeContentItem.id);
     const latestApproval = activeApproval ?? (await getLatestBloggerDraftApproval(safeContentItem.id));
+    const successfulSaveForCurrentApproval = activeApproval ? await getSuccessfulBloggerDraftSaveByApproval(activeApproval.id) : null;
     const approvalSummary = buildBloggerDraftApprovalSummary({
       approval: latestApproval ? toBloggerDraftApprovalAdmin(latestApproval) : null,
       approvalSnapshotHash: latestApproval?.snapshotHash ?? null,
@@ -66,6 +70,8 @@ export async function POST(_request: Request, { params }: RouteContext) {
       },
       null
     );
+    const clientSecretDiagnostic = buildClientSecretDiagnostic(connection?.clientSecretRef ?? null, secretStatus?.hasClientSecret ?? false);
+    const accessTokenExpired = isExpired(secretStatus?.accessTokenExpiresAt ?? null);
 
     const blockingReasons = buildBlockingReasons({
       hasDraftHtml: Boolean(safeContentItem.draftHtml?.trim()),
@@ -73,11 +79,13 @@ export async function POST(_request: Request, { params }: RouteContext) {
       bloggerConnectionCount: bloggerConnections.length,
       connectionStatus: connection?.status ?? "not_configured",
       hasSelectedBlog: Boolean(connection?.bloggerBlogId && connection.bloggerBlogVerifiedAt),
-      hasClientSecret: Boolean(secretStatus?.hasClientSecret),
+      hasClientSecret: clientSecretDiagnostic.clientSecretConfigured,
       hasAccessToken: Boolean(secretStatus?.hasAccessToken),
+      accessTokenExpired,
       payloadReady: payloadPreview.draftPayloadReady,
       approvalStatus: approvalSummary.approvalStatus,
       approvalMatchesCurrentPreview: approvalSummary.approvalMatchesCurrentPreview,
+      successfulSaveForCurrentApproval: Boolean(successfulSaveForCurrentApproval),
       contentReady: publishReadiness.contentReady,
       readinessBlockingKeys: publishReadiness.blockingIssues.map((issue) => issue.key),
       payloadBlockingIssues: payloadPreview.blockingIssues
@@ -86,8 +94,7 @@ export async function POST(_request: Request, { params }: RouteContext) {
       new Set([
         ...payloadPreview.warnings,
         ...publishReadiness.warnings.map((warning) => warning.key),
-        ...(approvalSummary.approvalStatus === "stale" ? ["blogger_draft_approval_stale"] : []),
-        ...(secretStatus?.accessTokenExpiresAt && new Date(secretStatus.accessTokenExpiresAt).getTime() < Date.now() ? ["access_token_expired_token_refresh_not_implemented"] : [])
+        ...(approvalSummary.approvalStatus === "stale" ? ["blogger_draft_approval_stale"] : [])
       ])
     );
     const canSaveDraft = blockingReasons.length === 0;
@@ -132,10 +139,14 @@ export async function POST(_request: Request, { params }: RouteContext) {
         status: connection?.status ?? "not_configured",
         connectionId: connection?.id ?? null,
         connectedEmail: connection?.connectedEmail ?? null,
-        hasClientSecret: Boolean(secretStatus?.hasClientSecret),
+        hasClientSecretRef: clientSecretDiagnostic.hasClientSecretRef,
+        clientSecretConfigured: clientSecretDiagnostic.clientSecretConfigured,
+        encryptedClientSecretStored: clientSecretDiagnostic.encryptedClientSecretStored,
+        hasClientSecret: clientSecretDiagnostic.clientSecretConfigured,
         hasAccessToken: Boolean(secretStatus?.hasAccessToken),
         hasRefreshToken: Boolean(secretStatus?.hasRefreshToken),
         accessTokenExpiresAt: secretStatus?.accessTokenExpiresAt ?? null,
+        accessTokenExpired,
         tokenRefreshImplemented: false,
         secretMaterialReturned: false
       },
@@ -154,6 +165,11 @@ export async function POST(_request: Request, { params }: RouteContext) {
         blockingIssues: payloadPreview.blockingIssues,
         warnings: payloadPreview.warnings,
         titleCandidate: payloadPreview.titleCandidate
+      },
+      draftSavePreflightSummary: {
+        draftNotSavedYetExpected: !successfulSaveForCurrentApproval,
+        successfulSaveForCurrentApproval: Boolean(successfulSaveForCurrentApproval),
+        duplicateSaveBlocked: Boolean(successfulSaveForCurrentApproval)
       },
       sideEffectSummary: {
         bloggerApiWrite: false,
@@ -179,6 +195,29 @@ function formatOptionalDate(value: Date | string | null) {
   return value instanceof Date ? value.toISOString() : value;
 }
 
+function buildClientSecretDiagnostic(clientSecretRef: string | null, encryptedClientSecretStored: boolean) {
+  const ref = clientSecretRef?.trim() ?? "";
+  const hasClientSecretRef = Boolean(ref);
+  const clientSecretRefIsSafeEnvKey = hasClientSecretRef && CLIENT_SECRET_ENV_KEY_PATTERN.test(ref);
+  const envClientSecretConfigured = clientSecretRefIsSafeEnvKey ? Boolean(process.env[ref]?.trim()) : false;
+
+  return {
+    hasClientSecretRef,
+    clientSecretConfigured: encryptedClientSecretStored || envClientSecretConfigured,
+    encryptedClientSecretStored,
+    clientSecretRefIsSafeEnvKey,
+    envClientSecretConfigured
+  };
+}
+
+function isExpired(value: string | null) {
+  if (!value) {
+    return false;
+  }
+  const time = new Date(value).getTime();
+  return Number.isFinite(time) && time <= Date.now();
+}
+
 function buildBlockingReasons(input: {
   hasDraftHtml: boolean;
   htmlValidationOk: boolean;
@@ -187,9 +226,11 @@ function buildBlockingReasons(input: {
   hasSelectedBlog: boolean;
   hasClientSecret: boolean;
   hasAccessToken: boolean;
+  accessTokenExpired: boolean;
   payloadReady: boolean;
   approvalStatus: string;
   approvalMatchesCurrentPreview: boolean;
+  successfulSaveForCurrentApproval: boolean;
   contentReady: boolean;
   readinessBlockingKeys: string[];
   payloadBlockingIssues: string[];
@@ -217,6 +258,9 @@ function buildBlockingReasons(input: {
   if (input.bloggerConnectionCount === 1 && !input.hasAccessToken) {
     reasons.push("blogger_access_token_missing");
   }
+  if (input.bloggerConnectionCount === 1 && input.hasAccessToken && input.accessTokenExpired) {
+    reasons.push("access_token_expired_reauth_required");
+  }
   if (input.bloggerConnectionCount === 1 && !input.hasSelectedBlog) {
     reasons.push("blogger_blog_not_verified");
   }
@@ -229,6 +273,10 @@ function buildBlockingReasons(input: {
   if (input.approvalStatus !== "approved" || !input.approvalMatchesCurrentPreview) {
     reasons.push(input.approvalStatus === "stale" ? "blogger_draft_approval_stale" : "blogger_draft_approval_required");
   }
+  if (input.successfulSaveForCurrentApproval) {
+    reasons.push("blogger_draft_already_saved_for_approval");
+  }
 
-  return Array.from(new Set([...reasons, ...input.readinessBlockingKeys, ...input.payloadBlockingIssues]));
+  const draftSavePreflightReadinessKeys = input.readinessBlockingKeys.filter((key) => key !== "blogger_draft_saved");
+  return Array.from(new Set([...reasons, ...draftSavePreflightReadinessKeys, ...input.payloadBlockingIssues]));
 }

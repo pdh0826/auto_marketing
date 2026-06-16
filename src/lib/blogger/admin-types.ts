@@ -291,10 +291,14 @@ export interface BloggerDraftSavePreflight {
     status: BloggerConnectionStatus;
     connectionId: string | null;
     connectedEmail: string | null;
+    hasClientSecretRef: boolean;
+    clientSecretConfigured: boolean;
+    encryptedClientSecretStored: boolean;
     hasClientSecret: boolean;
     hasAccessToken: boolean;
     hasRefreshToken: boolean;
     accessTokenExpiresAt: string | null;
+    accessTokenExpired: boolean;
     tokenRefreshImplemented: false;
     secretMaterialReturned: false;
   };
@@ -313,6 +317,11 @@ export interface BloggerDraftSavePreflight {
     blockingIssues: string[];
     warnings: string[];
     titleCandidate: string | null;
+  };
+  draftSavePreflightSummary: {
+    draftNotSavedYetExpected: boolean;
+    successfulSaveForCurrentApproval: boolean;
+    duplicateSaveBlocked: boolean;
   };
   sideEffectSummary: {
     bloggerApiWrite: false;
