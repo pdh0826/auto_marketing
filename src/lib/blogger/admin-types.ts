@@ -493,6 +493,7 @@ export interface PublishApprovalSaveResponse {
   contentItemId: string;
   approvalId: string;
   created: boolean;
+  existing: boolean;
   status: BloggerPublishApprovalStatus;
   mode: PublishApprovalMode;
   snapshotHash: string;
@@ -514,4 +515,31 @@ export interface PublishApprovalSaveResponse {
     createdAt: string;
   };
   sideEffectSummary: PublishApprovalSaveSideEffectSummary;
+}
+
+export interface PublishApprovalReadbackSideEffectSummary {
+  dbRead: true;
+  dbWrite: false;
+  approvalPersistence: false;
+  contentItemMutation: false;
+  bloggerApiWrite: false;
+  bloggerPublish: false;
+  bloggerScheduledPublish: false;
+  bloggerPostsUpdate: false;
+  bloggerDraftSave: false;
+  tokenRefresh: false;
+  llmCall: false;
+}
+
+export interface PublishApprovalReadbackResponse {
+  contentItemId: string;
+  checkedAt: string;
+  count: number;
+  latestApproval: BloggerPublishApprovalAdmin | null;
+  activeApprovals: BloggerPublishApprovalAdmin[];
+  canPublish: false;
+  canSchedulePublish: false;
+  blockingReasons: string[];
+  warnings: string[];
+  sideEffectSummary: PublishApprovalReadbackSideEffectSummary;
 }

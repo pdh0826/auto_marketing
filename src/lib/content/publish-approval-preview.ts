@@ -91,7 +91,7 @@ export function buildPublishApprovalPreview(input: BuildPublishApprovalPreviewIn
     tokenState,
     tokenStateCheckedAt: checkedAtIso
   };
-  const canonicalSnapshot = stableStringify(snapshot);
+  const canonicalSnapshot = stableStringify(buildHashableSnapshot(snapshot));
 
   return {
     contentItemId: input.contentItem.id,
@@ -139,6 +139,13 @@ function md5Hex(value: string) {
 
 function sha256Hex(value: string) {
   return createHash("sha256").update(value, "utf8").digest("hex");
+}
+
+function buildHashableSnapshot(snapshot: Record<string, unknown>) {
+  return {
+    ...snapshot,
+    tokenStateCheckedAt: "excluded_from_hash"
+  };
 }
 
 function stableStringify(value: unknown): string {

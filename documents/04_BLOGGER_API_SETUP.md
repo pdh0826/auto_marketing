@@ -379,3 +379,31 @@ Access token expired policy:
 - `expired_reauth_required` may be recorded in the approval snapshot.
 - This does not authorize publish execution.
 - Any future Blogger publish write must re-check token state and require OAuth reconnect or a later approved token refresh policy.
+
+## Patch 9E-7B Publish approval persistence smoke/readback
+
+Patch 9E-7B adds readback for saved publish approvals and verifies one local DB approval insert smoke.
+
+New route:
+
+```text
+POST /api/content-items/[id]/publish-approval-readback
+```
+
+This route is read-only:
+
+- no DB write
+- no Blogger API call
+- no publish or scheduled publish
+- no token refresh
+- no content item mutation
+- no LLM call
+
+The route returns latest and active saved approval summaries without returning full `snapshotJson`, full HTML, token values, encrypted values, client secrets, raw OAuth responses, or raw Blogger responses.
+
+The save route remains local-only:
+
+- first approved smoke can insert one `blogger_publish_approvals` row
+- same snapshot save returns the existing approval idempotently
+- stored approvals still keep `canPublish=false` and `canSchedulePublish=false`
+- future publish execution remains blocked until separate publish execution preflight, OAuth/token policy, audit policy, local mutation policy, and user approval exist

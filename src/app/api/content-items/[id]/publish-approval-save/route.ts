@@ -53,10 +53,7 @@ export async function POST(request: Request, { params }: RouteContext) {
       return NextResponse.json(scheduleValidationError, { status: 400 });
     }
 
-    const checkedAt = parseCheckedAt(body.tokenStateCheckedAt);
-    if (!checkedAt) {
-      return NextResponse.json({ error: "token_state_checked_at_required", message: "Run Publish Approval Snapshot Preview again before saving approval." }, { status: 400 });
-    }
+    const checkedAt = parseCheckedAt(body.tokenStateCheckedAt) ?? new Date();
 
     const context = await loadPublishApprovalSaveContext(params.id, {
       mode,
@@ -104,6 +101,7 @@ export async function POST(request: Request, { params }: RouteContext) {
       contentItemId: params.id,
       approvalId: saved.approval.id,
       created: saved.created,
+      existing: !saved.created,
       status: saved.approval.status,
       mode: saved.approval.mode,
       snapshotHash: saved.approval.snapshotHash,
@@ -111,7 +109,7 @@ export async function POST(request: Request, { params }: RouteContext) {
       canonicalization: saved.approval.canonicalization,
       canPublish: false,
       canSchedulePublish: false,
-      blockingReasons: context.preview.blockingReasons.filter((reason) => reason !== "explicit_publish_approval_save_required"),
+      blockingReasons: context.preview.blockingReasons.filter((reason) => !PERSISTENCE_ACK_BLOCKING_REASONS.has(reason)),
       warnings: context.preview.warnings,
       savedApprovalSummary: {
         targetBloggerBlogId: saved.approval.targetBloggerBlogId,
@@ -126,7 +124,7 @@ export async function POST(request: Request, { params }: RouteContext) {
       },
       sideEffectSummary: {
         dbWrite: saved.created,
-        approvalPersistence: true,
+        approvalPersistence: saved.created,
         contentItemMutation: false,
         bloggerApiWrite: false,
         bloggerPublish: false,
@@ -234,6 +232,13 @@ function buildAcknowledgementError(body: PublishApprovalSaveRequest) {
     blockingReasons: missing
   };
 }
+
+const PERSISTENCE_ACK_BLOCKING_REASONS = new Set([
+  "explicit_publish_approval_save_required",
+  "rollback_acknowledgement_required",
+  "side_effect_summary_acknowledgement_required",
+  "approval_persistence_acknowledgement_required"
+]);
 
 function validateSchedule(mode: PublishApprovalMode, scheduledAt: string | null, timezone: string | null) {
   if (mode !== "scheduled_publish") {

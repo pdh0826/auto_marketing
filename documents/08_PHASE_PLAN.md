@@ -213,3 +213,13 @@ Patch 9E-7A 완료:
 - Content Detail UI에 local DB approval storage 옵션, acknowledgement checkbox, save 버튼, safe result summary 추가
 - 저장 후에도 `canPublish=false`, `canSchedulePublish=false` 유지
 - Blogger publish/scheduled publish/write, token refresh, posts.update, additional draft save, content item mutation, LLM 호출은 구현하지 않음
+
+Patch 9E-7B 완료:
+
+- `POST /api/content-items/[id]/publish-approval-readback` read-only API 추가
+- saved publish approval latest/active summary readback 추가
+- Content Detail UI에 Saved Publish Approval Readback 블록 추가
+- publish approval save response에 `existing`을 표시하고 existing 재사용 시 `dbWrite=false`, `approvalPersistence=false`로 구분
+- 1건 local DB insert smoke와 같은 snapshot idempotent save 검증
+- 저장된 approval이 있어도 `canPublish=false`, `canSchedulePublish=false` 유지
+- Blogger publish/scheduled publish/write, token refresh, posts.update, additional draft save, content item mutation, LLM 호출은 구현하지 않음

@@ -1049,3 +1049,24 @@ Not implemented:
 - content item status, `publishedAt`, `scheduledAt`, `qualityScore`, `draftHtml`, or `draftMarkdown` mutation
 - publish execution attempt audit
 - LLM calls or `llm_call_logs`
+
+## Patch 9E-7B: Publish Approval Persistence Smoke and Readback
+
+Implemented after Patch 9E-7A:
+
+- Added `POST /api/content-items/[id]/publish-approval-readback` as a read-only saved approval summary route.
+- Added latest and active publish approval read helpers.
+- Added saved publish approval readback UI on Content Detail.
+- Added `existing` to publish approval save response.
+- Clarified idempotent save behavior: same active snapshot returns existing approval without creating a duplicate row.
+- Verified one local DB publish approval insert smoke.
+- Verified idempotent second save keeps `blogger_publish_approvals` count at `1`.
+- Kept readback/save results at `canPublish=false` and `canSchedulePublish=false`.
+
+Not implemented:
+
+- Blogger publish or scheduled publish
+- Blogger API write, `posts.update`, `posts.insert`, or additional draft save
+- token refresh or token endpoint call
+- content item status, `publishedAt`, `scheduledAt`, `qualityScore`, `draftHtml`, or `draftMarkdown` mutation
+- LLM calls or `llm_call_logs`

@@ -51,6 +51,28 @@ export function findLatestBloggerPublishApprovalForContentItem(contentItemId: st
   });
 }
 
+export function listBloggerPublishApprovalsForContentItem(contentItemId: string) {
+  return prisma.bloggerPublishApproval.findMany({
+    where: { contentItemId },
+    orderBy: [{ createdAt: "desc" }],
+    take: 20,
+    select: safeSelect
+  });
+}
+
+export function listActiveBloggerPublishApprovalsForContentItem(contentItemId: string) {
+  return prisma.bloggerPublishApproval.findMany({
+    where: {
+      contentItemId,
+      status: "approved_snapshot",
+      invalidatedAt: null
+    },
+    orderBy: [{ createdAt: "desc" }],
+    take: 20,
+    select: safeSelect
+  });
+}
+
 export function findBloggerPublishApprovalById(id: string) {
   return prisma.bloggerPublishApproval.findUnique({
     where: { id },

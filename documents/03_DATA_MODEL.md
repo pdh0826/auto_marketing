@@ -629,3 +629,22 @@ Still not added:
 - `posts.update` policy table
 - token refresh persistence
 - local content status/timestamp mutation policy
+
+## Patch 9E-7B Publish approval persistence smoke/readback
+
+Patch 9E-7B uses the existing `blogger_publish_approvals` table and does not add a new migration.
+
+Readback policy:
+
+- `publish-approval-readback` returns safe approval summaries only.
+- `snapshotJson` is not returned to UI/API clients.
+- Latest and active approval summaries include id, mode, status, snapshot hash, hash metadata, target blog/post id, draft HTML hash/length, title candidate, token state, acknowledgement booleans, created time, and invalidation metadata.
+- Readback side effects are `dbRead=true`, `dbWrite=false`, `approvalPersistence=false`, Blogger write false, token refresh false, content item mutation false, and LLM false.
+
+Smoke policy:
+
+- One local approval insert smoke is allowed for `blogger_publish_approvals`.
+- The save route must still require acknowledgement guard before insert.
+- A second save of the same content item, mode, snapshot hash, and scheduled time must return the existing active approval without creating a duplicate row.
+- After smoke, expected `blogger_publish_approvals` count is `1`.
+- `content_items`, `blogger_draft_saves`, `blogger_draft_approvals`, and `llm_call_logs` must remain unchanged.

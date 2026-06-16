@@ -812,3 +812,12 @@ Patch 9E-7A adds local DB persistence for publish approval snapshots, not an LLM
 - No `llm_call_logs` row is created by preview, save guard failure, or approval persistence.
 - Prompt text, raw model responses, generated candidate text, Blogger tokens, encrypted values, raw Blogger responses, raw Blogger error bodies, and full draft HTML remain outside the approval snapshot.
 - Stored publish approvals do not authorize or execute content generation, Blogger publish, scheduled publish, token refresh, or `posts.update`.
+
+## Patch 9E-7B publish approval readback boundary
+
+Patch 9E-7B adds readback and smoke verification for publish approval persistence, not an LLM routing change.
+
+- `POST /api/content-items/[id]/publish-approval-readback` must not call LLM providers.
+- `publish-approval-save` smoke and idempotency checks must not create `llm_call_logs`.
+- Readback returns safe DB metadata only and does not expose prompts, raw responses, candidate text, Blogger tokens, encrypted values, raw Blogger responses, raw Blogger error bodies, or full draft HTML.
+- Stored approval readback does not authorize content generation, Blogger publish, scheduled publish, token refresh, or `posts.update`.

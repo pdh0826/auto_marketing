@@ -47,6 +47,7 @@ The current completed path is:
 - Publish approval snapshot preview is read-only: `canCreatePublishApproval=false`, hash preview is persisted only after an explicit save action with acknowledgements.
 - Publish approval persistence policy is partially implemented as local snapshot storage; invalidation UX, publish attempt audit, and real publish execution remain future work.
 - Publish approval persistence storage is implemented locally: `blogger_publish_approvals` can store non-secret approval snapshots after explicit acknowledgements, but publish execution remains unimplemented.
+- Publish approval readback is implemented: latest/active saved approval summaries can be read in API/UI, and one local DB insert smoke has been verified.
 - `content_items.status`, `publishedAt`, `scheduledAt`, `qualityScore`, and `draftHtml` are not changed by publish-readiness or policy UI.
 
 ## Next Patch Priorities
@@ -61,13 +62,13 @@ B. **Patch 9E-5D: posts.update preflight/approval design**
 - Design update target identity, update approval snapshot, rollback warning, and side-effect summary before any `posts.update` implementation.
 - Keep retry limited to recorded retryable failures where Blogger draft creation is not known to have succeeded.
 
-C. **Patch 9E-7B: publish approval read/status UX**
+C. **Patch 9E-7C: publish approval invalidation/readiness policy**
 
-- Add read-only listing/status for stored publish approvals.
-- Show latest approval id/hash/status in Publish Preflight and Content Detail.
+- Decide how saved publish approvals become stale or invalidated when draft HTML/title/blog/post/schedule/token state changes.
+- Show latest approval id/hash/status in Publish Preflight if useful.
 - Keep actual Blogger publish execution out of scope.
 
-D. **Patch 9E-7C: publish execution audit/preflight design**
+D. **Patch 9E-7D: publish execution audit/preflight design**
 
 - Design publish execution attempt audit, partial failure handling, and local content status/timestamp mutation ordering.
 - Do not call Blogger publish until design is explicitly approved.
@@ -146,6 +147,7 @@ Expected preflight condition after the successful save:
 - 9E-6C added read-only publish approval snapshot/hash preview API/UI while keeping `canCreatePublishApproval=false`, no approval persistence, and all side-effect flags false.
 - 9E-6D documented and surfaced publish approval persistence policy/schema planning while keeping no approval table, no migration, no DB write, no publish, and no Blogger write.
 - 9E-7A added local publish approval persistence storage in `blogger_publish_approvals`, guarded by server-side hash match and three acknowledgements, while keeping no publish, no scheduled publish, no Blogger write, no token refresh, and no content item mutation.
+- 9E-7B added saved publish approval readback API/UI and verified one local approval insert plus idempotent re-save, while keeping no publish, no scheduled publish, no Blogger write, no token refresh, and no content item mutation.
 
 ## Closeout Safety Notes
 

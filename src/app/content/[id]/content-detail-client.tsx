@@ -8,6 +8,7 @@ import type {
   BloggerDraftSavePreflight,
   PublishApprovalMode,
   PublishApprovalPreview,
+  PublishApprovalReadbackResponse,
   PublishApprovalSaveResponse,
   PublishPreflightDryRun
 } from "@/lib/blogger/admin-types";
@@ -263,6 +264,7 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
   const [publishPreflightResult, setPublishPreflightResult] = useState<PublishPreflightDryRun | null>(null);
   const [publishApprovalPreviewResult, setPublishApprovalPreviewResult] = useState<PublishApprovalPreview | null>(null);
   const [publishApprovalSaveResult, setPublishApprovalSaveResult] = useState<PublishApprovalSaveResponse | null>(null);
+  const [publishApprovalReadbackResult, setPublishApprovalReadbackResult] = useState<PublishApprovalReadbackResponse | null>(null);
   const [bloggerDraftPreviewResult, setBloggerDraftPreviewResult] = useState<BloggerDraftPayloadPreview | null>(null);
   const [bloggerDraftSavePreflightResult, setBloggerDraftSavePreflightResult] = useState<BloggerDraftSavePreflight | null>(null);
   const [stepwiseRuns, setStepwiseRuns] = useState<StepwiseDraftGenerationRunSummary[]>([]);
@@ -319,6 +321,7 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
   const [runningPublishPreflight, setRunningPublishPreflight] = useState(false);
   const [runningPublishApprovalPreview, setRunningPublishApprovalPreview] = useState(false);
   const [savingPublishApproval, setSavingPublishApproval] = useState(false);
+  const [runningPublishApprovalReadback, setRunningPublishApprovalReadback] = useState(false);
   const [runningBloggerDraftPreview, setRunningBloggerDraftPreview] = useState(false);
   const [runningBloggerDraftSavePreflight, setRunningBloggerDraftSavePreflight] = useState(false);
   const [approvingBloggerDraft, setApprovingBloggerDraft] = useState(false);
@@ -343,6 +346,7 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
   const [publishPreflightError, setPublishPreflightError] = useState<string | null>(null);
   const [publishApprovalPreviewError, setPublishApprovalPreviewError] = useState<string | null>(null);
   const [publishApprovalSaveError, setPublishApprovalSaveError] = useState<string | null>(null);
+  const [publishApprovalReadbackError, setPublishApprovalReadbackError] = useState<string | null>(null);
   const [bloggerDraftPreviewError, setBloggerDraftPreviewError] = useState<string | null>(null);
   const [bloggerDraftSavePreflightError, setBloggerDraftSavePreflightError] = useState<string | null>(null);
   const [bloggerDraftSaveError, setBloggerDraftSaveError] = useState<string | null>(null);
@@ -368,6 +372,7 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
   const canRunPublishReadiness = Boolean(!runningPublishReadiness);
   const canRunPublishPreflight = Boolean(!runningPublishPreflight);
   const canRunPublishApprovalPreview = Boolean(!runningPublishApprovalPreview);
+  const canRunPublishApprovalReadback = Boolean(!runningPublishApprovalReadback);
   const publishApprovalPreviewMatchesOptions = Boolean(
     publishApprovalPreviewResult &&
       publishApprovalPreviewResult.approvalSnapshotPreview.publishMode === publishApprovalMode &&
@@ -1237,10 +1242,28 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
       });
       setPublishApprovalSaveResult(result.data);
       setNotice("Publish approval snapshot을 로컬 DB에 저장했습니다. Blogger publish, scheduled publish, token refresh, content status 변경은 수행하지 않았습니다.");
+      await runPublishApprovalReadback();
     } catch (caught) {
       setPublishApprovalSaveError(caught instanceof Error ? caught.message : "Publish approval snapshot 저장에 실패했습니다.");
     } finally {
       setSavingPublishApproval(false);
+    }
+  }
+
+  async function runPublishApprovalReadback() {
+    setPublishApprovalReadbackError(null);
+    setRunningPublishApprovalReadback(true);
+
+    try {
+      const result = await requestJson<ApiResult<PublishApprovalReadbackResponse>>(`/api/content-items/${contentItemId}/publish-approval-readback`, {
+        method: "POST",
+        body: JSON.stringify({})
+      });
+      setPublishApprovalReadbackResult(result.data);
+    } catch (caught) {
+      setPublishApprovalReadbackError(caught instanceof Error ? caught.message : "Saved publish approval readback에 실패했습니다.");
+    } finally {
+      setRunningPublishApprovalReadback(false);
     }
   }
 
@@ -1607,6 +1630,7 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
             {publishPreflightError ? <div className="notice error">{publishPreflightError}</div> : null}
             {publishApprovalPreviewError ? <div className="notice error">{publishApprovalPreviewError}</div> : null}
             {publishApprovalSaveError ? <div className="notice error">{publishApprovalSaveError}</div> : null}
+            {publishApprovalReadbackError ? <div className="notice error">{publishApprovalReadbackError}</div> : null}
 
             <div className="read-block">
               <h3>Publish Approval Storage Options</h3>
@@ -1670,6 +1694,9 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
               <button className="button secondary" type="button" disabled={!canRunPublishApprovalPreview} onClick={() => void runPublishApprovalPreview()}>
                 {runningPublishApprovalPreview ? "Approval Snapshot Preview 실행 중" : "Publish Approval Snapshot Preview"}
               </button>
+              <button className="button secondary" type="button" disabled={!canRunPublishApprovalReadback} onClick={() => void runPublishApprovalReadback()}>
+                {runningPublishApprovalReadback ? "Saved Approval Readback 실행 중" : "Load Saved Publish Approvals"}
+              </button>
               <button className="button secondary" type="button" disabled>
                 Publish는 후속 패치에서 연결 예정
               </button>
@@ -1682,6 +1709,69 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
               Publish approval snapshot은 이제 local DB에 저장할 수 있지만, 저장은 publish 실행이 아닙니다. 저장된 approval이 있어도 canPublish=false,
               canSchedulePublish=false를 유지합니다.
             </div>
+
+            {publishApprovalReadbackResult ? (
+              <div className="read-block">
+                <h3>Saved Publish Approval Readback</h3>
+                <div className={publishApprovalReadbackResult.latestApproval ? "notice" : "notice warning"}>
+                  <strong>{publishApprovalReadbackResult.latestApproval ? "Saved publish approval snapshot found" : "Saved publish approval snapshot missing"}</strong>
+                  <p>
+                    Saved publish approval snapshot은 로컬 DB에 저장된 승인 스냅샷입니다. 이 저장은 Blogger publish 실행이 아니며 canPublish=false /
+                    canSchedulePublish=false 상태는 유지됩니다.
+                  </p>
+                  <p>실제 publish는 별도 preflight, OAuth 재연결, 실행 정책, 사용자 승인 후 future patch에서만 가능해야 합니다.</p>
+                </div>
+                <div className="detail-grid">
+                  <DetailItem label="Checked At" value={formatDate(publishApprovalReadbackResult.checkedAt)} />
+                  <DetailItem label="Approval Count" value={String(publishApprovalReadbackResult.count)} />
+                  <DetailItem label="Active Approval Count" value={String(publishApprovalReadbackResult.activeApprovals.length)} />
+                  <DetailItem label="Can Publish" value={publishApprovalReadbackResult.canPublish ? "yes" : "no"} />
+                  <DetailItem label="Can Schedule Publish" value={publishApprovalReadbackResult.canSchedulePublish ? "yes" : "no"} />
+                  <DetailItem label="DB Read" value={String(publishApprovalReadbackResult.sideEffectSummary.dbRead)} />
+                  <DetailItem label="DB Write" value={String(publishApprovalReadbackResult.sideEffectSummary.dbWrite)} />
+                  <DetailItem label="Approval Persistence" value={String(publishApprovalReadbackResult.sideEffectSummary.approvalPersistence)} />
+                  <DetailItem label="Blogger API Write" value={String(publishApprovalReadbackResult.sideEffectSummary.bloggerApiWrite)} />
+                  <DetailItem label="Blogger Publish" value={String(publishApprovalReadbackResult.sideEffectSummary.bloggerPublish)} />
+                  <DetailItem label="Blogger Scheduled Publish" value={String(publishApprovalReadbackResult.sideEffectSummary.bloggerScheduledPublish)} />
+                  <DetailItem label="Content Item Mutation" value={String(publishApprovalReadbackResult.sideEffectSummary.contentItemMutation)} />
+                  <DetailItem label="Token Refresh" value={String(publishApprovalReadbackResult.sideEffectSummary.tokenRefresh)} />
+                  <DetailItem label="LLM Call" value={String(publishApprovalReadbackResult.sideEffectSummary.llmCall)} />
+                </div>
+                {publishApprovalReadbackResult.latestApproval ? (
+                  <div className="detail-grid">
+                    <DetailItem label="Approval ID" value={publishApprovalReadbackResult.latestApproval.id} />
+                    <DetailItem label="Mode" value={publishApprovalReadbackResult.latestApproval.mode} />
+                    <DetailItem label="Status" value={publishApprovalReadbackResult.latestApproval.status} />
+                    <DetailItem label="Snapshot Hash" value={publishApprovalReadbackResult.latestApproval.snapshotHash} />
+                    <DetailItem label="Hash Algorithm" value={publishApprovalReadbackResult.latestApproval.hashAlgorithm} />
+                    <DetailItem label="Canonicalization" value={publishApprovalReadbackResult.latestApproval.canonicalization} />
+                    <DetailItem label="Target Blog ID" value={publishApprovalReadbackResult.latestApproval.targetBloggerBlogId} />
+                    <DetailItem label="Target Blog Name" value={publishApprovalReadbackResult.latestApproval.targetBloggerBlogName ?? "-"} />
+                    <DetailItem label="Blogger Post ID" value={publishApprovalReadbackResult.latestApproval.bloggerPostId} />
+                    <DetailItem label="Draft HTML Hash" value={publishApprovalReadbackResult.latestApproval.draftHtmlHash} />
+                    <DetailItem label="Draft HTML Length" value={String(publishApprovalReadbackResult.latestApproval.draftHtmlLength)} />
+                    <DetailItem label="Title Candidate" value={publishApprovalReadbackResult.latestApproval.titleCandidate ?? "-"} />
+                    <DetailItem label="Token State" value={publishApprovalReadbackResult.latestApproval.tokenState} />
+                    <DetailItem label="Token State Checked At" value={formatDate(publishApprovalReadbackResult.latestApproval.tokenStateCheckedAt)} />
+                    <DetailItem label="Rollback Acknowledged" value={String(publishApprovalReadbackResult.latestApproval.rollbackAcknowledged)} />
+                    <DetailItem label="Side-effect Acknowledged" value={String(publishApprovalReadbackResult.latestApproval.sideEffectSummaryAcknowledged)} />
+                    <DetailItem label="Persistence Acknowledged" value={String(publishApprovalReadbackResult.latestApproval.approvalPersistenceAcknowledged)} />
+                    <DetailItem label="Created At" value={formatDate(publishApprovalReadbackResult.latestApproval.createdAt)} />
+                    <DetailItem label="Invalidated At" value={publishApprovalReadbackResult.latestApproval.invalidatedAt ? formatDate(publishApprovalReadbackResult.latestApproval.invalidatedAt) : "-"} />
+                    <DetailItem label="Invalidated Reason" value={publishApprovalReadbackResult.latestApproval.invalidatedReason ?? "-"} />
+                  </div>
+                ) : null}
+                <ValidationList
+                  title="Publish Approval Readback Blocking Reasons"
+                  items={publishApprovalReadbackResult.blockingReasons}
+                  emptyText="blocking reason이 없습니다."
+                  isError
+                />
+                <ValidationList title="Publish Approval Readback Warnings" items={publishApprovalReadbackResult.warnings} emptyText="warning이 없습니다." isWarning />
+              </div>
+            ) : (
+              <div className="notice">Load Saved Publish Approvals를 실행하면 저장된 local approval snapshot summary를 read-only로 확인합니다.</div>
+            )}
 
             {publishReadinessResult ? (
               <>
@@ -2068,7 +2158,8 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
                       <div className="notice">
                         <strong>Publish approval snapshot 저장 완료</strong>
                         <p>
-                          approvalId: {publishApprovalSaveResult.approvalId} / created: {publishApprovalSaveResult.created ? "yes" : "existing reused"}
+                          approvalId: {publishApprovalSaveResult.approvalId} / created: {publishApprovalSaveResult.created ? "yes" : "no"} / existing:{" "}
+                          {publishApprovalSaveResult.existing ? "yes" : "no"}
                         </p>
                         <p>
                           canPublish: {publishApprovalSaveResult.canPublish ? "yes" : "no"} / canSchedulePublish:{" "}

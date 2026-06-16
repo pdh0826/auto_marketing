@@ -929,3 +929,21 @@ Safety guard:
 - Publish Readiness는 계속 `ready=false`, `contentReady=true`, `publishReady=false`, `stage=draft_saved_publish_not_implemented`를 유지해야 한다.
 - Publish Preflight는 계속 `canPublish=false`, `canSchedulePublish=false`, side-effect all false를 유지해야 한다.
 - 9E-7A 구현/스모크 중에는 Blogger API write, additional draft save, `posts.update`, publish/scheduled publish, token refresh, token endpoint call, LLM 호출, content item mutation이 발생하지 않아야 한다.
+
+## Patch 9E-7B Publish approval persistence smoke/readback 검증
+
+- 시작 전 `blogger_publish_approvals` count는 `0`이어야 한다. 이미 1 이상이면 existing readback/idempotency 중심으로 진행한다.
+- `publish-approval-save` acknowledgement false 요청은 `acknowledgement_required`로 실패해야 하고 count를 증가시키면 안 된다.
+- acknowledgement true 요청은 local DB에 publish approval snapshot 1건을 저장해야 한다.
+- first save response는 `approvalId` present, `created=true`, `existing=false`, `canPublish=false`, `canSchedulePublish=false`여야 한다.
+- first save side effects는 `dbWrite=true`, `approvalPersistence=true`, `contentItemMutation=false`, `bloggerApiWrite=false`, `bloggerPublish=false`, `bloggerScheduledPublish=false`, `tokenRefresh=false`, `llmCall=false`여야 한다.
+- `blogger_publish_approvals` count는 first save 후 `1`이어야 한다.
+- `publish-approval-readback`은 `count=1`, `latestApproval.id` present, latest snapshot hash equals saved snapshot hash, `canPublish=false`, `canSchedulePublish=false`를 반환해야 한다.
+- readback side effects는 `dbRead=true`, `dbWrite=false`, `approvalPersistence=false`, Blogger write false, token refresh false, content mutation false, LLM false여야 한다.
+- same snapshot save를 다시 실행하면 같은 approval id를 반환하고 `created=false`, `existing=true`여야 한다.
+- idempotent save 후 `blogger_publish_approvals` count는 계속 `1`이어야 한다.
+- Content Detail UI는 latest saved approval summary를 표시해야 한다.
+- UI는 저장된 approval이 publish 실행이 아니며 `canPublish=false`, `canSchedulePublish=false`가 유지된다고 표시해야 한다.
+- Blogger Draft 저장 버튼은 duplicate save 상태에서 계속 disabled여야 한다.
+- publish/scheduled publish 실행 버튼은 새로 활성화되면 안 된다.
+- 9E-7B 구현/스모크 중에는 Blogger API write, additional draft save, `posts.update`, publish/scheduled publish, token refresh, token endpoint call, LLM 호출, content item mutation이 발생하지 않아야 한다.
