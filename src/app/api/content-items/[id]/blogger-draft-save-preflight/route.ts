@@ -9,7 +9,7 @@ import { buildPublishReadiness } from "@/lib/content/publish-readiness";
 import { getActiveBloggerDraftApproval, getLatestBloggerDraftApproval, toBloggerDraftApprovalAdmin } from "@/lib/db/blogger-draft-approvals";
 import { getBloggerConnectionSecretStatus } from "@/lib/db/blogger-connection-secrets";
 import { listBloggerConnectionsForBlog } from "@/lib/db/blogger-connections";
-import { getSuccessfulBloggerDraftSaveByApproval } from "@/lib/db/blogger-draft-saves";
+import { getSuccessfulBloggerDraftSaveByApproval, toBloggerDraftSaveAdmin } from "@/lib/db/blogger-draft-saves";
 import { prisma } from "@/lib/db/client";
 import { safeErrorMessage } from "@/lib/llm/redaction";
 
@@ -169,7 +169,8 @@ export async function POST(_request: Request, { params }: RouteContext) {
       draftSavePreflightSummary: {
         draftNotSavedYetExpected: !successfulSaveForCurrentApproval,
         successfulSaveForCurrentApproval: Boolean(successfulSaveForCurrentApproval),
-        duplicateSaveBlocked: Boolean(successfulSaveForCurrentApproval)
+        duplicateSaveBlocked: Boolean(successfulSaveForCurrentApproval),
+        latestSuccessfulDraftSave: successfulSaveForCurrentApproval ? toBloggerDraftSaveAdmin(successfulSaveForCurrentApproval) : null
       },
       sideEffectSummary: {
         bloggerApiWrite: false,

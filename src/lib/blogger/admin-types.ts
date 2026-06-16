@@ -322,6 +322,7 @@ export interface BloggerDraftSavePreflight {
     draftNotSavedYetExpected: boolean;
     successfulSaveForCurrentApproval: boolean;
     duplicateSaveBlocked: boolean;
+    latestSuccessfulDraftSave: BloggerDraftSaveAdmin | null;
   };
   sideEffectSummary: {
     bloggerApiWrite: false;

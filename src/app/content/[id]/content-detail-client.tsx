@@ -359,6 +359,12 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
       !bloggerDraftSavePreflightResult.draftSavePreflightSummary.duplicateSaveBlocked &&
       !savingBloggerDraft
   );
+  const latestSuccessfulBloggerDraftSave =
+    bloggerDraftPreviewResult?.draftSaveSummary.latestSuccessfulDraftSave ??
+    bloggerDraftSavePreflightResult?.draftSavePreflightSummary.latestSuccessfulDraftSave ??
+    null;
+  const latestSuccessfulBloggerDraftAdminLinks = buildBloggerDraftAdminLinks(latestSuccessfulBloggerDraftSave);
+  const latestSuccessfulBloggerDraftUrlLooksLikeHome = looksLikeBloggerBlogHomeUrl(latestSuccessfulBloggerDraftSave);
   const stepwiseBusy = Boolean(loadingStepwiseRuns || creatingStepwiseRun || executingStepwiseStepKey || assemblingStepwiseRun || finalPolishingStepwiseRun);
   const canCreateStepwiseRun = Boolean(contentItem?.planJson && !creatingStepwiseRun);
   const canAssembleStepwiseRun = Boolean(selectedStepwiseRun && !stepwiseBusy && getMissingStepwiseSectionKeys(selectedStepwiseRun).length === 0);
@@ -1267,13 +1273,14 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
             ...current.draftSavePreflightSummary,
             draftNotSavedYetExpected: false,
             successfulSaveForCurrentApproval: true,
-            duplicateSaveBlocked: true
+            duplicateSaveBlocked: true,
+            latestSuccessfulDraftSave: result.data.draftSave
           }
         };
       });
       setBloggerDraftSaveConfirmationPending(false);
       setNotice(
-        `Blogger draft가 생성되었습니다. publish=false, scheduledPublish=false입니다. Post ID: ${result.data.draftSave?.bloggerPostId ?? "-"} / Draft URL: ${
+        `Blogger draft가 생성되었습니다. publish=false, scheduledPublish=false입니다. 같은 approval의 중복 저장은 차단됩니다. Post ID: ${result.data.draftSave?.bloggerPostId ?? "-"} / Draft URL: ${
           result.data.draftSave?.bloggerPostUrl ?? "-"
         }`
       );
@@ -1574,16 +1581,73 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
             ) : null}
             {!bloggerDraftSavePreflightResult ? (
               <div className="notice warning">Blogger Draft 저장 버튼은 Draft Save Preflight가 통과하기 전까지 비활성화됩니다.</div>
+            ) : bloggerDraftSavePreflightResult.draftSavePreflightSummary.duplicateSaveBlocked ? (
+              <div className="notice">현재 approval에 대한 Blogger draft가 이미 저장되어 중복 저장이 차단되었습니다. 저장 버튼은 보호 상태로 비활성화됩니다.</div>
             ) : !bloggerDraftSavePreflightResult.canSaveDraft ? (
               <div className="notice warning">Draft Save Preflight가 통과하지 않았습니다. blocking reason을 해결하고 다시 실행해야 Blogger draft save를 시도할 수 있습니다.</div>
             ) : (
               <div className="notice">Draft Save Preflight가 통과했습니다. 실제 Blogger draft save는 별도 명시 승인 버튼을 눌러야만 실행됩니다.</div>
             )}
 
+            {latestSuccessfulBloggerDraftSave ? (
+              <div className="read-block">
+                <h3>Blogger Draft Save Success</h3>
+                <div className="notice">
+                  <strong>Blogger draft save succeeded</strong>
+                  <p>이 글은 Blogger draft로 저장되었고 publish는 수행하지 않았습니다.</p>
+                  <p>현재 approval에 대한 Blogger draft가 이미 저장되어 중복 저장이 차단되었습니다.</p>
+                  <p>posts.update, publish, scheduled publish, token refresh는 구현/실행하지 않았습니다.</p>
+                  <p>content_items status/qualityScore/publishedAt/scheduledAt은 변경하지 않았습니다.</p>
+                </div>
+                <div className="detail-grid">
+                  <DetailItem label="Save Status" value={latestSuccessfulBloggerDraftSave.status} />
+                  <DetailItem label="Saved At" value={latestSuccessfulBloggerDraftSave.savedAt ? formatDate(latestSuccessfulBloggerDraftSave.savedAt) : "-"} />
+                  <DetailItem label="Approval ID" value={latestSuccessfulBloggerDraftSave.approvalId} />
+                  <DetailItem label="Target Blog Name" value={latestSuccessfulBloggerDraftSave.targetBloggerBlogName ?? "-"} />
+                  <DetailItem label="Target Blog ID" value={latestSuccessfulBloggerDraftSave.targetBloggerBlogId} />
+                  <DetailItem label="Target Blog URL" value={latestSuccessfulBloggerDraftSave.targetBloggerBlogUrl ?? "-"} />
+                  <DetailItem label="Title Candidate" value={latestSuccessfulBloggerDraftSave.titleCandidate} />
+                  <DetailItem label="Blogger Post ID" value={latestSuccessfulBloggerDraftSave.bloggerPostId ?? "-"} />
+                  <DetailItem label="Stored Blogger Post URL" value={latestSuccessfulBloggerDraftSave.bloggerPostUrl ?? "-"} />
+                  <DetailItem label="Duplicate Save Blocked" value={bloggerDraftSavePreflightResult?.draftSavePreflightSummary.duplicateSaveBlocked ? "yes" : "yes for same approval"} />
+                  <DetailItem label="Publish" value="false" />
+                  <DetailItem label="Scheduled Publish" value="false" />
+                  <DetailItem label="posts.update" value="not implemented" />
+                  <DetailItem label="Token Refresh" value="not implemented" />
+                </div>
+                {latestSuccessfulBloggerDraftUrlLooksLikeHome ? (
+                  <div className="notice warning">
+                    Blogger가 draft post에 대해 블로그 홈 URL을 반환할 수 있습니다. 초안 관리에는 아래에서 계산한 Blogger 관리자 편집/미리보기 링크가 더 유용합니다.
+                  </div>
+                ) : null}
+                {latestSuccessfulBloggerDraftAdminLinks ? (
+                  <div className="form-actions">
+                    <a className="button secondary" href={latestSuccessfulBloggerDraftAdminLinks.editUrl} target="_blank" rel="noreferrer">
+                      Blogger 관리자에서 초안 편집 열기
+                    </a>
+                    <a className="button secondary" href={latestSuccessfulBloggerDraftAdminLinks.previewUrl} target="_blank" rel="noreferrer">
+                      Blogger 초안 미리보기 열기
+                    </a>
+                  </div>
+                ) : (
+                  <div className="notice warning">Blogger 관리자 링크를 계산하려면 target blog id와 Blogger post id가 모두 필요합니다.</div>
+                )}
+                <div className="notice">
+                  다른 draft post를 만들려면 draftHtml을 의도적으로 변경하고 Blogger Draft Payload Preview와 approval snapshot을 새로 생성한 뒤 preflight를 다시 통과해야 합니다.
+                </div>
+              </div>
+            ) : null}
+
             {bloggerDraftSavePreflightResult ? (
               <div className="read-block">
                 <h3>Blogger Draft Save Preflight</h3>
-                <div className={bloggerDraftSavePreflightResult.canSaveDraft ? "notice" : "notice warning"}>
+                <div
+                  className={
+                    bloggerDraftSavePreflightResult.canSaveDraft || bloggerDraftSavePreflightResult.draftSavePreflightSummary.duplicateSaveBlocked
+                      ? "notice"
+                      : "notice warning"
+                  }
+                >
                   <strong>Preflight Result</strong>
                   <p>
                     ok: {bloggerDraftSavePreflightResult.ok ? "yes" : "no"} / canSaveDraft:{" "}
@@ -1667,9 +1731,10 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
                   </div>
                 ) : null}
                 {bloggerDraftSavePreflightResult.draftSavePreflightSummary.duplicateSaveBlocked ? (
-                  <div className="notice error">
+                  <div className="notice">
                     <strong>Duplicate draft save blocked</strong>
-                    <p>현재 approval snapshot으로 이미 성공한 Blogger draft save가 있어 중복 저장을 막았습니다.</p>
+                    <p>현재 approval에 대한 Blogger draft가 이미 저장되어 중복 저장이 차단되었습니다.</p>
+                    <p>같은 approval에서는 보호 상태로 저장 버튼을 비활성화합니다. 다른 draft가 필요하면 draftHtml을 변경하고 새 approval snapshot을 생성하세요.</p>
                   </div>
                 ) : null}
                 {bloggerDraftSavePreflightResult.approvalSnapshotStatus.requiresReapproval ? (
@@ -3240,6 +3305,39 @@ function formatStepwiseErrorCode(code: string) {
     return "local_stepwise_route_required - stepwise 실행은 local/Ollama/local_http content_draft route에서만 허용됩니다.";
   }
   return code;
+}
+
+function buildBloggerDraftAdminLinks(draftSave: BloggerDraftSaveAdmin | null) {
+  if (!draftSave?.targetBloggerBlogId || !draftSave.bloggerPostId) {
+    return null;
+  }
+
+  const blogId = encodeURIComponent(draftSave.targetBloggerBlogId);
+  const postId = encodeURIComponent(draftSave.bloggerPostId);
+
+  return {
+    editUrl: `https://www.blogger.com/blog/post/edit/${blogId}/${postId}`,
+    previewUrl: `https://www.blogger.com/blog/post/edit/preview/${blogId}/${postId}`
+  };
+}
+
+function looksLikeBloggerBlogHomeUrl(draftSave: BloggerDraftSaveAdmin | null) {
+  if (!draftSave?.bloggerPostUrl || !draftSave.targetBloggerBlogUrl) {
+    return false;
+  }
+
+  return normalizeUrlForComparison(draftSave.bloggerPostUrl) === normalizeUrlForComparison(draftSave.targetBloggerBlogUrl);
+}
+
+function normalizeUrlForComparison(value: string) {
+  const trimmed = value.trim();
+  try {
+    const url = new URL(trimmed);
+    const pathname = url.pathname.replace(/\/+$/, "") || "/";
+    return `${url.protocol.toLowerCase()}//${url.host.toLowerCase()}${pathname}`;
+  } catch {
+    return trimmed.replace(/\/+$/, "").toLowerCase();
+  }
 }
 
 function DetailItem({ label, value }: { label: string; value: string }) {

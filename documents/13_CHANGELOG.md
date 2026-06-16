@@ -795,3 +795,32 @@ Policy:
 - No automatic draft save.
 - No publish, scheduled publish, posts.update, token refresh, LLM call, schema change, or content item mutation.
 - Blogger write remains possible only through the explicit user-clicked save button after preflight passes.
+
+## Patch 9E-4G-2b: Blogger Draft Save Success UX and Admin Link Polish
+
+Implemented after Patch 9E-4G-2a:
+
+- Recorded the live smoke outcome where the web UI created one Blogger draft post in the test blog.
+- Added safe latest-successful draft save metadata to Draft Save Preflight responses.
+- Improved the content detail Blogger Draft Save section with a success block for saved draft metadata.
+- Added derived Blogger admin edit/preview links from `targetBloggerBlogId` and `bloggerPostId`.
+- Added guidance that Blogger may return a blog/home URL for draft posts and that the derived admin links are the useful management links.
+- Reframed `blogger_draft_already_saved_for_approval` as a protective duplicate-save state instead of a scary error.
+- Kept copy explicit that the saved post is still a draft and `posts.update`, publish, scheduled publish, and token refresh are not implemented/executed.
+
+Live smoke record:
+
+- `blogger_draft_saves=1`
+- `blogger_draft_approvals=1`
+- `llm_call_logs=22`
+- `bloggerPostId=6376467965797870330`
+- Duplicate preflight blocker `blogger_draft_already_saved_for_approval` confirmed.
+- `draftMarkdown` hash stayed `9e0921e7edc9e4a8464a0a52ba369d3d`.
+- `draftHtml` hash stayed `a7393df8fb009566201daeea18796027`.
+- Content status stayed `planned`; `qualityScore`, `publishedAt`, and `scheduledAt` were unchanged.
+
+Policy:
+
+- UX/read-only metadata polish only.
+- No new Blogger API write or additional draft save during this patch.
+- No publish, scheduled publish, posts.update, token refresh, LLM call, schema change, migration, or content item mutation.

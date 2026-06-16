@@ -135,27 +135,34 @@ latest committed baseline before Patch 9E-4C-3C: 3cb3fbc Add stepwise draft gene
 - The save button now activates from the latest passing Draft Save Preflight result rather than publish-readiness top-level readiness.
 - The UI uses an in-page 2-step confirmation before calling the existing guarded Blogger draft save route.
 - Codex smoke should verify the enabled button but should not click the final save confirmation without explicit user approval.
+- Patch 9E-4G-2b documents the first successful web UI Blogger draft save smoke.
+- The test blog draft save created Blogger post id `6376467965797870330`; `blogger_draft_saves=1`, `blogger_draft_approvals=1`, and `llm_call_logs=22`.
+- The content item stayed `planned`; `draftMarkdown` hash `9e0921e7edc9e4a8464a0a52ba369d3d` and `draftHtml` hash `a7393df8fb009566201daeea18796027` were unchanged.
+- Draft Save Preflight can now return the latest same-approval successful draft save as safe metadata.
+- Content detail shows a success/protection block with draft metadata, derived Blogger admin edit/preview links, and duplicate-save guidance.
+- `blogger_draft_already_saved_for_approval` is a protective state for the same approval, not a publish failure.
+- `posts.update`, publish, scheduled publish, token refresh, and additional draft save remain out of scope unless explicitly requested.
 
 ## Next Patch Candidate
 
-Patch 9E-4G-2 후보: user-approved one-time Blogger draft save from the web UI.
+Patch 9E-4G-3 후보: Blogger draft update/retry policy planning, or Patch 9E-5 Blogger OAuth/token refresh readiness planning.
 
 Alternative candidates:
 
 - Patch 9E-5: Blogger OAuth/test blog readiness 재점검.
+- Patch 9E-4H: post-save publish-readiness UX refresh without publish implementation.
 
 Recommended scope:
 
-- Re-run and verify saved `draftHtml` Quality Dry Run, Publish Readiness, Blogger Draft Payload Preview, and Blogger Draft Save Preflight.
-- Confirm preflight blocks missing Blogger connection, missing verified selected blog, missing/expired token, missing active approval, stale approval, HTML validation failures, and content readiness failures.
-- Use the 9E-4G-1b checklist/action items to clear blockers before any live write attempt.
-- If preflight is blocked by `access_token_expired_reauth_required`, manually re-run OAuth before considering draft save.
-- Only perform actual Blogger draft save after the user explicitly approves a live test blog write in the UI.
+- Treat the current same-approval draft save as already completed and duplicate-blocked.
+- Do not create another Blogger draft unless a new patch explicitly designs update/retry/new-approval semantics.
+- If preflight is blocked by `access_token_expired_reauth_required`, manually re-run OAuth before considering any further Blogger write.
+- For another save attempt, require intentional `draftHtml` change, new payload preview, new approval snapshot, and user-approved live write.
 - Keep publish, scheduled publish, token refresh, and posts.update out of scope.
 - Keep automatic `draftHtml`, status, qualityScore, Blogger draft save, and publish out of scope unless separately requested.
 - Keep existing `generate-draft` route unchanged.
 - Keep commercial/high-performance remote providers on the existing one-shot full draft path.
-- Keep Blogger OAuth/live draft save out of scope unless explicitly selected.
+- Keep additional Blogger live draft save out of scope unless explicitly selected.
 
 ## Do Not Start With
 

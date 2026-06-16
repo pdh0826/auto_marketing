@@ -764,3 +764,16 @@ npm run build
 - Codex smoke에서는 사용자 명시 승인 없이 “Blogger Draft 저장” 확정 클릭을 하지 않는다.
 - save 성공 후에는 post id/draft URL이 있으면 표시하고, 같은 approval 중복 저장이 막히도록 UI state를 갱신해야 한다.
 - save 실패 시 safe error만 표시하고 token/client secret/encrypted value/raw Blogger response/full draftHtml은 노출하지 않아야 한다.
+
+## Patch 9E-4G-2b Blogger draft save success UX / admin link polish 검증
+
+- live smoke에서 웹 UI를 통한 Blogger draft save가 1회 성공한 뒤 `blogger_draft_saves=1`, `blogger_draft_approvals=1`, `llm_call_logs=22`가 유지되어야 한다.
+- 성공 row의 safe metadata가 Content detail에 표시되어야 한다: status, savedAt, approvalId, target blog name/id/url, title candidate, Blogger post id, stored Blogger post URL.
+- blog id와 post id가 있으면 UI가 derived Blogger admin links를 표시해야 한다:
+  - `https://www.blogger.com/blog/post/edit/{targetBloggerBlogId}/{bloggerPostId}`
+  - `https://www.blogger.com/blog/post/edit/preview/{targetBloggerBlogId}/{bloggerPostId}`
+- stored `bloggerPostUrl`이 blog home URL처럼 보이면 Blogger가 draft post에 blog/home URL을 반환할 수 있고 관리자 링크가 더 유용하다는 안내가 보여야 한다.
+- post-save preflight에서 `blogger_draft_already_saved_for_approval`이 반환되면 scary error가 아니라 success/protection state로 표시되어야 한다.
+- 같은 approval에 대한 “Blogger Draft 저장” 버튼은 disabled로 유지되어야 하며, 다른 draft save는 draftHtml 변경 및 새 approval snapshot이 필요하다는 안내가 보여야 한다.
+- UI는 `publish=false`, `scheduledPublish=false`, `posts.update not implemented`, `token refresh not implemented`를 명확히 표시해야 한다.
+- 9E-4G-2b 구현/스모크 중에는 Blogger API write, 추가 draft save, publish/scheduled publish, posts.update, token refresh, LLM 호출, content item mutation이 발생하지 않아야 한다.
