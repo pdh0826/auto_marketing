@@ -45,6 +45,27 @@
 - 실제 발행과 예약 발행
 - 자동 bulk publishing
 
+## 2026-06-16 구현 상태 추가
+
+완료:
+
+- 저장된 `draftHtml` 품질 preview와 publish-readiness preview
+- Blogger OAuth callback token exchange와 encrypted token storage
+- Blogger blog list read-only 조회와 verified blog selection
+- Blogger draft payload preview, manual approval snapshot, guarded draft save
+- Blogger `posts.insert?isDraft=true` 기반 draft save 1회 live 검증
+- Post-save duplicate protection, token-expired reauth guidance, update/retry policy planning
+
+아직 구현하지 않음:
+
+- Blogger publish
+- Scheduled publish
+- `posts.update`
+- Token refresh
+- Automatic `content_items.status`, `qualityScore`, `publishedAt`, `scheduledAt` mutation
+
+Publish/scheduled publish는 별도 approval, preflight, side-effect summary, audit, rollback 안내, token 상태 정책이 설계되기 전까지 구현하지 않는다.
+
 ## 초기 제외 기능
 
 - 자동 키워드 수집

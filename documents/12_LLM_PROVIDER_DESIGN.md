@@ -762,3 +762,13 @@ Patch 9E-5B is a Blogger draft update/retry policy and UX patch, not an LLM rout
 - No LLM provider is invoked and no `llm_call_logs` row is created.
 - No Blogger write, additional draft save, `posts.update`, publish, scheduled publish, token refresh, content item mutation, schema change, or migration occurs.
 - Prompt text, raw LLM responses, Blogger tokens, encrypted values, raw Blogger responses, and full draft HTML remain outside UI/log metadata.
+
+## Patch 9E-6A publish/scheduled publish policy boundary
+
+Patch 9E-6A is a Blogger publish/scheduled publish policy and UX patch, not an LLM routing change.
+
+- The UI explains that a saved Blogger draft is not publish-ready and that `publishReady=false`/top-level `ready=false` remain intentional.
+- Publish and scheduled publish are documented as planning-only until separate approval, preflight, side-effect summary, audit, rollback, and token policies exist.
+- No LLM provider is invoked and no `llm_call_logs` row is created.
+- No Blogger publish call, scheduled publish call, `posts.update`, additional draft save, token refresh, content item status/timestamp mutation, schema change, or migration occurs.
+- Prompt text, raw LLM responses, Blogger tokens, encrypted values, raw Blogger responses, and full draft HTML remain outside UI/log metadata.

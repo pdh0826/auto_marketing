@@ -5,7 +5,7 @@
 ```text
 repo: ~/blog-growth-agent
 branch: master
-latest committed baseline before Patch 9E-5B: df79022 Clarify Blogger token expiry readiness
+latest committed baseline before Patch 9E-6A: 7f1a1b4 Clarify Blogger draft update retry policy
 milestone: Stepwise draft -> publish-ready HTML -> manual draftHtml apply -> Blogger OAuth/blog selection -> approval -> Blogger draft save 1회 성공
 ```
 
@@ -42,6 +42,8 @@ The current completed path is:
 - Current preflight may also include `access_token_expired_reauth_required`; this means a future Blogger write needs OAuth re-connection, not automatic token refresh.
 - Automatic token refresh is not implemented.
 - Draft update/retry policy is planning-only: successful same-approval saves are not retried, and `posts.update` is not implemented.
+- Publish/scheduled publish policy is planning-only: saved Blogger draft is not publish-ready, and `publishReady=false`/top-level `ready=false` remain intentional.
+- `content_items.status`, `publishedAt`, `scheduledAt`, `qualityScore`, and `draftHtml` are not changed by publish-readiness or policy UI.
 
 ## Next Patch Priorities
 
@@ -55,7 +57,17 @@ B. **Patch 9E-5D: posts.update preflight/approval design**
 - Design update target identity, update approval snapshot, rollback warning, and side-effect summary before any `posts.update` implementation.
 - Keep retry limited to recorded retryable failures where Blogger draft creation is not known to have succeeded.
 
-C. **Later: publish/scheduled publish design only**
+C. **Patch 9E-6B: publish preflight/approval design**
+
+- Design publish target identity, manual publish approval, rollback acknowledgement, and `sideEffectSummary.publish=true`.
+- Design local `status`/`publishedAt` mutation order and partial failure handling without implementing publish.
+
+D. **Patch 9E-6C: scheduled publish preflight/approval design**
+
+- Design `scheduledAt`, timezone, cancellation/update, local `status`/`scheduledAt` mutation, and `sideEffectSummary.scheduledPublish=true`.
+- Do not implement scheduled publish until design is explicitly approved.
+
+General boundary:
 
 - Do not implement publish/scheduled publish until draft update/retry, token refresh, and manual approval policies are settled.
 
@@ -124,6 +136,7 @@ Expected preflight condition after the successful save:
 - 9E-4H refreshed post-save Publish Readiness UX while keeping `ready=false` and `publishReady=false`.
 - 9E-5A clarified token-expired readiness UX and token refresh design boundaries without implementing refresh.
 - 9E-5B documented and surfaced Blogger draft update/retry policy planning without implementing `posts.update` or retry execution.
+- 9E-6A documented and surfaced publish/scheduled publish policy planning without implementing publish, scheduling, or local status/timestamp mutation.
 
 ## Closeout Safety Notes
 
@@ -131,5 +144,6 @@ Expected preflight condition after the successful save:
 - `posts.update`, publish, scheduled publish, token refresh, and bulk publishing are not implemented.
 - Additional Blogger draft saves must not be run for the same approval unless a later patch intentionally changes approval/update semantics.
 - Successful same-approval draft saves are not retry candidates. Draft corrections need a new approval/new draft or a separately approved `posts.update` policy.
+- A saved Blogger draft is not publish-ready. Publish and scheduled publish need separate approval/preflight/side-effect/audit/rollback policy before implementation.
 - Expired access token handling is currently OAuth re-connection guidance only; do not call refresh/token endpoints without a later explicit patch.
 - `.env.local`, `.env.local.backup*`, secret backup files, tokens, client secrets, and encrypted values must not be read, modified, printed, or staged.

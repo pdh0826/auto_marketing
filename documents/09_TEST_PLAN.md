@@ -854,3 +854,17 @@ Safety guard:
 - Draft Save Preflight는 계속 `canSaveDraft=false`, `blogger_draft_already_saved_for_approval`, `access_token_expired_reauth_required`, side-effect all false를 유지해야 한다.
 - Publish readiness는 계속 `ready=false`, `publishReady=false`, `stage=draft_saved_publish_not_implemented`, `metadata.bloggerDraftSaved=true`를 유지해야 한다.
 - 9E-5B 구현/스모크 중에는 Blogger API write, 추가 draft save, `posts.update`, publish/scheduled publish, token refresh, LLM 호출, DB/schema/content item mutation이 발생하지 않아야 한다.
+
+## Patch 9E-6A Publish / Scheduled Publish policy design 검증
+
+- Content detail UI는 Blogger draft 저장 완료가 publish-ready가 아니라는 점을 명확히 표시해야 한다.
+- UI는 `Publish / Scheduled Publish Policy` 또는 동등한 planning-only 안내를 표시해야 한다.
+- UI는 `publishReady=false`와 top-level `ready=false` 의미를 유지해야 한다.
+- UI는 publish/scheduled publish가 아직 구현되지 않았고 별도 approval, preflight, side-effect summary, rollback 안내가 필요하다고 설명해야 한다.
+- UI는 `content_items.status`, `publishedAt`, `scheduledAt`, `qualityScore`, `draftHtml` 변경이 이번 패치에서 허용되지 않는다고 안내해야 한다.
+- token expired 상태에서는 publish/scheduled publish보다 OAuth 재연결이 우선이라는 안내가 유지되어야 한다.
+- posts.update/retry 정책과 publish/scheduled publish 정책은 분리되어 표시되어야 한다.
+- publish 또는 scheduled publish 버튼이 새로 활성화되면 안 되며, Blogger Draft 저장 버튼도 same-approval duplicate 상태에서는 disabled여야 한다.
+- Draft Save Preflight는 계속 `canSaveDraft=false`, `blogger_draft_already_saved_for_approval`, `access_token_expired_reauth_required`, side-effect all false를 유지해야 한다.
+- Publish readiness는 계속 `ready=false`, `contentReady=true`, `publishReady=false`, `stage=draft_saved_publish_not_implemented`, `metadata.bloggerDraftSaved=true`를 유지해야 한다.
+- 9E-6A 구현/스모크 중에는 Blogger API write, additional draft save, `posts.update`, publish/scheduled publish, token refresh, LLM 호출, DB/schema/content item mutation이 발생하지 않아야 한다.

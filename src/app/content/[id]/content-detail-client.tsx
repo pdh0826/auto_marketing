@@ -1561,6 +1561,10 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
                     <DetailItem label="Top-level Ready" value={publishReadinessResult.ready ? "yes" : "no"} />
                     <DetailItem label="Publish" value="not implemented" />
                     <DetailItem label="Scheduled Publish" value="not implemented" />
+                    <DetailItem label="Publish Readiness Policy" value="planning only" />
+                    <DetailItem label="Required Before Publish" value="OAuth reconnect, publish preflight, manual approval, side-effect summary" />
+                    <DetailItem label="Content Mutation" value="not allowed in this patch" />
+                    <DetailItem label="External Rollback" value="not guaranteed" />
                     <DetailItem label="posts.update" value="not implemented" />
                     <DetailItem label="Token Refresh" value="not implemented" />
                     <DetailItem label="Draft Update Policy" value="planning only" />
@@ -1574,6 +1578,7 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
                       <p>현재 approval snapshot으로 이미 성공한 Blogger draft가 있어 같은 approval로는 다시 저장하지 않습니다.</p>
                     </div>
                   ) : null}
+                  {publishReadinessResult.metadata.bloggerDraftSaved ? <PublishScheduledPublishPolicyNotice /> : null}
                   {publishReadinessResult.metadata.bloggerDraftSaved ? <BloggerDraftUpdateRetryPolicyNotice /> : null}
                   {postSaveAccessTokenExpired ? (
                     <div className="notice warning">
@@ -1693,6 +1698,10 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
                   <DetailItem label="Duplicate Save Blocked" value={bloggerDraftSavePreflightResult?.draftSavePreflightSummary.duplicateSaveBlocked ? "yes" : "yes for same approval"} />
                   <DetailItem label="Publish" value="false" />
                   <DetailItem label="Scheduled Publish" value="false" />
+                  <DetailItem label="Publish Readiness Policy" value="planning only" />
+                  <DetailItem label="Required Before Publish" value="OAuth reconnect, publish preflight, manual approval, side-effect summary" />
+                  <DetailItem label="Content Mutation" value="not allowed in this patch" />
+                  <DetailItem label="External Rollback" value="not guaranteed" />
                   <DetailItem label="posts.update" value="not implemented" />
                   <DetailItem label="Token Refresh" value="not implemented" />
                   <DetailItem label="Draft Update Policy" value="planning only" />
@@ -1700,6 +1709,7 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
                   <DetailItem label="Duplicate Save" value="blocked for current approval" />
                   <DetailItem label="New Approval Before Draft Mutation" value="required by policy" />
                 </div>
+                <PublishScheduledPublishPolicyNotice />
                 <BloggerDraftUpdateRetryPolicyNotice />
                 {latestSuccessfulBloggerDraftUrlLooksLikeHome ? (
                   <div className="notice warning">
@@ -3964,6 +3974,29 @@ function BloggerDraftUpdateRetryPolicyNotice() {
       <p>
         Blogger posts.update는 외부 Blogger draft를 직접 수정하는 작업이며, 로컬 Git/DB처럼 쉽게 rollback된다고 가정하면 안 됩니다. 향후 update/retry 작업은 별도
         preflight, side-effect summary, 사용자 승인, OAuth 재연결 상태 확인이 필요합니다.
+      </p>
+    </div>
+  );
+}
+
+function PublishScheduledPublishPolicyNotice() {
+  return (
+    <div className="notice warning">
+      <strong>Publish / Scheduled Publish Policy</strong>
+      <p>
+        Blogger draft는 저장되었지만 아직 publish-ready 상태는 아닙니다. Publish Readiness의 publishReady=false와 top-level ready=false는 의도적으로 유지됩니다.
+      </p>
+      <p>
+        publish와 scheduled publish는 외부 Blogger 상태와 로컬 content status/publishedAt/scheduledAt를 바꿀 수 있는 단계이므로, 별도 승인된 preflight와 사용자 확인
+        없이는 실행하지 않습니다.
+      </p>
+      <p>
+        발행 전에는 OAuth 재연결 또는 유효한 token 상태, publish 전용 manual approval, side-effect summary, rollback 안내가 필요합니다. token 만료 상태에서는
+        publish/scheduled publish보다 OAuth 재연결이 우선입니다.
+      </p>
+      <p>
+        posts.update/retry 정책과 publish 정책은 분리합니다. 이번 패치에서는 content_items.status, publishedAt, scheduledAt, qualityScore, draftHtml을 변경하지
+        않습니다.
       </p>
     </div>
   );

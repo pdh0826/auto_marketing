@@ -221,3 +221,37 @@ Before implementing `posts.update`, decide:
 6. How to audit update attempts without storing raw Blogger response bodies or full HTML.
 7. How token expiry, duplicate update collisions, and concurrent edits are blocked.
 8. How to keep `posts.update` separate from publish and scheduled publish.
+
+## Patch 9E-6A Publish / scheduled publish policy design
+
+Patch 9E-6A is a policy and UX planning patch. It does not implement Blogger publish, scheduled publish, a publish route, scheduled publish route, `posts.update`, additional draft save, token refresh, or local content status mutation.
+
+Current behavior:
+
+- A Blogger draft can be saved and visible in Blogger admin, but this is not publish-ready.
+- Publish Readiness intentionally keeps `publishReady=false` and top-level `ready=false`.
+- `content_items.status`, `publishedAt`, `scheduledAt`, `qualityScore`, and `draftHtml` are not changed by publish-readiness or this policy patch.
+- Token-expired state blocks future Blogger writes until OAuth re-connection is completed.
+- Draft update/retry policy remains separate from publish/scheduled publish policy.
+
+Publish policy:
+
+- Publish means converting an existing Blogger draft to a public post.
+- It changes external Blogger state and may later require local `content_items.status` and `publishedAt` mutation, but that mutation requires a separate approved policy.
+- Before publish, a dedicated publish preflight must confirm draft existence, target blog/post id, approval snapshot, token status, duplicate/update collision state, no prior publish success, manual publish approval, side-effect summary, and rollback warning acknowledgement.
+- A publish preflight must explicitly show `sideEffectSummary.publish=true` before the user confirms the real action.
+
+Scheduled publish policy:
+
+- Scheduled publish means configuring a post to become public at a future time.
+- Blogger API support details, timezone handling, schedule cancellation/update, failure handling, and local `scheduledAt`/status policy require separate design.
+- Scheduled publish preflight must include every publish preflight requirement plus future `scheduledAt`, explicit timezone, schedule update/cancel policy, and `sideEffectSummary.scheduledPublish=true`.
+
+Future local mutation design must decide:
+
+1. Whether publish success changes `planned -> published` or needs an intermediate status.
+2. Whether scheduled publish changes `planned -> scheduled` and when `scheduledAt` is recorded.
+3. How to handle partial failure between Blogger success and local DB update.
+4. Whether to create a pending state before Blogger write or update the DB only after success.
+5. How to keep raw Blogger responses, tokens, and full HTML out of logs/audit metadata.
+6. Whether `posts.update` is allowed after publish or scheduled publish.

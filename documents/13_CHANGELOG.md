@@ -940,3 +940,23 @@ Policy:
 - No retry execution implementation.
 - No Blogger API write, additional draft save, publish, scheduled publish, token refresh, LLM call, schema change, migration, or content item mutation.
 - Existing Draft Save Preflight and Publish Readiness semantics remain unchanged.
+
+## Patch 9E-6A: Publish / Scheduled Publish Policy Design
+
+Implemented after Patch 9E-5B:
+
+- Added content detail guidance for publish and scheduled publish policy planning.
+- The UI now explains that a saved Blogger draft is not publish-ready.
+- Publish Ready and top-level Ready remain visibly false after draft save.
+- Added planning-only status labels for publish readiness policy, required pre-publish checks, content mutation, and external rollback.
+- Documented the difference between immediate publish and scheduled publish.
+- Documented future publish preflight requirements: saved draft, blog/post identity, approval snapshot, token status, duplicate/update conflict checks, manual publish approval, side-effect summary, and rollback acknowledgement.
+- Documented future scheduled publish requirements: `scheduledAt`, explicit timezone, schedule cancel/update policy, local status/scheduledAt policy, and `sideEffectSummary.scheduledPublish=true`.
+- Documented that local `content_items.status`, `publishedAt`, `scheduledAt`, `qualityScore`, and `draftHtml` mutations remain forbidden until a separate approved policy.
+
+Policy:
+
+- No publish implementation.
+- No scheduled publish implementation.
+- No Blogger publish call, Blogger write, additional draft save, `posts.update`, token refresh, LLM call, schema change, migration, or content item mutation.
+- Existing Draft Save Preflight and Publish Readiness semantics remain unchanged.

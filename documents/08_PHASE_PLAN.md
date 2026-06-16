@@ -150,9 +150,9 @@ Patch 9E-4B 완료:
 
 다음 패치 후보:
 
-- Patch 9E-4C: Local LLM sectioned multi-pass long-form generation
-- Patch 9E-5: Blogger OAuth/test blog readiness 재점검
-- Blogger publish/scheduled publish는 별도 패치
+- Patch 9E-5C: explicit token refresh design approval
+- Patch 9E-5D: posts.update preflight/approval design
+- Patch 9E-6B: publish preflight/approval design, still without Blogger publish execution
 
 먼저 하지 말 것:
 
@@ -162,3 +162,12 @@ Patch 9E-4B 완료:
 - API Key나 secret 출력
 - raw LLM response나 prompt 전문 로그 저장
 - `content_plan` route를 `content_draft` 대용으로 사용
+
+Patch 9E-6A 완료:
+
+- Blogger draft save 성공 이후 publish/scheduled publish policy를 UI와 문서에 planning-only로 표시
+- publish와 scheduled publish의 차이, 필요한 approval/preflight/side-effect summary/audit/rollback 정책 문서화
+- `content_items.status`, `publishedAt`, `scheduledAt`, `qualityScore`, `draftHtml` 변경은 별도 정책 전 금지로 유지
+- token expired 상태에서는 publish/scheduled publish보다 OAuth 재연결이 우선이라는 정책 유지
+- `posts.update`/retry 정책과 publish 정책을 분리
+- Blogger publish/scheduled publish route, Blogger write, token refresh, DB schema/migration은 구현하지 않음
