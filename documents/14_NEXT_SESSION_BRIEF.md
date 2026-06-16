@@ -44,8 +44,9 @@ The current completed path is:
 - Draft update/retry policy is planning-only: successful same-approval saves are not retried, and `posts.update` is not implemented.
 - Publish/scheduled publish policy is planning-only: saved Blogger draft is not publish-ready, and `publishReady=false`/top-level `ready=false` remain intentional.
 - Publish preflight dry-run is read-only: `canPublish=false`, `canSchedulePublish=false`, side-effect flags all false, and publish/scheduled publish remain not implemented.
-- Publish approval snapshot preview is read-only: `canCreatePublishApproval=false`, hash preview is not persisted, and approval persistence remains not implemented.
-- Publish approval persistence policy is planning-only: future approval records need immutable snapshot, deterministic hash, rollback acknowledgement, side-effect acknowledgement, token checkedAt, invalidation policy, and publish attempt audit before implementation.
+- Publish approval snapshot preview is read-only: `canCreatePublishApproval=false`, hash preview is persisted only after an explicit save action with acknowledgements.
+- Publish approval persistence policy is partially implemented as local snapshot storage; invalidation UX, publish attempt audit, and real publish execution remain future work.
+- Publish approval persistence storage is implemented locally: `blogger_publish_approvals` can store non-secret approval snapshots after explicit acknowledgements, but publish execution remains unimplemented.
 - `content_items.status`, `publishedAt`, `scheduledAt`, `qualityScore`, and `draftHtml` are not changed by publish-readiness or policy UI.
 
 ## Next Patch Priorities
@@ -60,16 +61,16 @@ B. **Patch 9E-5D: posts.update preflight/approval design**
 - Design update target identity, update approval snapshot, rollback warning, and side-effect summary before any `posts.update` implementation.
 - Keep retry limited to recorded retryable failures where Blogger draft creation is not known to have succeeded.
 
-C. **Patch 9E-6E: publish approval persistence implementation plan**
+C. **Patch 9E-7B: publish approval read/status UX**
 
-- Decide whether to implement a dedicated `blogger_publish_approvals` table.
-- Freeze canonical snapshot fields, hash algorithm, invalidation rules, acknowledgement capture, token checkedAt, and publish attempt audit linkage before any migration.
+- Add read-only listing/status for stored publish approvals.
+- Show latest approval id/hash/status in Publish Preflight and Content Detail.
 - Keep actual Blogger publish execution out of scope.
 
-D. **Patch 9E-6F: scheduled publish preflight/approval design**
+D. **Patch 9E-7C: publish execution audit/preflight design**
 
-- Design `scheduledAt`, timezone, cancellation/update, local `status`/`scheduledAt` mutation, and `sideEffectSummary.scheduledPublish=true`.
-- Do not implement scheduled publish until design is explicitly approved.
+- Design publish execution attempt audit, partial failure handling, and local content status/timestamp mutation ordering.
+- Do not call Blogger publish until design is explicitly approved.
 
 General boundary:
 
@@ -144,6 +145,7 @@ Expected preflight condition after the successful save:
 - 9E-6B added read-only publish preflight dry-run API/UI and documented the future publish approval snapshot model while keeping `canPublish=false`, `canSchedulePublish=false`, and all side-effect flags false.
 - 9E-6C added read-only publish approval snapshot/hash preview API/UI while keeping `canCreatePublishApproval=false`, no approval persistence, and all side-effect flags false.
 - 9E-6D documented and surfaced publish approval persistence policy/schema planning while keeping no approval table, no migration, no DB write, no publish, and no Blogger write.
+- 9E-7A added local publish approval persistence storage in `blogger_publish_approvals`, guarded by server-side hash match and three acknowledgements, while keeping no publish, no scheduled publish, no Blogger write, no token refresh, and no content item mutation.
 
 ## Closeout Safety Notes
 

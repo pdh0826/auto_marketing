@@ -573,3 +573,59 @@ Audit policy:
 - Publish execution attempts should be stored separately from approvals.
 - Attempt records should link to approval id, Blogger post id, publish mode, safe status, safe error code/message, and local content mutation outcome.
 - Raw Blogger response body, raw Blogger error body, access token, refresh token, client secret, encrypted value, and full `draftHtml` must not be stored.
+
+## Patch 9E-7A Publish approval persistence storage
+
+Patch 9E-7A adds the first publish approval persistence table and supporting enum types.
+
+Added Prisma model:
+
+- `BloggerPublishApproval`
+
+Mapped table:
+
+- `blogger_publish_approvals`
+
+Added enums:
+
+- `BloggerPublishApprovalMode`: `publish`, `scheduled_publish`
+- `BloggerPublishApprovalStatus`: `approved_snapshot`, `invalidated`, `used_for_publish_attempt`, `used_for_schedule_attempt`, `cancelled`
+
+Stored fields are non-secret snapshot metadata only:
+
+- content item id
+- publish approval mode/status
+- target Blogger blog id/name/url
+- Blogger draft post id
+- related Blogger draft save id
+- related Blogger draft approval id
+- `draftMarkdown` hash
+- `draftHtml` hash and length
+- title candidate
+- optional `scheduledAt` and timezone
+- non-secret snapshot JSON
+- snapshot hash, hash algorithm, canonicalization
+- rollback acknowledgement
+- side-effect summary acknowledgement
+- approval persistence acknowledgement
+- token state and token state checked time
+- created/invalidated metadata
+
+Policy:
+
+- Approval persistence stores a local approval snapshot only.
+- Approval persistence does not call Blogger.
+- Approval persistence does not publish or schedule publish.
+- Approval persistence does not mutate `content_items.status`, `publishedAt`, `scheduledAt`, `qualityScore`, `draftHtml`, or `draftMarkdown`.
+- The save route must regenerate the publish approval snapshot server-side and compare the server hash with the client preview hash.
+- Active approvals are treated as `status=approved_snapshot` and `invalidatedAt=null`.
+- Same `contentItemId` + mode + snapshot hash + scheduled time active approval is idempotent and can return the existing row.
+- Token expired state may be persisted as snapshot metadata, but future publish execution remains blocked until OAuth reconnect or another approved token policy exists.
+
+Still not added:
+
+- publish execution attempt table
+- publish/scheduled publish route
+- `posts.update` policy table
+- token refresh persistence
+- local content status/timestamp mutation policy

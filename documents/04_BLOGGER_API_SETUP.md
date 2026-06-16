@@ -335,3 +335,47 @@ Future publish execution remains separate:
 - Scheduled publish must include `scheduledAt` and timezone in the approval snapshot.
 - Token refresh is still not implemented and must not be called implicitly.
 - Raw Blogger responses, raw error bodies, access tokens, refresh tokens, client secrets, encrypted values, and full HTML must remain redacted.
+
+## Patch 9E-7A Publish approval persistence storage
+
+Patch 9E-7A adds local DB storage for publish approval snapshots.
+
+New route:
+
+```text
+POST /api/content-items/[id]/publish-approval-save
+```
+
+The route stores a non-secret approval snapshot in `blogger_publish_approvals` only after:
+
+- server-side publish approval snapshot regeneration
+- client preview hash matches the server hash
+- rollback acknowledgement is true
+- side-effect summary acknowledgement is true
+- approval persistence acknowledgement is true
+- successful Blogger draft save metadata exists
+- target Blogger blog id exists
+- Blogger draft post id exists
+- current draft approval snapshot still matches
+
+Allowed side effect:
+
+- local DB insert into `blogger_publish_approvals`, or idempotent reuse of an existing active approval with the same snapshot.
+
+Still forbidden:
+
+- Blogger API write
+- Blogger publish
+- scheduled publish
+- `posts.update`
+- `posts.insert`
+- additional draft save
+- token refresh or token endpoint call
+- content item status/timestamp mutation
+- LLM call
+
+Access token expired policy:
+
+- `expired_reauth_required` may be recorded in the approval snapshot.
+- This does not authorize publish execution.
+- Any future Blogger publish write must re-check token state and require OAuth reconnect or a later approved token refresh policy.

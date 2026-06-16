@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { buildBloggerDraftApprovalSnapshotHashes, buildBloggerDraftApprovalSummary } from "@/lib/blogger/draft-approval";
 import { buildBloggerDraftPayloadPreview } from "@/lib/blogger/draft-payload-preview";
+import type { PublishApprovalMode } from "@/lib/blogger/admin-types";
 import type { ContentAssetAdmin } from "@/lib/content/asset-types";
 import type { ContentItemAdmin } from "@/lib/content/admin-types";
 import { buildPublishApprovalPreview } from "@/lib/content/publish-approval-preview";
@@ -22,6 +23,14 @@ interface RouteContext {
 
 export async function POST(_request: Request, { params }: RouteContext) {
   try {
+    const body = (await _request.json().catch(() => ({}))) as {
+      mode?: PublishApprovalMode;
+      scheduledAt?: string | null;
+      timezone?: string | null;
+    };
+    const mode = body.mode === "scheduled_publish" ? "scheduled_publish" : "publish";
+    const scheduledAt = typeof body.scheduledAt === "string" && body.scheduledAt.trim() ? body.scheduledAt.trim() : null;
+    const timezone = typeof body.timezone === "string" && body.timezone.trim() ? body.timezone.trim() : null;
     const contentItem = await prisma.contentItem.findUnique({
       where: { id: params.id },
       include: {
@@ -66,6 +75,9 @@ export async function POST(_request: Request, { params }: RouteContext) {
     const result = buildPublishApprovalPreview({
       contentItem: safeContentItem,
       publishPreflight,
+      publishMode: mode,
+      scheduledAt,
+      timezone,
       checkedAt
     });
 

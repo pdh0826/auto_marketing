@@ -802,3 +802,13 @@ Patch 9E-6D is a publish approval persistence policy/schema planning patch, not 
 - The UI and docs describe future immutable approval persistence, invalidation, acknowledgement, token checkedAt, and publish attempt audit requirements.
 - No prompt text, raw model response, generated candidate text, Blogger token, encrypted value, raw Blogger response, raw Blogger error body, or full draft HTML is stored in metadata.
 - Future publish approval persistence must remain independent from content generation and must not call an LLM when creating or invalidating approval records.
+
+## Patch 9E-7A publish approval persistence storage boundary
+
+Patch 9E-7A adds local DB persistence for publish approval snapshots, not an LLM routing change.
+
+- `POST /api/content-items/[id]/publish-approval-save` must not call LLM providers.
+- The route stores server-regenerated non-secret snapshot metadata only.
+- No `llm_call_logs` row is created by preview, save guard failure, or approval persistence.
+- Prompt text, raw model responses, generated candidate text, Blogger tokens, encrypted values, raw Blogger responses, raw Blogger error bodies, and full draft HTML remain outside the approval snapshot.
+- Stored publish approvals do not authorize or execute content generation, Blogger publish, scheduled publish, token refresh, or `posts.update`.

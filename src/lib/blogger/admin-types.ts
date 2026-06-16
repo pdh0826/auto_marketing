@@ -398,6 +398,19 @@ export interface PublishApprovalPreviewSideEffectSummary {
   approvalPersistence: false;
 }
 
+export interface PublishApprovalSaveSideEffectSummary {
+  dbWrite: boolean;
+  approvalPersistence: boolean;
+  contentItemMutation: false;
+  bloggerApiWrite: false;
+  bloggerPublish: false;
+  bloggerScheduledPublish: false;
+  bloggerPostsUpdate: false;
+  bloggerDraftSave: false;
+  tokenRefresh: false;
+  llmCall: false;
+}
+
 export interface PublishApprovalSnapshotPreview {
   contentItemId: string;
   contentStatus: string | null;
@@ -418,6 +431,7 @@ export interface PublishApprovalSnapshotPreview {
   timezone: string | null;
   rollbackAcknowledged: false;
   sideEffectSummaryAcknowledged: false;
+  approvalPersistenceAcknowledged: false;
   tokenState: PublishApprovalTokenState;
   tokenStateCheckedAt: string;
 }
@@ -438,4 +452,66 @@ export interface PublishApprovalPreview {
   requiredBeforePublish: string[];
   requiredBeforeScheduledPublish: string[];
   sideEffectSummary: PublishApprovalPreviewSideEffectSummary;
+}
+
+export type BloggerPublishApprovalStatus = "approved_snapshot" | "invalidated" | "used_for_publish_attempt" | "used_for_schedule_attempt" | "cancelled";
+
+export interface BloggerPublishApprovalAdmin {
+  id: string;
+  contentItemId: string;
+  status: BloggerPublishApprovalStatus;
+  mode: PublishApprovalMode;
+  snapshotHash: string;
+  snapshotHashPrefix: string;
+  hashAlgorithm: "sha256";
+  canonicalization: string;
+  targetBloggerBlogId: string;
+  targetBloggerBlogName: string | null;
+  targetBloggerBlogUrl: string | null;
+  bloggerPostId: string;
+  bloggerDraftSaveId: string | null;
+  bloggerDraftApprovalId: string | null;
+  draftMarkdownHash: string;
+  draftHtmlHash: string;
+  draftHtmlLength: number;
+  titleCandidate: string | null;
+  scheduledAt: string | null;
+  timezone: string | null;
+  rollbackAcknowledged: boolean;
+  sideEffectSummaryAcknowledged: boolean;
+  approvalPersistenceAcknowledged: boolean;
+  tokenState: PublishApprovalTokenState;
+  tokenStateCheckedAt: string;
+  createdBy: string | null;
+  createdAt: string;
+  invalidatedAt: string | null;
+  invalidatedReason: string | null;
+  supersededByApprovalId: string | null;
+}
+
+export interface PublishApprovalSaveResponse {
+  contentItemId: string;
+  approvalId: string;
+  created: boolean;
+  status: BloggerPublishApprovalStatus;
+  mode: PublishApprovalMode;
+  snapshotHash: string;
+  hashAlgorithm: "sha256";
+  canonicalization: string;
+  canPublish: false;
+  canSchedulePublish: false;
+  blockingReasons: string[];
+  warnings: string[];
+  savedApprovalSummary: {
+    targetBloggerBlogId: string | null;
+    bloggerPostId: string | null;
+    draftHtmlHash: string;
+    draftHtmlLength: number;
+    tokenState: PublishApprovalTokenState;
+    rollbackAcknowledged: boolean;
+    sideEffectSummaryAcknowledged: boolean;
+    approvalPersistenceAcknowledged: boolean;
+    createdAt: string;
+  };
+  sideEffectSummary: PublishApprovalSaveSideEffectSummary;
 }

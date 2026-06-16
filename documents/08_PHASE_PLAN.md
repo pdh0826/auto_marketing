@@ -200,3 +200,16 @@ Patch 9E-6D 완료:
 - draft/content/blog/post/schedule/timezone/token/status 변경 시 approval이 stale 또는 invalidated가 되어야 한다는 정책 문서화
 - stored publish approval과 실제 publish execution은 별도 단계이며 publish/scheduled publish는 후속 승인 전 구현하지 않음
 - Blogger publish/scheduled publish/write, token refresh, posts.update, additional draft save, DB schema/migration, content item mutation, LLM 호출은 구현하지 않음
+
+Patch 9E-7A 완료:
+
+- `BloggerPublishApprovalMode`, `BloggerPublishApprovalStatus`, `BloggerPublishApproval` Prisma model 추가
+- `blogger_publish_approvals` migration 추가 및 local dev DB 적용
+- publish approval snapshot 저장 helper 추가
+- `POST /api/content-items/[id]/publish-approval-save` 추가
+- save route는 서버에서 publish approval snapshot을 재생성하고 client preview hash와 일치할 때만 저장
+- rollback acknowledgement, side-effect acknowledgement, approval persistence acknowledgement 3개를 모두 요구
+- 같은 content/mode/snapshot/schedule active approval은 idempotent하게 existing row 반환 가능
+- Content Detail UI에 local DB approval storage 옵션, acknowledgement checkbox, save 버튼, safe result summary 추가
+- 저장 후에도 `canPublish=false`, `canSchedulePublish=false` 유지
+- Blogger publish/scheduled publish/write, token refresh, posts.update, additional draft save, content item mutation, LLM 호출은 구현하지 않음

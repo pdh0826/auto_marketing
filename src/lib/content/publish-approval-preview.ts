@@ -6,14 +6,14 @@ import { REQUIRED_BEFORE_PUBLISH, REQUIRED_BEFORE_SCHEDULED_PUBLISH } from "@/li
 export const PUBLISH_APPROVAL_PREVIEW_CANONICALIZATION = "stable-json-sort-keys-v1";
 
 export const REQUIRED_BEFORE_APPROVAL_PERSISTENCE = [
-  "Publish approval DB model or approved existing-table extension",
-  "Canonical snapshot field list and hash algorithm frozen",
-  "Manual rollback acknowledgement capture",
-  "Manual side-effect summary acknowledgement capture",
-  "Token state checkedAt persistence policy",
-  "Approval expiration and invalidation policy",
-  "Publish execution attempt audit model",
-  "Partial failure handling policy"
+  "Explicit publish approval save action",
+  "Client hash preview must match server-side regenerated snapshot hash",
+  "Manual rollback acknowledgement",
+  "Manual side-effect summary acknowledgement",
+  "Manual approval persistence acknowledgement",
+  "Token expired state can be stored, but publish execution requires OAuth reconnect",
+  "Publish execution attempt audit model before real publish",
+  "Partial failure handling policy before real publish"
 ] as const;
 
 export interface BuildPublishApprovalPreviewInput {
@@ -33,11 +33,12 @@ export function buildPublishApprovalPreview(input: BuildPublishApprovalPreviewIn
   const timezone = input.timezone ?? null;
   const tokenState = getTokenState(input.publishPreflight);
   const blockingReasons = new Set<string>([
-    "publish_approval_persistence_not_implemented",
+    "explicit_publish_approval_save_required",
     "publish_not_implemented",
     "scheduled_publish_not_implemented",
     "rollback_acknowledgement_required",
-    "side_effect_summary_acknowledgement_required"
+    "side_effect_summary_acknowledgement_required",
+    "approval_persistence_acknowledgement_required"
   ]);
   const warnings = new Set<string>(input.publishPreflight.warnings);
 
@@ -86,6 +87,7 @@ export function buildPublishApprovalPreview(input: BuildPublishApprovalPreviewIn
     timezone,
     rollbackAcknowledged: false as const,
     sideEffectSummaryAcknowledged: false as const,
+    approvalPersistenceAcknowledged: false as const,
     tokenState,
     tokenStateCheckedAt: checkedAtIso
   };

@@ -1024,3 +1024,28 @@ Not implemented:
 - content item status, `publishedAt`, `scheduledAt`, `qualityScore`, `draftHtml`, or `draftMarkdown` mutation
 - DB write/mutation
 - LLM calls or `llm_call_logs`
+
+## Patch 9E-7A: Publish Approval Persistence Storage
+
+Implemented after Patch 9E-6D:
+
+- Added Prisma enums `BloggerPublishApprovalMode` and `BloggerPublishApprovalStatus`.
+- Added `BloggerPublishApproval` model mapped to `blogger_publish_approvals`.
+- Added migration `20260617000100_add_blogger_publish_approvals`.
+- Added `src/lib/db/blogger-publish-approvals.ts` for safe approval insert/read/count helpers.
+- Added `POST /api/content-items/[id]/publish-approval-save`.
+- The save route regenerates the publish approval snapshot server-side and requires the client preview hash to match.
+- The save route requires rollback acknowledgement, side-effect summary acknowledgement, and approval persistence acknowledgement.
+- Same content/mode/snapshot/schedule active approval can be reused idempotently.
+- Updated Publish Approval Snapshot Preview semantics: persistence exists, but explicit save and acknowledgements are required.
+- Added Content Detail UI for publish approval storage options, acknowledgement checkboxes, local DB save button, and safe save result summary.
+- Stored approval still returns `canPublish=false` and `canSchedulePublish=false`.
+
+Not implemented:
+
+- Blogger publish or scheduled publish
+- Blogger API write, `posts.update`, `posts.insert`, or additional draft save
+- token refresh or token endpoint call
+- content item status, `publishedAt`, `scheduledAt`, `qualityScore`, `draftHtml`, or `draftMarkdown` mutation
+- publish execution attempt audit
+- LLM calls or `llm_call_logs`

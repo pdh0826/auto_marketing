@@ -908,3 +908,24 @@ Safety guard:
 - Publish Readiness는 계속 `ready=false`, `contentReady=true`, `publishReady=false`, `stage=draft_saved_publish_not_implemented`, `metadata.bloggerDraftSaved=true`를 유지해야 한다.
 - 9E-6D 구현/스모크 중에는 Prisma schema/migration 변경, publish approval insert/update, Blogger API write, additional draft save, `posts.update`, publish/scheduled publish, token refresh, token endpoint call, LLM 호출, DB write/mutation, content item mutation이 발생하지 않아야 한다.
 - DB guard 기대값은 기존 post-save baseline과 같아야 한다: `blogger_draft_saves=1`, `blogger_draft_approvals=1`, `llm_call_logs=22`, content item status `planned`, draft hashes unchanged.
+
+## Patch 9E-7A Publish approval persistence storage 검증
+
+- Prisma schema에 `BloggerPublishApproval` model과 publish approval mode/status enum이 있어야 한다.
+- `blogger_publish_approvals` table이 존재해야 한다.
+- 새 table은 smoke 전 count `0`이어야 한다.
+- `POST /api/content-items/[id]/publish-approval-preview`는 더 이상 `publish_approval_persistence_not_implemented` blocker를 반환하지 않아야 한다.
+- preview는 `explicit_publish_approval_save_required`, `rollback_acknowledgement_required`, `side_effect_summary_acknowledgement_required`, `approval_persistence_acknowledgement_required`를 표시할 수 있다.
+- `POST /api/content-items/[id]/publish-approval-save`는 acknowledgement가 없으면 `acknowledgement_required`로 실패하고 DB insert를 만들지 않아야 한다.
+- 실제 save smoke는 사용자 명시 승인 없이는 수행하지 않는다.
+- 실제 save smoke를 수행하는 경우 response는 approval id, snapshot hash, `canPublish=false`, `canSchedulePublish=false`, `contentItemMutation=false`, `bloggerApiWrite=false`, `bloggerPublish=false`, `bloggerScheduledPublish=false`, `tokenRefresh=false`, `llmCall=false`를 반환해야 한다.
+- 저장된 snapshot에는 access token, refresh token, client secret, encrypted value, raw OAuth response, raw Blogger response/error body, full `draftHtml`이 없어야 한다.
+- Content Detail UI는 acknowledgement checkbox 3개와 Save Publish Approval Snapshot 버튼을 보여야 한다.
+- checkbox 전에는 save 버튼이 disabled여야 한다.
+- UI는 approval 저장이 local DB snapshot storage일 뿐 publish 실행이 아니라고 표시해야 한다.
+- publish/scheduled publish 실행 버튼은 여전히 없어야 하거나 disabled여야 한다.
+- Blogger Draft 저장 버튼은 duplicate save 상태에서 계속 disabled여야 한다.
+- Draft Save Preflight는 계속 duplicate blocker와 token expired blocker를 표시하고 side-effect all false를 유지해야 한다.
+- Publish Readiness는 계속 `ready=false`, `contentReady=true`, `publishReady=false`, `stage=draft_saved_publish_not_implemented`를 유지해야 한다.
+- Publish Preflight는 계속 `canPublish=false`, `canSchedulePublish=false`, side-effect all false를 유지해야 한다.
+- 9E-7A 구현/스모크 중에는 Blogger API write, additional draft save, `posts.update`, publish/scheduled publish, token refresh, token endpoint call, LLM 호출, content item mutation이 발생하지 않아야 한다.

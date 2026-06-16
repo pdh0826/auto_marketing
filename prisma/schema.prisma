@@ -122,6 +122,19 @@ enum BloggerDraftSaveStatus {
   failed
 }
 
+enum BloggerPublishApprovalMode {
+  publish
+  scheduled_publish
+}
+
+enum BloggerPublishApprovalStatus {
+  approved_snapshot
+  invalidated
+  used_for_publish_attempt
+  used_for_schedule_attempt
+  cancelled
+}
+
 enum ContentDraftGenerationRunStatus {
   pending
   running
@@ -212,13 +225,14 @@ model ContentItem {
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
 
-  blog                  Blog?                       @relation(fields: [blogId], references: [id], onDelete: SetNull)
-  brandProfile          BrandProfile?               @relation(fields: [brandProfileId], references: [id], onDelete: SetNull)
-  llmCallLogs           LlmCallLog[]
-  assets                ContentAsset[]
-  bloggerDraftApprovals BloggerDraftApproval[]
-  bloggerDraftSaves     BloggerDraftSave[]
-  draftGenerationRuns   ContentDraftGenerationRun[]
+  blog                    Blog?                       @relation(fields: [blogId], references: [id], onDelete: SetNull)
+  brandProfile            BrandProfile?               @relation(fields: [brandProfileId], references: [id], onDelete: SetNull)
+  llmCallLogs             LlmCallLog[]
+  assets                  ContentAsset[]
+  bloggerDraftApprovals   BloggerDraftApproval[]
+  bloggerDraftSaves       BloggerDraftSave[]
+  bloggerPublishApprovals BloggerPublishApproval[]
+  draftGenerationRuns     ContentDraftGenerationRun[]
 
   @@index([blogId])
   @@index([brandProfileId])
@@ -484,8 +498,9 @@ model BloggerDraftApproval {
   createdAt                   DateTime                   @default(now())
   updatedAt                   DateTime                   @updatedAt
 
-  contentItem ContentItem        @relation(fields: [contentItemId], references: [id], onDelete: Cascade)
-  draftSaves  BloggerDraftSave[]
+  contentItem      ContentItem              @relation(fields: [contentItemId], references: [id], onDelete: Cascade)
+  draftSaves       BloggerDraftSave[]
+  publishApprovals BloggerPublishApproval[]
 
   @@index([contentItemId])
   @@index([status])
@@ -518,8 +533,9 @@ model BloggerDraftSave {
   createdAt              DateTime               @default(now())
   updatedAt              DateTime               @updatedAt
 
-  contentItem ContentItem          @relation(fields: [contentItemId], references: [id], onDelete: Cascade)
-  approval    BloggerDraftApproval @relation(fields: [approvalId], references: [id], onDelete: Restrict)
+  contentItem      ContentItem              @relation(fields: [contentItemId], references: [id], onDelete: Cascade)
+  approval         BloggerDraftApproval     @relation(fields: [approvalId], references: [id], onDelete: Restrict)
+  publishApprovals BloggerPublishApproval[]
 
   @@index([contentItemId])
   @@index([approvalId])
@@ -527,6 +543,55 @@ model BloggerDraftSave {
   @@index([snapshotHash])
   @@index([savedAt])
   @@map("blogger_draft_saves")
+}
+
+model BloggerPublishApproval {
+  id                              String                       @id @default(cuid())
+  contentItemId                   String
+  mode                            BloggerPublishApprovalMode
+  status                          BloggerPublishApprovalStatus @default(approved_snapshot)
+  targetBloggerBlogId             String
+  targetBloggerBlogName           String?
+  targetBloggerBlogUrl            String?
+  bloggerPostId                   String
+  bloggerDraftSaveId              String?
+  bloggerDraftApprovalId          String?
+  draftMarkdownHash               String
+  draftHtmlHash                   String
+  draftHtmlLength                 Int
+  titleCandidate                  String?
+  scheduledAt                     DateTime?
+  timezone                        String?
+  snapshotJson                    Json
+  snapshotHash                    String
+  hashAlgorithm                   String
+  canonicalization                String
+  rollbackAcknowledged            Boolean                      @default(false)
+  sideEffectSummaryAcknowledged   Boolean                      @default(false)
+  approvalPersistenceAcknowledged Boolean                      @default(false)
+  tokenState                      String
+  tokenStateCheckedAt             DateTime
+  createdBy                       String?
+  createdAt                       DateTime                     @default(now())
+  updatedAt                       DateTime                     @updatedAt
+  invalidatedAt                   DateTime?
+  invalidatedReason               String?
+  supersededByApprovalId          String?
+
+  contentItem          ContentItem           @relation(fields: [contentItemId], references: [id], onDelete: Cascade)
+  bloggerDraftSave     BloggerDraftSave?     @relation(fields: [bloggerDraftSaveId], references: [id], onDelete: SetNull)
+  bloggerDraftApproval BloggerDraftApproval? @relation(fields: [bloggerDraftApprovalId], references: [id], onDelete: SetNull)
+
+  @@index([contentItemId])
+  @@index([bloggerPostId])
+  @@index([targetBloggerBlogId])
+  @@index([snapshotHash])
+  @@index([status])
+  @@index([createdAt])
+  @@index([invalidatedAt])
+  @@index([mode])
+  @@index([scheduledAt])
+  @@map("blogger_publish_approvals")
 }
 
 model BloggerConnectionSecret {

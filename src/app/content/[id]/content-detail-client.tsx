@@ -6,7 +6,9 @@ import type {
   BloggerDraftPayloadPreview,
   BloggerDraftSaveAdmin,
   BloggerDraftSavePreflight,
+  PublishApprovalMode,
   PublishApprovalPreview,
+  PublishApprovalSaveResponse,
   PublishPreflightDryRun
 } from "@/lib/blogger/admin-types";
 import type { BlogPostTemplatePreviewResult, BlogPostTemplatePreviewSource } from "@/lib/blog-renderer/blog-post-template-renderer";
@@ -260,6 +262,7 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
   const [publishReadinessResult, setPublishReadinessResult] = useState<PublishReadinessResult | null>(null);
   const [publishPreflightResult, setPublishPreflightResult] = useState<PublishPreflightDryRun | null>(null);
   const [publishApprovalPreviewResult, setPublishApprovalPreviewResult] = useState<PublishApprovalPreview | null>(null);
+  const [publishApprovalSaveResult, setPublishApprovalSaveResult] = useState<PublishApprovalSaveResponse | null>(null);
   const [bloggerDraftPreviewResult, setBloggerDraftPreviewResult] = useState<BloggerDraftPayloadPreview | null>(null);
   const [bloggerDraftSavePreflightResult, setBloggerDraftSavePreflightResult] = useState<BloggerDraftSavePreflight | null>(null);
   const [stepwiseRuns, setStepwiseRuns] = useState<StepwiseDraftGenerationRunSummary[]>([]);
@@ -283,6 +286,12 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
   const [lastHtmlApplySummary, setLastHtmlApplySummary] = useState<HtmlApplySummary | null>(null);
   const [htmlApplyConfirmationPending, setHtmlApplyConfirmationPending] = useState(false);
   const [bloggerDraftSaveConfirmationPending, setBloggerDraftSaveConfirmationPending] = useState(false);
+  const [publishApprovalMode, setPublishApprovalMode] = useState<PublishApprovalMode>("publish");
+  const [publishApprovalScheduledAt, setPublishApprovalScheduledAt] = useState("");
+  const [publishApprovalTimezone, setPublishApprovalTimezone] = useState("Asia/Tokyo");
+  const [publishApprovalRollbackAcknowledged, setPublishApprovalRollbackAcknowledged] = useState(false);
+  const [publishApprovalSideEffectAcknowledged, setPublishApprovalSideEffectAcknowledged] = useState(false);
+  const [publishApprovalPersistenceAcknowledged, setPublishApprovalPersistenceAcknowledged] = useState(false);
   const [qualityRepairCandidateText, setQualityRepairCandidateText] = useState("");
   const [qualityRepairEditMode, setQualityRepairEditMode] = useState(false);
   const [qualityRepairDirty, setQualityRepairDirty] = useState(false);
@@ -309,6 +318,7 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
   const [runningPublishReadiness, setRunningPublishReadiness] = useState(false);
   const [runningPublishPreflight, setRunningPublishPreflight] = useState(false);
   const [runningPublishApprovalPreview, setRunningPublishApprovalPreview] = useState(false);
+  const [savingPublishApproval, setSavingPublishApproval] = useState(false);
   const [runningBloggerDraftPreview, setRunningBloggerDraftPreview] = useState(false);
   const [runningBloggerDraftSavePreflight, setRunningBloggerDraftSavePreflight] = useState(false);
   const [approvingBloggerDraft, setApprovingBloggerDraft] = useState(false);
@@ -332,6 +342,7 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
   const [publishReadinessError, setPublishReadinessError] = useState<string | null>(null);
   const [publishPreflightError, setPublishPreflightError] = useState<string | null>(null);
   const [publishApprovalPreviewError, setPublishApprovalPreviewError] = useState<string | null>(null);
+  const [publishApprovalSaveError, setPublishApprovalSaveError] = useState<string | null>(null);
   const [bloggerDraftPreviewError, setBloggerDraftPreviewError] = useState<string | null>(null);
   const [bloggerDraftSavePreflightError, setBloggerDraftSavePreflightError] = useState<string | null>(null);
   const [bloggerDraftSaveError, setBloggerDraftSaveError] = useState<string | null>(null);
@@ -357,6 +368,23 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
   const canRunPublishReadiness = Boolean(!runningPublishReadiness);
   const canRunPublishPreflight = Boolean(!runningPublishPreflight);
   const canRunPublishApprovalPreview = Boolean(!runningPublishApprovalPreview);
+  const publishApprovalPreviewMatchesOptions = Boolean(
+    publishApprovalPreviewResult &&
+      publishApprovalPreviewResult.approvalSnapshotPreview.publishMode === publishApprovalMode &&
+      (publishApprovalPreviewResult.approvalSnapshotPreview.scheduledAt ?? "") ===
+        (publishApprovalMode === "scheduled_publish" ? publishApprovalScheduledAt.trim() : "") &&
+      (publishApprovalPreviewResult.approvalSnapshotPreview.timezone ?? "") ===
+        (publishApprovalMode === "scheduled_publish" ? publishApprovalTimezone.trim() : "")
+  );
+  const canSavePublishApproval = Boolean(
+    publishApprovalPreviewResult?.approvalSnapshotHashPreview &&
+      publishApprovalPreviewMatchesOptions &&
+      publishApprovalRollbackAcknowledged &&
+      publishApprovalSideEffectAcknowledged &&
+      publishApprovalPersistenceAcknowledged &&
+      (publishApprovalMode === "publish" || (publishApprovalScheduledAt.trim() && publishApprovalTimezone.trim())) &&
+      !savingPublishApproval
+  );
   const canRunBloggerDraftPreview = Boolean(!runningBloggerDraftPreview);
   const canRunBloggerDraftSavePreflight = Boolean(!runningBloggerDraftSavePreflight);
   const canApproveBloggerDraftPayload = Boolean(
@@ -1156,19 +1184,63 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
   async function runPublishApprovalPreview() {
     setNotice(null);
     setPublishApprovalPreviewError(null);
+    setPublishApprovalSaveError(null);
+    setPublishApprovalSaveResult(null);
     setRunningPublishApprovalPreview(true);
 
     try {
       const result = await requestJson<ApiResult<PublishApprovalPreview>>(`/api/content-items/${contentItemId}/publish-approval-preview`, {
         method: "POST",
-        body: JSON.stringify({})
+        body: JSON.stringify({
+          mode: publishApprovalMode,
+          scheduledAt: publishApprovalMode === "scheduled_publish" ? publishApprovalScheduledAt.trim() || null : null,
+          timezone: publishApprovalMode === "scheduled_publish" ? publishApprovalTimezone.trim() || null : null
+        })
       });
       setPublishApprovalPreviewResult(result.data);
-      setNotice("Publish approval snapshot preview를 생성했습니다. approval 저장, publish, scheduled publish, Blogger write, token refresh, LLM 호출, DB 저장은 수행하지 않았습니다.");
+      setNotice("Publish approval snapshot preview를 생성했습니다. approval 저장 전 hash 확인만 수행했고 publish, scheduled publish, Blogger write, token refresh, LLM 호출, DB 저장은 수행하지 않았습니다.");
     } catch (caught) {
       setPublishApprovalPreviewError(caught instanceof Error ? caught.message : "Publish approval snapshot preview에 실패했습니다.");
     } finally {
       setRunningPublishApprovalPreview(false);
+    }
+  }
+
+  async function savePublishApprovalSnapshot() {
+    if (!publishApprovalPreviewResult) {
+      setPublishApprovalSaveError("Publish Approval Snapshot Preview를 먼저 실행하세요.");
+      return;
+    }
+    if (!canSavePublishApproval) {
+      setPublishApprovalSaveError("세 가지 acknowledgement를 모두 확인하고 현재 옵션으로 preview를 다시 실행해야 저장할 수 있습니다.");
+      return;
+    }
+
+    setNotice(null);
+    setPublishApprovalSaveError(null);
+    setPublishApprovalSaveResult(null);
+    setSavingPublishApproval(true);
+
+    try {
+      const result = await requestJson<ApiResult<PublishApprovalSaveResponse>>(`/api/content-items/${contentItemId}/publish-approval-save`, {
+        method: "POST",
+        body: JSON.stringify({
+          mode: publishApprovalMode,
+          scheduledAt: publishApprovalMode === "scheduled_publish" ? publishApprovalScheduledAt.trim() || null : null,
+          timezone: publishApprovalMode === "scheduled_publish" ? publishApprovalTimezone.trim() || null : null,
+          approvalSnapshotHashPreview: publishApprovalPreviewResult.approvalSnapshotHashPreview,
+          tokenStateCheckedAt: publishApprovalPreviewResult.approvalSnapshotPreview.tokenStateCheckedAt,
+          rollbackAcknowledged: publishApprovalRollbackAcknowledged,
+          sideEffectSummaryAcknowledged: publishApprovalSideEffectAcknowledged,
+          approvalPersistenceAcknowledged: publishApprovalPersistenceAcknowledged
+        })
+      });
+      setPublishApprovalSaveResult(result.data);
+      setNotice("Publish approval snapshot을 로컬 DB에 저장했습니다. Blogger publish, scheduled publish, token refresh, content status 변경은 수행하지 않았습니다.");
+    } catch (caught) {
+      setPublishApprovalSaveError(caught instanceof Error ? caught.message : "Publish approval snapshot 저장에 실패했습니다.");
+    } finally {
+      setSavingPublishApproval(false);
     }
   }
 
@@ -1534,6 +1606,59 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
             {publishReadinessError ? <div className="notice error">{publishReadinessError}</div> : null}
             {publishPreflightError ? <div className="notice error">{publishPreflightError}</div> : null}
             {publishApprovalPreviewError ? <div className="notice error">{publishApprovalPreviewError}</div> : null}
+            {publishApprovalSaveError ? <div className="notice error">{publishApprovalSaveError}</div> : null}
+
+            <div className="read-block">
+              <h3>Publish Approval Storage Options</h3>
+              <div className="notice">
+                이 설정은 publish approval snapshot preview와 local DB 저장에만 사용됩니다. Blogger publish, scheduled publish, posts.update, token refresh, content status
+                변경은 수행하지 않습니다.
+              </div>
+              <div className="form-grid">
+                <label>
+                  <span>Approval mode</span>
+                  <select
+                    value={publishApprovalMode}
+                    onChange={(event) => {
+                      setPublishApprovalMode(event.target.value === "scheduled_publish" ? "scheduled_publish" : "publish");
+                      setPublishApprovalPreviewResult(null);
+                      setPublishApprovalSaveResult(null);
+                      setPublishApprovalSaveError(null);
+                    }}
+                  >
+                    <option value="publish">publish</option>
+                    <option value="scheduled_publish">scheduled_publish</option>
+                  </select>
+                </label>
+                <label>
+                  <span>Scheduled At</span>
+                  <input
+                    type="datetime-local"
+                    value={publishApprovalScheduledAt}
+                    disabled={publishApprovalMode !== "scheduled_publish"}
+                    onChange={(event) => {
+                      setPublishApprovalScheduledAt(event.target.value);
+                      setPublishApprovalPreviewResult(null);
+                      setPublishApprovalSaveResult(null);
+                      setPublishApprovalSaveError(null);
+                    }}
+                  />
+                </label>
+                <label>
+                  <span>Timezone</span>
+                  <input
+                    value={publishApprovalTimezone}
+                    disabled={publishApprovalMode !== "scheduled_publish"}
+                    onChange={(event) => {
+                      setPublishApprovalTimezone(event.target.value);
+                      setPublishApprovalPreviewResult(null);
+                      setPublishApprovalSaveResult(null);
+                      setPublishApprovalSaveError(null);
+                    }}
+                  />
+                </label>
+              </div>
+            </div>
 
             <div className="form-actions">
               <button className="button" type="button" disabled={!canRunPublishReadiness} onClick={() => void runPublishReadiness()}>
@@ -1554,8 +1679,8 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
               LLM call을 수행하지 않습니다.
             </div>
             <div className="notice">
-              Publish approval snapshot preview는 실제 approval을 저장하지 않습니다. 사용자가 나중에 어떤 non-secret 값에 승인하게 될지 확인하기 위한 read-only 점검입니다.
-              현재 canCreatePublishApproval=false, canPublish=false, canSchedulePublish=false입니다.
+              Publish approval snapshot은 이제 local DB에 저장할 수 있지만, 저장은 publish 실행이 아닙니다. 저장된 approval이 있어도 canPublish=false,
+              canSchedulePublish=false를 유지합니다.
             </div>
 
             {publishReadinessResult ? (
@@ -1788,8 +1913,8 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
                     점검입니다.
                   </p>
                   <p>
-                    Snapshot hash preview는 현재 표시된 non-secret snapshot payload를 기준으로 계산된 미리보기 hash입니다. 이 값은 아직 DB에 저장되지 않았으며,
-                    approval persistence가 구현된 것이 아닙니다.
+                    Snapshot hash preview는 현재 표시된 non-secret snapshot payload를 기준으로 계산된 미리보기 hash입니다. acknowledgement 후 별도 버튼으로 이
+                    snapshot을 local DB에 저장할 수 있지만, 저장해도 publish 실행은 수행하지 않습니다.
                   </p>
                 </div>
                 {publishApprovalPreviewResult.approvalSnapshotPreview.tokenState === "expired_reauth_required" ? (
@@ -1848,6 +1973,10 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
                     label="Side-effect Summary Acknowledged"
                     value={String(publishApprovalPreviewResult.approvalSnapshotPreview.sideEffectSummaryAcknowledged)}
                   />
+                  <DetailItem
+                    label="Approval Persistence Acknowledged"
+                    value={String(publishApprovalPreviewResult.approvalSnapshotPreview.approvalPersistenceAcknowledged)}
+                  />
                   <DetailItem label="Token State" value={publishApprovalPreviewResult.approvalSnapshotPreview.tokenState} />
                   <DetailItem label="Token State Checked At" value={formatDate(publishApprovalPreviewResult.approvalSnapshotPreview.tokenStateCheckedAt)} />
                 </div>
@@ -1865,6 +1994,111 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
                   emptyText="approval persistence 전 필수 항목이 없습니다."
                 />
                 <PublishApprovalPersistencePolicyNotice />
+                <div className="read-block">
+                  <h3>Save Publish Approval Snapshot</h3>
+                  <div className="notice warning">
+                    <strong>Local DB approval storage only</strong>
+                    <p>이 버튼은 publish approval snapshot만 로컬 DB에 저장합니다.</p>
+                    <p>Blogger publish, scheduled publish, posts.update, token refresh, content status 변경은 수행하지 않습니다.</p>
+                    <p>저장된 approval이 있어도 실제 publish 실행은 별도 preflight와 별도 승인된 future patch에서만 가능합니다.</p>
+                  </div>
+                  {!publishApprovalPreviewMatchesOptions ? (
+                    <div className="notice warning">현재 mode/schedule 옵션이 preview와 다릅니다. 저장 전 Publish Approval Snapshot Preview를 다시 실행하세요.</div>
+                  ) : null}
+                  <div className="detail-grid">
+                    <DetailItem label="DB Write Before Click" value="will write approval snapshot only" />
+                    <DetailItem label="Blogger API Write" value="false" />
+                    <DetailItem label="Publish" value="false" />
+                    <DetailItem label="Scheduled Publish" value="false" />
+                    <DetailItem label="Content Item Mutation" value="false" />
+                    <DetailItem label="Token Refresh" value="false" />
+                    <DetailItem label="LLM Call" value="false" />
+                    <DetailItem label="Can Publish After Save" value="false" />
+                    <DetailItem label="Can Schedule Publish After Save" value="false" />
+                  </div>
+                  <div className="notice">
+                    <label>
+                      <input
+                        type="checkbox"
+                        checked={publishApprovalRollbackAcknowledged}
+                        onChange={(event) => {
+                          setPublishApprovalRollbackAcknowledged(event.target.checked);
+                          setPublishApprovalSaveResult(null);
+                          setPublishApprovalSaveError(null);
+                        }}
+                      />{" "}
+                      Blogger publish는 외부 서비스 상태를 변경하며 rollback이 자동 보장되지 않는다는 점을 확인했습니다.
+                    </label>
+                  </div>
+                  <div className="notice">
+                    <label>
+                      <input
+                        type="checkbox"
+                        checked={publishApprovalSideEffectAcknowledged}
+                        onChange={(event) => {
+                          setPublishApprovalSideEffectAcknowledged(event.target.checked);
+                          setPublishApprovalSaveResult(null);
+                          setPublishApprovalSaveError(null);
+                        }}
+                      />{" "}
+                      publish/scheduled publish/content item mutation은 이번 저장에서 실행되지 않으며, future patch에서 별도 side-effect summary가 필요함을 확인했습니다.
+                    </label>
+                  </div>
+                  <div className="notice">
+                    <label>
+                      <input
+                        type="checkbox"
+                        checked={publishApprovalPersistenceAcknowledged}
+                        onChange={(event) => {
+                          setPublishApprovalPersistenceAcknowledged(event.target.checked);
+                          setPublishApprovalSaveResult(null);
+                          setPublishApprovalSaveError(null);
+                        }}
+                      />{" "}
+                      이 작업은 approval snapshot persistence이며 publish 실행 권한이나 publish-ready 상태를 의미하지 않음을 확인했습니다.
+                    </label>
+                  </div>
+                  <div className="form-actions">
+                    <button className="button secondary" type="button" disabled={!canSavePublishApproval} onClick={() => void savePublishApprovalSnapshot()}>
+                      {savingPublishApproval ? "Publish Approval Snapshot 저장 중" : "Save Publish Approval Snapshot"}
+                    </button>
+                  </div>
+                  {publishApprovalSaveResult ? (
+                    <>
+                      <div className="notice">
+                        <strong>Publish approval snapshot 저장 완료</strong>
+                        <p>
+                          approvalId: {publishApprovalSaveResult.approvalId} / created: {publishApprovalSaveResult.created ? "yes" : "existing reused"}
+                        </p>
+                        <p>
+                          canPublish: {publishApprovalSaveResult.canPublish ? "yes" : "no"} / canSchedulePublish:{" "}
+                          {publishApprovalSaveResult.canSchedulePublish ? "yes" : "no"}
+                        </p>
+                      </div>
+                      <div className="detail-grid">
+                        <DetailItem label="Approval Status" value={publishApprovalSaveResult.status} />
+                        <DetailItem label="Mode" value={publishApprovalSaveResult.mode} />
+                        <DetailItem label="Snapshot Hash" value={publishApprovalSaveResult.snapshotHash} />
+                        <DetailItem label="Hash Algorithm" value={publishApprovalSaveResult.hashAlgorithm} />
+                        <DetailItem label="Canonicalization" value={publishApprovalSaveResult.canonicalization} />
+                        <DetailItem label="Target Blog ID" value={publishApprovalSaveResult.savedApprovalSummary.targetBloggerBlogId ?? "-"} />
+                        <DetailItem label="Blogger Post ID" value={publishApprovalSaveResult.savedApprovalSummary.bloggerPostId ?? "-"} />
+                        <DetailItem label="Draft HTML Hash" value={publishApprovalSaveResult.savedApprovalSummary.draftHtmlHash} />
+                        <DetailItem label="Draft HTML Length" value={String(publishApprovalSaveResult.savedApprovalSummary.draftHtmlLength)} />
+                        <DetailItem label="Token State" value={publishApprovalSaveResult.savedApprovalSummary.tokenState} />
+                        <DetailItem label="Created At" value={formatDate(publishApprovalSaveResult.savedApprovalSummary.createdAt)} />
+                        <DetailItem label="DB Write" value={String(publishApprovalSaveResult.sideEffectSummary.dbWrite)} />
+                        <DetailItem label="Approval Persistence" value={String(publishApprovalSaveResult.sideEffectSummary.approvalPersistence)} />
+                        <DetailItem label="Blogger API Write" value={String(publishApprovalSaveResult.sideEffectSummary.bloggerApiWrite)} />
+                        <DetailItem label="Blogger Publish" value={String(publishApprovalSaveResult.sideEffectSummary.bloggerPublish)} />
+                        <DetailItem label="Blogger Scheduled Publish" value={String(publishApprovalSaveResult.sideEffectSummary.bloggerScheduledPublish)} />
+                        <DetailItem label="Content Item Mutation" value={String(publishApprovalSaveResult.sideEffectSummary.contentItemMutation)} />
+                        <DetailItem label="Token Refresh" value={String(publishApprovalSaveResult.sideEffectSummary.tokenRefresh)} />
+                        <DetailItem label="LLM Call" value={String(publishApprovalSaveResult.sideEffectSummary.llmCall)} />
+                      </div>
+                    </>
+                  ) : null}
+                </div>
                 <ValidationList title="Required Before Publish" items={publishApprovalPreviewResult.requiredBeforePublish} emptyText="publish 전 필수 항목이 없습니다." />
                 <ValidationList
                   title="Required Before Scheduled Publish"
@@ -4271,33 +4505,33 @@ function PublishApprovalPersistencePolicyNotice() {
     <div className="notice warning">
       <strong>Publish Approval Persistence Policy</strong>
       <p>
-        현재 화면의 approval snapshot/hash는 preview-only입니다. publish approval table, schema, migration, insert/update route는 아직 구현되지 않았고 DB에 저장되지
-        않습니다.
+        Publish approval snapshot은 acknowledgement 후 local DB에 저장할 수 있습니다. 이 저장은 publish 실행이 아니며 Blogger API write를 수행하지 않습니다.
       </p>
       <p>
         향후 publish approval은 immutable snapshot으로 저장되어야 하며, 저장된 approval이 있어도 publish 실행은 별도 preflight와 사용자 명시 승인 후에만 허용됩니다.
       </p>
       <div className="detail-grid">
-        <DetailItem label="Approval Persistence" value="not implemented" />
-        <DetailItem label="Schema / Migration" value="not implemented" />
-        <DetailItem label="Snapshot Hash" value="preview only, not stored" />
+        <DetailItem label="Approval Persistence" value="implemented: local DB snapshot only" />
+        <DetailItem label="Schema / Migration" value="implemented for blogger_publish_approvals" />
+        <DetailItem label="Snapshot Hash" value="stored only after explicit save" />
         <DetailItem label="Invalidation Policy" value="planning only" />
         <DetailItem label="Rollback Acknowledgement" value="required before persistence" />
         <DetailItem label="Side-effect Acknowledgement" value="required before persistence" />
         <DetailItem label="Publish Execution" value="separate future step" />
-        <DetailItem label="DB Write" value="false" />
+        <DetailItem label="DB Write" value="approval table only after explicit save" />
       </div>
       <ValidationList
         title="Publish Approval Persistence Design Gates"
         items={[
-          "Dedicated publish approval table or approved existing-table extension",
-          "Frozen canonical snapshot field list and hash algorithm",
+          "Dedicated publish approval table implemented for snapshot storage",
+          "Server regenerated snapshot hash must match client preview hash",
           "Immutable approval snapshot with created/invalidated lifecycle",
           "Rollback acknowledgement capture before approval creation",
           "Side-effect summary acknowledgement capture before approval creation",
-          "Token state checkedAt persistence policy",
-          "Publish execution attempt audit model linked to approval id",
-          "Partial failure handling policy for Blogger success plus local DB failure"
+          "Approval persistence acknowledgement capture before approval creation",
+          "Token state checkedAt persisted without token values",
+          "Publish execution attempt audit model remains future work",
+          "Partial failure handling policy for real publish remains future work"
         ]}
         emptyText="policy gate가 없습니다."
       />
@@ -4556,11 +4790,11 @@ function getPublishPreflightActionItem(reason: string) {
 }
 
 function getPublishApprovalPreviewActionItem(reason: string) {
-  if (reason === "publish_approval_persistence_not_implemented") {
+  if (reason === "explicit_publish_approval_save_required") {
     return {
       reason,
-      label: "Publish approval persistence",
-      action: "Publish approval 저장 테이블/route는 아직 구현하지 않습니다. 이 화면은 snapshot/hash preview만 제공합니다."
+      label: "Publish approval save",
+      action: "세 가지 acknowledgement를 확인한 뒤 Save Publish Approval Snapshot 버튼으로 local DB에 snapshot을 저장하세요."
     };
   }
   if (reason === "publish_not_implemented") {
@@ -4588,14 +4822,21 @@ function getPublishApprovalPreviewActionItem(reason: string) {
     return {
       reason,
       label: "Rollback acknowledgement",
-      action: "Publish는 외부 Blogger 상태를 바꾸므로 rollback 제한 안내와 사용자의 명시 acknowledgement 저장 정책이 필요합니다."
+      action: "Publish는 외부 Blogger 상태를 바꾸므로 rollback 제한 안내를 확인해야 approval snapshot을 저장할 수 있습니다."
     };
   }
   if (reason === "side_effect_summary_acknowledgement_required") {
     return {
       reason,
       label: "Side-effect acknowledgement",
-      action: "Blogger publish, local status/timestamp mutation 등 실제 side effect summary를 사용자가 승인하는 정책이 필요합니다."
+      action: "이번 저장은 approval table insert만 수행하며, 실제 publish side effect는 future patch에서 별도 확인이 필요함을 acknowledge하세요."
+    };
+  }
+  if (reason === "approval_persistence_acknowledgement_required") {
+    return {
+      reason,
+      label: "Approval persistence acknowledgement",
+      action: "저장된 approval이 publish 실행이나 publish-ready 상태를 의미하지 않는다는 점을 acknowledge하세요."
     };
   }
   if (reason === "blogger_draft_not_saved") {
@@ -4650,7 +4891,7 @@ function getPublishApprovalPreviewActionItem(reason: string) {
   return {
     reason,
     label: "Publish approval preview",
-    action: "관련 preview blocker를 확인하고 후속 persistence/publish 설계 패치에서 해결하세요."
+    action: "관련 preview blocker를 확인하세요. 저장된 approval이 있어도 publish 실행은 후속 패치에서만 가능합니다."
   };
 }
 
