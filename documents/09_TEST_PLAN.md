@@ -841,3 +841,16 @@ Safety guard:
 - Preflight side effect summary는 `tokenRefresh=false`, `bloggerApiWrite=false`, `bloggerDraftSave=false`, `publish=false`, `scheduledPublish=false`, `llmCall=false`, `contentItemMutation=false`를 유지해야 한다.
 - Publish readiness는 계속 `ready=false`, `publishReady=false`, `stage=draft_saved_publish_not_implemented`, `metadata.bloggerDraftSaved=true`를 유지해야 한다.
 - DB guard 기대값은 변경 전과 동일해야 한다: `blogger_draft_saves=1`, `blogger_draft_approvals=1`, `llm_call_logs=22`, content item status `planned`, draft hashes unchanged.
+
+## Patch 9E-5B Blogger posts.update / retry policy planning 검증
+
+- Content detail UI는 저장된 Blogger draft가 이미 있고 같은 approval snapshot으로는 duplicate protection 때문에 다시 저장하지 않는다고 설명해야 한다.
+- UI는 `Draft Update Policy: planning only`, `posts.update: not implemented`, `Retry Policy: planning only`, `Duplicate Save: blocked for current approval` 의미를 보여야 한다.
+- UI는 저장된 Blogger draft 수정에는 `posts.update`, 새 approval, 새 draft save 중 별도 승인된 정책이 필요하다고 안내해야 한다.
+- Retry는 timeout/network/5xx 같은 제한된 실패에서만 검토 가능하고, 이미 성공한 approval, token expired, approval mismatch, content hash mismatch, publish 단계에서는 retry하지 않는다고 안내해야 한다.
+- UI는 Blogger `posts.update`가 외부 Blogger draft를 직접 수정하며 쉽게 rollback된다고 가정하면 안 된다고 안내해야 한다.
+- token expired 상태에서는 update/retry보다 OAuth 재연결 안내가 우선이어야 한다.
+- Blogger Draft 저장 버튼은 계속 disabled여야 하며 update/retry/save 버튼이 새로 생기면 안 된다.
+- Draft Save Preflight는 계속 `canSaveDraft=false`, `blogger_draft_already_saved_for_approval`, `access_token_expired_reauth_required`, side-effect all false를 유지해야 한다.
+- Publish readiness는 계속 `ready=false`, `publishReady=false`, `stage=draft_saved_publish_not_implemented`, `metadata.bloggerDraftSaved=true`를 유지해야 한다.
+- 9E-5B 구현/스모크 중에는 Blogger API write, 추가 draft save, `posts.update`, publish/scheduled publish, token refresh, LLM 호출, DB/schema/content item mutation이 발생하지 않아야 한다.

@@ -921,3 +921,22 @@ Policy:
 - No automatic token refresh implementation.
 - No refresh token use, token endpoint call, OAuth token exchange call, Blogger write, additional draft save, publish, scheduled publish, `posts.update`, LLM call, schema change, migration, or content item mutation.
 - Access token, refresh token, client secret, encrypted value, and raw OAuth response remain redacted and are not exposed in UI/docs/logs/test output.
+
+## Patch 9E-5B: Blogger Draft Update/Retry Policy Planning
+
+Implemented after Patch 9E-5A:
+
+- Added content detail guidance for the post-save Blogger draft update/retry policy.
+- The UI now explains that the saved Blogger draft is already protected by same-approval duplicate-save blocking.
+- Added policy status labels for draft update planning, retry planning, `posts.update` not implemented, duplicate save blocked, and new approval before draft mutation.
+- Documented that saved draft corrections require a later approved policy: `posts.update`, a new approval, or a new draft save.
+- Documented retry boundaries: retry may only be considered for limited retryable failures where draft creation is not known to have succeeded.
+- Documented non-retry states: already successful approval, token expiry, approval mismatch, content hash mismatch, auth/scope errors, and publish/scheduled publish.
+- Added rollback guidance that Blogger `posts.update` changes external service state and should not be treated like a local rollback.
+
+Policy:
+
+- No `posts.update` implementation.
+- No retry execution implementation.
+- No Blogger API write, additional draft save, publish, scheduled publish, token refresh, LLM call, schema change, migration, or content item mutation.
+- Existing Draft Save Preflight and Publish Readiness semantics remain unchanged.

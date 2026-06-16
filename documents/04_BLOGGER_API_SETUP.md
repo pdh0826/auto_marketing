@@ -193,3 +193,31 @@ Before implementing token refresh in a later patch, decide:
 3. How to prevent duplicate refresh attempts and handle clock skew around expiry.
 4. How refresh failure falls back to OAuth re-authorization.
 5. Whether a refreshed token still requires a fresh Draft Save Preflight before Blogger write.
+
+## Patch 9E-5B Blogger posts.update / retry policy planning
+
+Patch 9E-5B is a policy and UX planning patch. It does not implement `posts.update`, retry execution, additional draft saves, publish, scheduled publish, or token refresh.
+
+Current policy:
+
+- A successful Blogger draft save for the current approval is final for that approval.
+- `blogger_draft_already_saved_for_approval` is a protective duplicate-save blocker, not a recoverable error.
+- The same approval snapshot must not trigger another `posts.insert`.
+- If saved `draftHtml`, title, target blog, or approval snapshot changes, the old approval must not be reused for another draft mutation.
+- Token-expired state blocks update/retry planning actions until OAuth re-connection is completed in the existing settings flow.
+
+Retry policy:
+
+- Retry may only be considered for a recorded `retryable=true` failure where Blogger draft creation is not known to have succeeded, such as a timeout, network failure, or 5xx response.
+- Retry is not allowed for an already successful approval, auth/scope errors, token expiry, approval mismatch, content hash mismatch, or publish/scheduled-publish paths.
+
+Before implementing `posts.update`, decide:
+
+1. The update target identity: `bloggerPostId`, `bloggerBlogId`, approval id, title hash, and `draftHtml` hash.
+2. Whether each update requires a new approval or a separate update-approval snapshot.
+3. How to verify that the remote Blogger post is still a draft before updating.
+4. What preflight and side-effect summary fields are required for update attempts.
+5. How to display rollback limitations because Blogger updates change external service state.
+6. How to audit update attempts without storing raw Blogger response bodies or full HTML.
+7. How token expiry, duplicate update collisions, and concurrent edits are blocked.
+8. How to keep `posts.update` separate from publish and scheduled publish.

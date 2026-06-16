@@ -752,3 +752,13 @@ Patch 9E-5A is a Blogger OAuth/token readiness UX and design patch, not an LLM r
 - No refresh token is used, no token endpoint is called, and no Blogger write is triggered.
 - No LLM provider is invoked and no `llm_call_logs` row is created.
 - Token/secret/raw OAuth response values remain outside UI, logs, docs, and test output.
+
+## Patch 9E-5B Blogger draft update/retry policy boundary
+
+Patch 9E-5B is a Blogger draft update/retry policy and UX patch, not an LLM routing change.
+
+- The UI explains that successful same-approval draft saves are duplicate-blocked and that `posts.update` is not implemented.
+- Retry/update policy is documented as planning only.
+- No LLM provider is invoked and no `llm_call_logs` row is created.
+- No Blogger write, additional draft save, `posts.update`, publish, scheduled publish, token refresh, content item mutation, schema change, or migration occurs.
+- Prompt text, raw LLM responses, Blogger tokens, encrypted values, raw Blogger responses, and full draft HTML remain outside UI/log metadata.

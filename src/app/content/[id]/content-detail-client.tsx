@@ -1563,6 +1563,10 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
                     <DetailItem label="Scheduled Publish" value="not implemented" />
                     <DetailItem label="posts.update" value="not implemented" />
                     <DetailItem label="Token Refresh" value="not implemented" />
+                    <DetailItem label="Draft Update Policy" value="planning only" />
+                    <DetailItem label="Retry Policy" value="planning only" />
+                    <DetailItem label="Duplicate Save" value={postSaveDuplicateProtectionActive ? "blocked for current approval" : "run preflight to confirm"} />
+                    <DetailItem label="New Approval Before Draft Mutation" value="required by policy" />
                   </div>
                   {postSaveDuplicateProtectionActive ? (
                     <div className="notice">
@@ -1570,6 +1574,7 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
                       <p>현재 approval snapshot으로 이미 성공한 Blogger draft가 있어 같은 approval로는 다시 저장하지 않습니다.</p>
                     </div>
                   ) : null}
+                  {publishReadinessResult.metadata.bloggerDraftSaved ? <BloggerDraftUpdateRetryPolicyNotice /> : null}
                   {postSaveAccessTokenExpired ? (
                     <div className="notice warning">
                       <strong>Blogger OAuth 재연결 필요</strong>
@@ -1690,7 +1695,12 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
                   <DetailItem label="Scheduled Publish" value="false" />
                   <DetailItem label="posts.update" value="not implemented" />
                   <DetailItem label="Token Refresh" value="not implemented" />
+                  <DetailItem label="Draft Update Policy" value="planning only" />
+                  <DetailItem label="Retry Policy" value="planning only" />
+                  <DetailItem label="Duplicate Save" value="blocked for current approval" />
+                  <DetailItem label="New Approval Before Draft Mutation" value="required by policy" />
                 </div>
+                <BloggerDraftUpdateRetryPolicyNotice />
                 {latestSuccessfulBloggerDraftUrlLooksLikeHome ? (
                   <div className="notice warning">
                     Blogger가 draft post에 대해 블로그 홈 URL을 반환할 수 있습니다. 초안 관리에는 아래에서 계산한 Blogger 관리자 편집/미리보기 링크가 더 유용합니다.
@@ -1822,7 +1832,10 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
                   <div className="notice">
                     <strong>Duplicate draft save blocked</strong>
                     <p>현재 approval에 대한 Blogger draft가 이미 저장되어 중복 저장이 차단되었습니다.</p>
-                    <p>같은 approval에서는 보호 상태로 저장 버튼을 비활성화합니다. 다른 draft가 필요하면 draftHtml을 변경하고 새 approval snapshot을 생성하세요.</p>
+                    <p>
+                      같은 approval에서는 보호 상태로 저장 버튼을 비활성화합니다. 저장된 Blogger draft를 수정하려면 posts.update, 새 approval, 새 draft save 중 어떤 정책을
+                      사용할지 별도 승인된 설계가 필요합니다.
+                    </p>
                   </div>
                 ) : null}
                 {bloggerDraftSavePreflightResult.approvalSnapshotStatus.requiresReapproval ? (
@@ -3929,6 +3942,29 @@ function BloggerDraftSaveActionItems({ result }: { result: BloggerDraftSavePrefl
           <Link href="/settings/blogger">Blogger 설정</Link>에서 connection을 만든 뒤 이 preflight를 다시 실행하세요.
         </p>
       ) : null}
+    </div>
+  );
+}
+
+function BloggerDraftUpdateRetryPolicyNotice() {
+  return (
+    <div className="notice">
+      <strong>Blogger Draft Update / Retry Policy</strong>
+      <p>
+        이 Blogger draft는 이미 저장되었습니다. 같은 approval snapshot으로는 duplicate protection이 동작하므로 다시 저장하지 않습니다.
+      </p>
+      <p>
+        저장된 Blogger draft를 수정하려면 posts.update, 새 approval, 새 draft save 중 어떤 정책을 사용할지 별도 승인된 설계가 필요합니다. posts.update와 retry 실행은
+        아직 구현되지 않았습니다.
+      </p>
+      <p>
+        Retry는 네트워크 오류처럼 Blogger에 draft가 생성되었는지 확인되지 않는 제한된 실패에서만 검토할 수 있습니다. 이미 성공한 approval, content hash 변경,
+        approval snapshot 변경, token 만료, publish 단계에서는 retry하지 않습니다.
+      </p>
+      <p>
+        Blogger posts.update는 외부 Blogger draft를 직접 수정하는 작업이며, 로컬 Git/DB처럼 쉽게 rollback된다고 가정하면 안 됩니다. 향후 update/retry 작업은 별도
+        preflight, side-effect summary, 사용자 승인, OAuth 재연결 상태 확인이 필요합니다.
+      </p>
     </div>
   );
 }

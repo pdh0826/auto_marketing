@@ -5,7 +5,7 @@
 ```text
 repo: ~/blog-growth-agent
 branch: master
-latest committed baseline before Patch 9E-5A: 0e0ae59 Refresh post-save publish readiness UX
+latest committed baseline before Patch 9E-5B: df79022 Clarify Blogger token expiry readiness
 milestone: Stepwise draft -> publish-ready HTML -> manual draftHtml apply -> Blogger OAuth/blog selection -> approval -> Blogger draft save 1회 성공
 ```
 
@@ -41,18 +41,19 @@ The current completed path is:
 - Post-save preflight confirms duplicate protection with `blogger_draft_already_saved_for_approval`.
 - Current preflight may also include `access_token_expired_reauth_required`; this means a future Blogger write needs OAuth re-connection, not automatic token refresh.
 - Automatic token refresh is not implemented.
+- Draft update/retry policy is planning-only: successful same-approval saves are not retried, and `posts.update` is not implemented.
 
 ## Next Patch Priorities
 
-A. **Patch 9E-5B: posts.update/retry policy planning for draft corrections**
-
-- Decide whether corrections should create a new approval/new draft or update the existing Blogger draft.
-- Plan retry/update semantics before any `posts.update` implementation.
-
-B. **Patch 9E-5C: explicit token refresh design approval**
+A. **Patch 9E-5C: explicit token refresh design approval**
 
 - Decide whether refresh is user-triggered, preflight-triggered, or guarded-write-triggered.
 - Keep refresh token/raw response redaction and audit policy explicit before implementation.
+
+B. **Patch 9E-5D: posts.update preflight/approval design**
+
+- Design update target identity, update approval snapshot, rollback warning, and side-effect summary before any `posts.update` implementation.
+- Keep retry limited to recorded retryable failures where Blogger draft creation is not known to have succeeded.
 
 C. **Later: publish/scheduled publish design only**
 
@@ -122,11 +123,13 @@ Expected preflight condition after the successful save:
 - 9E-4G-2b polished successful draft save UX, derived Blogger admin edit/preview links, and duplicate-save protection display.
 - 9E-4H refreshed post-save Publish Readiness UX while keeping `ready=false` and `publishReady=false`.
 - 9E-5A clarified token-expired readiness UX and token refresh design boundaries without implementing refresh.
+- 9E-5B documented and surfaced Blogger draft update/retry policy planning without implementing `posts.update` or retry execution.
 
 ## Closeout Safety Notes
 
 - The live draft save used Blogger `posts.insert` with `isDraft=true`.
 - `posts.update`, publish, scheduled publish, token refresh, and bulk publishing are not implemented.
 - Additional Blogger draft saves must not be run for the same approval unless a later patch intentionally changes approval/update semantics.
+- Successful same-approval draft saves are not retry candidates. Draft corrections need a new approval/new draft or a separately approved `posts.update` policy.
 - Expired access token handling is currently OAuth re-connection guidance only; do not call refresh/token endpoints without a later explicit patch.
 - `.env.local`, `.env.local.backup*`, secret backup files, tokens, client secrets, and encrypted values must not be read, modified, printed, or staged.
