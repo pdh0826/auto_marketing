@@ -777,3 +777,43 @@ npm run build
 - 같은 approval에 대한 “Blogger Draft 저장” 버튼은 disabled로 유지되어야 하며, 다른 draft save는 draftHtml 변경 및 새 approval snapshot이 필요하다는 안내가 보여야 한다.
 - UI는 `publish=false`, `scheduledPublish=false`, `posts.update not implemented`, `token refresh not implemented`를 명확히 표시해야 한다.
 - 9E-4G-2b 구현/스모크 중에는 Blogger API write, 추가 draft save, publish/scheduled publish, posts.update, token refresh, LLM 호출, content item mutation이 발생하지 않아야 한다.
+
+## 2026-06-16 Session Closeout Smoke Baseline
+
+Confirmed milestone:
+
+- Stepwise final candidate can flow through manual Draft Markdown candidate handoff.
+- Blog template preview can render deterministic Blogger-ready HTML preview.
+- Template HTML can flow through manual HTML candidate handoff.
+- `validate-html` and explicit 2-step `apply-html` can save only `draftHtml`.
+- Blogger OAuth connection and verified blog selection are configured for the test blog.
+- Blogger draft payload preview, approval snapshot, and draft save preflight can gate real draft save.
+- Web UI Blogger draft save succeeded once for the test content item.
+
+Post-save baseline:
+
+- `contentItemId=cmqc2xqbr00011y70sxmgl65v`
+- `approvalId=cmqfwjz9u0009iwag9auo688v`
+- `bloggerPostId=6376467965797870330`
+- `blogger_draft_saves=1`
+- `blogger_draft_approvals=1`
+- `llm_call_logs=22`
+- `draftMarkdown` md5 unchanged: `9e0921e7edc9e4a8464a0a52ba369d3d`
+- `draftHtml` md5 unchanged: `a7393df8fb009566201daeea18796027`
+- content item status remains `planned`
+- `qualityScore`, `publishedAt`, and `scheduledAt` unchanged
+- post-save preflight blocks duplicate save with `blogger_draft_already_saved_for_approval`
+
+Next tests:
+
+- Post-save publish-readiness refresh should show draft saved while keeping `publishReady=false` and top-level `ready=false`.
+- Token expiry/re-auth behavior should be tested without implementing automatic refresh.
+- Draft correction/update/retry policy should be tested only after a separate posts.update/retry design patch.
+- Publish and scheduled publish tests remain forbidden until a later explicit design/approval patch.
+
+Safety guard:
+
+- Do not run another Blogger draft save for the same approval.
+- Do not call publish, scheduled publish, `posts.update`, token refresh, or LLM in closeout/readiness UX patches.
+- Do not mutate content item status, `qualityScore`, `publishedAt`, or `scheduledAt`.
+- Do not read, print, modify, or stage `.env.local`, `.env.local.backup*`, token files, client secrets, encrypted values, or secret backup files.

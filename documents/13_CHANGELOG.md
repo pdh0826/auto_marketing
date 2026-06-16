@@ -824,3 +824,64 @@ Policy:
 - UX/read-only metadata polish only.
 - No new Blogger API write or additional draft save during this patch.
 - No publish, scheduled publish, posts.update, token refresh, LLM call, schema change, migration, or content item mutation.
+
+## Session Closeout: 2026-06-16 Stepwise Draft to Blogger Draft Save Milestone
+
+Final milestone:
+
+- Completed the end-to-end reviewed draft path from persisted local stepwise generation to Blogger draft save:
+  `Stepwise draft -> publish-ready HTML preview -> manual draftHtml apply -> Blogger OAuth/blog selection -> payload preview -> approval snapshot -> Blogger draft save 1회 성공`.
+- The milestone remains manual/review-gated at each persistence or external write boundary.
+- No automatic publish pipeline has been enabled.
+
+Completed patch sequence in this session:
+
+- 9E-4C-3E: content detail stepwise draft UI.
+- 9E-4C-3F: client-side guard for copying `finalCandidateMarkdown` into the Draft Markdown candidate editor.
+- 9E-4D: deterministic Blog Post Template HTML preview renderer.
+- 9E-4E: client-side guard for copying template preview HTML into the HTML candidate editor.
+- 9E-4F: hardened manual `draftHtml` apply guard with server revalidation and 2-step confirmation.
+- 9E-4G-1: saved `draftHtml` Blogger Draft Save Preflight gate.
+- 9E-4G-1b: readiness UX and Blogger connection guidance.
+- 9E-4G-1c: preflight blocker classification fix.
+- 9E-4G-2a: guarded Blogger Draft save button activation from `canSaveDraft=true`.
+- 9E-4G-2b: Blogger draft save success UX and derived admin edit/preview links.
+
+Live smoke result:
+
+- Test content item: `cmqc2xqbr00011y70sxmgl65v`.
+- Title candidate: `주식 초보자가 매수 타이밍을 놓치는 이유`.
+- Blogger connection: `cmqfst8vc0001iwrpi1qu8oj2`.
+- Selected test blog: `급등포착`.
+- Target Blogger blog id: `3065973490356135805`.
+- Target Blogger blog URL: `https://mathlearningappl.blogspot.com/`.
+- Approval: `cmqfwjz9u0009iwag9auo688v`.
+- Blogger draft post id: `6376467965797870330`.
+- Blogger admin draft/preview was confirmed by the user.
+
+Safety/result record:
+
+- `blogger_draft_saves=1`.
+- `blogger_draft_approvals=1`.
+- `llm_call_logs=22`.
+- Content item status stayed `planned`.
+- `draftMarkdown` md5 stayed `9e0921e7edc9e4a8464a0a52ba369d3d`.
+- `draftHtml` md5 stayed `a7393df8fb009566201daeea18796027`.
+- `draftHtml` length stayed `2789`.
+- `qualityScore`, `publishedAt`, and `scheduledAt` stayed unchanged.
+- Post-save preflight confirmed duplicate protection with `blogger_draft_already_saved_for_approval`.
+
+Still not implemented:
+
+- Blogger publish.
+- Scheduled publish.
+- `posts.update`.
+- Token refresh.
+- Automatic content item status transition.
+- Automatic `qualityScore`, `publishedAt`, or `scheduledAt` mutation.
+- Additional Blogger draft save for the same approval.
+
+Security/redaction policy confirmed:
+
+- No access token, refresh token, client secret, encrypted value, raw Blogger response body, full `draftHtml`, prompt full text, raw LLM response, or generated candidate full text is exposed in admin DTOs/log metadata.
+- `.env.local`, `.env.local.backup*`, and secret backup files must not be read, modified, printed, or staged.
