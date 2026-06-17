@@ -543,3 +543,61 @@ export interface PublishApprovalReadbackResponse {
   warnings: string[];
   sideEffectSummary: PublishApprovalReadbackSideEffectSummary;
 }
+
+export interface PublishApprovalExecutionGuardSideEffectSummary {
+  dbRead: true;
+  dbWrite: false;
+  approvalInvalidation: false;
+  contentItemMutation: false;
+  bloggerApiWrite: false;
+  bloggerPublish: false;
+  bloggerScheduledPublish: false;
+  bloggerPostsUpdate: false;
+  bloggerDraftSave: false;
+  tokenRefresh: false;
+  llmCall: false;
+}
+
+export interface PublishApprovalExecutionGuardMatchSummary {
+  draftHtmlHashMatches: boolean | null;
+  draftMarkdownHashMatches: boolean | null;
+  draftHtmlLengthMatches: boolean | null;
+  titleCandidateMatches: boolean | null;
+  targetBloggerBlogMatches: boolean | null;
+  bloggerPostIdMatches: boolean | null;
+  contentStatusMatches: boolean | null;
+  scheduledAtMatches: boolean | null;
+  timezoneMatches: boolean | null;
+  modeMatches: boolean | null;
+  tokenStateMatches: boolean | null;
+}
+
+export interface PublishApprovalExecutionGuardResponse {
+  contentItemId: string;
+  checkedAt: string;
+  approvalId: string | null;
+  approvalSnapshotHash: string | null;
+  approvalFound: boolean;
+  approvalActive: boolean;
+  approvalMatchesCurrentState: boolean;
+  canExecutePublish: false;
+  canExecuteScheduledPublish: false;
+  canPublish: false;
+  canSchedulePublish: false;
+  blockingReasons: string[];
+  warnings: string[];
+  invalidationCandidates: string[];
+  matchSummary: PublishApprovalExecutionGuardMatchSummary;
+  approvalSummary: {
+    id: string | null;
+    mode: string | null;
+    status: string | null;
+    snapshotHash: string | null;
+    createdAt: string | null;
+    invalidatedAt: string | null;
+    invalidatedReason: string | null;
+    tokenState: string | null;
+  };
+  requiredBeforeExecution: string[];
+  sideEffectSummary: PublishApprovalExecutionGuardSideEffectSummary;
+}

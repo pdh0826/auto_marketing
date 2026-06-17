@@ -7,6 +7,7 @@ import type {
   BloggerDraftSaveAdmin,
   BloggerDraftSavePreflight,
   PublishApprovalMode,
+  PublishApprovalExecutionGuardResponse,
   PublishApprovalPreview,
   PublishApprovalReadbackResponse,
   PublishApprovalSaveResponse,
@@ -265,6 +266,7 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
   const [publishApprovalPreviewResult, setPublishApprovalPreviewResult] = useState<PublishApprovalPreview | null>(null);
   const [publishApprovalSaveResult, setPublishApprovalSaveResult] = useState<PublishApprovalSaveResponse | null>(null);
   const [publishApprovalReadbackResult, setPublishApprovalReadbackResult] = useState<PublishApprovalReadbackResponse | null>(null);
+  const [publishApprovalExecutionGuardResult, setPublishApprovalExecutionGuardResult] = useState<PublishApprovalExecutionGuardResponse | null>(null);
   const [bloggerDraftPreviewResult, setBloggerDraftPreviewResult] = useState<BloggerDraftPayloadPreview | null>(null);
   const [bloggerDraftSavePreflightResult, setBloggerDraftSavePreflightResult] = useState<BloggerDraftSavePreflight | null>(null);
   const [stepwiseRuns, setStepwiseRuns] = useState<StepwiseDraftGenerationRunSummary[]>([]);
@@ -322,6 +324,7 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
   const [runningPublishApprovalPreview, setRunningPublishApprovalPreview] = useState(false);
   const [savingPublishApproval, setSavingPublishApproval] = useState(false);
   const [runningPublishApprovalReadback, setRunningPublishApprovalReadback] = useState(false);
+  const [runningPublishApprovalExecutionGuard, setRunningPublishApprovalExecutionGuard] = useState(false);
   const [runningBloggerDraftPreview, setRunningBloggerDraftPreview] = useState(false);
   const [runningBloggerDraftSavePreflight, setRunningBloggerDraftSavePreflight] = useState(false);
   const [approvingBloggerDraft, setApprovingBloggerDraft] = useState(false);
@@ -347,6 +350,7 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
   const [publishApprovalPreviewError, setPublishApprovalPreviewError] = useState<string | null>(null);
   const [publishApprovalSaveError, setPublishApprovalSaveError] = useState<string | null>(null);
   const [publishApprovalReadbackError, setPublishApprovalReadbackError] = useState<string | null>(null);
+  const [publishApprovalExecutionGuardError, setPublishApprovalExecutionGuardError] = useState<string | null>(null);
   const [bloggerDraftPreviewError, setBloggerDraftPreviewError] = useState<string | null>(null);
   const [bloggerDraftSavePreflightError, setBloggerDraftSavePreflightError] = useState<string | null>(null);
   const [bloggerDraftSaveError, setBloggerDraftSaveError] = useState<string | null>(null);
@@ -373,6 +377,7 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
   const canRunPublishPreflight = Boolean(!runningPublishPreflight);
   const canRunPublishApprovalPreview = Boolean(!runningPublishApprovalPreview);
   const canRunPublishApprovalReadback = Boolean(!runningPublishApprovalReadback);
+  const canRunPublishApprovalExecutionGuard = Boolean(!runningPublishApprovalExecutionGuard);
   const publishApprovalPreviewMatchesOptions = Boolean(
     publishApprovalPreviewResult &&
       publishApprovalPreviewResult.approvalSnapshotPreview.publishMode === publishApprovalMode &&
@@ -1267,6 +1272,29 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
     }
   }
 
+  async function runPublishApprovalExecutionGuard() {
+    setNotice(null);
+    setPublishApprovalExecutionGuardError(null);
+    setRunningPublishApprovalExecutionGuard(true);
+
+    try {
+      const result = await requestJson<ApiResult<PublishApprovalExecutionGuardResponse>>(`/api/content-items/${contentItemId}/publish-approval-execution-guard`, {
+        method: "POST",
+        body: JSON.stringify({
+          mode: publishApprovalMode,
+          scheduledAt: publishApprovalMode === "scheduled_publish" ? publishApprovalScheduledAt.trim() || null : null,
+          timezone: publishApprovalMode === "scheduled_publish" ? publishApprovalTimezone.trim() || null : null
+        })
+      });
+      setPublishApprovalExecutionGuardResult(result.data);
+      setNotice("Publish approval execution guard를 read-only로 확인했습니다. publish, scheduled publish, invalidation DB update, Blogger write는 수행하지 않았습니다.");
+    } catch (caught) {
+      setPublishApprovalExecutionGuardError(caught instanceof Error ? caught.message : "Publish approval execution guard에 실패했습니다.");
+    } finally {
+      setRunningPublishApprovalExecutionGuard(false);
+    }
+  }
+
   async function runBloggerDraftPreview() {
     setNotice(null);
     setBloggerDraftPreviewError(null);
@@ -1631,6 +1659,7 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
             {publishApprovalPreviewError ? <div className="notice error">{publishApprovalPreviewError}</div> : null}
             {publishApprovalSaveError ? <div className="notice error">{publishApprovalSaveError}</div> : null}
             {publishApprovalReadbackError ? <div className="notice error">{publishApprovalReadbackError}</div> : null}
+            {publishApprovalExecutionGuardError ? <div className="notice error">{publishApprovalExecutionGuardError}</div> : null}
 
             <div className="read-block">
               <h3>Publish Approval Storage Options</h3>
@@ -1696,6 +1725,9 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
               </button>
               <button className="button secondary" type="button" disabled={!canRunPublishApprovalReadback} onClick={() => void runPublishApprovalReadback()}>
                 {runningPublishApprovalReadback ? "Saved Approval Readback 실행 중" : "Load Saved Publish Approvals"}
+              </button>
+              <button className="button secondary" type="button" disabled={!canRunPublishApprovalExecutionGuard} onClick={() => void runPublishApprovalExecutionGuard()}>
+                {runningPublishApprovalExecutionGuard ? "Execution Guard 확인 중" : "Check Publish Approval Execution Guard"}
               </button>
               <button className="button secondary" type="button" disabled>
                 Publish는 후속 패치에서 연결 예정
@@ -1771,6 +1803,91 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
               </div>
             ) : (
               <div className="notice">Load Saved Publish Approvals를 실행하면 저장된 local approval snapshot summary를 read-only로 확인합니다.</div>
+            )}
+
+            {publishApprovalExecutionGuardResult ? (
+              <div className="read-block">
+                <h3>Publish Approval Execution Guard</h3>
+                <div className={publishApprovalExecutionGuardResult.approvalMatchesCurrentState ? "notice warning" : "notice error"}>
+                  <strong>
+                    {publishApprovalExecutionGuardResult.approvalMatchesCurrentState
+                      ? "Saved publish approval matches current state"
+                      : "Saved publish approval may require invalidation"}
+                  </strong>
+                  <p>
+                    Execution Guard는 저장된 publish approval이 현재 content/Blogger draft 상태와 여전히 일치하는지 read-only로 확인합니다.
+                    이 점검은 publish를 실행하지 않으며, approval을 무효화하지도 않습니다.
+                  </p>
+                  <p>
+                    현재 canExecutePublish=false, canExecuteScheduledPublish=false입니다. 표시된 invalidation candidates는 read-only 판단 결과이며 이번 단계에서는 DB에
+                    invalidatedAt을 기록하지 않습니다.
+                  </p>
+                </div>
+                <div className="detail-grid">
+                  <DetailItem label="Checked At" value={formatDate(publishApprovalExecutionGuardResult.checkedAt)} />
+                  <DetailItem label="Approval ID" value={publishApprovalExecutionGuardResult.approvalId ?? "-"} />
+                  <DetailItem label="Approval Found" value={String(publishApprovalExecutionGuardResult.approvalFound)} />
+                  <DetailItem label="Approval Active" value={String(publishApprovalExecutionGuardResult.approvalActive)} />
+                  <DetailItem label="Matches Current State" value={String(publishApprovalExecutionGuardResult.approvalMatchesCurrentState)} />
+                  <DetailItem label="Can Execute Publish" value={String(publishApprovalExecutionGuardResult.canExecutePublish)} />
+                  <DetailItem label="Can Execute Scheduled Publish" value={String(publishApprovalExecutionGuardResult.canExecuteScheduledPublish)} />
+                  <DetailItem label="Can Publish" value={String(publishApprovalExecutionGuardResult.canPublish)} />
+                  <DetailItem label="Can Schedule Publish" value={String(publishApprovalExecutionGuardResult.canSchedulePublish)} />
+                  <DetailItem label="Snapshot Hash" value={publishApprovalExecutionGuardResult.approvalSnapshotHash ?? "-"} />
+                </div>
+                <div className="detail-grid">
+                  <DetailItem label="Draft HTML Hash Matches" value={formatNullableBoolean(publishApprovalExecutionGuardResult.matchSummary.draftHtmlHashMatches)} />
+                  <DetailItem label="Draft Markdown Hash Matches" value={formatNullableBoolean(publishApprovalExecutionGuardResult.matchSummary.draftMarkdownHashMatches)} />
+                  <DetailItem label="Draft HTML Length Matches" value={formatNullableBoolean(publishApprovalExecutionGuardResult.matchSummary.draftHtmlLengthMatches)} />
+                  <DetailItem label="Title Candidate Matches" value={formatNullableBoolean(publishApprovalExecutionGuardResult.matchSummary.titleCandidateMatches)} />
+                  <DetailItem label="Target Blog Matches" value={formatNullableBoolean(publishApprovalExecutionGuardResult.matchSummary.targetBloggerBlogMatches)} />
+                  <DetailItem label="Blogger Post ID Matches" value={formatNullableBoolean(publishApprovalExecutionGuardResult.matchSummary.bloggerPostIdMatches)} />
+                  <DetailItem label="Content Status Matches" value={formatNullableBoolean(publishApprovalExecutionGuardResult.matchSummary.contentStatusMatches)} />
+                  <DetailItem label="Mode Matches" value={formatNullableBoolean(publishApprovalExecutionGuardResult.matchSummary.modeMatches)} />
+                  <DetailItem label="Scheduled At Matches" value={formatNullableBoolean(publishApprovalExecutionGuardResult.matchSummary.scheduledAtMatches)} />
+                  <DetailItem label="Timezone Matches" value={formatNullableBoolean(publishApprovalExecutionGuardResult.matchSummary.timezoneMatches)} />
+                  <DetailItem label="Token State Matches" value={formatNullableBoolean(publishApprovalExecutionGuardResult.matchSummary.tokenStateMatches)} />
+                </div>
+                <div className="detail-grid">
+                  <DetailItem label="Approval Status" value={publishApprovalExecutionGuardResult.approvalSummary.status ?? "-"} />
+                  <DetailItem label="Approval Mode" value={publishApprovalExecutionGuardResult.approvalSummary.mode ?? "-"} />
+                  <DetailItem label="Created At" value={publishApprovalExecutionGuardResult.approvalSummary.createdAt ? formatDate(publishApprovalExecutionGuardResult.approvalSummary.createdAt) : "-"} />
+                  <DetailItem label="Invalidated At" value={publishApprovalExecutionGuardResult.approvalSummary.invalidatedAt ? formatDate(publishApprovalExecutionGuardResult.approvalSummary.invalidatedAt) : "-"} />
+                  <DetailItem label="Invalidated Reason" value={publishApprovalExecutionGuardResult.approvalSummary.invalidatedReason ?? "-"} />
+                  <DetailItem label="Token State" value={publishApprovalExecutionGuardResult.approvalSummary.tokenState ?? "-"} />
+                  <DetailItem label="DB Read" value={String(publishApprovalExecutionGuardResult.sideEffectSummary.dbRead)} />
+                  <DetailItem label="DB Write" value={String(publishApprovalExecutionGuardResult.sideEffectSummary.dbWrite)} />
+                  <DetailItem label="Approval Invalidation" value={String(publishApprovalExecutionGuardResult.sideEffectSummary.approvalInvalidation)} />
+                  <DetailItem label="Blogger API Write" value={String(publishApprovalExecutionGuardResult.sideEffectSummary.bloggerApiWrite)} />
+                  <DetailItem label="Blogger Publish" value={String(publishApprovalExecutionGuardResult.sideEffectSummary.bloggerPublish)} />
+                  <DetailItem label="Blogger Scheduled Publish" value={String(publishApprovalExecutionGuardResult.sideEffectSummary.bloggerScheduledPublish)} />
+                  <DetailItem label="Content Item Mutation" value={String(publishApprovalExecutionGuardResult.sideEffectSummary.contentItemMutation)} />
+                  <DetailItem label="Token Refresh" value={String(publishApprovalExecutionGuardResult.sideEffectSummary.tokenRefresh)} />
+                  <DetailItem label="LLM Call" value={String(publishApprovalExecutionGuardResult.sideEffectSummary.llmCall)} />
+                </div>
+                <ValidationList
+                  title="Execution Guard Blocking Reasons"
+                  items={publishApprovalExecutionGuardResult.blockingReasons}
+                  emptyText="blocking reason이 없습니다."
+                  isError
+                />
+                <ValidationList
+                  title="Invalidation Candidates"
+                  items={publishApprovalExecutionGuardResult.invalidationCandidates}
+                  emptyText="현재 저장된 approval과 current state mismatch가 없습니다."
+                  isWarning
+                />
+                <ValidationList title="Execution Guard Warnings" items={publishApprovalExecutionGuardResult.warnings} emptyText="warning이 없습니다." isWarning />
+                <ValidationList
+                  title="Required Before Execution"
+                  items={publishApprovalExecutionGuardResult.requiredBeforeExecution}
+                  emptyText="execution gate가 없습니다."
+                />
+              </div>
+            ) : (
+              <div className="notice">
+                Check Publish Approval Execution Guard를 실행하면 저장된 approval과 현재 content/Blogger draft state match를 read-only로 확인합니다.
+              </div>
             )}
 
             {publishReadinessResult ? (
@@ -5146,6 +5263,13 @@ function formatDate(value: string) {
     dateStyle: "short",
     timeStyle: "short"
   }).format(new Date(value));
+}
+
+function formatNullableBoolean(value: boolean | null) {
+  if (value === null) {
+    return "not checked";
+  }
+  return value ? "true" : "false";
 }
 
 function formatBytes(value: number) {

@@ -947,3 +947,18 @@ Safety guard:
 - Blogger Draft 저장 버튼은 duplicate save 상태에서 계속 disabled여야 한다.
 - publish/scheduled publish 실행 버튼은 새로 활성화되면 안 된다.
 - 9E-7B 구현/스모크 중에는 Blogger API write, additional draft save, `posts.update`, publish/scheduled publish, token refresh, token endpoint call, LLM 호출, content item mutation이 발생하지 않아야 한다.
+
+## Patch 9E-7C Publish approval execution guard 검증
+
+- `POST /api/content-items/[id]/publish-approval-execution-guard`는 read-only route여야 한다.
+- 응답은 latest saved publish approval과 current content item/Blogger draft metadata를 비교해야 한다.
+- 현재 기준 item에서는 `approvalFound=true`, `approvalActive=true`, `approvalMatchesCurrentState=true`가 기대된다.
+- 응답은 `canExecutePublish=false`, `canExecuteScheduledPublish=false`, `canPublish=false`, `canSchedulePublish=false`를 유지해야 한다.
+- `blockingReasons`에는 `publish_execution_not_implemented`, `publish_not_implemented`, `scheduled_publish_not_implemented`, `content_item_mutation_policy_not_implemented`가 포함되어야 한다.
+- token expired 상태이면 `access_token_expired_reauth_required`가 계속 포함되어야 한다.
+- current state mismatch가 없으면 `invalidationCandidates=[]`가 기대된다.
+- mismatch가 있으면 `draft_html_hash_changed`, `draft_markdown_hash_changed`, `draft_html_length_changed`, `title_candidate_changed`, `target_blogger_blog_changed`, `blogger_post_id_changed`, `content_status_changed`, `scheduled_at_changed`, `timezone_changed` 같은 read-only invalidation candidate가 표시되어야 한다.
+- `sideEffectSummary`는 `dbRead=true`, `dbWrite=false`, `approvalInvalidation=false`, Blogger write false, token refresh false, content mutation false, LLM false여야 한다.
+- Content Detail UI는 execution guard result, match summary, invalidation candidates, blockers, required-before-execution gates를 표시해야 한다.
+- UI는 invalidation candidates가 read-only 판단 결과이며 이번 패치에서 DB에 `invalidatedAt`을 쓰지 않는다고 표시해야 한다.
+- 9E-7C 구현/스모크 중에는 `blogger_publish_approvals` insert/update, approval invalidation DB update, Blogger API write, additional draft save, `posts.update`, publish/scheduled publish, token refresh, token endpoint call, LLM 호출, content item mutation이 발생하지 않아야 한다.

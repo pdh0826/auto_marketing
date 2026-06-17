@@ -821,3 +821,13 @@ Patch 9E-7B adds readback and smoke verification for publish approval persistenc
 - `publish-approval-save` smoke and idempotency checks must not create `llm_call_logs`.
 - Readback returns safe DB metadata only and does not expose prompts, raw responses, candidate text, Blogger tokens, encrypted values, raw Blogger responses, raw Blogger error bodies, or full draft HTML.
 - Stored approval readback does not authorize content generation, Blogger publish, scheduled publish, token refresh, or `posts.update`.
+
+## Patch 9E-7C publish approval execution guard boundary
+
+Patch 9E-7C adds read-only publish approval execution guard checks, not an LLM routing change.
+
+- `POST /api/content-items/[id]/publish-approval-execution-guard` must not call LLM providers.
+- The guard compares safe saved approval metadata with current content/Blogger draft metadata.
+- Invalidation candidates are read-only diagnostics and must not create or update `llm_call_logs`.
+- The guard does not expose prompts, raw responses, candidate text, Blogger tokens, encrypted values, raw Blogger responses, raw Blogger error bodies, or full draft HTML.
+- Execution guard results do not authorize content generation, Blogger publish, scheduled publish, token refresh, `posts.update`, or content item mutation.

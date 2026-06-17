@@ -57,17 +57,18 @@
 - Post-save duplicate protection, token-expired reauth guidance, update/retry policy planning
 - Publish preflight dry-run과 future publish approval snapshot field 설계
 - Publish approval snapshot/hash preview
+- Publish approval persistence storage/readback/execution guard
 
 아직 구현하지 않음:
 
-- Publish approval persistence
+- Publish approval invalidation DB update
 - Blogger publish
 - Scheduled publish
 - `posts.update`
 - Token refresh
 - Automatic `content_items.status`, `qualityScore`, `publishedAt`, `scheduledAt` mutation
 
-Publish approval persistence는 local DB snapshot storage와 readback까지 구현된 상태지만, 이것은 publish 실행이 아니다. Publish/scheduled publish는 별도 publish execution preflight, side-effect summary, audit, rollback 안내, token 상태 정책, local status/timestamp mutation 정책이 설계되기 전까지 구현하지 않는다.
+Publish approval persistence는 local DB snapshot storage/readback/execution guard까지 구현된 상태지만, 이것은 publish 실행이나 approval invalidation update가 아니다. Publish/scheduled publish는 별도 publish execution preflight, side-effect summary, audit, rollback 안내, token 상태 정책, local status/timestamp mutation 정책이 설계되기 전까지 구현하지 않는다.
 
 ## 초기 제외 기능
 

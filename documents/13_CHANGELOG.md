@@ -1070,3 +1070,23 @@ Not implemented:
 - token refresh or token endpoint call
 - content item status, `publishedAt`, `scheduledAt`, `qualityScore`, `draftHtml`, or `draftMarkdown` mutation
 - LLM calls or `llm_call_logs`
+
+## Patch 9E-7C: Publish Approval Invalidation and Execution Guard
+
+Implemented after Patch 9E-7B:
+
+- Added `POST /api/content-items/[id]/publish-approval-execution-guard` as a read-only execution guard route.
+- Added `src/lib/content/publish-approval-execution-guard.ts` to compare the latest saved publish approval against current content item and Blogger draft metadata.
+- Added Content Detail UI for execution guard match summary, invalidation candidates, blockers, required-before-execution gates, and side-effect summary.
+- The guard reports `canExecutePublish=false`, `canExecuteScheduledPublish=false`, `canPublish=false`, and `canSchedulePublish=false`.
+- Invalidation candidates are read-only diagnostics only; this patch does not update `invalidatedAt` or `invalidatedReason`.
+- Token expired state remains an execution blocker via `access_token_expired_reauth_required`.
+
+Not implemented:
+
+- Blogger publish or scheduled publish
+- Blogger API write, `posts.update`, `posts.insert`, or additional draft save
+- publish approval invalidation DB update
+- token refresh or token endpoint call
+- content item status, `publishedAt`, `scheduledAt`, `qualityScore`, `draftHtml`, or `draftMarkdown` mutation
+- LLM calls or `llm_call_logs`

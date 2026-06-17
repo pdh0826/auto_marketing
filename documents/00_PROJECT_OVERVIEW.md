@@ -58,3 +58,4 @@ Google Blogger 기반 블로그를 여러 개 운영하면서, 블로그별 주�
 - Publish preflight dry-run은 read-only로 추가되었으며 `canPublish=false`, `canSchedulePublish=false`, side-effect all false를 유지한다.
 - Publish approval snapshot preview는 read-only로 유지되며 hash preview와 explicit save guard를 제공한다.
 - Publish approval persistence storage와 readback이 추가되어 non-secret approval snapshot을 local DB에 저장하고 확인할 수 있지만, publish 실행은 구현하지 않았다.
+- Publish approval execution guard가 read-only로 추가되어 저장된 approval과 current content/Blogger draft state match 및 invalidation candidates를 확인할 수 있지만, invalidation DB update와 publish 실행은 구현하지 않았다.

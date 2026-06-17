@@ -223,3 +223,12 @@ Patch 9E-7B 완료:
 - 1건 local DB insert smoke와 같은 snapshot idempotent save 검증
 - 저장된 approval이 있어도 `canPublish=false`, `canSchedulePublish=false` 유지
 - Blogger publish/scheduled publish/write, token refresh, posts.update, additional draft save, content item mutation, LLM 호출은 구현하지 않음
+
+Patch 9E-7C 완료:
+
+- `POST /api/content-items/[id]/publish-approval-execution-guard` read-only API 추가
+- latest saved publish approval과 현재 content/Blogger draft metadata match summary 추가
+- invalidation candidates를 read-only 판단 결과로 표시
+- Content Detail UI에 execution guard 결과, blockers, required-before-execution, side-effect summary 추가
+- `canExecutePublish=false`, `canExecuteScheduledPublish=false`, `canPublish=false`, `canSchedulePublish=false` 유지
+- approval invalidation DB update, Blogger publish/scheduled publish/write, token refresh, posts.update, additional draft save, content item mutation, LLM 호출은 구현하지 않음

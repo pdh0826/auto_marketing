@@ -648,3 +648,43 @@ Smoke policy:
 - A second save of the same content item, mode, snapshot hash, and scheduled time must return the existing active approval without creating a duplicate row.
 - After smoke, expected `blogger_publish_approvals` count is `1`.
 - `content_items`, `blogger_draft_saves`, `blogger_draft_approvals`, and `llm_call_logs` must remain unchanged.
+
+## Patch 9E-7C Publish approval execution guard
+
+Patch 9E-7C adds read-only execution guard logic for stored publish approvals. It does not add a schema migration.
+
+The guard compares the latest saved publish approval safe fields against current state:
+
+- content item id and status
+- `draftMarkdown` hash
+- `draftHtml` hash and length
+- title candidate
+- target Blogger blog id
+- Blogger draft post id
+- publish mode
+- optional `scheduledAt` and timezone
+- approval status and invalidation metadata
+- token state
+
+The guard returns read-only `invalidationCandidates` such as:
+
+- `draft_html_hash_changed`
+- `draft_markdown_hash_changed`
+- `draft_html_length_changed`
+- `title_candidate_changed`
+- `target_blogger_blog_changed`
+- `blogger_post_id_changed`
+- `content_status_changed`
+- `scheduled_at_changed`
+- `timezone_changed`
+- `approval_already_invalidated`
+- `approval_status_not_executable`
+
+Policy:
+
+- `invalidationCandidates` are diagnostics only.
+- This patch does not update `blogger_publish_approvals.invalidatedAt` or `invalidatedReason`.
+- This patch does not insert a new publish approval.
+- The guard keeps `canExecutePublish=false`, `canExecuteScheduledPublish=false`, `canPublish=false`, and `canSchedulePublish=false`.
+- Token expired state remains an execution blocker, but no token refresh is attempted.
+- No `content_items` status/timestamp/hash field is mutated.

@@ -407,3 +407,38 @@ The save route remains local-only:
 - same snapshot save returns the existing approval idempotently
 - stored approvals still keep `canPublish=false` and `canSchedulePublish=false`
 - future publish execution remains blocked until separate publish execution preflight, OAuth/token policy, audit policy, local mutation policy, and user approval exist
+
+## Patch 9E-7C Publish approval execution guard
+
+Patch 9E-7C adds a read-only guard before any future publish execution.
+
+New route:
+
+```text
+POST /api/content-items/[id]/publish-approval-execution-guard
+```
+
+This route checks whether the latest saved publish approval still matches the current content and Blogger draft metadata.
+
+The route is read-only:
+
+- no approval invalidation DB update
+- no DB insert
+- no Blogger API call
+- no publish or scheduled publish
+- no `posts.update`
+- no additional draft save
+- no token refresh
+- no content item mutation
+- no LLM call
+
+The route may return read-only invalidation candidates for changed draft hashes, title, target blog, Blogger post id, content status, schedule, timezone, already invalidated approval, or non-executable approval status.
+
+Stored approvals still do not authorize execution:
+
+- `canExecutePublish=false`
+- `canExecuteScheduledPublish=false`
+- `canPublish=false`
+- `canSchedulePublish=false`
+
+If the access token state is expired, `access_token_expired_reauth_required` remains a blocker. A future real Blogger publish write must require OAuth reconnect or a separately approved token refresh policy.
