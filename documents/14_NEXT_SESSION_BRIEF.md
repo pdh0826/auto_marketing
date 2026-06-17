@@ -49,6 +49,7 @@ The current completed path is:
 - Publish approval persistence storage is implemented locally: `blogger_publish_approvals` can store non-secret approval snapshots after explicit acknowledgements, but publish execution remains unimplemented.
 - Publish approval readback is implemented: latest/active saved approval summaries can be read in API/UI, and one local DB insert smoke has been verified.
 - Publish approval execution guard is implemented read-only: saved approval/current state matching and invalidation candidates can be checked, but invalidation DB update and publish execution remain unimplemented.
+- Publish approval invalidation preview is implemented read-only: normal/manual invalidation dry-run plans can be checked, but invalidatedAt/invalidatedReason DB update remains unimplemented.
 - `content_items.status`, `publishedAt`, `scheduledAt`, `qualityScore`, and `draftHtml` are not changed by publish-readiness or policy UI.
 
 ## Next Patch Priorities
@@ -63,13 +64,13 @@ B. **Patch 9E-5D: posts.update preflight/approval design**
 - Design update target identity, update approval snapshot, rollback warning, and side-effect summary before any `posts.update` implementation.
 - Keep retry limited to recorded retryable failures where Blogger draft creation is not known to have succeeded.
 
-C. **Patch 9E-7D: publish approval invalidation action design**
+C. **Patch 9E-7E: publish approval invalidation action design**
 
 - Decide whether invalidation is automatic, manual, or preflight-derived before adding any DB update route.
 - Keep invalidation action separate from Blogger publish execution.
 - Keep actual Blogger publish execution out of scope.
 
-D. **Patch 9E-7E: publish execution audit/preflight design**
+D. **Patch 9E-7F: publish execution audit/preflight design**
 
 - Design publish execution attempt audit, partial failure handling, and local content status/timestamp mutation ordering.
 - Do not call Blogger publish until design is explicitly approved.
@@ -150,6 +151,7 @@ Expected preflight condition after the successful save:
 - 9E-7A added local publish approval persistence storage in `blogger_publish_approvals`, guarded by server-side hash match and three acknowledgements, while keeping no publish, no scheduled publish, no Blogger write, no token refresh, and no content item mutation.
 - 9E-7B added saved publish approval readback API/UI and verified one local approval insert plus idempotent re-save, while keeping no publish, no scheduled publish, no Blogger write, no token refresh, and no content item mutation.
 - 9E-7C added read-only publish approval execution guard API/UI for current-state match and invalidation candidate checks, while keeping no invalidation DB update, no publish, no scheduled publish, no Blogger write, no token refresh, and no content item mutation.
+- 9E-7D added read-only publish approval invalidation preview API/UI for normal/manual dry-run plans, while keeping no invalidation DB update, no publish, no scheduled publish, no Blogger write, no token refresh, and no content item mutation.
 
 ## Closeout Safety Notes
 

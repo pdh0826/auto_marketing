@@ -1090,3 +1090,23 @@ Not implemented:
 - token refresh or token endpoint call
 - content item status, `publishedAt`, `scheduledAt`, `qualityScore`, `draftHtml`, or `draftMarkdown` mutation
 - LLM calls or `llm_call_logs`
+
+## Patch 9E-7D: Publish Approval Invalidation Dry-run and Policy
+
+Implemented after Patch 9E-7C:
+
+- Added `POST /api/content-items/[id]/publish-approval-invalidation-preview` as a read-only invalidation dry-run route.
+- Added `src/lib/content/publish-approval-invalidation-preview.ts` to build dry-run invalidation plans from execution guard results.
+- Added Content Detail UI for normal invalidation preview, manual invalidation dry-run reason, dry-run plan, invalidation reasons, blockers, and side-effect summary.
+- Normal current-state preview reports `wouldInvalidate=false` and `canInvalidate=false`.
+- Manual invalidation dry-run can report `wouldInvalidate=true`, but still keeps `canInvalidate=false`.
+- Dry-run plans do not update `invalidatedAt` or `invalidatedReason`.
+
+Not implemented:
+
+- approval invalidation DB update or execution route
+- Blogger publish or scheduled publish
+- Blogger API write, `posts.update`, `posts.insert`, or additional draft save
+- token refresh or token endpoint call
+- content item status, `publishedAt`, `scheduledAt`, `qualityScore`, `draftHtml`, or `draftMarkdown` mutation
+- LLM calls or `llm_call_logs`

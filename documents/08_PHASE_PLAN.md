@@ -232,3 +232,12 @@ Patch 9E-7C 완료:
 - Content Detail UI에 execution guard 결과, blockers, required-before-execution, side-effect summary 추가
 - `canExecutePublish=false`, `canExecuteScheduledPublish=false`, `canPublish=false`, `canSchedulePublish=false` 유지
 - approval invalidation DB update, Blogger publish/scheduled publish/write, token refresh, posts.update, additional draft save, content item mutation, LLM 호출은 구현하지 않음
+
+Patch 9E-7D 완료:
+
+- `POST /api/content-items/[id]/publish-approval-invalidation-preview` read-only API 추가
+- execution guard 결과를 기반으로 invalidation dry-run plan 생성
+- normal preview는 current approval match 상태에서 `wouldInvalidate=false`, `canInvalidate=false` 유지
+- manual reason dry-run은 `wouldInvalidate=true`를 표시할 수 있지만 `canInvalidate=false` 및 `dbWrite=false` 유지
+- Content Detail UI에 invalidation preview, manual dry-run reason, invalidation reasons/candidates, dry-run plan, side-effect summary 추가
+- approval invalidation DB update, Blogger publish/scheduled publish/write, token refresh, posts.update, additional draft save, content item mutation, LLM 호출은 구현하지 않음

@@ -442,3 +442,38 @@ Stored approvals still do not authorize execution:
 - `canSchedulePublish=false`
 
 If the access token state is expired, `access_token_expired_reauth_required` remains a blocker. A future real Blogger publish write must require OAuth reconnect or a separately approved token refresh policy.
+
+## Patch 9E-7D Publish approval invalidation dry-run
+
+Patch 9E-7D adds a read-only invalidation preview before any future approval invalidation persistence.
+
+New route:
+
+```text
+POST /api/content-items/[id]/publish-approval-invalidation-preview
+```
+
+This route previews whether the latest saved publish approval would be invalidated.
+
+The route is read-only:
+
+- no `invalidatedAt` update
+- no `invalidatedReason` update
+- no approval delete
+- no Blogger API call
+- no publish or scheduled publish
+- no `posts.update`
+- no additional draft save
+- no token refresh
+- no content item mutation
+- no LLM call
+
+Manual invalidation reason is supported only as a dry-run input. It can produce `wouldInvalidate=true`, but `canInvalidate=false` remains fixed and no DB update is performed.
+
+Stored approvals still do not authorize execution:
+
+- `canInvalidate=false`
+- `canExecutePublish=false`
+- `canExecuteScheduledPublish=false`
+- `canPublish=false`
+- `canSchedulePublish=false`

@@ -688,3 +688,28 @@ Policy:
 - The guard keeps `canExecutePublish=false`, `canExecuteScheduledPublish=false`, `canPublish=false`, and `canSchedulePublish=false`.
 - Token expired state remains an execution blocker, but no token refresh is attempted.
 - No `content_items` status/timestamp/hash field is mutated.
+
+## Patch 9E-7D Publish approval invalidation dry-run
+
+Patch 9E-7D adds read-only invalidation preview logic for stored publish approvals. It does not add a schema migration.
+
+The invalidation preview uses execution guard output and returns:
+
+- approval found/active/current-state match summary
+- manual invalidation request state
+- manual invalidation reason preview
+- `wouldInvalidate`
+- `canInvalidate=false`
+- `invalidationReasons`
+- `invalidationCandidates`
+- dry-run invalidation plan for `blogger_publish_approvals`
+- side-effect summary with `dbRead=true` and all writes false
+
+Policy:
+
+- Normal current-state preview should not require invalidation when the saved approval still matches current content/Blogger draft metadata.
+- Manual invalidation reason may be previewed, but it only adds `manual_user_requested_invalidation` to the dry-run plan.
+- `canInvalidate` remains false until a separately approved future patch implements persistence.
+- This patch does not update `blogger_publish_approvals.invalidatedAt` or `invalidatedReason`.
+- This patch does not insert, update, or delete `blogger_publish_approvals`.
+- This patch does not mutate `content_items`, `blogger_draft_saves`, `blogger_draft_approvals`, or `llm_call_logs`.

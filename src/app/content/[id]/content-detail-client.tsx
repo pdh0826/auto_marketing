@@ -8,6 +8,7 @@ import type {
   BloggerDraftSavePreflight,
   PublishApprovalMode,
   PublishApprovalExecutionGuardResponse,
+  PublishApprovalInvalidationPreviewResponse,
   PublishApprovalPreview,
   PublishApprovalReadbackResponse,
   PublishApprovalSaveResponse,
@@ -267,6 +268,7 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
   const [publishApprovalSaveResult, setPublishApprovalSaveResult] = useState<PublishApprovalSaveResponse | null>(null);
   const [publishApprovalReadbackResult, setPublishApprovalReadbackResult] = useState<PublishApprovalReadbackResponse | null>(null);
   const [publishApprovalExecutionGuardResult, setPublishApprovalExecutionGuardResult] = useState<PublishApprovalExecutionGuardResponse | null>(null);
+  const [publishApprovalInvalidationPreviewResult, setPublishApprovalInvalidationPreviewResult] = useState<PublishApprovalInvalidationPreviewResponse | null>(null);
   const [bloggerDraftPreviewResult, setBloggerDraftPreviewResult] = useState<BloggerDraftPayloadPreview | null>(null);
   const [bloggerDraftSavePreflightResult, setBloggerDraftSavePreflightResult] = useState<BloggerDraftSavePreflight | null>(null);
   const [stepwiseRuns, setStepwiseRuns] = useState<StepwiseDraftGenerationRunSummary[]>([]);
@@ -296,6 +298,7 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
   const [publishApprovalRollbackAcknowledged, setPublishApprovalRollbackAcknowledged] = useState(false);
   const [publishApprovalSideEffectAcknowledged, setPublishApprovalSideEffectAcknowledged] = useState(false);
   const [publishApprovalPersistenceAcknowledged, setPublishApprovalPersistenceAcknowledged] = useState(false);
+  const [publishApprovalManualInvalidationReason, setPublishApprovalManualInvalidationReason] = useState("");
   const [qualityRepairCandidateText, setQualityRepairCandidateText] = useState("");
   const [qualityRepairEditMode, setQualityRepairEditMode] = useState(false);
   const [qualityRepairDirty, setQualityRepairDirty] = useState(false);
@@ -325,6 +328,7 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
   const [savingPublishApproval, setSavingPublishApproval] = useState(false);
   const [runningPublishApprovalReadback, setRunningPublishApprovalReadback] = useState(false);
   const [runningPublishApprovalExecutionGuard, setRunningPublishApprovalExecutionGuard] = useState(false);
+  const [runningPublishApprovalInvalidationPreview, setRunningPublishApprovalInvalidationPreview] = useState(false);
   const [runningBloggerDraftPreview, setRunningBloggerDraftPreview] = useState(false);
   const [runningBloggerDraftSavePreflight, setRunningBloggerDraftSavePreflight] = useState(false);
   const [approvingBloggerDraft, setApprovingBloggerDraft] = useState(false);
@@ -351,6 +355,7 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
   const [publishApprovalSaveError, setPublishApprovalSaveError] = useState<string | null>(null);
   const [publishApprovalReadbackError, setPublishApprovalReadbackError] = useState<string | null>(null);
   const [publishApprovalExecutionGuardError, setPublishApprovalExecutionGuardError] = useState<string | null>(null);
+  const [publishApprovalInvalidationPreviewError, setPublishApprovalInvalidationPreviewError] = useState<string | null>(null);
   const [bloggerDraftPreviewError, setBloggerDraftPreviewError] = useState<string | null>(null);
   const [bloggerDraftSavePreflightError, setBloggerDraftSavePreflightError] = useState<string | null>(null);
   const [bloggerDraftSaveError, setBloggerDraftSaveError] = useState<string | null>(null);
@@ -378,6 +383,7 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
   const canRunPublishApprovalPreview = Boolean(!runningPublishApprovalPreview);
   const canRunPublishApprovalReadback = Boolean(!runningPublishApprovalReadback);
   const canRunPublishApprovalExecutionGuard = Boolean(!runningPublishApprovalExecutionGuard);
+  const canRunPublishApprovalInvalidationPreview = Boolean(!runningPublishApprovalInvalidationPreview);
   const publishApprovalPreviewMatchesOptions = Boolean(
     publishApprovalPreviewResult &&
       publishApprovalPreviewResult.approvalSnapshotPreview.publishMode === publishApprovalMode &&
@@ -1295,6 +1301,32 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
     }
   }
 
+  async function runPublishApprovalInvalidationPreview(manualInvalidationRequested = false) {
+    setNotice(null);
+    setPublishApprovalInvalidationPreviewError(null);
+    setRunningPublishApprovalInvalidationPreview(true);
+
+    try {
+      const result = await requestJson<ApiResult<PublishApprovalInvalidationPreviewResponse>>(`/api/content-items/${contentItemId}/publish-approval-invalidation-preview`, {
+        method: "POST",
+        body: JSON.stringify({
+          approvalId: publishApprovalExecutionGuardResult?.approvalId ?? publishApprovalReadbackResult?.latestApproval?.id ?? null,
+          mode: publishApprovalMode,
+          scheduledAt: publishApprovalMode === "scheduled_publish" ? publishApprovalScheduledAt.trim() || null : null,
+          timezone: publishApprovalMode === "scheduled_publish" ? publishApprovalTimezone.trim() || null : null,
+          manualInvalidationRequested,
+          manualReason: manualInvalidationRequested ? publishApprovalManualInvalidationReason.trim() || null : null
+        })
+      });
+      setPublishApprovalInvalidationPreviewResult(result.data);
+      setNotice("Publish approval invalidation preview를 read-only로 확인했습니다. invalidatedAt/invalidatedReason DB update, publish, Blogger write는 수행하지 않았습니다.");
+    } catch (caught) {
+      setPublishApprovalInvalidationPreviewError(caught instanceof Error ? caught.message : "Publish approval invalidation preview에 실패했습니다.");
+    } finally {
+      setRunningPublishApprovalInvalidationPreview(false);
+    }
+  }
+
   async function runBloggerDraftPreview() {
     setNotice(null);
     setBloggerDraftPreviewError(null);
@@ -1660,6 +1692,7 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
             {publishApprovalSaveError ? <div className="notice error">{publishApprovalSaveError}</div> : null}
             {publishApprovalReadbackError ? <div className="notice error">{publishApprovalReadbackError}</div> : null}
             {publishApprovalExecutionGuardError ? <div className="notice error">{publishApprovalExecutionGuardError}</div> : null}
+            {publishApprovalInvalidationPreviewError ? <div className="notice error">{publishApprovalInvalidationPreviewError}</div> : null}
 
             <div className="read-block">
               <h3>Publish Approval Storage Options</h3>
@@ -1728,6 +1761,9 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
               </button>
               <button className="button secondary" type="button" disabled={!canRunPublishApprovalExecutionGuard} onClick={() => void runPublishApprovalExecutionGuard()}>
                 {runningPublishApprovalExecutionGuard ? "Execution Guard 확인 중" : "Check Publish Approval Execution Guard"}
+              </button>
+              <button className="button secondary" type="button" disabled={!canRunPublishApprovalInvalidationPreview} onClick={() => void runPublishApprovalInvalidationPreview(false)}>
+                {runningPublishApprovalInvalidationPreview ? "Invalidation Preview 실행 중" : "Check Approval Invalidation Preview"}
               </button>
               <button className="button secondary" type="button" disabled>
                 Publish는 후속 패치에서 연결 예정
@@ -1889,6 +1925,97 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
                 Check Publish Approval Execution Guard를 실행하면 저장된 approval과 현재 content/Blogger draft state match를 read-only로 확인합니다.
               </div>
             )}
+
+            <div className="read-block">
+              <h3>Publish Approval Invalidation Preview</h3>
+              <div className="notice">
+                Invalidation Preview는 저장된 publish approval을 실제로 무효화하지 않습니다. 이 점검은 read-only이며, invalidatedAt/invalidatedReason을 DB에
+                기록하지 않습니다. 현재 canInvalidate=false입니다.
+              </div>
+              <label className="field">
+                Manual invalidation reason dry-run
+                <input
+                  value={publishApprovalManualInvalidationReason}
+                  onChange={(event) => setPublishApprovalManualInvalidationReason(event.target.value)}
+                  placeholder="manual dry-run reason only"
+                />
+              </label>
+              <div className="form-actions">
+                <button className="button secondary" type="button" disabled={!canRunPublishApprovalInvalidationPreview} onClick={() => void runPublishApprovalInvalidationPreview(false)}>
+                  {runningPublishApprovalInvalidationPreview ? "Invalidation Preview 실행 중" : "Run Normal Invalidation Preview"}
+                </button>
+                <button className="button secondary" type="button" disabled={!canRunPublishApprovalInvalidationPreview} onClick={() => void runPublishApprovalInvalidationPreview(true)}>
+                  {runningPublishApprovalInvalidationPreview ? "Manual Dry-run 실행 중" : "Run Manual Invalidation Dry-run"}
+                </button>
+                <button className="button secondary" type="button" disabled>
+                  Invalidate 실행은 후속 패치에서만 검토
+                </button>
+              </div>
+              <div className="notice warning">
+                Manual reason을 입력해도 이번 단계에서는 dry-run plan만 표시됩니다. 실제 approval invalidation persistence는 별도 승인된 future patch에서만
+                구현합니다.
+              </div>
+            </div>
+
+            {publishApprovalInvalidationPreviewResult ? (
+              <div className="read-block">
+                <h3>Publish Approval Invalidation Dry-run Result</h3>
+                <div className={publishApprovalInvalidationPreviewResult.wouldInvalidate ? "notice warning" : "notice"}>
+                  <strong>{publishApprovalInvalidationPreviewResult.wouldInvalidate ? "Invalidation would be planned" : "Invalidation is not required"}</strong>
+                  <p>
+                    wouldInvalidate는 계획/판단 결과입니다. canInvalidate=false이며 이 화면은 DB update를 수행하지 않습니다.
+                  </p>
+                </div>
+                <div className="detail-grid">
+                  <DetailItem label="Checked At" value={formatDate(publishApprovalInvalidationPreviewResult.checkedAt)} />
+                  <DetailItem label="Approval ID" value={publishApprovalInvalidationPreviewResult.approvalId ?? "-"} />
+                  <DetailItem label="Approval Found" value={String(publishApprovalInvalidationPreviewResult.approvalFound)} />
+                  <DetailItem label="Approval Active" value={String(publishApprovalInvalidationPreviewResult.approvalActive)} />
+                  <DetailItem label="Matches Current State" value={formatNullableBoolean(publishApprovalInvalidationPreviewResult.approvalMatchesCurrentState)} />
+                  <DetailItem label="Manual Requested" value={String(publishApprovalInvalidationPreviewResult.manualInvalidationRequested)} />
+                  <DetailItem label="Manual Reason" value={publishApprovalInvalidationPreviewResult.manualReason ?? "-"} />
+                  <DetailItem label="Would Invalidate" value={String(publishApprovalInvalidationPreviewResult.wouldInvalidate)} />
+                  <DetailItem label="Can Invalidate" value={String(publishApprovalInvalidationPreviewResult.canInvalidate)} />
+                  <DetailItem label="Can Execute Publish" value={String(publishApprovalInvalidationPreviewResult.canExecutePublish)} />
+                  <DetailItem label="Can Execute Scheduled Publish" value={String(publishApprovalInvalidationPreviewResult.canExecuteScheduledPublish)} />
+                  <DetailItem label="Plan Table" value={publishApprovalInvalidationPreviewResult.invalidationPlan.updateTable} />
+                  <DetailItem label="Plan Invalidated At" value={publishApprovalInvalidationPreviewResult.invalidationPlan.setInvalidatedAt ?? "-"} />
+                  <DetailItem label="Plan Invalidated Reason" value={publishApprovalInvalidationPreviewResult.invalidationPlan.setInvalidatedReason ?? "-"} />
+                  <DetailItem label="Dry-run Only" value={String(publishApprovalInvalidationPreviewResult.invalidationPlan.dryRunOnly)} />
+                  <DetailItem label="DB Update Implemented" value={String(publishApprovalInvalidationPreviewResult.invalidationPlan.dbUpdateImplemented)} />
+                </div>
+                <div className="detail-grid">
+                  <DetailItem label="DB Read" value={String(publishApprovalInvalidationPreviewResult.sideEffectSummary.dbRead)} />
+                  <DetailItem label="DB Write" value={String(publishApprovalInvalidationPreviewResult.sideEffectSummary.dbWrite)} />
+                  <DetailItem label="Approval Invalidation" value={String(publishApprovalInvalidationPreviewResult.sideEffectSummary.approvalInvalidation)} />
+                  <DetailItem label="Blogger API Write" value={String(publishApprovalInvalidationPreviewResult.sideEffectSummary.bloggerApiWrite)} />
+                  <DetailItem label="Blogger Publish" value={String(publishApprovalInvalidationPreviewResult.sideEffectSummary.bloggerPublish)} />
+                  <DetailItem label="Blogger Scheduled Publish" value={String(publishApprovalInvalidationPreviewResult.sideEffectSummary.bloggerScheduledPublish)} />
+                  <DetailItem label="Content Item Mutation" value={String(publishApprovalInvalidationPreviewResult.sideEffectSummary.contentItemMutation)} />
+                  <DetailItem label="Token Refresh" value={String(publishApprovalInvalidationPreviewResult.sideEffectSummary.tokenRefresh)} />
+                  <DetailItem label="LLM Call" value={String(publishApprovalInvalidationPreviewResult.sideEffectSummary.llmCall)} />
+                </div>
+                <ValidationList
+                  title="Invalidation Reasons"
+                  items={publishApprovalInvalidationPreviewResult.invalidationReasons}
+                  emptyText="invalidation reason이 없습니다."
+                  isWarning
+                />
+                <ValidationList
+                  title="Invalidation Candidates"
+                  items={publishApprovalInvalidationPreviewResult.invalidationCandidates}
+                  emptyText="current state mismatch candidate가 없습니다."
+                  isWarning
+                />
+                <ValidationList
+                  title="Invalidation Preview Blocking Reasons"
+                  items={publishApprovalInvalidationPreviewResult.blockingReasons}
+                  emptyText="blocking reason이 없습니다."
+                  isError
+                />
+                <ValidationList title="Invalidation Preview Warnings" items={publishApprovalInvalidationPreviewResult.warnings} emptyText="warning이 없습니다." isWarning />
+              </div>
+            ) : null}
 
             {publishReadinessResult ? (
               <>

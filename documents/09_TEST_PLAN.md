@@ -962,3 +962,16 @@ Safety guard:
 - Content Detail UI는 execution guard result, match summary, invalidation candidates, blockers, required-before-execution gates를 표시해야 한다.
 - UI는 invalidation candidates가 read-only 판단 결과이며 이번 패치에서 DB에 `invalidatedAt`을 쓰지 않는다고 표시해야 한다.
 - 9E-7C 구현/스모크 중에는 `blogger_publish_approvals` insert/update, approval invalidation DB update, Blogger API write, additional draft save, `posts.update`, publish/scheduled publish, token refresh, token endpoint call, LLM 호출, content item mutation이 발생하지 않아야 한다.
+
+## Patch 9E-7D Publish approval invalidation dry-run 검증
+
+- `POST /api/content-items/[id]/publish-approval-invalidation-preview`는 read-only route여야 한다.
+- normal preview는 latest saved publish approval과 execution guard 결과를 기반으로 invalidation plan만 반환해야 한다.
+- 현재 기준 item에서는 `approvalFound=true`, `approvalActive=true`, `approvalMatchesCurrentState=true`, `wouldInvalidate=false`, `canInvalidate=false`, `invalidationReasons=[]`, `invalidationCandidates=[]`가 기대된다.
+- manual dry-run 요청은 `manualInvalidationRequested=true`, `wouldInvalidate=true`, `canInvalidate=false`, `invalidationReasons`에 `manual_user_requested_invalidation`을 포함해야 한다.
+- 모든 invalidation preview 응답은 `invalidation_persistence_not_implemented` 또는 동등한 blocker를 유지해야 한다.
+- `sideEffectSummary`는 `dbRead=true`, `dbWrite=false`, `approvalInvalidation=false`, Blogger write false, token refresh false, content mutation false, LLM false여야 한다.
+- `invalidationPlan.dryRunOnly=true`, `dbUpdateImplemented=false`여야 한다.
+- Content Detail UI는 invalidation preview result, manual reason dry-run, invalidation reasons/candidates, dry-run plan, side-effect summary를 표시해야 한다.
+- UI는 manual reason을 입력해도 이번 단계에서는 DB에 `invalidatedAt`/`invalidatedReason`을 쓰지 않는다고 표시해야 한다.
+- 9E-7D 구현/스모크 중에는 `blogger_publish_approvals` insert/update/delete, approval invalidation DB update, Blogger API write, additional draft save, `posts.update`, publish/scheduled publish, token refresh, token endpoint call, LLM 호출, content item mutation이 발생하지 않아야 한다.

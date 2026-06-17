@@ -601,3 +601,38 @@ export interface PublishApprovalExecutionGuardResponse {
   requiredBeforeExecution: string[];
   sideEffectSummary: PublishApprovalExecutionGuardSideEffectSummary;
 }
+
+export interface PublishApprovalInvalidationPreviewResponse {
+  contentItemId: string;
+  checkedAt: string;
+  approvalId: string | null;
+  approvalFound: boolean;
+  approvalActive: boolean;
+  approvalMatchesCurrentState: boolean | null;
+  manualInvalidationRequested: boolean;
+  manualReason: string | null;
+  wouldInvalidate: boolean;
+  canInvalidate: false;
+  canPublish: false;
+  canSchedulePublish: false;
+  canExecutePublish: false;
+  canExecuteScheduledPublish: false;
+  blockingReasons: string[];
+  warnings: string[];
+  invalidationReasons: string[];
+  invalidationCandidates: string[];
+  invalidationPlan: {
+    updateTable: "blogger_publish_approvals";
+    setInvalidatedAt: string | null;
+    setInvalidatedReason: string | null;
+    dryRunOnly: true;
+    dbUpdateImplemented: false;
+  };
+  executionGuardSummary: {
+    canExecutePublish: false;
+    canExecuteScheduledPublish: false;
+    approvalMatchesCurrentState: boolean | null;
+    blockingReasons: string[];
+  };
+  sideEffectSummary: PublishApprovalExecutionGuardSideEffectSummary;
+}

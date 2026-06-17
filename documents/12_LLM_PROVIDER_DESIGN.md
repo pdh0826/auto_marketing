@@ -831,3 +831,14 @@ Patch 9E-7C adds read-only publish approval execution guard checks, not an LLM r
 - Invalidation candidates are read-only diagnostics and must not create or update `llm_call_logs`.
 - The guard does not expose prompts, raw responses, candidate text, Blogger tokens, encrypted values, raw Blogger responses, raw Blogger error bodies, or full draft HTML.
 - Execution guard results do not authorize content generation, Blogger publish, scheduled publish, token refresh, `posts.update`, or content item mutation.
+
+## Patch 9E-7D publish approval invalidation dry-run boundary
+
+Patch 9E-7D adds read-only publish approval invalidation preview checks, not an LLM routing change.
+
+- `POST /api/content-items/[id]/publish-approval-invalidation-preview` must not call LLM providers.
+- The invalidation preview uses execution guard and saved approval metadata only.
+- Manual invalidation reason is treated as dry-run input and must not trigger an LLM call.
+- The dry-run must not create or update `llm_call_logs`.
+- The dry-run does not expose prompts, raw responses, candidate text, Blogger tokens, encrypted values, raw Blogger responses, raw Blogger error bodies, or full draft HTML.
+- Invalidation preview results do not authorize content generation, Blogger publish, scheduled publish, token refresh, `posts.update`, approval invalidation DB update, or content item mutation.
