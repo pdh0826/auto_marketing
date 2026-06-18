@@ -975,3 +975,20 @@ Safety guard:
 - Content Detail UI는 invalidation preview result, manual reason dry-run, invalidation reasons/candidates, dry-run plan, side-effect summary를 표시해야 한다.
 - UI는 manual reason을 입력해도 이번 단계에서는 DB에 `invalidatedAt`/`invalidatedReason`을 쓰지 않는다고 표시해야 한다.
 - 9E-7D 구현/스모크 중에는 `blogger_publish_approvals` insert/update/delete, approval invalidation DB update, Blogger API write, additional draft save, `posts.update`, publish/scheduled publish, token refresh, token endpoint call, LLM 호출, content item mutation이 발생하지 않아야 한다.
+
+## Patch 9E-7E Publish execution attempt preview 검증
+
+- `POST /api/content-items/[id]/publish-execution-attempt-preview`는 read-only route여야 한다.
+- 응답은 latest saved publish approval, latest successful Blogger draft save, token expiry state, execution guard 결과를 기반으로 future attempt plan만 반환해야 한다.
+- 현재 기준 item에서는 `approvalId=cmqh37dbb0001iwd7ft6yrxo0`, `approvalMatchesCurrentState=true`, `invalidationCandidates=[]`가 기대된다.
+- 응답은 `attemptStorageImplemented=false`, `wouldCreateAttempt=false`, `canCreateAttempt=false`, `canExecutePublish=false`, `canExecuteScheduledPublish=false`, `canPublish=false`, `canSchedulePublish=false`를 유지해야 한다.
+- `blockingReasons`에는 `attempt_storage_not_implemented`, `publish_execution_not_implemented`가 포함되어야 한다.
+- token expired 상태이면 `access_token_expired_reauth_required`가 계속 포함되어야 한다.
+- `plannedAttempt.futureTable=blogger_publish_execution_attempts`, `plannedAttempt.status=planned_only`, `plannedAttempt.publishApprovalId`와 `plannedAttempt.publishApprovalSnapshotHash`가 saved approval과 일치해야 한다.
+- `failurePolicySummary`는 retry eligible, retry blocked, partial failure 예시를 포함해야 한다.
+- `redactionPolicySummary`는 raw Blogger response/error body, tokens, encrypted values, full HTML, prompt/raw LLM response 저장 금지를 명시해야 한다.
+- `contentMutationOrdering`은 Blogger success 기록과 `content_items.status`/`publishedAt` mutation을 분리해야 한다고 표시해야 한다.
+- `sideEffectSummary`는 `dbRead=true`, `dbWrite=false`, `attemptPersistence=false`, Blogger write false, publish false, scheduled publish false, token refresh false, content mutation false, LLM false여야 한다.
+- Content Detail UI는 Publish Execution Attempt Preview 버튼과 planning-only result, blockers, failure/retry/partial failure policy, redaction policy, side-effect summary를 표시해야 한다.
+- UI는 Create attempt, Publish, Schedule Publish, Retry, Token Refresh 실행 버튼을 제공하면 안 된다.
+- 9E-7E 구현/스모크 중에는 schema/migration 변경, attempt insert, `blogger_publish_approvals` update/delete, approval invalidation DB update, Blogger API write, additional draft save, `posts.update`, publish/scheduled publish, token refresh, token endpoint call, LLM 호출, content item mutation이 발생하지 않아야 한다.

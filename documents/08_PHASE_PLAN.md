@@ -241,3 +241,14 @@ Patch 9E-7D 완료:
 - manual reason dry-run은 `wouldInvalidate=true`를 표시할 수 있지만 `canInvalidate=false` 및 `dbWrite=false` 유지
 - Content Detail UI에 invalidation preview, manual dry-run reason, invalidation reasons/candidates, dry-run plan, side-effect summary 추가
 - approval invalidation DB update, Blogger publish/scheduled publish/write, token refresh, posts.update, additional draft save, content item mutation, LLM 호출은 구현하지 않음
+
+Patch 9E-7E 완료:
+
+- `POST /api/content-items/[id]/publish-execution-attempt-preview` read-only API 추가
+- future `blogger_publish_execution_attempts` schema/policy plan 문서화
+- attempt가 `publishApprovalId`와 approval snapshot hash에 연결되어야 한다는 정책 정리
+- retry eligible / retry blocked / partial failure 정책 요약 추가
+- raw Blogger response/error body, token, encrypted value, full HTML, prompt/raw LLM response 저장 금지 redaction 정책 정리
+- Content Detail UI에 Publish Execution Attempt Preview planning-only 결과와 side-effect summary 추가
+- `attemptStorageImplemented=false`, `wouldCreateAttempt=false`, `canCreateAttempt=false`, `canExecutePublish=false`, `canExecuteScheduledPublish=false` 유지
+- schema/migration, attempt insert, Blogger publish/scheduled publish/write, token refresh, posts.update, additional draft save, content item mutation, LLM 호출은 구현하지 않음

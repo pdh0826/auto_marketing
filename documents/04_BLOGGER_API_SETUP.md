@@ -477,3 +477,44 @@ Stored approvals still do not authorize execution:
 - `canExecuteScheduledPublish=false`
 - `canPublish=false`
 - `canSchedulePublish=false`
+
+## Patch 9E-7E Publish execution attempt preview
+
+Patch 9E-7E adds a read-only preview for the future publish execution attempt audit layer.
+
+New route:
+
+```text
+POST /api/content-items/[id]/publish-execution-attempt-preview
+```
+
+This route reads the latest saved publish approval, latest successful Blogger draft save, token expiry state, and the existing publish approval execution guard result. It returns a future attempt plan without creating a row or calling Blogger.
+
+The route is read-only:
+
+- no publish execution attempt insert
+- no new Prisma model or migration
+- no Blogger API call
+- no publish or scheduled publish
+- no `posts.update`
+- no additional draft save
+- no token refresh or token endpoint call
+- no content item mutation
+- no LLM call
+
+Current execution remains blocked:
+
+- `attemptStorageImplemented=false`
+- `wouldCreateAttempt=false`
+- `canCreateAttempt=false`
+- `canExecutePublish=false`
+- `canExecuteScheduledPublish=false`
+- `canPublish=false`
+- `canSchedulePublish=false`
+
+Future attempt policy:
+
+- attempt rows must link to `publishApprovalId` and `publishApprovalSnapshotHash`
+- raw Blogger response/error bodies must be redacted before storage
+- retries must be blocked when external Blogger side effects may have occurred
+- Blogger success and local `content_items.status`/`publishedAt` mutation must be ordered and auditable as separate steps

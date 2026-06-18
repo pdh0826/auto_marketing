@@ -1110,3 +1110,25 @@ Not implemented:
 - token refresh or token endpoint call
 - content item status, `publishedAt`, `scheduledAt`, `qualityScore`, `draftHtml`, or `draftMarkdown` mutation
 - LLM calls or `llm_call_logs`
+
+## Patch 9E-7E: Publish Execution Attempt Preview and Policy
+
+Implemented after Patch 9E-7D:
+
+- Added `POST /api/content-items/[id]/publish-execution-attempt-preview` as a read-only future attempt planning route.
+- Added `src/lib/content/publish-execution-attempt-preview.ts` to build planned-only attempt summaries from execution guard and saved approval metadata.
+- Added Content Detail UI for publish execution attempt preview, planned attempt summary, blockers, required gates, retry/failure/partial failure policy, redaction policy, content mutation ordering, and side-effect summary.
+- Documented future `blogger_publish_execution_attempts` schema fields and status candidates.
+- Documented retry eligible, retry blocked, partial failure, redaction, and local content mutation ordering policy.
+- The preview reports `attemptStorageImplemented=false`, `wouldCreateAttempt=false`, `canCreateAttempt=false`, `canExecutePublish=false`, `canExecuteScheduledPublish=false`, `canPublish=false`, and `canSchedulePublish=false`.
+
+Not implemented:
+
+- publish execution attempt table/model/migration
+- publish attempt insert/update
+- Blogger publish or scheduled publish
+- Blogger API write, `posts.update`, `posts.insert`, or additional draft save
+- token refresh or token endpoint call
+- approval invalidation DB update
+- content item status, `publishedAt`, `scheduledAt`, `qualityScore`, `draftHtml`, or `draftMarkdown` mutation
+- LLM calls or `llm_call_logs`

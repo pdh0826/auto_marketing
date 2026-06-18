@@ -713,3 +713,87 @@ Policy:
 - This patch does not update `blogger_publish_approvals.invalidatedAt` or `invalidatedReason`.
 - This patch does not insert, update, or delete `blogger_publish_approvals`.
 - This patch does not mutate `content_items`, `blogger_draft_saves`, `blogger_draft_approvals`, or `llm_call_logs`.
+
+## Patch 9E-7E Publish execution attempt policy/schema plan
+
+Patch 9E-7E documents the future publish execution attempt audit model and adds a read-only preview. It does not add a Prisma model or migration.
+
+Future table name:
+
+- `blogger_publish_execution_attempts`
+
+Future fields should include:
+
+- `id`
+- `contentItemId`
+- `publishApprovalId`
+- `publishApprovalSnapshotHash`
+- `mode`
+- `status`
+- `attemptNumber`
+- `targetBloggerBlogId`
+- `bloggerPostId`
+- `draftHtmlHash`
+- `titleCandidate`
+- `requestedAt`
+- `startedAt`
+- `finishedAt`
+- `requestedBy`
+- `tokenStateAtAttempt`
+- `executionGuardCheckedAt`
+- `approvalMatchesCurrentState`
+- `invalidationCandidatesJson`
+- `sideEffectSummaryJson`
+- `bloggerRequestSummaryJson`
+- `bloggerResponseRedactedJson`
+- `errorType`
+- `errorCode`
+- `errorMessageRedacted`
+- `retryEligible`
+- `retryBlockedReason`
+- `contentMutationPlanned`
+- `contentMutationCompleted`
+- `contentStatusBefore`
+- `contentStatusAfter`
+- `publishedAtPlanned`
+- `publishedAtApplied`
+- `scheduledAtPlanned`
+- `scheduledAtApplied`
+- `createdAt`
+- `updatedAt`
+
+Future status candidates:
+
+- `planned_only`
+- `blocked_by_preflight`
+- `ready_for_execution`
+- `attempt_started`
+- `blogger_publish_succeeded`
+- `blogger_publish_failed`
+- `local_content_mutation_pending`
+- `local_content_mutation_succeeded`
+- `local_content_mutation_failed`
+- `partial_failure`
+- `cancelled`
+- `retry_planned`
+- `retry_blocked`
+
+Policy:
+
+- Publish attempts must link to `publishApprovalId` and `publishApprovalSnapshotHash`.
+- A successful publish approval must not be reused for another publish attempt.
+- Retry decisions must be based on the attempt log plus approval id, not on ad hoc UI state.
+- If an external Blogger side effect may have occurred, automatic retry is blocked until a separate verification step confirms state.
+- Raw Blogger response/error bodies, tokens, encrypted values, full HTML, prompts, and raw LLM responses must not be stored.
+- Confirmed Blogger success and local `content_items.status`/`publishedAt` mutation must be separate ordered steps; local mutation failure after Blogger success becomes `partial_failure`.
+
+Patch 9E-7E read-only preview:
+
+- `POST /api/content-items/[id]/publish-execution-attempt-preview`
+- `attemptStorageImplemented=false`
+- `wouldCreateAttempt=false`
+- `canCreateAttempt=false`
+- `canExecutePublish=false`
+- `canExecuteScheduledPublish=false`
+- `sideEffectSummary.dbRead=true`
+- all write/publish/token/LLM/content mutation flags false

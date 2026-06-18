@@ -842,3 +842,14 @@ Patch 9E-7D adds read-only publish approval invalidation preview checks, not an 
 - The dry-run must not create or update `llm_call_logs`.
 - The dry-run does not expose prompts, raw responses, candidate text, Blogger tokens, encrypted values, raw Blogger responses, raw Blogger error bodies, or full draft HTML.
 - Invalidation preview results do not authorize content generation, Blogger publish, scheduled publish, token refresh, `posts.update`, approval invalidation DB update, or content item mutation.
+
+## Patch 9E-7E publish execution attempt preview boundary
+
+Patch 9E-7E adds read-only publish execution attempt policy/schema preview checks, not an LLM routing change.
+
+- `POST /api/content-items/[id]/publish-execution-attempt-preview` must not call LLM providers.
+- The attempt preview uses execution guard and saved approval metadata only.
+- The preview must not create or update `llm_call_logs`.
+- The preview must not persist attempt rows, mutate content items, call Blogger, publish, schedule publish, update posts, save another draft, or refresh tokens.
+- Future attempt metadata should keep safe hashes, ids, timestamps, short error codes/messages, and redacted summaries only.
+- Future attempt metadata must not expose prompts, raw model responses, generated candidate text, Blogger tokens, encrypted values, client secrets, raw OAuth responses, raw Blogger response/error bodies, or full draft HTML.
