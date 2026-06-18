@@ -65,7 +65,8 @@ export async function POST(request: Request, { params }: RouteContext) {
       contentItemId: params.id,
       executionGuard,
       latestApproval: safeLatestApproval,
-      latestSuccessfulDraftSave: safeLatestSuccessfulDraftSave
+      latestSuccessfulDraftSave: safeLatestSuccessfulDraftSave,
+      contentStatusBefore: safeContentItem.status ?? null
     });
 
     return NextResponse.json({ data: result });

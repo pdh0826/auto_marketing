@@ -12,7 +12,9 @@ import type {
   PublishApprovalPreview,
   PublishApprovalReadbackResponse,
   PublishApprovalSaveResponse,
+  PublishExecutionAttemptReadbackResponse,
   PublishExecutionAttemptPreviewResponse,
+  PublishExecutionAttemptSaveResponse,
   PublishPreflightDryRun
 } from "@/lib/blogger/admin-types";
 import type { BlogPostTemplatePreviewResult, BlogPostTemplatePreviewSource } from "@/lib/blog-renderer/blog-post-template-renderer";
@@ -271,6 +273,8 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
   const [publishApprovalExecutionGuardResult, setPublishApprovalExecutionGuardResult] = useState<PublishApprovalExecutionGuardResponse | null>(null);
   const [publishApprovalInvalidationPreviewResult, setPublishApprovalInvalidationPreviewResult] = useState<PublishApprovalInvalidationPreviewResponse | null>(null);
   const [publishExecutionAttemptPreviewResult, setPublishExecutionAttemptPreviewResult] = useState<PublishExecutionAttemptPreviewResponse | null>(null);
+  const [publishExecutionAttemptSaveResult, setPublishExecutionAttemptSaveResult] = useState<PublishExecutionAttemptSaveResponse | null>(null);
+  const [publishExecutionAttemptReadbackResult, setPublishExecutionAttemptReadbackResult] = useState<PublishExecutionAttemptReadbackResponse | null>(null);
   const [bloggerDraftPreviewResult, setBloggerDraftPreviewResult] = useState<BloggerDraftPayloadPreview | null>(null);
   const [bloggerDraftSavePreflightResult, setBloggerDraftSavePreflightResult] = useState<BloggerDraftSavePreflight | null>(null);
   const [stepwiseRuns, setStepwiseRuns] = useState<StepwiseDraftGenerationRunSummary[]>([]);
@@ -301,6 +305,9 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
   const [publishApprovalSideEffectAcknowledged, setPublishApprovalSideEffectAcknowledged] = useState(false);
   const [publishApprovalPersistenceAcknowledged, setPublishApprovalPersistenceAcknowledged] = useState(false);
   const [publishApprovalManualInvalidationReason, setPublishApprovalManualInvalidationReason] = useState("");
+  const [publishAttemptPersistenceAcknowledged, setPublishAttemptPersistenceAcknowledged] = useState(false);
+  const [publishAttemptNoBloggerWriteAcknowledged, setPublishAttemptNoBloggerWriteAcknowledged] = useState(false);
+  const [publishAttemptNoContentMutationAcknowledged, setPublishAttemptNoContentMutationAcknowledged] = useState(false);
   const [qualityRepairCandidateText, setQualityRepairCandidateText] = useState("");
   const [qualityRepairEditMode, setQualityRepairEditMode] = useState(false);
   const [qualityRepairDirty, setQualityRepairDirty] = useState(false);
@@ -332,6 +339,8 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
   const [runningPublishApprovalExecutionGuard, setRunningPublishApprovalExecutionGuard] = useState(false);
   const [runningPublishApprovalInvalidationPreview, setRunningPublishApprovalInvalidationPreview] = useState(false);
   const [runningPublishExecutionAttemptPreview, setRunningPublishExecutionAttemptPreview] = useState(false);
+  const [savingPublishExecutionAttempt, setSavingPublishExecutionAttempt] = useState(false);
+  const [runningPublishExecutionAttemptReadback, setRunningPublishExecutionAttemptReadback] = useState(false);
   const [runningBloggerDraftPreview, setRunningBloggerDraftPreview] = useState(false);
   const [runningBloggerDraftSavePreflight, setRunningBloggerDraftSavePreflight] = useState(false);
   const [approvingBloggerDraft, setApprovingBloggerDraft] = useState(false);
@@ -360,6 +369,8 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
   const [publishApprovalExecutionGuardError, setPublishApprovalExecutionGuardError] = useState<string | null>(null);
   const [publishApprovalInvalidationPreviewError, setPublishApprovalInvalidationPreviewError] = useState<string | null>(null);
   const [publishExecutionAttemptPreviewError, setPublishExecutionAttemptPreviewError] = useState<string | null>(null);
+  const [publishExecutionAttemptSaveError, setPublishExecutionAttemptSaveError] = useState<string | null>(null);
+  const [publishExecutionAttemptReadbackError, setPublishExecutionAttemptReadbackError] = useState<string | null>(null);
   const [bloggerDraftPreviewError, setBloggerDraftPreviewError] = useState<string | null>(null);
   const [bloggerDraftSavePreflightError, setBloggerDraftSavePreflightError] = useState<string | null>(null);
   const [bloggerDraftSaveError, setBloggerDraftSaveError] = useState<string | null>(null);
@@ -389,6 +400,15 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
   const canRunPublishApprovalExecutionGuard = Boolean(!runningPublishApprovalExecutionGuard);
   const canRunPublishApprovalInvalidationPreview = Boolean(!runningPublishApprovalInvalidationPreview);
   const canRunPublishExecutionAttemptPreview = Boolean(!runningPublishExecutionAttemptPreview);
+  const canSavePublishExecutionAttempt = Boolean(
+    publishExecutionAttemptPreviewResult?.attemptPlanHashPreview &&
+      publishExecutionAttemptPreviewResult.approvalId &&
+      publishAttemptPersistenceAcknowledged &&
+      publishAttemptNoBloggerWriteAcknowledged &&
+      publishAttemptNoContentMutationAcknowledged &&
+      !savingPublishExecutionAttempt
+  );
+  const canRunPublishExecutionAttemptReadback = Boolean(!runningPublishExecutionAttemptReadback);
   const publishApprovalPreviewMatchesOptions = Boolean(
     publishApprovalPreviewResult &&
       publishApprovalPreviewResult.approvalSnapshotPreview.publishMode === publishApprovalMode &&
@@ -1335,6 +1355,8 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
   async function runPublishExecutionAttemptPreview() {
     setNotice(null);
     setPublishExecutionAttemptPreviewError(null);
+    setPublishExecutionAttemptSaveError(null);
+    setPublishExecutionAttemptSaveResult(null);
     setRunningPublishExecutionAttemptPreview(true);
 
     try {
@@ -1352,6 +1374,63 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
       setPublishExecutionAttemptPreviewError(caught instanceof Error ? caught.message : "Publish execution attempt preview에 실패했습니다.");
     } finally {
       setRunningPublishExecutionAttemptPreview(false);
+    }
+  }
+
+  async function savePublishExecutionAttemptPlan() {
+    if (!publishExecutionAttemptPreviewResult?.attemptPlanHashPreview || !publishExecutionAttemptPreviewResult.approvalId) {
+      setPublishExecutionAttemptSaveError("Publish Execution Attempt Preview를 먼저 실행하세요.");
+      return;
+    }
+    if (!canSavePublishExecutionAttempt) {
+      setPublishExecutionAttemptSaveError("attempt persistence / no Blogger write / no content mutation acknowledgement를 모두 확인해야 저장할 수 있습니다.");
+      return;
+    }
+
+    setNotice(null);
+    setPublishExecutionAttemptSaveError(null);
+    setPublishExecutionAttemptSaveResult(null);
+    setSavingPublishExecutionAttempt(true);
+
+    try {
+      const result = await requestJson<ApiResult<PublishExecutionAttemptSaveResponse>>(`/api/content-items/${contentItemId}/publish-execution-attempt-save`, {
+        method: "POST",
+        body: JSON.stringify({
+          publishApprovalId: publishExecutionAttemptPreviewResult.approvalId,
+          attemptPlanHashPreview: publishExecutionAttemptPreviewResult.attemptPlanHashPreview,
+          attemptPersistenceAcknowledged: publishAttemptPersistenceAcknowledged,
+          noBloggerWriteAcknowledged: publishAttemptNoBloggerWriteAcknowledged,
+          noContentMutationAcknowledged: publishAttemptNoContentMutationAcknowledged
+        })
+      });
+      setPublishExecutionAttemptSaveResult(result.data);
+      setNotice(
+        result.data.created
+          ? "Publish execution attempt plan을 local DB에 저장했습니다. Blogger publish, scheduled publish, posts.update, token refresh, content status 변경은 수행하지 않았습니다."
+          : "동일한 publish execution attempt plan이 이미 저장되어 existing row를 재사용했습니다. Blogger write와 content mutation은 수행하지 않았습니다."
+      );
+      await runPublishExecutionAttemptReadback();
+    } catch (caught) {
+      setPublishExecutionAttemptSaveError(caught instanceof Error ? caught.message : "Publish execution attempt plan 저장에 실패했습니다.");
+    } finally {
+      setSavingPublishExecutionAttempt(false);
+    }
+  }
+
+  async function runPublishExecutionAttemptReadback() {
+    setPublishExecutionAttemptReadbackError(null);
+    setRunningPublishExecutionAttemptReadback(true);
+
+    try {
+      const result = await requestJson<ApiResult<PublishExecutionAttemptReadbackResponse>>(`/api/content-items/${contentItemId}/publish-execution-attempt-readback`, {
+        method: "POST",
+        body: JSON.stringify({})
+      });
+      setPublishExecutionAttemptReadbackResult(result.data);
+    } catch (caught) {
+      setPublishExecutionAttemptReadbackError(caught instanceof Error ? caught.message : "Publish execution attempt readback에 실패했습니다.");
+    } finally {
+      setRunningPublishExecutionAttemptReadback(false);
     }
   }
 
@@ -1722,6 +1801,8 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
             {publishApprovalExecutionGuardError ? <div className="notice error">{publishApprovalExecutionGuardError}</div> : null}
             {publishApprovalInvalidationPreviewError ? <div className="notice error">{publishApprovalInvalidationPreviewError}</div> : null}
             {publishExecutionAttemptPreviewError ? <div className="notice error">{publishExecutionAttemptPreviewError}</div> : null}
+            {publishExecutionAttemptSaveError ? <div className="notice error">{publishExecutionAttemptSaveError}</div> : null}
+            {publishExecutionAttemptReadbackError ? <div className="notice error">{publishExecutionAttemptReadbackError}</div> : null}
 
             <div className="read-block">
               <h3>Publish Approval Storage Options</h3>
@@ -1796,6 +1877,9 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
               </button>
               <button className="button secondary" type="button" disabled={!canRunPublishExecutionAttemptPreview} onClick={() => void runPublishExecutionAttemptPreview()}>
                 {runningPublishExecutionAttemptPreview ? "Attempt Preview 실행 중" : "Check Publish Execution Attempt Preview"}
+              </button>
+              <button className="button secondary" type="button" disabled={!canRunPublishExecutionAttemptReadback} onClick={() => void runPublishExecutionAttemptReadback()}>
+                {runningPublishExecutionAttemptReadback ? "Attempt Readback 실행 중" : "Load Saved Execution Attempts"}
               </button>
               <button className="button secondary" type="button" disabled>
                 Publish는 후속 패치에서 연결 예정
@@ -2074,6 +2158,9 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
                   <DetailItem label="Can Execute Scheduled Publish" value={String(publishExecutionAttemptPreviewResult.canExecuteScheduledPublish)} />
                   <DetailItem label="Can Publish" value={String(publishExecutionAttemptPreviewResult.canPublish)} />
                   <DetailItem label="Can Schedule Publish" value={String(publishExecutionAttemptPreviewResult.canSchedulePublish)} />
+                  <DetailItem label="Attempt Plan Hash Preview" value={publishExecutionAttemptPreviewResult.attemptPlanHashPreview} />
+                  <DetailItem label="Hash Algorithm" value={publishExecutionAttemptPreviewResult.hashAlgorithm} />
+                  <DetailItem label="Canonicalization" value={publishExecutionAttemptPreviewResult.canonicalization} />
                 </div>
                 <div className="detail-grid">
                   <DetailItem label="Future Table" value={publishExecutionAttemptPreviewResult.plannedAttempt.futureTable} />
@@ -2155,6 +2242,122 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
                   items={publishExecutionAttemptPreviewResult.contentMutationOrdering}
                   emptyText="content mutation ordering policy가 없습니다."
                 />
+                <div className="read-block">
+                  <h3>Publish Execution Attempt Storage</h3>
+                  <div className="notice warning">
+                    <strong>Local DB attempt plan storage only</strong>
+                    <p>이 버튼은 publish execution attempt plan만 로컬 DB에 저장합니다.</p>
+                    <p>Blogger publish, scheduled publish, posts.update, token refresh, content status/publishedAt/scheduledAt 변경은 수행하지 않습니다.</p>
+                    <p>저장된 attempt가 있어도 실제 publish 실행은 별도 preflight와 별도 승인된 future patch에서만 가능합니다.</p>
+                  </div>
+                  <div className="detail-grid">
+                    <DetailItem label="DB Write Before Click" value="will write attempt plan only" />
+                    <DetailItem label="Blogger API Write" value="false" />
+                    <DetailItem label="Publish" value="false" />
+                    <DetailItem label="Scheduled Publish" value="false" />
+                    <DetailItem label="Content Item Mutation" value="false" />
+                    <DetailItem label="Token Refresh" value="false" />
+                    <DetailItem label="LLM Call" value="false" />
+                    <DetailItem label="Can Execute Publish After Save" value="false" />
+                    <DetailItem label="Can Execute Scheduled Publish After Save" value="false" />
+                  </div>
+                  <div className="notice">
+                    <label>
+                      <input
+                        type="checkbox"
+                        checked={publishAttemptPersistenceAcknowledged}
+                        onChange={(event) => {
+                          setPublishAttemptPersistenceAcknowledged(event.target.checked);
+                          setPublishExecutionAttemptSaveResult(null);
+                          setPublishExecutionAttemptSaveError(null);
+                        }}
+                      />{" "}
+                      이 작업은 publish execution attempt plan을 local DB에 저장하는 작업이며 publish 실행이 아님을 확인했습니다.
+                    </label>
+                  </div>
+                  <div className="notice">
+                    <label>
+                      <input
+                        type="checkbox"
+                        checked={publishAttemptNoBloggerWriteAcknowledged}
+                        onChange={(event) => {
+                          setPublishAttemptNoBloggerWriteAcknowledged(event.target.checked);
+                          setPublishExecutionAttemptSaveResult(null);
+                          setPublishExecutionAttemptSaveError(null);
+                        }}
+                      />{" "}
+                      이 저장은 Blogger publish, scheduled publish, posts.update, additional draft save, token refresh를 실행하지 않음을 확인했습니다.
+                    </label>
+                  </div>
+                  <div className="notice">
+                    <label>
+                      <input
+                        type="checkbox"
+                        checked={publishAttemptNoContentMutationAcknowledged}
+                        onChange={(event) => {
+                          setPublishAttemptNoContentMutationAcknowledged(event.target.checked);
+                          setPublishExecutionAttemptSaveResult(null);
+                          setPublishExecutionAttemptSaveError(null);
+                        }}
+                      />{" "}
+                      이 저장은 content_items.status, qualityScore, publishedAt, scheduledAt, draftHtml, draftMarkdown을 변경하지 않음을 확인했습니다.
+                    </label>
+                  </div>
+                  <div className="form-actions">
+                    <button className="button secondary" type="button" disabled={!canSavePublishExecutionAttempt} onClick={() => void savePublishExecutionAttemptPlan()}>
+                      {savingPublishExecutionAttempt ? "Attempt Plan 저장 중" : "Save Publish Execution Attempt Plan"}
+                    </button>
+                    <button className="button secondary" type="button" disabled={!canRunPublishExecutionAttemptReadback} onClick={() => void runPublishExecutionAttemptReadback()}>
+                      {runningPublishExecutionAttemptReadback ? "Attempt Readback 실행 중" : "Load Saved Execution Attempts"}
+                    </button>
+                    <button className="button secondary" type="button" disabled>
+                      Publish 실행은 후속 패치에서만 검토
+                    </button>
+                  </div>
+                  {publishExecutionAttemptSaveResult ? (
+                    <>
+                      <div className="notice">
+                        <strong>Publish execution attempt plan 저장 완료</strong>
+                        <p>
+                          attemptId: {publishExecutionAttemptSaveResult.attemptId} / created: {publishExecutionAttemptSaveResult.created ? "yes" : "no"} / existing:{" "}
+                          {publishExecutionAttemptSaveResult.existing ? "yes" : "no"}
+                        </p>
+                        <p>
+                          canExecutePublish: {publishExecutionAttemptSaveResult.canExecutePublish ? "yes" : "no"} / canExecuteScheduledPublish:{" "}
+                          {publishExecutionAttemptSaveResult.canExecuteScheduledPublish ? "yes" : "no"}
+                        </p>
+                      </div>
+                      <div className="detail-grid">
+                        <DetailItem label="Attempt Status" value={publishExecutionAttemptSaveResult.status} />
+                        <DetailItem label="Mode" value={publishExecutionAttemptSaveResult.mode} />
+                        <DetailItem label="Attempt Plan Hash" value={publishExecutionAttemptSaveResult.attemptPlanHash} />
+                        <DetailItem label="Publish Approval ID" value={publishExecutionAttemptSaveResult.publishApprovalId} />
+                        <DetailItem label="Publish Approval Hash" value={publishExecutionAttemptSaveResult.savedAttemptSummary.publishApprovalSnapshotHash} />
+                        <DetailItem label="Target Blog ID" value={publishExecutionAttemptSaveResult.savedAttemptSummary.targetBloggerBlogId ?? "-"} />
+                        <DetailItem label="Blogger Post ID" value={publishExecutionAttemptSaveResult.savedAttemptSummary.bloggerPostId ?? "-"} />
+                        <DetailItem label="Draft HTML Hash" value={publishExecutionAttemptSaveResult.savedAttemptSummary.draftHtmlHash ?? "-"} />
+                        <DetailItem label="Token State At Attempt" value={publishExecutionAttemptSaveResult.savedAttemptSummary.tokenStateAtAttempt ?? "-"} />
+                        <DetailItem
+                          label="Approval Matches Current State"
+                          value={formatNullableBoolean(publishExecutionAttemptSaveResult.savedAttemptSummary.approvalMatchesCurrentState)}
+                        />
+                        <DetailItem label="Retry Eligible" value={String(publishExecutionAttemptSaveResult.savedAttemptSummary.retryEligible)} />
+                        <DetailItem label="Retry Blocked Reason" value={publishExecutionAttemptSaveResult.savedAttemptSummary.retryBlockedReason ?? "-"} />
+                        <DetailItem label="Content Mutation Planned" value={String(publishExecutionAttemptSaveResult.savedAttemptSummary.contentMutationPlanned)} />
+                        <DetailItem label="Content Mutation Completed" value={String(publishExecutionAttemptSaveResult.savedAttemptSummary.contentMutationCompleted)} />
+                        <DetailItem label="Created At" value={formatDate(publishExecutionAttemptSaveResult.savedAttemptSummary.createdAt)} />
+                        <DetailItem label="DB Write" value={String(publishExecutionAttemptSaveResult.sideEffectSummary.dbWrite)} />
+                        <DetailItem label="Attempt Persistence" value={String(publishExecutionAttemptSaveResult.sideEffectSummary.attemptPersistence)} />
+                        <DetailItem label="Blogger API Write" value={String(publishExecutionAttemptSaveResult.sideEffectSummary.bloggerApiWrite)} />
+                        <DetailItem label="Blogger Publish" value={String(publishExecutionAttemptSaveResult.sideEffectSummary.bloggerPublish)} />
+                        <DetailItem label="Blogger Scheduled Publish" value={String(publishExecutionAttemptSaveResult.sideEffectSummary.bloggerScheduledPublish)} />
+                        <DetailItem label="Content Item Mutation" value={String(publishExecutionAttemptSaveResult.sideEffectSummary.contentItemMutation)} />
+                        <DetailItem label="Token Refresh" value={String(publishExecutionAttemptSaveResult.sideEffectSummary.tokenRefresh)} />
+                        <DetailItem label="LLM Call" value={String(publishExecutionAttemptSaveResult.sideEffectSummary.llmCall)} />
+                      </div>
+                    </>
+                  ) : null}
+                </div>
               </div>
             ) : (
               <div className="notice">
@@ -2162,6 +2365,74 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
                 publish, scheduled publish, Blogger write, content item mutation은 수행하지 않습니다.
               </div>
             )}
+
+            {publishExecutionAttemptReadbackResult ? (
+              <div className="read-block">
+                <h3>Saved Publish Execution Attempt Readback</h3>
+                <div className={publishExecutionAttemptReadbackResult.latestAttempt ? "notice" : "notice warning"}>
+                  <strong>{publishExecutionAttemptReadbackResult.latestAttempt ? "Saved attempt plan found" : "Saved attempt plan missing"}</strong>
+                  <p>
+                    Saved execution attempt는 local DB의 planning-only audit record입니다. 저장되어 있어도 canExecutePublish=false /
+                    canExecuteScheduledPublish=false 상태를 유지합니다.
+                  </p>
+                  <p>Blogger publish, scheduled publish, posts.update, token refresh, content item mutation은 이 readback에서 수행하지 않습니다.</p>
+                </div>
+                <div className="detail-grid">
+                  <DetailItem label="Checked At" value={formatDate(publishExecutionAttemptReadbackResult.checkedAt)} />
+                  <DetailItem label="Attempt Count" value={String(publishExecutionAttemptReadbackResult.count)} />
+                  <DetailItem label="Active Attempt Count" value={String(publishExecutionAttemptReadbackResult.activeAttempts.length)} />
+                  <DetailItem label="Can Execute Publish" value={String(publishExecutionAttemptReadbackResult.canExecutePublish)} />
+                  <DetailItem label="Can Execute Scheduled Publish" value={String(publishExecutionAttemptReadbackResult.canExecuteScheduledPublish)} />
+                  <DetailItem label="Can Publish" value={String(publishExecutionAttemptReadbackResult.canPublish)} />
+                  <DetailItem label="Can Schedule Publish" value={String(publishExecutionAttemptReadbackResult.canSchedulePublish)} />
+                  <DetailItem label="DB Read" value={String(publishExecutionAttemptReadbackResult.sideEffectSummary.dbRead)} />
+                  <DetailItem label="DB Write" value={String(publishExecutionAttemptReadbackResult.sideEffectSummary.dbWrite)} />
+                  <DetailItem label="Attempt Persistence" value={String(publishExecutionAttemptReadbackResult.sideEffectSummary.attemptPersistence)} />
+                  <DetailItem label="Blogger API Write" value={String(publishExecutionAttemptReadbackResult.sideEffectSummary.bloggerApiWrite)} />
+                  <DetailItem label="Blogger Publish" value={String(publishExecutionAttemptReadbackResult.sideEffectSummary.bloggerPublish)} />
+                  <DetailItem label="Blogger Scheduled Publish" value={String(publishExecutionAttemptReadbackResult.sideEffectSummary.bloggerScheduledPublish)} />
+                  <DetailItem label="Content Item Mutation" value={String(publishExecutionAttemptReadbackResult.sideEffectSummary.contentItemMutation)} />
+                  <DetailItem label="Token Refresh" value={String(publishExecutionAttemptReadbackResult.sideEffectSummary.tokenRefresh)} />
+                  <DetailItem label="LLM Call" value={String(publishExecutionAttemptReadbackResult.sideEffectSummary.llmCall)} />
+                </div>
+                {publishExecutionAttemptReadbackResult.latestAttempt ? (
+                  <div className="detail-grid">
+                    <DetailItem label="Attempt ID" value={publishExecutionAttemptReadbackResult.latestAttempt.id} />
+                    <DetailItem label="Publish Approval ID" value={publishExecutionAttemptReadbackResult.latestAttempt.publishApprovalId} />
+                    <DetailItem label="Publish Approval Hash" value={publishExecutionAttemptReadbackResult.latestAttempt.publishApprovalSnapshotHash} />
+                    <DetailItem label="Mode" value={publishExecutionAttemptReadbackResult.latestAttempt.mode} />
+                    <DetailItem label="Status" value={publishExecutionAttemptReadbackResult.latestAttempt.status} />
+                    <DetailItem label="Attempt Number" value={String(publishExecutionAttemptReadbackResult.latestAttempt.attemptNumber)} />
+                    <DetailItem label="Attempt Plan Hash" value={publishExecutionAttemptReadbackResult.latestAttempt.attemptPlanHash} />
+                    <DetailItem label="Hash Algorithm" value={publishExecutionAttemptReadbackResult.latestAttempt.hashAlgorithm} />
+                    <DetailItem label="Canonicalization" value={publishExecutionAttemptReadbackResult.latestAttempt.canonicalization} />
+                    <DetailItem label="Target Blog ID" value={publishExecutionAttemptReadbackResult.latestAttempt.targetBloggerBlogId ?? "-"} />
+                    <DetailItem label="Blogger Post ID" value={publishExecutionAttemptReadbackResult.latestAttempt.bloggerPostId ?? "-"} />
+                    <DetailItem label="Draft HTML Hash" value={publishExecutionAttemptReadbackResult.latestAttempt.draftHtmlHash ?? "-"} />
+                    <DetailItem label="Title Candidate" value={publishExecutionAttemptReadbackResult.latestAttempt.titleCandidate ?? "-"} />
+                    <DetailItem label="Token State At Attempt" value={publishExecutionAttemptReadbackResult.latestAttempt.tokenStateAtAttempt ?? "-"} />
+                    <DetailItem
+                      label="Approval Matches Current State"
+                      value={formatNullableBoolean(publishExecutionAttemptReadbackResult.latestAttempt.approvalMatchesCurrentState)}
+                    />
+                    <DetailItem label="Retry Eligible" value={String(publishExecutionAttemptReadbackResult.latestAttempt.retryEligible)} />
+                    <DetailItem label="Retry Blocked Reason" value={publishExecutionAttemptReadbackResult.latestAttempt.retryBlockedReason ?? "-"} />
+                    <DetailItem label="Content Mutation Planned" value={String(publishExecutionAttemptReadbackResult.latestAttempt.contentMutationPlanned)} />
+                    <DetailItem label="Content Mutation Completed" value={String(publishExecutionAttemptReadbackResult.latestAttempt.contentMutationCompleted)} />
+                    <DetailItem label="Content Status Before" value={publishExecutionAttemptReadbackResult.latestAttempt.contentStatusBefore ?? "-"} />
+                    <DetailItem label="Content Status After" value={publishExecutionAttemptReadbackResult.latestAttempt.contentStatusAfter ?? "-"} />
+                    <DetailItem label="Created At" value={formatDate(publishExecutionAttemptReadbackResult.latestAttempt.createdAt)} />
+                  </div>
+                ) : null}
+                <ValidationList
+                  title="Execution Attempt Readback Blocking Reasons"
+                  items={publishExecutionAttemptReadbackResult.blockingReasons}
+                  emptyText="blocking reason이 없습니다."
+                  isError
+                />
+                <ValidationList title="Execution Attempt Readback Warnings" items={publishExecutionAttemptReadbackResult.warnings} emptyText="warning이 없습니다." isWarning />
+              </div>
+            ) : null}
 
             {publishReadinessResult ? (
               <>

@@ -853,3 +853,14 @@ Patch 9E-7E adds read-only publish execution attempt policy/schema preview check
 - The preview must not persist attempt rows, mutate content items, call Blogger, publish, schedule publish, update posts, save another draft, or refresh tokens.
 - Future attempt metadata should keep safe hashes, ids, timestamps, short error codes/messages, and redacted summaries only.
 - Future attempt metadata must not expose prompts, raw model responses, generated candidate text, Blogger tokens, encrypted values, client secrets, raw OAuth responses, raw Blogger response/error bodies, or full draft HTML.
+
+## Patch 9E-7F publish execution attempt storage boundary
+
+Patch 9E-7F adds local DB storage/readback for publish execution attempt plans, not an LLM routing change.
+
+- `POST /api/content-items/[id]/publish-execution-attempt-save` must not call LLM providers.
+- `POST /api/content-items/[id]/publish-execution-attempt-readback` must not call LLM providers.
+- Attempt save and idempotent save must not create `llm_call_logs`.
+- Stored attempt metadata is server-generated from safe approval/execution-guard metadata only.
+- Stored attempt metadata must not expose prompts, raw model responses, generated candidate text, Blogger tokens, encrypted values, client secrets, raw OAuth responses, raw Blogger response/error bodies, or full draft HTML.
+- Stored attempt plans do not authorize content generation, Blogger publish, scheduled publish, token refresh, `posts.update`, approval invalidation DB update, or content item mutation.

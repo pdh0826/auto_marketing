@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import type {
   BloggerDraftSaveAdmin,
   BloggerPublishApprovalAdmin,
@@ -5,12 +6,23 @@ import type {
   PublishExecutionAttemptPreviewResponse
 } from "@/lib/blogger/admin-types";
 
+export const PUBLISH_EXECUTION_ATTEMPT_CANONICALIZATION = "stable-json-sort-keys-v1";
+
 export const REQUIRED_BEFORE_PUBLISH_ATTEMPT_STORAGE = [
-  "Create and migrate a publish execution attempt audit table",
-  "Define attempt uniqueness and idempotency constraints by publishApprovalId",
-  "Define redacted Blogger request/response summary storage",
-  "Define retry eligibility and partial failure verification policy",
-  "Define content_items status/publishedAt mutation ordering"
+  "Explicit publish execution attempt plan save action",
+  "Client attempt plan hash preview must match server-side regenerated attempt plan hash",
+  "Manual attempt persistence acknowledgement",
+  "Manual no-Blogger-write acknowledgement",
+  "Manual no-content-mutation acknowledgement"
+] as const;
+
+export const REQUIRED_BEFORE_PUBLISH_ATTEMPT_EXECUTION = [
+  "Publish execution route must be implemented in a separately approved patch",
+  "Blogger access token must be valid immediately before execution",
+  "Saved publish approval and saved attempt must still match current content and Blogger draft state",
+  "Blogger publish request/response redaction policy must be enforced",
+  "Content item status/publishedAt mutation policy must be implemented as a separate ordered step",
+  "Partial failure verification and retry blocking policy must be implemented"
 ] as const;
 
 export const PUBLISH_ATTEMPT_RETRY_ELIGIBLE_EXAMPLES = [
@@ -60,13 +72,15 @@ export interface BuildPublishExecutionAttemptPreviewInput {
   executionGuard: PublishApprovalExecutionGuardResponse;
   latestApproval: BloggerPublishApprovalAdmin | null;
   latestSuccessfulDraftSave: BloggerDraftSaveAdmin | null;
+  contentStatusBefore?: string | null;
   checkedAt?: Date;
 }
 
 export function buildPublishExecutionAttemptPreview(input: BuildPublishExecutionAttemptPreviewInput): PublishExecutionAttemptPreviewResponse {
   const checkedAt = input.checkedAt ?? new Date();
   const blockingReasons = new Set<string>([
-    "attempt_storage_not_implemented",
+    "explicit_attempt_save_required",
+    "attempt_acknowledgement_required",
     "publish_execution_not_implemented",
     "content_item_mutation_policy_not_implemented",
     ...input.executionGuard.blockingReasons
@@ -84,13 +98,35 @@ export function buildPublishExecutionAttemptPreview(input: BuildPublishExecution
   if (!input.executionGuard.approvalMatchesCurrentState) {
     blockingReasons.add("publish_approval_current_state_mismatch");
   }
+  const retryBlockedReason = getRetryBlockedReason(blockingReasons);
+  const plannedAttempt = {
+    futureTable: "blogger_publish_execution_attempts" as const,
+    mode: approval?.mode ?? null,
+    status: "planned_only" as const,
+    publishApprovalId: approval?.id ?? input.executionGuard.approvalId,
+    publishApprovalSnapshotHash: approval?.snapshotHash ?? input.executionGuard.approvalSnapshotHash,
+    targetBloggerBlogId: approval?.targetBloggerBlogId ?? latestDraftSave?.targetBloggerBlogId ?? null,
+    bloggerPostId: approval?.bloggerPostId ?? latestDraftSave?.bloggerPostId ?? null,
+    draftHtmlHash: approval?.draftHtmlHash ?? null,
+    titleCandidate: approval?.titleCandidate ?? latestDraftSave?.titleCandidate ?? null,
+    tokenStateAtAttempt,
+    executionGuardCheckedAt: input.executionGuard.checkedAt,
+    approvalMatchesCurrentState: input.executionGuard.approvalFound ? input.executionGuard.approvalMatchesCurrentState : null,
+    invalidationCandidates: input.executionGuard.invalidationCandidates,
+    retryEligible: false as const,
+    retryBlockedReason,
+    contentMutationPlanned: false as const,
+    bloggerApiWritePlanned: false as const,
+    contentStatusBefore: input.contentStatusBefore ?? null
+  };
+  const attemptPlanHashPreview = sha256Hex(stableStringify(buildHashableAttemptPlan(plannedAttempt)));
 
   return {
     contentItemId: input.contentItemId,
     checkedAt: checkedAt.toISOString(),
     approvalId: approval?.id ?? input.executionGuard.approvalId,
     approvalSnapshotHash: approval?.snapshotHash ?? input.executionGuard.approvalSnapshotHash,
-    attemptStorageImplemented: false,
+    attemptStorageImplemented: true,
     wouldCreateAttempt: false,
     canCreateAttempt: false,
     canExecutePublish: false,
@@ -99,26 +135,13 @@ export function buildPublishExecutionAttemptPreview(input: BuildPublishExecution
     canSchedulePublish: false,
     blockingReasons: Array.from(blockingReasons),
     warnings: Array.from(warnings),
-    plannedAttempt: {
-      futureTable: "blogger_publish_execution_attempts",
-      mode: approval?.mode ?? null,
-      status: "planned_only",
-      publishApprovalId: approval?.id ?? input.executionGuard.approvalId,
-      publishApprovalSnapshotHash: approval?.snapshotHash ?? input.executionGuard.approvalSnapshotHash,
-      targetBloggerBlogId: approval?.targetBloggerBlogId ?? latestDraftSave?.targetBloggerBlogId ?? null,
-      bloggerPostId: approval?.bloggerPostId ?? latestDraftSave?.bloggerPostId ?? null,
-      draftHtmlHash: approval?.draftHtmlHash ?? null,
-      titleCandidate: approval?.titleCandidate ?? latestDraftSave?.titleCandidate ?? null,
-      tokenStateAtAttempt,
-      executionGuardCheckedAt: input.executionGuard.checkedAt,
-      approvalMatchesCurrentState: input.executionGuard.approvalFound ? input.executionGuard.approvalMatchesCurrentState : null,
-      invalidationCandidates: input.executionGuard.invalidationCandidates,
-      retryEligible: false,
-      contentMutationPlanned: false,
-      bloggerApiWritePlanned: false
-    },
+    plannedAttempt,
+    attemptPlanHashPreview,
+    hashAlgorithm: "sha256",
+    canonicalization: PUBLISH_EXECUTION_ATTEMPT_CANONICALIZATION,
     requiredBeforeAttemptStorage: [...REQUIRED_BEFORE_PUBLISH_ATTEMPT_STORAGE],
-    requiredBeforeExecution: input.executionGuard.requiredBeforeExecution,
+    requiredBeforeAttemptPersistence: [...REQUIRED_BEFORE_PUBLISH_ATTEMPT_STORAGE],
+    requiredBeforeExecution: [...REQUIRED_BEFORE_PUBLISH_ATTEMPT_EXECUTION],
     failurePolicySummary: {
       retryEligibleExamples: [...PUBLISH_ATTEMPT_RETRY_ELIGIBLE_EXAMPLES],
       retryBlockedExamples: [...PUBLISH_ATTEMPT_RETRY_BLOCKED_EXAMPLES],
@@ -149,4 +172,43 @@ export function buildPublishExecutionAttemptPreview(input: BuildPublishExecution
       llmCall: false
     }
   };
+}
+
+function getRetryBlockedReason(blockingReasons: Set<string>) {
+  if (blockingReasons.has("access_token_expired_reauth_required")) {
+    return "token_expired_reauth_required";
+  }
+  if (blockingReasons.has("publish_approval_current_state_mismatch")) {
+    return "approval_snapshot_mismatch";
+  }
+  if (blockingReasons.has("publish_approval_missing")) {
+    return "publish_approval_missing";
+  }
+  return "publish_execution_not_implemented";
+}
+
+function buildHashableAttemptPlan(plannedAttempt: PublishExecutionAttemptPreviewResponse["plannedAttempt"]) {
+  return {
+    ...plannedAttempt,
+    executionGuardCheckedAt: "excluded_from_hash"
+  };
+}
+
+function sha256Hex(value: string) {
+  return createHash("sha256").update(value, "utf8").digest("hex");
+}
+
+function stableStringify(value: unknown): string {
+  if (value === null || typeof value !== "object") {
+    return JSON.stringify(value);
+  }
+  if (Array.isArray(value)) {
+    return `[${value.map(stableStringify).join(",")}]`;
+  }
+
+  const record = value as Record<string, unknown>;
+  return `{${Object.keys(record)
+    .sort()
+    .map((key) => `${JSON.stringify(key)}:${stableStringify(record[key])}`)
+    .join(",")}}`;
 }

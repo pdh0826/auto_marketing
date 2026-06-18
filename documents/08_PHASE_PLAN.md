@@ -252,3 +252,15 @@ Patch 9E-7E 완료:
 - Content Detail UI에 Publish Execution Attempt Preview planning-only 결과와 side-effect summary 추가
 - `attemptStorageImplemented=false`, `wouldCreateAttempt=false`, `canCreateAttempt=false`, `canExecutePublish=false`, `canExecuteScheduledPublish=false` 유지
 - schema/migration, attempt insert, Blogger publish/scheduled publish/write, token refresh, posts.update, additional draft save, content item mutation, LLM 호출은 구현하지 않음
+
+Patch 9E-7F 완료:
+
+- `BloggerPublishExecutionAttempt` Prisma model과 `blogger_publish_execution_attempts` migration 추가
+- `POST /api/content-items/[id]/publish-execution-attempt-save` local-only 저장 API 추가
+- `POST /api/content-items/[id]/publish-execution-attempt-readback` read-only 조회 API 추가
+- attempt preview에 `attemptStorageImplemented=true`, `attemptPlanHashPreview`, hash metadata, explicit save/ack blockers 반영
+- 저장 route는 server-side attempt preview/hash를 재생성하고 acknowledgement 3개를 요구
+- 같은 `contentItemId + publishApprovalId + attemptPlanHash` 저장은 idempotent하게 기존 row를 반환
+- Content Detail UI에 attempt persistence/no Blogger write/no content mutation acknowledgement와 save/readback summary 추가
+- 저장된 attempt가 있어도 `canExecutePublish=false`, `canExecuteScheduledPublish=false` 유지
+- Blogger publish/scheduled publish/write, token refresh, posts.update, additional draft save, approval invalidation DB update, content item mutation, LLM 호출은 구현하지 않음

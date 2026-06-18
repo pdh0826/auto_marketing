@@ -61,3 +61,4 @@ Google Blogger 기반 블로그를 여러 개 운영하면서, 블로그별 주�
 - Publish approval execution guard가 read-only로 추가되어 저장된 approval과 current content/Blogger draft state match 및 invalidation candidates를 확인할 수 있지만, invalidation DB update와 publish 실행은 구현하지 않았다.
 - Publish approval invalidation preview가 read-only로 추가되어 normal/manual invalidation dry-run plan을 확인할 수 있지만, invalidatedAt/invalidatedReason DB update는 구현하지 않았다.
 - Publish execution attempt preview가 read-only로 추가되어 future attempt schema/retry/partial failure/redaction/content mutation ordering policy를 확인할 수 있지만, attempt table/migration/insert와 publish 실행은 구현하지 않았다.
+- Publish execution attempt storage가 local DB에 추가되어 acknowledgement 후 planning-only attempt record를 저장/조회할 수 있지만, Blogger publish 실행은 구현하지 않았다.

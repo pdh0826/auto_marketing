@@ -797,3 +797,72 @@ Patch 9E-7E read-only preview:
 - `canExecuteScheduledPublish=false`
 - `sideEffectSummary.dbRead=true`
 - all write/publish/token/LLM/content mutation flags false
+
+## Patch 9E-7F Publish execution attempt storage
+
+Patch 9E-7F adds local DB storage for publish execution attempt planning records.
+
+New Prisma model and table:
+
+- model: `BloggerPublishExecutionAttempt`
+- table: `blogger_publish_execution_attempts`
+
+The stored row is a planning-only / blocked pre-execution audit record. It is not a Blogger publish execution record.
+
+Key stored fields:
+
+- `contentItemId`
+- `publishApprovalId`
+- `publishApprovalSnapshotHash`
+- `mode`
+- `status`
+- `attemptNumber`
+- `targetBloggerBlogId`
+- `bloggerPostId`
+- `draftHtmlHash`
+- `titleCandidate`
+- `tokenStateAtAttempt`
+- `executionGuardCheckedAt`
+- `approvalMatchesCurrentState`
+- `invalidationCandidatesJson`
+- `sideEffectSummaryJson`
+- `bloggerRequestSummaryJson`
+- `bloggerResponseRedactedJson`
+- `errorType`
+- `errorCode`
+- `errorMessageRedacted`
+- `retryEligible`
+- `retryBlockedReason`
+- `contentMutationPlanned`
+- `contentMutationCompleted`
+- `contentStatusBefore`
+- `contentStatusAfter`
+- `publishedAtPlanned`
+- `publishedAtApplied`
+- `scheduledAtPlanned`
+- `scheduledAtApplied`
+- `attemptPlanJson`
+- `attemptPlanHash`
+- `hashAlgorithm`
+- `canonicalization`
+- `createdAt`
+- `updatedAt`
+
+Status values implemented in this patch:
+
+- `planned_only`
+- `blocked_by_preflight`
+
+Idempotency:
+
+- `@@unique([contentItemId, publishApprovalId, attemptPlanHash])`
+- Saving the same server-regenerated attempt plan returns the existing row instead of creating a duplicate.
+
+Persistence policy:
+
+- Attempt plan storage requires explicit acknowledgement for attempt persistence, no Blogger write, and no content mutation.
+- The save route regenerates the attempt preview server-side and requires the client hash preview to match.
+- The save route requires the publish approval to belong to the content item, be active, and still match current state.
+- Stored attempt rows keep `canExecutePublish=false` and `canExecuteScheduledPublish=false`.
+- Raw Blogger response/error bodies, access tokens, refresh tokens, client secrets, encrypted values, full HTML, prompts, and raw LLM responses are not stored.
+- This patch does not mutate `content_items.status`, `publishedAt`, `scheduledAt`, `qualityScore`, `draftHtml`, or `draftMarkdown`.

@@ -518,3 +518,49 @@ Future attempt policy:
 - raw Blogger response/error bodies must be redacted before storage
 - retries must be blocked when external Blogger side effects may have occurred
 - Blogger success and local `content_items.status`/`publishedAt` mutation must be ordered and auditable as separate steps
+
+## Patch 9E-7F Publish execution attempt storage
+
+Patch 9E-7F adds local DB storage for publish execution attempt plans. This is still not Blogger publish execution.
+
+New routes:
+
+```text
+POST /api/content-items/[id]/publish-execution-attempt-save
+POST /api/content-items/[id]/publish-execution-attempt-readback
+```
+
+Updated route:
+
+```text
+POST /api/content-items/[id]/publish-execution-attempt-preview
+```
+
+The preview now reports:
+
+- `attemptStorageImplemented=true`
+- `attemptPlanHashPreview` present
+- `wouldCreateAttempt=false`
+- `canCreateAttempt=false` unless the save route is called with explicit acknowledgement
+- `canExecutePublish=false`
+- `canExecuteScheduledPublish=false`
+
+The save route:
+
+- regenerates the attempt preview server-side
+- requires `attemptPlanHashPreview` to match the server hash
+- requires an active matching publish approval
+- requires acknowledgement for attempt persistence, no Blogger write, and no content mutation
+- inserts one `planned_only` local DB attempt row or returns the existing row idempotently
+
+The save route does not:
+
+- call Blogger
+- publish or schedule publish
+- call `posts.update`
+- save another Blogger draft
+- refresh tokens or call token endpoints
+- mutate `content_items`
+- call an LLM
+
+Readback returns safe attempt summaries only. It does not expose full `attemptPlanJson`, raw Blogger bodies, token values, encrypted values, client secrets, full HTML, prompts, or raw LLM responses.

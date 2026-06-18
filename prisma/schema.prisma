@@ -135,6 +135,11 @@ enum BloggerPublishApprovalStatus {
   cancelled
 }
 
+enum BloggerPublishExecutionAttemptStatus {
+  planned_only
+  blocked_by_preflight
+}
+
 enum ContentDraftGenerationRunStatus {
   pending
   running
@@ -232,6 +237,7 @@ model ContentItem {
   bloggerDraftApprovals   BloggerDraftApproval[]
   bloggerDraftSaves       BloggerDraftSave[]
   bloggerPublishApprovals BloggerPublishApproval[]
+  bloggerPublishExecutionAttempts BloggerPublishExecutionAttempt[]
   draftGenerationRuns     ContentDraftGenerationRun[]
 
   @@index([blogId])
@@ -581,6 +587,7 @@ model BloggerPublishApproval {
   contentItem          ContentItem           @relation(fields: [contentItemId], references: [id], onDelete: Cascade)
   bloggerDraftSave     BloggerDraftSave?     @relation(fields: [bloggerDraftSaveId], references: [id], onDelete: SetNull)
   bloggerDraftApproval BloggerDraftApproval? @relation(fields: [bloggerDraftApprovalId], references: [id], onDelete: SetNull)
+  executionAttempts    BloggerPublishExecutionAttempt[]
 
   @@index([contentItemId])
   @@index([bloggerPostId])
@@ -592,6 +599,59 @@ model BloggerPublishApproval {
   @@index([mode])
   @@index([scheduledAt])
   @@map("blogger_publish_approvals")
+}
+
+model BloggerPublishExecutionAttempt {
+  id                          String                               @id @default(cuid())
+  contentItemId               String
+  publishApprovalId           String
+  publishApprovalSnapshotHash String
+  mode                        BloggerPublishApprovalMode
+  status                      BloggerPublishExecutionAttemptStatus @default(planned_only)
+  attemptNumber               Int                                  @default(1)
+  targetBloggerBlogId         String?
+  bloggerPostId               String?
+  draftHtmlHash               String?
+  titleCandidate              String?
+  tokenStateAtAttempt         String?
+  executionGuardCheckedAt     DateTime
+  approvalMatchesCurrentState Boolean?
+  invalidationCandidatesJson  Json
+  sideEffectSummaryJson       Json
+  bloggerRequestSummaryJson   Json?
+  bloggerResponseRedactedJson Json?
+  errorType                   String?
+  errorCode                   String?
+  errorMessageRedacted        String?
+  retryEligible               Boolean                              @default(false)
+  retryBlockedReason          String?
+  contentMutationPlanned      Boolean                              @default(false)
+  contentMutationCompleted    Boolean                              @default(false)
+  contentStatusBefore         String?
+  contentStatusAfter          String?
+  publishedAtPlanned          DateTime?
+  publishedAtApplied          DateTime?
+  scheduledAtPlanned          DateTime?
+  scheduledAtApplied          DateTime?
+  attemptPlanJson             Json
+  attemptPlanHash             String
+  hashAlgorithm               String
+  canonicalization            String
+  createdAt                   DateTime                             @default(now())
+  updatedAt                   DateTime                             @updatedAt
+
+  contentItem     ContentItem             @relation(fields: [contentItemId], references: [id], onDelete: Cascade)
+  publishApproval BloggerPublishApproval  @relation(fields: [publishApprovalId], references: [id], onDelete: Restrict)
+
+  @@unique([contentItemId, publishApprovalId, attemptPlanHash])
+  @@index([contentItemId])
+  @@index([publishApprovalId])
+  @@index([publishApprovalSnapshotHash])
+  @@index([attemptPlanHash])
+  @@index([status])
+  @@index([mode])
+  @@index([createdAt])
+  @@map("blogger_publish_execution_attempts")
 }
 
 model BloggerConnectionSecret {

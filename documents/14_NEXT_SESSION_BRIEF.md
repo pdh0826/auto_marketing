@@ -51,6 +51,7 @@ The current completed path is:
 - Publish approval execution guard is implemented read-only: saved approval/current state matching and invalidation candidates can be checked, but invalidation DB update and publish execution remain unimplemented.
 - Publish approval invalidation preview is implemented read-only: normal/manual invalidation dry-run plans can be checked, but invalidatedAt/invalidatedReason DB update remains unimplemented.
 - Publish execution attempt preview is implemented read-only: future attempt schema/policy, retry/partial failure handling, redaction, and content mutation ordering can be checked, but no attempt table/migration/insert or publish execution exists.
+- Publish execution attempt storage is implemented locally: `blogger_publish_execution_attempts` can store one planning-only attempt record after explicit acknowledgements, but publish execution remains unimplemented.
 - `content_items.status`, `publishedAt`, `scheduledAt`, `qualityScore`, and `draftHtml` are not changed by publish-readiness or policy UI.
 
 ## Next Patch Priorities
@@ -71,10 +72,10 @@ C. **Patch 9E-7F: publish approval invalidation action design**
 - Keep invalidation action separate from Blogger publish execution.
 - Keep actual Blogger publish execution out of scope.
 
-D. **Patch 9E-7G: publish execution attempt storage design**
+D. **Patch 9E-7G: publish execution attempt execution preflight design**
 
-- Decide whether to add the `blogger_publish_execution_attempts` table after the 9E-7E policy preview.
-- Keep first implementation storage-only or preflight-only before any Blogger publish call.
+- Design a read-only execution preflight for saved attempt records before any Blogger publish call.
+- Require valid OAuth state, active approval, matching attempt plan, no invalidation candidates, and explicit execution side-effect acknowledgement.
 - Preserve raw response redaction, retry-blocking on unknown side effects, and separate local content mutation ordering.
 - Do not call Blogger publish until design is explicitly approved.
 
@@ -156,6 +157,7 @@ Expected preflight condition after the successful save:
 - 9E-7C added read-only publish approval execution guard API/UI for current-state match and invalidation candidate checks, while keeping no invalidation DB update, no publish, no scheduled publish, no Blogger write, no token refresh, and no content item mutation.
 - 9E-7D added read-only publish approval invalidation preview API/UI for normal/manual dry-run plans, while keeping no invalidation DB update, no publish, no scheduled publish, no Blogger write, no token refresh, and no content item mutation.
 - 9E-7E added read-only publish execution attempt preview API/UI and documented future attempt schema/retry/partial failure/redaction/content mutation ordering policy, while keeping no attempt table, no migration, no attempt insert, no publish, no scheduled publish, no Blogger write, no token refresh, and no content item mutation.
+- 9E-7F added local publish execution attempt storage/readback in `blogger_publish_execution_attempts`, guarded by server-side hash match and three acknowledgements, while keeping no publish, no scheduled publish, no Blogger write, no token refresh, no approval invalidation DB update, and no content item mutation.
 
 ## Closeout Safety Notes
 

@@ -1132,3 +1132,28 @@ Not implemented:
 - approval invalidation DB update
 - content item status, `publishedAt`, `scheduledAt`, `qualityScore`, `draftHtml`, or `draftMarkdown` mutation
 - LLM calls or `llm_call_logs`
+
+## Patch 9E-7F: Publish Execution Attempt Storage
+
+Implemented after Patch 9E-7E:
+
+- Added `BloggerPublishExecutionAttempt` Prisma model mapped to `blogger_publish_execution_attempts`.
+- Added migration `20260618000100_add_blogger_publish_execution_attempts`.
+- Added `src/lib/db/blogger-publish-execution-attempts.ts` for safe attempt insert/read/count helpers.
+- Updated `POST /api/content-items/[id]/publish-execution-attempt-preview` to report `attemptStorageImplemented=true` and include `attemptPlanHashPreview`.
+- Added `POST /api/content-items/[id]/publish-execution-attempt-save` for local DB planning-only attempt storage.
+- Added `POST /api/content-items/[id]/publish-execution-attempt-readback` for safe saved attempt summaries.
+- The save route regenerates the attempt preview server-side and requires the client preview hash to match.
+- The save route requires attempt persistence, no Blogger write, and no content mutation acknowledgements.
+- Same content/approval/attemptPlanHash returns the existing attempt idempotently.
+- Added Content Detail UI for attempt acknowledgements, local DB save, safe save result, and readback summary.
+- Stored attempts still return `canExecutePublish=false` and `canExecuteScheduledPublish=false`.
+
+Not implemented:
+
+- Blogger publish or scheduled publish
+- Blogger API write, `posts.update`, `posts.insert`, or additional draft save
+- token refresh or token endpoint call
+- approval invalidation DB update
+- content item status, `publishedAt`, `scheduledAt`, `qualityScore`, `draftHtml`, or `draftMarkdown` mutation
+- LLM calls or `llm_call_logs`

@@ -992,3 +992,26 @@ Safety guard:
 - Content Detail UI는 Publish Execution Attempt Preview 버튼과 planning-only result, blockers, failure/retry/partial failure policy, redaction policy, side-effect summary를 표시해야 한다.
 - UI는 Create attempt, Publish, Schedule Publish, Retry, Token Refresh 실행 버튼을 제공하면 안 된다.
 - 9E-7E 구현/스모크 중에는 schema/migration 변경, attempt insert, `blogger_publish_approvals` update/delete, approval invalidation DB update, Blogger API write, additional draft save, `posts.update`, publish/scheduled publish, token refresh, token endpoint call, LLM 호출, content item mutation이 발생하지 않아야 한다.
+
+## Patch 9E-7F Publish execution attempt storage 검증
+
+- Prisma schema에 `BloggerPublishExecutionAttempt` model과 `BloggerPublishExecutionAttemptStatus` enum이 있어야 한다.
+- `blogger_publish_execution_attempts` table이 존재해야 한다.
+- 새 table은 approved save smoke 전 count `0`이어야 한다.
+- `publish-execution-attempt-preview`는 `attemptStorageImplemented=true`, `attemptPlanHashPreview` present, `canCreateAttempt=false`, `canExecutePublish=false`, `canExecuteScheduledPublish=false`를 반환해야 한다.
+- preview blockers에는 `explicit_attempt_save_required`, `attempt_acknowledgement_required`, `publish_execution_not_implemented`가 포함되어야 한다.
+- acknowledgement false save 요청은 `attempt_acknowledgement_required` 또는 acknowledgement blocker로 실패하고 insert를 만들지 않아야 한다.
+- acknowledgement true save 요청은 local DB에 publish execution attempt plan 1건을 저장해야 한다.
+- first save response는 `attemptId` present, `created=true`, `existing=false`, `canExecutePublish=false`, `canExecuteScheduledPublish=false`여야 한다.
+- first save side effects는 `dbWrite=true`, `attemptPersistence=true`, `contentItemMutation=false`, `bloggerApiWrite=false`, `bloggerPublish=false`, `bloggerScheduledPublish=false`, `tokenRefresh=false`, `llmCall=false`여야 한다.
+- 같은 attempt plan을 다시 저장하면 같은 attempt id를 반환하고 `created=false`, `existing=true`여야 한다.
+- idempotent save 후 `blogger_publish_execution_attempts` count는 계속 `1`이어야 한다.
+- readback은 `count=1`, `latestAttempt.id` present, latest attempt plan hash equals saved hash, `canExecutePublish=false`, `canExecuteScheduledPublish=false`를 반환해야 한다.
+- readback side effects는 `dbRead=true`, `dbWrite=false`, `attemptPersistence=false`, Blogger write false, token refresh false, content mutation false, LLM false여야 한다.
+- Content Detail UI는 acknowledgement checkbox 3개, Save Publish Execution Attempt Plan 버튼, saved attempt readback summary를 표시해야 한다.
+- checkbox 전에는 save 버튼이 disabled여야 한다.
+- UI는 attempt 저장이 local DB planning record일 뿐 publish 실행이 아니라고 표시해야 한다.
+- publish/scheduled publish 실행 버튼은 새로 활성화되면 안 된다.
+- Blogger Draft 저장 버튼은 duplicate save 상태에서 계속 disabled여야 한다.
+- 저장된 attempt에는 access token, refresh token, client secret, encrypted value, raw OAuth response, raw Blogger response/error body, full `draftHtml`이 없어야 한다.
+- 9E-7F 구현/스모크 중에는 Blogger API write, additional draft save, `posts.update`, publish/scheduled publish, token refresh, token endpoint call, approval invalidation DB update, LLM 호출, content item mutation이 발생하지 않아야 한다.

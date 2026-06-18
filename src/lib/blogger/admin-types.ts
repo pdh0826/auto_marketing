@@ -651,12 +651,46 @@ export interface PublishExecutionAttemptPreviewSideEffectSummary {
   llmCall: false;
 }
 
+export type BloggerPublishExecutionAttemptStatus = "planned_only" | "blocked_by_preflight";
+
+export interface BloggerPublishExecutionAttemptAdmin {
+  id: string;
+  contentItemId: string;
+  publishApprovalId: string;
+  publishApprovalSnapshotHash: string;
+  mode: PublishApprovalMode;
+  status: BloggerPublishExecutionAttemptStatus;
+  attemptNumber: number;
+  targetBloggerBlogId: string | null;
+  bloggerPostId: string | null;
+  draftHtmlHash: string | null;
+  titleCandidate: string | null;
+  tokenStateAtAttempt: PublishApprovalTokenState | null;
+  executionGuardCheckedAt: string;
+  approvalMatchesCurrentState: boolean | null;
+  retryEligible: boolean;
+  retryBlockedReason: string | null;
+  contentMutationPlanned: boolean;
+  contentMutationCompleted: boolean;
+  contentStatusBefore: string | null;
+  contentStatusAfter: string | null;
+  publishedAtPlanned: string | null;
+  publishedAtApplied: string | null;
+  scheduledAtPlanned: string | null;
+  scheduledAtApplied: string | null;
+  attemptPlanHash: string;
+  hashAlgorithm: "sha256";
+  canonicalization: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface PublishExecutionAttemptPreviewResponse {
   contentItemId: string;
   checkedAt: string;
   approvalId: string | null;
   approvalSnapshotHash: string | null;
-  attemptStorageImplemented: false;
+  attemptStorageImplemented: boolean;
   wouldCreateAttempt: false;
   canCreateAttempt: false;
   canExecutePublish: false;
@@ -680,10 +714,16 @@ export interface PublishExecutionAttemptPreviewResponse {
     approvalMatchesCurrentState: boolean | null;
     invalidationCandidates: string[];
     retryEligible: false;
+    retryBlockedReason: string | null;
     contentMutationPlanned: false;
     bloggerApiWritePlanned: false;
+    contentStatusBefore: string | null;
   };
+  attemptPlanHashPreview: string;
+  hashAlgorithm: "sha256";
+  canonicalization: string;
   requiredBeforeAttemptStorage: string[];
+  requiredBeforeAttemptPersistence: string[];
   requiredBeforeExecution: string[];
   failurePolicySummary: {
     retryEligibleExamples: string[];
@@ -701,5 +741,66 @@ export interface PublishExecutionAttemptPreviewResponse {
     blockingReasons: string[];
     warnings: string[];
   };
+  sideEffectSummary: PublishExecutionAttemptPreviewSideEffectSummary;
+}
+
+export interface PublishExecutionAttemptSaveSideEffectSummary {
+  dbWrite: boolean;
+  attemptPersistence: boolean;
+  contentItemMutation: false;
+  bloggerApiWrite: false;
+  bloggerPublish: false;
+  bloggerScheduledPublish: false;
+  bloggerPostsUpdate: false;
+  bloggerDraftSave: false;
+  tokenRefresh: false;
+  llmCall: false;
+}
+
+export interface PublishExecutionAttemptSaveResponse {
+  contentItemId: string;
+  attemptId: string;
+  publishApprovalId: string;
+  created: boolean;
+  existing: boolean;
+  status: BloggerPublishExecutionAttemptStatus;
+  mode: PublishApprovalMode;
+  attemptPlanHash: string;
+  hashAlgorithm: "sha256";
+  canonicalization: string;
+  canExecutePublish: false;
+  canExecuteScheduledPublish: false;
+  canPublish: false;
+  canSchedulePublish: false;
+  blockingReasons: string[];
+  warnings: string[];
+  savedAttemptSummary: {
+    publishApprovalSnapshotHash: string;
+    targetBloggerBlogId: string | null;
+    bloggerPostId: string | null;
+    draftHtmlHash: string | null;
+    tokenStateAtAttempt: PublishApprovalTokenState | null;
+    approvalMatchesCurrentState: boolean | null;
+    retryEligible: false;
+    retryBlockedReason: string | null;
+    contentMutationPlanned: false;
+    contentMutationCompleted: false;
+    createdAt: string;
+  };
+  sideEffectSummary: PublishExecutionAttemptSaveSideEffectSummary;
+}
+
+export interface PublishExecutionAttemptReadbackResponse {
+  contentItemId: string;
+  checkedAt: string;
+  count: number;
+  latestAttempt: BloggerPublishExecutionAttemptAdmin | null;
+  activeAttempts: BloggerPublishExecutionAttemptAdmin[];
+  canExecutePublish: false;
+  canExecuteScheduledPublish: false;
+  canPublish: false;
+  canSchedulePublish: false;
+  blockingReasons: string[];
+  warnings: string[];
   sideEffectSummary: PublishExecutionAttemptPreviewSideEffectSummary;
 }
