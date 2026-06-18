@@ -27,6 +27,8 @@ export interface BuildPublishOAuthGateInput {
   hasAccessToken: boolean;
   accessTokenExpiresAt: string | null;
   contentStatus: string | null;
+  scheduledAt: string | null;
+  publishedAt: string | null;
   draftMarkdown: string | null;
   draftHtml: string | null;
   latestApproval: BloggerPublishApprovalAdmin | null;
@@ -52,8 +54,14 @@ export function buildPublishOAuthGate(input: BuildPublishOAuthGateInput): Publis
     currentDraftMarkdownHash,
     currentDraftHtmlHash
   });
+  const finalPublishExecutionPreflightSummary = buildFinalPublishExecutionPreflightSummary({
+    input,
+    reconnectCompletionSummary
+  });
   const blockingReasons = new Set<string>(reconnectCompletionSummary.blockingReasons);
+  finalPublishExecutionPreflightSummary.blockingReasons.forEach((reason) => blockingReasons.add(reason));
   const warnings = new Set<string>();
+  finalPublishExecutionPreflightSummary.warnings.forEach((warning) => warnings.add(warning));
 
   if (!input.connection) {
     blockingReasons.add("blogger_connection_missing");
@@ -119,6 +127,7 @@ export function buildPublishOAuthGate(input: BuildPublishOAuthGateInput): Publis
       blockingReasons: Array.from(new Set([...reconnectCompletionSummary.blockingReasons])),
       warnings: Array.from(new Set([...reconnectCompletionSummary.warnings]))
     },
+    finalPublishExecutionPreflightSummary,
     requiredBeforePublishExecution: [...REQUIRED_BEFORE_PUBLISH_OAUTH_GATE],
     requiredBeforeScheduledPublishExecution: [...REQUIRED_BEFORE_SCHEDULED_PUBLISH_OAUTH_GATE],
     sideEffectSummary: {
@@ -136,6 +145,132 @@ export function buildPublishOAuthGate(input: BuildPublishOAuthGateInput): Publis
       contentMutation: false,
       contentItemMutation: false,
       llmCall: false
+    }
+  };
+}
+
+function buildFinalPublishExecutionPreflightSummary(input: {
+  input: BuildPublishOAuthGateInput;
+  reconnectCompletionSummary: PublishOAuthGateResponse["manualReconnectCompletionSummary"];
+}): PublishOAuthGateResponse["finalPublishExecutionPreflightSummary"] {
+  const { input: gateInput, reconnectCompletionSummary } = input;
+  const approval = gateInput.latestApproval;
+  const attempt = gateInput.latestAttempt;
+  const contentExists = Boolean(gateInput.contentItemId);
+  const contentAlreadyPublished = gateInput.contentStatus === "published" || Boolean(gateInput.publishedAt);
+  const contentAlreadyScheduled = gateInput.contentStatus === "scheduled" || Boolean(gateInput.scheduledAt);
+  const contentSnapshotMatchesApproval = Boolean(
+    reconnectCompletionSummary.draftMarkdownHashMatchesApprovalSnapshot === true && reconnectCompletionSummary.draftHtmlHashMatchesApprovalSnapshot === true
+  );
+  const oauthGateSatisfied = Boolean(reconnectCompletionSummary.reconnectCompletionReady && !reconnectCompletionSummary.reauthRequired);
+  const coreReadOnlyReady = Boolean(
+    oauthGateSatisfied &&
+      reconnectCompletionSummary.publishApprovalStillValid &&
+      reconnectCompletionSummary.publishExecutionAttemptStillPlanningOnly &&
+      reconnectCompletionSummary.contentStillPlanned &&
+      !contentAlreadyPublished &&
+      !contentAlreadyScheduled &&
+      contentSnapshotMatchesApproval &&
+      reconnectCompletionSummary.targetBlogMatchesApprovalSnapshot === true
+  );
+  const blockingReasons = new Set<string>([
+    "guarded_blogger_publish_not_implemented",
+    "publish_execution_still_disabled_until_guarded_publish_implementation",
+    "rollback_plan_not_acknowledged",
+    "external_write_risk_not_acknowledged",
+    "final_human_approval_required"
+  ]);
+  const warnings = new Set<string>();
+
+  if (!coreReadOnlyReady) {
+    blockingReasons.add("final_publish_execution_preflight_not_ready");
+  }
+  if (!oauthGateSatisfied) {
+    blockingReasons.add("oauth_gate_not_satisfied");
+  }
+  if (!reconnectCompletionSummary.reconnectCompletionReady) {
+    blockingReasons.add("manual_reconnect_completion_not_ready");
+  }
+  if (reconnectCompletionSummary.accessTokenState === "expired_reauth_required") {
+    blockingReasons.add("access_token_still_expired_reauth_required");
+  }
+  if (reconnectCompletionSummary.accessTokenState === "missing") {
+    blockingReasons.add("access_token_missing_after_reconnect");
+  }
+  addFinalBlocker(!reconnectCompletionSummary.bloggerConnectionExists, blockingReasons, "blogger_connection_missing");
+  addFinalBlocker(!reconnectCompletionSummary.selectedBlogExists, blockingReasons, "selected_blog_missing");
+  addFinalBlocker(reconnectCompletionSummary.selectedBlogMatchesApprovalTarget === false, blockingReasons, "selected_blog_mismatch_after_reconnect");
+  addFinalBlocker(reconnectCompletionSummary.targetBlogMatchesApprovalSnapshot === false, blockingReasons, "target_blog_snapshot_mismatch_after_reconnect");
+  addFinalBlocker(!reconnectCompletionSummary.publishApprovalExists, blockingReasons, "publish_approval_missing");
+  addFinalBlocker(reconnectCompletionSummary.publishApprovalInvalidated, blockingReasons, "publish_approval_invalidated");
+  addFinalBlocker(approval ? !reconnectCompletionSummary.publishApprovalStillValid : false, blockingReasons, "publish_approval_snapshot_mismatch");
+  addFinalBlocker(!reconnectCompletionSummary.publishExecutionAttemptExists, blockingReasons, "publish_execution_attempt_missing");
+  addFinalBlocker(
+    reconnectCompletionSummary.publishExecutionAttemptExists && !reconnectCompletionSummary.publishExecutionAttemptStillPlanningOnly,
+    blockingReasons,
+    "publish_execution_attempt_not_planning_only"
+  );
+  addFinalBlocker(!contentExists, blockingReasons, "content_missing");
+  addFinalBlocker(!reconnectCompletionSummary.contentStillPlanned, blockingReasons, "content_status_not_planned");
+  addFinalBlocker(contentAlreadyPublished, blockingReasons, "content_already_published");
+  addFinalBlocker(contentAlreadyScheduled, blockingReasons, "content_already_scheduled");
+  addFinalBlocker(!contentSnapshotMatchesApproval, blockingReasons, "draft_snapshot_mismatch_after_reconnect");
+
+  reconnectCompletionSummary.warnings.forEach((warning) => warnings.add(warning));
+  if (attempt && approval && attempt.publishApprovalId !== approval.id) {
+    warnings.add("publish_execution_attempt_approval_mismatch");
+  }
+
+  return {
+    checked: true,
+    finalPreflightReady: coreReadOnlyReady,
+    canProceedToPublishExecution: false,
+    canProceedToScheduledPublishExecution: false,
+    canExecutePublish: false,
+    oauthGateSatisfied,
+    manualReconnectCompletionReady: reconnectCompletionSummary.reconnectCompletionReady,
+    accessTokenState: reconnectCompletionSummary.accessTokenState,
+    reauthRequired: reconnectCompletionSummary.reauthRequired,
+    manualReconnectRequired: reconnectCompletionSummary.manualReconnectRequired,
+    tokenRefreshImplemented: false,
+    autoReconnectImplemented: false,
+    bloggerConnectionExists: reconnectCompletionSummary.bloggerConnectionExists,
+    selectedBlogExists: reconnectCompletionSummary.selectedBlogExists,
+    selectedBlogMatchesApprovalTarget: reconnectCompletionSummary.selectedBlogMatchesApprovalTarget,
+    targetBlogSnapshotMatchesCurrentSelection: reconnectCompletionSummary.targetBlogMatchesApprovalSnapshot,
+    publishApprovalExists: reconnectCompletionSummary.publishApprovalExists,
+    publishApprovalStillValid: reconnectCompletionSummary.publishApprovalStillValid,
+    publishApprovalInvalidated: reconnectCompletionSummary.publishApprovalInvalidated,
+    publishApprovalId: approval?.id ?? null,
+    publishExecutionAttemptExists: reconnectCompletionSummary.publishExecutionAttemptExists,
+    publishExecutionAttemptStillPlanningOnly: reconnectCompletionSummary.publishExecutionAttemptStillPlanningOnly,
+    publishExecutionAttemptId: attempt?.id ?? null,
+    contentExists,
+    contentStillPlanned: reconnectCompletionSummary.contentStillPlanned,
+    contentAlreadyPublished,
+    contentAlreadyScheduled,
+    draftMarkdownHashMatchesApprovalSnapshot: reconnectCompletionSummary.draftMarkdownHashMatchesApprovalSnapshot,
+    draftHtmlHashMatchesApprovalSnapshot: reconnectCompletionSummary.draftHtmlHashMatchesApprovalSnapshot,
+    contentSnapshotMatchesApproval,
+    rollbackPlanAcknowledged: false,
+    externalWriteRiskAcknowledged: false,
+    finalHumanApprovalRequired: true,
+    blockingReasons: Array.from(blockingReasons),
+    warnings: Array.from(warnings),
+    sideEffectSummary: {
+      dbRead: true,
+      dbWrite: false,
+      bloggerRead: false,
+      bloggerWrite: false,
+      bloggerPublish: false,
+      bloggerUpdate: false,
+      tokenRefresh: false,
+      oauthReconnect: false,
+      contentMutation: false,
+      approvalMutation: false,
+      attemptMutation: false,
+      llmCall: false,
+      externalSend: false
     }
   };
 }
@@ -284,6 +419,12 @@ function compareNullable(left: string | null, right: string | null) {
     return false;
   }
   return left === right;
+}
+
+function addFinalBlocker(condition: boolean, blockers: Set<string>, reason: string) {
+  if (condition) {
+    blockers.add(reason);
+  }
 }
 
 function isExpired(value: string | null) {

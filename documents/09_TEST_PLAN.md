@@ -1039,3 +1039,16 @@ Safety guard:
 - side effects는 `dbRead=true`이고 `dbWrite=false`, `bloggerRead=false`, `bloggerWrite=false`, Blogger publish false, token refresh false, OAuth reconnect false, content mutation false, LLM false여야 한다.
 - UI는 Manual Reconnect Completion Readiness 블록을 표시하고 `/settings/blogger` 재연결 안내와 final publish preflight 미구현 상태를 명확히 보여야 한다.
 - 9F 운영 자동화 로드맵 후보: 장기적으로 운영자가 매번 설정을 입력하는 구조가 아니라 Blog Operation Profile, 기본 정책, 예외 중심 대시보드 기반 자동 운영 구조로 전환하는 방향을 검토한다.
+
+## Patch 9E-8C Final publish execution preflight summary 검증
+
+- `POST /api/content-items/[id]/publish-oauth-gate`는 기존 route를 확장해 `finalPublishExecutionPreflightSummary`를 반환해야 한다.
+- Summary는 publish approval, publish execution attempt, OAuth gate, manual reconnect completion readiness, content snapshot/hash, target blog snapshot, rollback/safety acknowledgement placeholder, side-effect summary를 통합해야 한다.
+- `canProceedToPublishExecution=false`, `canProceedToScheduledPublishExecution=false`, `canExecutePublish=false`, `canExecuteScheduledPublish=false`를 유지해야 한다.
+- access token이 아직 expired 상태라면 final summary blocker에 `access_token_still_expired_reauth_required`와 `manual_reconnect_completion_not_ready`가 포함되어야 한다.
+- 정상에 가까운 상태에서도 `guarded_blogger_publish_not_implemented`, `publish_execution_still_disabled_until_guarded_publish_implementation`, `final_human_approval_required`는 blocker 또는 warning으로 유지되어야 한다.
+- `rollbackPlanAcknowledged=false`, `externalWriteRiskAcknowledged=false`, `finalHumanApprovalRequired=true`를 표시해야 한다.
+- Final preflight side effects는 `dbRead=true`, `dbWrite=false`, `bloggerRead=false`, `bloggerWrite=false`, `bloggerPublish=false`, `bloggerUpdate=false`, `tokenRefresh=false`, `oauthReconnect=false`, `contentMutation=false`, `approvalMutation=false`, `attemptMutation=false`, `llmCall=false`, `externalSend=false`여야 한다.
+- UI는 Final Publish Execution Preflight 블록을 표시하고 “Final publish execution is still disabled until guarded Blogger publish implementation is added.” 문구를 유지해야 한다.
+- 9E-8C 구현/스모크 중에는 Blogger publish/write, Blogger `posts.update`, OAuth reconnect, token refresh, DB/content/approval/attempt mutation, external send, LLM 호출이 발생하지 않아야 한다.
+- 9F 운영 자동화 로드맵 후보는 계속 유지한다: Blog Operation Profile, 기본 정책, 예외 중심 대시보드 기반 자동 운영 구조.

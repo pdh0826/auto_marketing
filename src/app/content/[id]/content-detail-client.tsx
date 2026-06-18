@@ -2033,6 +2033,110 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
                     isWarning
                   />
                 </div>
+                <div className="read-block">
+                  <h3>Final Publish Execution Preflight</h3>
+                  <div className="notice warning">
+                    <strong>Final publish execution is still disabled until guarded Blogger publish implementation is added.</strong>
+                    <p>
+                      이 final preflight는 publish approval, execution attempt, OAuth gate, manual reconnect completion, content snapshot, target blog snapshot,
+                      rollback placeholder, side-effect boundary를 하나로 합쳐 read-only로 보여줍니다.
+                    </p>
+                    <p>Blogger publish/write, posts.update, OAuth reconnect, token refresh, DB mutation, content mutation은 수행하지 않습니다.</p>
+                  </div>
+                  <div className="detail-grid">
+                    <DetailItem label="Checked" value={String(publishOAuthGateResult.finalPublishExecutionPreflightSummary.checked)} />
+                    <DetailItem label="Final Preflight Ready" value={String(publishOAuthGateResult.finalPublishExecutionPreflightSummary.finalPreflightReady)} />
+                    <DetailItem
+                      label="Can Proceed To Publish Execution"
+                      value={String(publishOAuthGateResult.finalPublishExecutionPreflightSummary.canProceedToPublishExecution)}
+                    />
+                    <DetailItem
+                      label="Can Proceed To Scheduled Publish"
+                      value={String(publishOAuthGateResult.finalPublishExecutionPreflightSummary.canProceedToScheduledPublishExecution)}
+                    />
+                    <DetailItem label="Can Execute Publish" value={String(publishOAuthGateResult.finalPublishExecutionPreflightSummary.canExecutePublish)} />
+                    <DetailItem label="OAuth Gate Satisfied" value={String(publishOAuthGateResult.finalPublishExecutionPreflightSummary.oauthGateSatisfied)} />
+                    <DetailItem
+                      label="Manual Reconnect Ready"
+                      value={String(publishOAuthGateResult.finalPublishExecutionPreflightSummary.manualReconnectCompletionReady)}
+                    />
+                    <DetailItem label="Access Token State" value={publishOAuthGateResult.finalPublishExecutionPreflightSummary.accessTokenState} />
+                    <DetailItem label="Reauth Required" value={String(publishOAuthGateResult.finalPublishExecutionPreflightSummary.reauthRequired)} />
+                    <DetailItem label="Manual Reconnect Required" value={String(publishOAuthGateResult.finalPublishExecutionPreflightSummary.manualReconnectRequired)} />
+                    <DetailItem label="Connection Exists" value={String(publishOAuthGateResult.finalPublishExecutionPreflightSummary.bloggerConnectionExists)} />
+                    <DetailItem label="Selected Blog Exists" value={String(publishOAuthGateResult.finalPublishExecutionPreflightSummary.selectedBlogExists)} />
+                    <DetailItem
+                      label="Selected Blog Matches Approval"
+                      value={formatNullableBoolean(publishOAuthGateResult.finalPublishExecutionPreflightSummary.selectedBlogMatchesApprovalTarget)}
+                    />
+                    <DetailItem
+                      label="Target Blog Snapshot Match"
+                      value={formatNullableBoolean(publishOAuthGateResult.finalPublishExecutionPreflightSummary.targetBlogSnapshotMatchesCurrentSelection)}
+                    />
+                    <DetailItem label="Publish Approval Exists" value={String(publishOAuthGateResult.finalPublishExecutionPreflightSummary.publishApprovalExists)} />
+                    <DetailItem label="Publish Approval Valid" value={String(publishOAuthGateResult.finalPublishExecutionPreflightSummary.publishApprovalStillValid)} />
+                    <DetailItem label="Publish Approval Invalidated" value={String(publishOAuthGateResult.finalPublishExecutionPreflightSummary.publishApprovalInvalidated)} />
+                    <DetailItem label="Publish Approval ID" value={publishOAuthGateResult.finalPublishExecutionPreflightSummary.publishApprovalId ?? "-"} />
+                    <DetailItem label="Attempt Exists" value={String(publishOAuthGateResult.finalPublishExecutionPreflightSummary.publishExecutionAttemptExists)} />
+                    <DetailItem
+                      label="Attempt Planning Only"
+                      value={String(publishOAuthGateResult.finalPublishExecutionPreflightSummary.publishExecutionAttemptStillPlanningOnly)}
+                    />
+                    <DetailItem label="Attempt ID" value={publishOAuthGateResult.finalPublishExecutionPreflightSummary.publishExecutionAttemptId ?? "-"} />
+                    <DetailItem label="Content Exists" value={String(publishOAuthGateResult.finalPublishExecutionPreflightSummary.contentExists)} />
+                    <DetailItem label="Content Still Planned" value={String(publishOAuthGateResult.finalPublishExecutionPreflightSummary.contentStillPlanned)} />
+                    <DetailItem label="Content Already Published" value={String(publishOAuthGateResult.finalPublishExecutionPreflightSummary.contentAlreadyPublished)} />
+                    <DetailItem label="Content Already Scheduled" value={String(publishOAuthGateResult.finalPublishExecutionPreflightSummary.contentAlreadyScheduled)} />
+                    <DetailItem
+                      label="Draft Markdown Match"
+                      value={formatNullableBoolean(publishOAuthGateResult.finalPublishExecutionPreflightSummary.draftMarkdownHashMatchesApprovalSnapshot)}
+                    />
+                    <DetailItem
+                      label="Draft HTML Match"
+                      value={formatNullableBoolean(publishOAuthGateResult.finalPublishExecutionPreflightSummary.draftHtmlHashMatchesApprovalSnapshot)}
+                    />
+                    <DetailItem
+                      label="Content Snapshot Match"
+                      value={String(publishOAuthGateResult.finalPublishExecutionPreflightSummary.contentSnapshotMatchesApproval)}
+                    />
+                    <DetailItem label="Rollback Acknowledged" value={String(publishOAuthGateResult.finalPublishExecutionPreflightSummary.rollbackPlanAcknowledged)} />
+                    <DetailItem
+                      label="External Write Risk Acknowledged"
+                      value={String(publishOAuthGateResult.finalPublishExecutionPreflightSummary.externalWriteRiskAcknowledged)}
+                    />
+                    <DetailItem
+                      label="Final Human Approval Required"
+                      value={String(publishOAuthGateResult.finalPublishExecutionPreflightSummary.finalHumanApprovalRequired)}
+                    />
+                  </div>
+                  <ValidationList
+                    title="Final Publish Execution Blocking Reasons"
+                    items={publishOAuthGateResult.finalPublishExecutionPreflightSummary.blockingReasons}
+                    emptyText="blocking reason이 없습니다."
+                    isError
+                  />
+                  <ValidationList
+                    title="Final Publish Execution Warnings"
+                    items={publishOAuthGateResult.finalPublishExecutionPreflightSummary.warnings}
+                    emptyText="warning이 없습니다."
+                    isWarning
+                  />
+                  <div className="detail-grid">
+                    <DetailItem label="DB Read" value={String(publishOAuthGateResult.finalPublishExecutionPreflightSummary.sideEffectSummary.dbRead)} />
+                    <DetailItem label="DB Write" value={String(publishOAuthGateResult.finalPublishExecutionPreflightSummary.sideEffectSummary.dbWrite)} />
+                    <DetailItem label="Blogger Read" value={String(publishOAuthGateResult.finalPublishExecutionPreflightSummary.sideEffectSummary.bloggerRead)} />
+                    <DetailItem label="Blogger Write" value={String(publishOAuthGateResult.finalPublishExecutionPreflightSummary.sideEffectSummary.bloggerWrite)} />
+                    <DetailItem label="Blogger Publish" value={String(publishOAuthGateResult.finalPublishExecutionPreflightSummary.sideEffectSummary.bloggerPublish)} />
+                    <DetailItem label="Blogger Update" value={String(publishOAuthGateResult.finalPublishExecutionPreflightSummary.sideEffectSummary.bloggerUpdate)} />
+                    <DetailItem label="Token Refresh" value={String(publishOAuthGateResult.finalPublishExecutionPreflightSummary.sideEffectSummary.tokenRefresh)} />
+                    <DetailItem label="OAuth Reconnect" value={String(publishOAuthGateResult.finalPublishExecutionPreflightSummary.sideEffectSummary.oauthReconnect)} />
+                    <DetailItem label="Content Mutation" value={String(publishOAuthGateResult.finalPublishExecutionPreflightSummary.sideEffectSummary.contentMutation)} />
+                    <DetailItem label="Approval Mutation" value={String(publishOAuthGateResult.finalPublishExecutionPreflightSummary.sideEffectSummary.approvalMutation)} />
+                    <DetailItem label="Attempt Mutation" value={String(publishOAuthGateResult.finalPublishExecutionPreflightSummary.sideEffectSummary.attemptMutation)} />
+                    <DetailItem label="LLM Call" value={String(publishOAuthGateResult.finalPublishExecutionPreflightSummary.sideEffectSummary.llmCall)} />
+                    <DetailItem label="External Send" value={String(publishOAuthGateResult.finalPublishExecutionPreflightSummary.sideEffectSummary.externalSend)} />
+                  </div>
+                </div>
                 <ValidationList
                   title="Required Before Publish Execution"
                   items={publishOAuthGateResult.requiredBeforePublishExecution}

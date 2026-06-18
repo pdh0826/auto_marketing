@@ -23,6 +23,8 @@ export async function POST(_request: Request, { params }: RouteContext) {
         id: true,
         blogId: true,
         status: true,
+        scheduledAt: true,
+        publishedAt: true,
         draftMarkdown: true,
         draftHtml: true
       }
@@ -54,6 +56,8 @@ export async function POST(_request: Request, { params }: RouteContext) {
       hasAccessToken: Boolean(secretStatus?.hasAccessToken),
       accessTokenExpiresAt: secretStatus?.accessTokenExpiresAt ?? null,
       contentStatus: contentItem.status,
+      scheduledAt: contentItem.scheduledAt?.toISOString() ?? null,
+      publishedAt: contentItem.publishedAt?.toISOString() ?? null,
       draftMarkdown: contentItem.draftMarkdown,
       draftHtml: contentItem.draftHtml,
       latestApproval: latestApproval ? toBloggerPublishApprovalAdmin(latestApproval) : null,

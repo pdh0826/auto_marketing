@@ -1199,3 +1199,24 @@ Not implemented:
 - approval invalidation DB update or attempt status update
 - content item status, `publishedAt`, `scheduledAt`, `qualityScore`, `draftHtml`, or `draftMarkdown` mutation
 - LLM calls or `llm_call_logs`
+
+## Patch 9E-8C: Final Publish Execution Preflight Summary
+
+Implemented after Patch 9E-8B:
+
+- Extended the existing `POST /api/content-items/[id]/publish-oauth-gate` route instead of adding a separate final preflight route.
+- Added `finalPublishExecutionPreflightSummary` to integrate publish approval, publish execution attempt, OAuth gate, manual reconnect completion readiness, content snapshot/hash, target blog snapshot, rollback/safety acknowledgement placeholders, blockers, warnings, and side-effect summary.
+- The final summary reports `canProceedToPublishExecution=false`, `canProceedToScheduledPublishExecution=false`, and `canExecutePublish=false`.
+- Current expired-token state keeps `access_token_still_expired_reauth_required` and `manual_reconnect_completion_not_ready` blockers.
+- Guarded Blogger publish implementation, final human approval, rollback acknowledgement, and external write risk acknowledgement remain blockers.
+- Added Content Detail UI for Final Publish Execution Preflight status, snapshot match booleans, acknowledgement placeholders, blockers, warnings, and side-effect summary.
+- Kept the 9F operation automation roadmap note: Blog Operation Profile, default policy, and exception-focused dashboard instead of repeated manual configuration.
+
+Not implemented:
+
+- Blogger publish or scheduled publish
+- Blogger API read/write, `posts.update`, `posts.insert`, or additional draft save
+- OAuth reconnect execution, OAuth callback/token exchange call, or token refresh
+- publish approval insert/update/invalidation or publish execution attempt insert/update
+- content item status, `publishedAt`, `scheduledAt`, `qualityScore`, `draftHtml`, or `draftMarkdown` mutation
+- LLM calls, `llm_call_logs`, deploy, push, or external service writes
