@@ -54,6 +54,7 @@ The current completed path is:
 - Publish execution attempt storage is implemented locally: `blogger_publish_execution_attempts` can store one planning-only attempt record after explicit acknowledgements, but publish execution remains unimplemented.
 - Publish OAuth Gate is implemented read-only: saved approval/attempt records still cannot proceed to publish execution while access token state is expired or otherwise not gate-satisfied.
 - The gate links users to `/settings/blogger` for manual OAuth reconnect guidance but does not start OAuth, refresh tokens, call Blogger, update attempts, invalidate approvals, or mutate content items.
+- Manual OAuth Reconnect Completion Readiness is implemented inside the existing publish OAuth gate: it shows what must be rechecked after `/settings/blogger` reconnect, but still keeps `canExecutePublish=false`.
 - `content_items.status`, `publishedAt`, `scheduledAt`, `qualityScore`, and `draftHtml` are not changed by publish-readiness or policy UI.
 
 ## Next Patch Priorities
@@ -81,11 +82,16 @@ D. **Patch 9E-7G: publish execution attempt execution preflight design**
 - Preserve raw response redaction, retry-blocking on unknown side effects, and separate local content mutation ordering.
 - Do not call Blogger publish until design is explicitly approved.
 
-E. **Patch 9E-8B: manual OAuth reconnect readiness flow**
+E. **Patch 9E-8C or 9E-8D: final publish execution preflight design**
 
-- Decide whether to guide users through the existing Blogger settings reconnect flow or add a dedicated reconnect CTA.
-- Keep token refresh out of scope unless explicitly approved.
-- Do not execute publish/scheduled publish as part of reconnect readiness.
+- Design the final read-only preflight that would run after OAuth reconnect completion.
+- Keep Blogger publish/scheduled publish execution disabled until explicit approval.
+- Continue to block token refresh unless a separate token refresh policy patch is approved.
+
+F. **Patch 9F roadmap candidate: Blog Operation Profile**
+
+- Long-term direction is not repeated operator input on every content item.
+- Explore Blog Operation Profile, default publishing policies, and an exception-focused dashboard for safer automated operations.
 
 General boundary:
 

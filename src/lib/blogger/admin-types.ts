@@ -806,12 +806,15 @@ export interface PublishExecutionAttemptReadbackResponse {
 }
 
 export type PublishOAuthAccessTokenState = "expired_reauth_required" | "valid_not_verified" | "missing" | "unknown";
+export type ManualReconnectCompletionAccessTokenState = "valid" | "expired_reauth_required" | "missing" | "unknown";
 
 export interface PublishOAuthGateResponse {
   contentItemId: string;
   checkedAt: string;
   canProceedToPublishExecution: false;
   canProceedToScheduledPublishExecution: false;
+  canExecutePublish: false;
+  canExecuteScheduledPublish: false;
   canPublish: false;
   canSchedulePublish: false;
   blockingReasons: string[];
@@ -832,11 +835,39 @@ export interface PublishOAuthGateResponse {
     publishApprovalId: string | null;
     publishExecutionAttemptId: string | null;
   };
+  manualReconnectCompletionSummary: {
+    checked: true;
+    reconnectSettingsPath: "/settings/blogger";
+    bloggerConnectionExists: boolean;
+    selectedBlogExists: boolean;
+    selectedBlogMatchesApprovalTarget: boolean | null;
+    accessTokenState: ManualReconnectCompletionAccessTokenState;
+    reauthRequired: boolean;
+    manualReconnectRequired: boolean;
+    tokenRefreshImplemented: false;
+    autoReconnectImplemented: false;
+    publishApprovalExists: boolean;
+    publishApprovalStillValid: boolean;
+    publishApprovalInvalidated: boolean;
+    publishExecutionAttemptExists: boolean;
+    publishExecutionAttemptStillPlanningOnly: boolean;
+    contentStillPlanned: boolean;
+    draftMarkdownHashMatchesApprovalSnapshot: boolean | null;
+    draftHtmlHashMatchesApprovalSnapshot: boolean | null;
+    targetBlogMatchesApprovalSnapshot: boolean | null;
+    reconnectCompletionReady: boolean;
+    canProceedToFinalPublishPreflight: false;
+    canExecutePublish: false;
+    blockingReasons: string[];
+    warnings: string[];
+  };
   requiredBeforePublishExecution: string[];
   requiredBeforeScheduledPublishExecution: string[];
   sideEffectSummary: {
     dbRead: true;
     dbWrite: false;
+    bloggerRead: false;
+    bloggerWrite: false;
     oauthReconnect: false;
     tokenRefresh: false;
     bloggerApiWrite: false;
@@ -844,6 +875,7 @@ export interface PublishOAuthGateResponse {
     bloggerScheduledPublish: false;
     bloggerPostsUpdate: false;
     bloggerDraftSave: false;
+    contentMutation: false;
     contentItemMutation: false;
     llmCall: false;
   };

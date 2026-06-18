@@ -1950,6 +1950,8 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
                   <DetailItem label="Checked At" value={formatDate(publishOAuthGateResult.checkedAt)} />
                   <DetailItem label="Can Proceed To Publish Execution" value={String(publishOAuthGateResult.canProceedToPublishExecution)} />
                   <DetailItem label="Can Proceed To Scheduled Publish" value={String(publishOAuthGateResult.canProceedToScheduledPublishExecution)} />
+                  <DetailItem label="Can Execute Publish" value={String(publishOAuthGateResult.canExecutePublish)} />
+                  <DetailItem label="Can Execute Scheduled Publish" value={String(publishOAuthGateResult.canExecuteScheduledPublish)} />
                   <DetailItem label="Connection Found" value={String(publishOAuthGateResult.oauthGateSummary.connectionFound)} />
                   <DetailItem label="Selected Blogger Blog Found" value={String(publishOAuthGateResult.oauthGateSummary.selectedBloggerBlogFound)} />
                   <DetailItem label="Target Blog ID" value={publishOAuthGateResult.oauthGateSummary.targetBloggerBlogId ?? "-"} />
@@ -1966,6 +1968,71 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
                 </div>
                 <ValidationList title="OAuth Gate Blocking Reasons" items={publishOAuthGateResult.blockingReasons} emptyText="blocking reason이 없습니다." isError />
                 <ValidationList title="OAuth Gate Warnings" items={publishOAuthGateResult.warnings} emptyText="warning이 없습니다." isWarning />
+                <div className="read-block">
+                  <h3>Manual Reconnect Completion Readiness</h3>
+                  <div className="notice warning">
+                    <strong>Read-only completion gate</strong>
+                    <p>
+                      이 summary는 `/settings/blogger`에서 수동 OAuth 재연결을 완료한 뒤 publish execution 전에 다시 확인해야 할 조건을 보여줍니다.
+                    </p>
+                    <p>
+                      final publish preflight가 아직 구현되지 않았으므로 reconnectCompletionReady와 무관하게 canExecutePublish=false를 유지합니다.
+                    </p>
+                  </div>
+                  <div className="detail-grid">
+                    <DetailItem label="Checked" value={String(publishOAuthGateResult.manualReconnectCompletionSummary.checked)} />
+                    <DetailItem label="Reconnect Ready" value={String(publishOAuthGateResult.manualReconnectCompletionSummary.reconnectCompletionReady)} />
+                    <DetailItem
+                      label="Can Proceed To Final Preflight"
+                      value={String(publishOAuthGateResult.manualReconnectCompletionSummary.canProceedToFinalPublishPreflight)}
+                    />
+                    <DetailItem label="Can Execute Publish" value={String(publishOAuthGateResult.manualReconnectCompletionSummary.canExecutePublish)} />
+                    <DetailItem label="Connection Exists" value={String(publishOAuthGateResult.manualReconnectCompletionSummary.bloggerConnectionExists)} />
+                    <DetailItem label="Selected Blog Exists" value={String(publishOAuthGateResult.manualReconnectCompletionSummary.selectedBlogExists)} />
+                    <DetailItem
+                      label="Selected Blog Matches Approval"
+                      value={formatNullableBoolean(publishOAuthGateResult.manualReconnectCompletionSummary.selectedBlogMatchesApprovalTarget)}
+                    />
+                    <DetailItem label="Access Token State" value={publishOAuthGateResult.manualReconnectCompletionSummary.accessTokenState} />
+                    <DetailItem label="Reauth Required" value={String(publishOAuthGateResult.manualReconnectCompletionSummary.reauthRequired)} />
+                    <DetailItem label="Manual Reconnect Required" value={String(publishOAuthGateResult.manualReconnectCompletionSummary.manualReconnectRequired)} />
+                    <DetailItem label="Token Refresh Implemented" value={String(publishOAuthGateResult.manualReconnectCompletionSummary.tokenRefreshImplemented)} />
+                    <DetailItem label="Auto Reconnect Implemented" value={String(publishOAuthGateResult.manualReconnectCompletionSummary.autoReconnectImplemented)} />
+                    <DetailItem label="Publish Approval Exists" value={String(publishOAuthGateResult.manualReconnectCompletionSummary.publishApprovalExists)} />
+                    <DetailItem label="Publish Approval Still Valid" value={String(publishOAuthGateResult.manualReconnectCompletionSummary.publishApprovalStillValid)} />
+                    <DetailItem label="Publish Approval Invalidated" value={String(publishOAuthGateResult.manualReconnectCompletionSummary.publishApprovalInvalidated)} />
+                    <DetailItem label="Publish Attempt Exists" value={String(publishOAuthGateResult.manualReconnectCompletionSummary.publishExecutionAttemptExists)} />
+                    <DetailItem
+                      label="Attempt Still Planning Only"
+                      value={String(publishOAuthGateResult.manualReconnectCompletionSummary.publishExecutionAttemptStillPlanningOnly)}
+                    />
+                    <DetailItem label="Content Still Planned" value={String(publishOAuthGateResult.manualReconnectCompletionSummary.contentStillPlanned)} />
+                    <DetailItem
+                      label="Draft Markdown Hash Match"
+                      value={formatNullableBoolean(publishOAuthGateResult.manualReconnectCompletionSummary.draftMarkdownHashMatchesApprovalSnapshot)}
+                    />
+                    <DetailItem
+                      label="Draft HTML Hash Match"
+                      value={formatNullableBoolean(publishOAuthGateResult.manualReconnectCompletionSummary.draftHtmlHashMatchesApprovalSnapshot)}
+                    />
+                    <DetailItem
+                      label="Target Blog Hash Match"
+                      value={formatNullableBoolean(publishOAuthGateResult.manualReconnectCompletionSummary.targetBlogMatchesApprovalSnapshot)}
+                    />
+                  </div>
+                  <ValidationList
+                    title="Manual Reconnect Completion Blocking Reasons"
+                    items={publishOAuthGateResult.manualReconnectCompletionSummary.blockingReasons}
+                    emptyText="blocking reason이 없습니다."
+                    isError
+                  />
+                  <ValidationList
+                    title="Manual Reconnect Completion Warnings"
+                    items={publishOAuthGateResult.manualReconnectCompletionSummary.warnings}
+                    emptyText="warning이 없습니다."
+                    isWarning
+                  />
+                </div>
                 <ValidationList
                   title="Required Before Publish Execution"
                   items={publishOAuthGateResult.requiredBeforePublishExecution}
@@ -1979,6 +2046,8 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
                 <div className="detail-grid">
                   <DetailItem label="DB Read" value={String(publishOAuthGateResult.sideEffectSummary.dbRead)} />
                   <DetailItem label="DB Write" value={String(publishOAuthGateResult.sideEffectSummary.dbWrite)} />
+                  <DetailItem label="Blogger Read" value={String(publishOAuthGateResult.sideEffectSummary.bloggerRead)} />
+                  <DetailItem label="Blogger Write" value={String(publishOAuthGateResult.sideEffectSummary.bloggerWrite)} />
                   <DetailItem label="OAuth Reconnect" value={String(publishOAuthGateResult.sideEffectSummary.oauthReconnect)} />
                   <DetailItem label="Token Refresh" value={String(publishOAuthGateResult.sideEffectSummary.tokenRefresh)} />
                   <DetailItem label="Blogger API Write" value={String(publishOAuthGateResult.sideEffectSummary.bloggerApiWrite)} />
@@ -1986,6 +2055,7 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
                   <DetailItem label="Blogger Scheduled Publish" value={String(publishOAuthGateResult.sideEffectSummary.bloggerScheduledPublish)} />
                   <DetailItem label="Blogger posts.update" value={String(publishOAuthGateResult.sideEffectSummary.bloggerPostsUpdate)} />
                   <DetailItem label="Blogger Draft Save" value={String(publishOAuthGateResult.sideEffectSummary.bloggerDraftSave)} />
+                  <DetailItem label="Content Mutation" value={String(publishOAuthGateResult.sideEffectSummary.contentMutation)} />
                   <DetailItem label="Content Item Mutation" value={String(publishOAuthGateResult.sideEffectSummary.contentItemMutation)} />
                   <DetailItem label="LLM Call" value={String(publishOAuthGateResult.sideEffectSummary.llmCall)} />
                 </div>

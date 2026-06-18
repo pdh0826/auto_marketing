@@ -1178,3 +1178,24 @@ Not implemented:
 - approval invalidation DB update or attempt status update
 - content item status, `publishedAt`, `scheduledAt`, `qualityScore`, `draftHtml`, or `draftMarkdown` mutation
 - LLM calls or `llm_call_logs`
+
+## Patch 9E-8B: Manual OAuth Reconnect Completion Gate
+
+Implemented after Patch 9E-8A:
+
+- Extended the existing `POST /api/content-items/[id]/publish-oauth-gate` route instead of adding a second OAuth readiness route.
+- Added `manualReconnectCompletionSummary` to describe what must be rechecked after a user manually reconnects OAuth in `/settings/blogger`.
+- The summary checks safe metadata for Blogger connection existence, selected blog presence, selected blog vs saved approval target, access token state, saved publish approval validity, saved publish execution attempt planning-only status, content status, draft hash match, and target blog match.
+- The response keeps `canExecutePublish=false`, `canExecuteScheduledPublish=false`, `canProceedToPublishExecution=false`, and `canProceedToScheduledPublishExecution=false`.
+- `final_publish_preflight_not_implemented` and `publish_execution_still_disabled_until_final_preflight` remain blockers even when the reconnect completion gate becomes otherwise ready.
+- Content Detail UI now shows a Manual Reconnect Completion Readiness block with blockers, warnings, safe match booleans, and side-effect summary.
+- Documented 9F operation automation roadmap direction: Blog Operation Profile, default policy, and exception-focused dashboard instead of repeated manual configuration.
+
+Not implemented:
+
+- OAuth reconnect execution, OAuth callback/token exchange call, or token refresh
+- Blogger publish or scheduled publish
+- Blogger API read/write, `posts.update`, `posts.insert`, or additional draft save
+- approval invalidation DB update or attempt status update
+- content item status, `publishedAt`, `scheduledAt`, `qualityScore`, `draftHtml`, or `draftMarkdown` mutation
+- LLM calls or `llm_call_logs`

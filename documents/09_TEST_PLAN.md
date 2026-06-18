@@ -1027,3 +1027,15 @@ Safety guard:
 - side effects는 `dbRead=true`이고 `dbWrite=false`, OAuth reconnect false, token refresh false, Blogger write/publish/scheduled publish/posts.update/draft save false, content mutation false, LLM false여야 한다.
 - UI/API/log/test output에는 access token, refresh token, client secret, encrypted value, raw OAuth response, raw Blogger response/error body가 노출되지 않아야 한다.
 - 9E-8A 구현/스모크 중에는 OAuth reconnect 실행, token endpoint call, Blogger API write, additional draft save, `posts.update`, publish/scheduled publish, token refresh, approval invalidation update, attempt status update, LLM 호출, content item mutation이 발생하지 않아야 한다.
+
+## Patch 9E-8B Manual OAuth reconnect completion gate 검증
+
+- `POST /api/content-items/[id]/publish-oauth-gate`는 기존 route를 확장해 `manualReconnectCompletionSummary`를 반환해야 한다.
+- 별도 OAuth reconnect, token refresh, Blogger API read/write, publish, scheduled publish, `posts.update`, additional draft save, approval invalidation update, attempt status update, content item mutation, LLM 호출은 발생하지 않아야 한다.
+- access token이 아직 만료 상태라면 `manualReconnectCompletionSummary.accessTokenState=expired_reauth_required`, `reauthRequired=true`, `manualReconnectRequired=true`, `reconnectCompletionReady=false`여야 한다.
+- saved approval/attempt가 있더라도 `canExecutePublish=false`, `canExecuteScheduledPublish=false`, `canProceedToPublishExecution=false`, `canProceedToScheduledPublishExecution=false`를 유지해야 한다.
+- `manualReconnectCompletionSummary`는 connection/blog selection, selected blog vs approval target, approval validity, attempt planning-only status, content status, draft markdown/html hash match, target blog match를 safe boolean/null metadata로 표시해야 한다.
+- 정상에 가까운 상태에서도 `final_publish_preflight_not_implemented`와 `publish_execution_still_disabled_until_final_preflight` blocker를 유지해야 한다.
+- side effects는 `dbRead=true`이고 `dbWrite=false`, `bloggerRead=false`, `bloggerWrite=false`, Blogger publish false, token refresh false, OAuth reconnect false, content mutation false, LLM false여야 한다.
+- UI는 Manual Reconnect Completion Readiness 블록을 표시하고 `/settings/blogger` 재연결 안내와 final publish preflight 미구현 상태를 명확히 보여야 한다.
+- 9F 운영 자동화 로드맵 후보: 장기적으로 운영자가 매번 설정을 입력하는 구조가 아니라 Blog Operation Profile, 기본 정책, 예외 중심 대시보드 기반 자동 운영 구조로 전환하는 방향을 검토한다.

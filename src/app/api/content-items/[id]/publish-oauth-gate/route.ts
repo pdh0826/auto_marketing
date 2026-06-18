@@ -21,7 +21,10 @@ export async function POST(_request: Request, { params }: RouteContext) {
       where: { id: params.id },
       select: {
         id: true,
-        blogId: true
+        blogId: true,
+        status: true,
+        draftMarkdown: true,
+        draftHtml: true
       }
     });
 
@@ -50,6 +53,9 @@ export async function POST(_request: Request, { params }: RouteContext) {
       connectionCount: bloggerConnections.length,
       hasAccessToken: Boolean(secretStatus?.hasAccessToken),
       accessTokenExpiresAt: secretStatus?.accessTokenExpiresAt ?? null,
+      contentStatus: contentItem.status,
+      draftMarkdown: contentItem.draftMarkdown,
+      draftHtml: contentItem.draftHtml,
       latestApproval: latestApproval ? toBloggerPublishApprovalAdmin(latestApproval) : null,
       latestAttempt: latestAttempt ? toBloggerPublishExecutionAttemptAdmin(latestAttempt) : null
     });

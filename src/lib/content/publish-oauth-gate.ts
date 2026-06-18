@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import type { BloggerPublishApprovalAdmin, BloggerPublishExecutionAttemptAdmin, PublishOAuthAccessTokenState, PublishOAuthGateResponse } from "@/lib/blogger/admin-types";
 
 export const REQUIRED_BEFORE_PUBLISH_OAUTH_GATE = [
@@ -25,6 +26,9 @@ export interface BuildPublishOAuthGateInput {
   connectionCount: number;
   hasAccessToken: boolean;
   accessTokenExpiresAt: string | null;
+  contentStatus: string | null;
+  draftMarkdown: string | null;
+  draftHtml: string | null;
   latestApproval: BloggerPublishApprovalAdmin | null;
   latestAttempt: BloggerPublishExecutionAttemptAdmin | null;
   checkedAt?: Date;
@@ -32,6 +36,8 @@ export interface BuildPublishOAuthGateInput {
 
 export function buildPublishOAuthGate(input: BuildPublishOAuthGateInput): PublishOAuthGateResponse {
   const checkedAt = input.checkedAt ?? new Date();
+  const currentDraftMarkdownHash = md5Hex(input.draftMarkdown ?? "");
+  const currentDraftHtmlHash = md5Hex(input.draftHtml ?? "");
   const accessTokenExpired = isExpired(input.accessTokenExpiresAt);
   const accessTokenState = getAccessTokenState({
     connectionFound: Boolean(input.connection),
@@ -39,10 +45,14 @@ export function buildPublishOAuthGate(input: BuildPublishOAuthGateInput): Publis
     accessTokenExpired
   });
   const reauthRequired = accessTokenState === "expired_reauth_required" || accessTokenState === "missing" || accessTokenState === "unknown";
-  const blockingReasons = new Set<string>([
-    "oauth_gate_not_satisfied",
-    "publish_execution_not_allowed_until_oauth_gate_passes"
-  ]);
+  const reconnectCompletionSummary = buildManualReconnectCompletionSummary({
+    input,
+    accessTokenState,
+    reauthRequired,
+    currentDraftMarkdownHash,
+    currentDraftHtmlHash
+  });
+  const blockingReasons = new Set<string>(reconnectCompletionSummary.blockingReasons);
   const warnings = new Set<string>();
 
   if (!input.connection) {
@@ -53,6 +63,11 @@ export function buildPublishOAuthGate(input: BuildPublishOAuthGateInput): Publis
   }
   if (!input.connection?.bloggerBlogId) {
     blockingReasons.add("blogger_blog_selection_missing");
+  }
+  if (!reconnectCompletionSummary.reconnectCompletionReady) {
+    blockingReasons.add("oauth_gate_not_satisfied");
+    blockingReasons.add("publish_execution_not_allowed_until_oauth_gate_passes");
+    blockingReasons.add("manual_reconnect_completion_not_ready");
   }
   if (accessTokenState === "expired_reauth_required") {
     blockingReasons.add("access_token_expired_reauth_required");
@@ -77,6 +92,8 @@ export function buildPublishOAuthGate(input: BuildPublishOAuthGateInput): Publis
     checkedAt: checkedAt.toISOString(),
     canProceedToPublishExecution: false,
     canProceedToScheduledPublishExecution: false,
+    canExecutePublish: false,
+    canExecuteScheduledPublish: false,
     canPublish: false,
     canSchedulePublish: false,
     blockingReasons: Array.from(blockingReasons),
@@ -97,11 +114,18 @@ export function buildPublishOAuthGate(input: BuildPublishOAuthGateInput): Publis
       publishApprovalId: input.latestApproval?.id ?? null,
       publishExecutionAttemptId: input.latestAttempt?.id ?? null
     },
+    manualReconnectCompletionSummary: {
+      ...reconnectCompletionSummary,
+      blockingReasons: Array.from(new Set([...reconnectCompletionSummary.blockingReasons])),
+      warnings: Array.from(new Set([...reconnectCompletionSummary.warnings]))
+    },
     requiredBeforePublishExecution: [...REQUIRED_BEFORE_PUBLISH_OAUTH_GATE],
     requiredBeforeScheduledPublishExecution: [...REQUIRED_BEFORE_SCHEDULED_PUBLISH_OAUTH_GATE],
     sideEffectSummary: {
       dbRead: true,
       dbWrite: false,
+      bloggerRead: false,
+      bloggerWrite: false,
       oauthReconnect: false,
       tokenRefresh: false,
       bloggerApiWrite: false,
@@ -109,9 +133,126 @@ export function buildPublishOAuthGate(input: BuildPublishOAuthGateInput): Publis
       bloggerScheduledPublish: false,
       bloggerPostsUpdate: false,
       bloggerDraftSave: false,
+      contentMutation: false,
       contentItemMutation: false,
       llmCall: false
     }
+  };
+}
+
+function buildManualReconnectCompletionSummary(input: {
+  input: BuildPublishOAuthGateInput;
+  accessTokenState: PublishOAuthAccessTokenState;
+  reauthRequired: boolean;
+  currentDraftMarkdownHash: string;
+  currentDraftHtmlHash: string;
+}): PublishOAuthGateResponse["manualReconnectCompletionSummary"] {
+  const { input: gateInput } = input;
+  const approval = gateInput.latestApproval;
+  const attempt = gateInput.latestAttempt;
+  const bloggerConnectionExists = Boolean(gateInput.connection);
+  const selectedBlogExists = Boolean(gateInput.connection?.bloggerBlogId);
+  const selectedBlogMatchesApprovalTarget = approval ? compareNullable(gateInput.connection?.bloggerBlogId ?? null, approval.targetBloggerBlogId) : null;
+  const publishApprovalStillValid = Boolean(approval && approval.status === "approved_snapshot" && !approval.invalidatedAt);
+  const publishApprovalInvalidated = Boolean(approval?.invalidatedAt || (approval && approval.status !== "approved_snapshot"));
+  const publishExecutionAttemptStillPlanningOnly = Boolean(attempt && attempt.status === "planned_only");
+  const contentStillPlanned = gateInput.contentStatus === "planned";
+  const draftMarkdownHashMatchesApprovalSnapshot = approval ? compareNullable(input.currentDraftMarkdownHash, approval.draftMarkdownHash) : null;
+  const draftHtmlHashMatchesApprovalSnapshot = approval ? compareNullable(input.currentDraftHtmlHash, approval.draftHtmlHash) : null;
+  const targetBlogMatchesApprovalSnapshot = approval ? compareNullable(gateInput.connection?.bloggerBlogId ?? null, approval.targetBloggerBlogId) : null;
+  const completionAccessTokenState = toManualReconnectCompletionAccessTokenState(input.accessTokenState);
+  const blockingReasons = new Set<string>([
+    "final_publish_preflight_not_implemented",
+    "publish_execution_still_disabled_until_final_preflight"
+  ]);
+  const warnings = new Set<string>();
+
+  if (!bloggerConnectionExists) {
+    blockingReasons.add("blogger_connection_missing");
+  }
+  if (!selectedBlogExists) {
+    blockingReasons.add("selected_blog_missing");
+  }
+  if (selectedBlogMatchesApprovalTarget === false) {
+    blockingReasons.add("selected_blog_mismatch_after_reconnect");
+  }
+  if (completionAccessTokenState === "expired_reauth_required") {
+    blockingReasons.add("access_token_still_expired_reauth_required");
+  }
+  if (completionAccessTokenState === "missing") {
+    blockingReasons.add("access_token_missing_after_reconnect");
+  }
+  if (!approval) {
+    blockingReasons.add("publish_approval_missing");
+  }
+  if (publishApprovalInvalidated) {
+    blockingReasons.add("publish_approval_invalidated");
+  }
+  if (!attempt) {
+    blockingReasons.add("publish_execution_attempt_missing");
+  }
+  if (attempt && !publishExecutionAttemptStillPlanningOnly) {
+    blockingReasons.add("publish_execution_attempt_not_planning_only");
+  }
+  if (!contentStillPlanned) {
+    blockingReasons.add("content_status_not_planned");
+  }
+  if (draftMarkdownHashMatchesApprovalSnapshot === false || draftHtmlHashMatchesApprovalSnapshot === false) {
+    blockingReasons.add("draft_snapshot_mismatch_after_reconnect");
+  }
+  if (targetBlogMatchesApprovalSnapshot === false) {
+    blockingReasons.add("target_blog_snapshot_mismatch_after_reconnect");
+  }
+  if (input.reauthRequired) {
+    warnings.add("manual_oauth_reconnect_required_before_final_publish_preflight");
+  }
+  if (approval && attempt && approval.id !== attempt.publishApprovalId) {
+    warnings.add("latest_publish_attempt_uses_different_approval");
+  }
+
+  const reconnectCompletionReady = Boolean(
+    bloggerConnectionExists &&
+      selectedBlogExists &&
+      selectedBlogMatchesApprovalTarget !== false &&
+      completionAccessTokenState === "valid" &&
+      publishApprovalStillValid &&
+      attempt &&
+      publishExecutionAttemptStillPlanningOnly &&
+      contentStillPlanned &&
+      draftMarkdownHashMatchesApprovalSnapshot !== false &&
+      draftHtmlHashMatchesApprovalSnapshot !== false &&
+      targetBlogMatchesApprovalSnapshot !== false
+  );
+
+  if (!reconnectCompletionReady) {
+    blockingReasons.add("manual_reconnect_completion_not_ready");
+  }
+
+  return {
+    checked: true,
+    reconnectSettingsPath: "/settings/blogger",
+    bloggerConnectionExists,
+    selectedBlogExists,
+    selectedBlogMatchesApprovalTarget,
+    accessTokenState: completionAccessTokenState,
+    reauthRequired: input.reauthRequired,
+    manualReconnectRequired: input.reauthRequired,
+    tokenRefreshImplemented: false,
+    autoReconnectImplemented: false,
+    publishApprovalExists: Boolean(approval),
+    publishApprovalStillValid,
+    publishApprovalInvalidated,
+    publishExecutionAttemptExists: Boolean(attempt),
+    publishExecutionAttemptStillPlanningOnly,
+    contentStillPlanned,
+    draftMarkdownHashMatchesApprovalSnapshot,
+    draftHtmlHashMatchesApprovalSnapshot,
+    targetBlogMatchesApprovalSnapshot,
+    reconnectCompletionReady,
+    canProceedToFinalPublishPreflight: false,
+    canExecutePublish: false,
+    blockingReasons: Array.from(blockingReasons),
+    warnings: Array.from(warnings)
   };
 }
 
@@ -128,10 +269,31 @@ function getAccessTokenState(input: { connectionFound: boolean; hasAccessToken: 
   return "valid_not_verified";
 }
 
+function toManualReconnectCompletionAccessTokenState(state: PublishOAuthAccessTokenState): PublishOAuthGateResponse["manualReconnectCompletionSummary"]["accessTokenState"] {
+  if (state === "valid_not_verified") {
+    return "valid";
+  }
+  return state;
+}
+
+function compareNullable(left: string | null, right: string | null) {
+  if (left === null && right === null) {
+    return true;
+  }
+  if (left === null || right === null) {
+    return false;
+  }
+  return left === right;
+}
+
 function isExpired(value: string | null) {
   if (!value) {
     return false;
   }
   const time = new Date(value).getTime();
   return Number.isFinite(time) && time <= Date.now();
+}
+
+function md5Hex(value: string) {
+  return createHash("md5").update(value, "utf8").digest("hex");
 }
