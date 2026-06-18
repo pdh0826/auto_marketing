@@ -59,6 +59,10 @@ The current completed path is:
 - Post-reconnect validation confirmed OAuth gate satisfied and final preflight ready, but publish execution remains disabled.
 - Guarded Blogger Publish Execution Design is implemented inside the existing publish OAuth gate: it shows the future publish operation plan, redacted request plan, failure policy draft, implementation/execution requirements, blockers, warnings, and side-effect summary while keeping `canExecutePublish=false`.
 - In the post-reconnect/final-preflight-ready path, legacy blockers `final_publish_preflight_not_implemented` and `publish_execution_still_disabled_until_final_preflight` should no longer appear; guarded publish implementation, rollback acknowledgement, external write risk acknowledgement, and final human approval remain blockers.
+- Guarded Blogger Publish Execution route is implemented at `POST /api/content-items/[id]/guarded-publish-execution`.
+- The route defaults to `mode=dry_run`, performs DB reads only, and keeps `canExecutePublish=false`.
+- Live publish is code-gated by `BLOGGER_GUARDED_PUBLISH_LIVE_ENABLED=true`, exact confirmation phrase `I_UNDERSTAND_THIS_WILL_PUBLISH_TO_BLOGGER`, matching approval/attempt/hash/blog/post metadata, OAuth/final-preflight readiness, rollback acknowledgement, external write risk acknowledgement, and final human approval.
+- Current OAuth expiry is a guarded route blocker, not a code implementation blocker. Live publish requires manual OAuth reconnect immediately before a separate live smoke.
 - `content_items.status`, `publishedAt`, `scheduledAt`, `qualityScore`, and `draftHtml` are not changed by publish-readiness or policy UI.
 
 ## Next Patch Priorities
@@ -86,11 +90,11 @@ D. **Patch 9E-7G: publish execution attempt execution preflight design**
 - Preserve raw response redaction, retry-blocking on unknown side effects, and separate local content mutation ordering.
 - Do not call Blogger publish until design is explicitly approved.
 
-E. **Patch 9E-9B: guarded publish execution implementation plan**
+E. **Patch 9E-9B-LIVE or 9E-9C: live publish approval/readback**
 
-- Review the 9E-9A guarded Blogger publish execution design summary after OAuth reconnect completion and final preflight review.
-- Decide the exact guarded publish implementation route, final human approval UX, rollback acknowledgement UX, external write risk acknowledgement UX, audit write ordering, and local content mutation ordering before any Blogger call.
-- Keep Blogger publish/scheduled publish execution disabled until explicit approval.
+- For `9E-9B-LIVE`, first complete manual OAuth reconnect in `/settings/blogger`, then get explicit user approval before running one live Blogger publish smoke.
+- For `9E-9C`, design publish result readback/reconciliation and manual review policy before any content item mutation.
+- Keep scheduled publish execution disabled until a separate policy patch.
 - Continue to block token refresh unless a separate token refresh policy patch is approved.
 
 F. **Patch 9F roadmap candidate: Blog Operation Profile**
@@ -182,6 +186,7 @@ Expected preflight condition after the successful save:
 - 9E-8C added final publish execution preflight summary inside the publish OAuth gate, while keeping `canExecutePublish=false` and no publish/write/mutation side effects.
 - 9E-8D was a validation milestone after manual OAuth reconnect: OAuth gate satisfied and final preflight ready were confirmed without a code patch.
 - 9E-9A added guarded Blogger publish execution design inside the publish OAuth gate, cleaned up obsolete final-preflight-not-implemented blockers after final preflight is ready, and kept `canExecutePublish=false` with no publish/write/mutation side effects.
+- 9E-9B added guarded Blogger publish execution route/lib and UI dry-run. Dry-run and live-negative smoke do not call Blogger or write DB. Live publish remains disabled unless the feature flag, exact phrase, acknowledgements, OAuth readiness, final preflight, and metadata matches are all satisfied.
 
 ## Closeout Safety Notes
 

@@ -16,9 +16,9 @@ export const REQUIRED_BEFORE_SCHEDULED_PUBLISH_OAUTH_GATE = [
 ] as const;
 
 export const REQUIRED_BEFORE_GUARDED_PUBLISH_IMPLEMENTATION = [
-  "Implement a guarded Blogger publish route in a separate patch",
-  "Use only the approved publish snapshot and saved execution attempt as inputs",
-  "Perform one explicit user-approved Blogger publish/write call",
+  "Guarded Blogger publish route is implemented but live execution remains disabled by default",
+  "Use only the approved publish snapshot and saved execution attempt as inputs for live execution",
+  "Require one explicit user-approved Blogger publish/write call",
   "Record a redacted publish execution result without storing raw Blogger response bodies",
   "Define readback and retry policy before enabling any content item mutation"
 ] as const;
@@ -186,14 +186,16 @@ function buildGuardedPublishExecutionDesignSummary(input: {
   });
   const plannedBloggerApiAction = existingBloggerPostId ? "blogger.posts.publish" : "to_be_decided_in_9E_9B";
   const blockingReasons = new Set<string>([
-    "guarded_blogger_publish_not_implemented",
-    "publish_execution_still_disabled_until_guarded_publish_implementation",
+    "guarded_blogger_publish_route_implemented_but_live_disabled",
     "rollback_plan_not_acknowledged",
     "external_write_risk_not_acknowledged",
     "final_human_approval_required"
   ]);
   const warnings = new Set<string>();
 
+  if (process.env.BLOGGER_GUARDED_PUBLISH_LIVE_ENABLED !== "true") {
+    blockingReasons.add("live_blogger_publish_feature_flag_disabled");
+  }
   if (!finalPublishExecutionPreflightSummary.finalPreflightReady) {
     blockingReasons.add("final_publish_execution_preflight_not_ready");
   }
@@ -207,9 +209,10 @@ function buildGuardedPublishExecutionDesignSummary(input: {
   return {
     checked: true,
     designVersion: "9E-9A",
-    implementationStatus: "design_only_not_implemented",
+    implementationStatus: "implemented_live_guarded",
+    routePath: "/api/content-items/[id]/guarded-publish-execution",
     finalPreflightReady: finalPublishExecutionPreflightSummary.finalPreflightReady,
-    guardedPublishImplementationReady: false,
+    guardedPublishImplementationReady: true,
     canProceedToPublishExecution: false,
     canProceedToScheduledPublishExecution: false,
     canExecutePublish: false,
@@ -301,14 +304,16 @@ function buildFinalPublishExecutionPreflightSummary(input: {
       reconnectCompletionSummary.targetBlogMatchesApprovalSnapshot === true
   );
   const blockingReasons = new Set<string>([
-    "guarded_blogger_publish_not_implemented",
-    "publish_execution_still_disabled_until_guarded_publish_implementation",
+    "guarded_blogger_publish_route_implemented_but_live_disabled",
     "rollback_plan_not_acknowledged",
     "external_write_risk_not_acknowledged",
     "final_human_approval_required"
   ]);
   const warnings = new Set<string>();
 
+  if (process.env.BLOGGER_GUARDED_PUBLISH_LIVE_ENABLED !== "true") {
+    blockingReasons.add("live_blogger_publish_feature_flag_disabled");
+  }
   if (!coreReadOnlyReady) {
     blockingReasons.add("final_publish_execution_preflight_not_ready");
   }

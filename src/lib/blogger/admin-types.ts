@@ -808,6 +808,86 @@ export interface PublishExecutionAttemptReadbackResponse {
 export type PublishOAuthAccessTokenState = "expired_reauth_required" | "valid_not_verified" | "missing" | "unknown";
 export type ManualReconnectCompletionAccessTokenState = "valid" | "expired_reauth_required" | "missing" | "unknown";
 
+export interface GuardedPublishExecutionResponse {
+  contentItemId: string;
+  checkedAt: string;
+  guardedPublishExecutionSummary: {
+    checked: true;
+    mode: "dry_run" | "live";
+    implementationStatus: "implemented_live_guarded";
+    routePath: "/api/content-items/[id]/guarded-publish-execution";
+    liveExecutionAttempted: boolean;
+    liveExecutionBlocked: boolean;
+    dryRunOnly: boolean;
+    canExecutePublish: false;
+    canProceedToPublishExecution: false;
+    canProceedToScheduledPublishExecution: false;
+    bloggerApiCallAllowedNow: boolean;
+    featureFlagEnabled: boolean;
+    confirmationPhraseAccepted: boolean;
+    rollbackPlanAcknowledged: boolean;
+    externalWriteRiskAcknowledged: boolean;
+    finalHumanApprovalConfirmed: boolean;
+    oauthGateSatisfied: boolean;
+    manualReconnectCompletionReady: boolean;
+    finalPreflightReady: boolean;
+    guardedDesignReady: boolean;
+    publishApprovalMatchesRequest: boolean;
+    publishExecutionAttemptMatchesRequest: boolean;
+    contentHashMatchesRequest: boolean;
+    targetBlogMatchesRequest: boolean;
+    bloggerPostIdMatchesRequest: boolean;
+    contentItemId: string;
+    publishApprovalId: string | null;
+    publishExecutionAttemptId: string | null;
+    bloggerDraftSaveId: string | null;
+    targetBloggerBlogId: string | null;
+    targetBloggerBlogName: string | null;
+    targetBloggerBlogUrl: string | null;
+    bloggerPostId: string | null;
+    redactedBloggerRequestPlan: {
+      method: "POST";
+      endpointKind: "blogger.posts.publish";
+      bloggerBlogId: string | null;
+      bloggerPostId: string | null;
+      usesAccessToken: true;
+      accessTokenIncluded: false;
+      requestBodyIncluded: false;
+      requestBodyHashOnly: true;
+    };
+    bloggerResultRedacted: {
+      attempted: boolean;
+      ok: boolean | null;
+      status: number | null;
+      bloggerPostId: string | null;
+      bloggerPostUrl: string | null;
+      publishedAt: string | null;
+      updatedAt: string | null;
+      retryable: boolean | null;
+      errorCode: string | null;
+      errorMessageRedacted: string | null;
+    };
+    blockingReasons: string[];
+    warnings: string[];
+    sideEffectSummary: {
+      dbRead: true;
+      dbWrite: boolean;
+      bloggerRead: false;
+      bloggerWrite: boolean;
+      bloggerPublish: boolean;
+      bloggerUpdate: false;
+      bloggerDraftSave: false;
+      tokenRefresh: false;
+      oauthReconnect: false;
+      contentMutation: false;
+      approvalMutation: false;
+      attemptMutation: boolean;
+      llmCall: false;
+      externalSend: boolean;
+    };
+  };
+}
+
 export interface PublishOAuthGateResponse {
   contentItemId: string;
   checkedAt: string;
@@ -916,9 +996,10 @@ export interface PublishOAuthGateResponse {
   guardedPublishExecutionDesignSummary: {
     checked: true;
     designVersion: "9E-9A";
-    implementationStatus: "design_only_not_implemented";
+    implementationStatus: "design_only_not_implemented" | "implemented_live_guarded";
+    routePath: "/api/content-items/[id]/guarded-publish-execution" | null;
     finalPreflightReady: boolean;
-    guardedPublishImplementationReady: false;
+    guardedPublishImplementationReady: boolean;
     canProceedToPublishExecution: false;
     canProceedToScheduledPublishExecution: false;
     canExecutePublish: false;

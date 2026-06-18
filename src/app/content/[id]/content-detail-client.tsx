@@ -15,6 +15,7 @@ import type {
   PublishExecutionAttemptReadbackResponse,
   PublishExecutionAttemptPreviewResponse,
   PublishExecutionAttemptSaveResponse,
+  GuardedPublishExecutionResponse,
   PublishOAuthGateResponse,
   PublishPreflightDryRun
 } from "@/lib/blogger/admin-types";
@@ -277,6 +278,7 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
   const [publishExecutionAttemptSaveResult, setPublishExecutionAttemptSaveResult] = useState<PublishExecutionAttemptSaveResponse | null>(null);
   const [publishExecutionAttemptReadbackResult, setPublishExecutionAttemptReadbackResult] = useState<PublishExecutionAttemptReadbackResponse | null>(null);
   const [publishOAuthGateResult, setPublishOAuthGateResult] = useState<PublishOAuthGateResponse | null>(null);
+  const [guardedPublishExecutionResult, setGuardedPublishExecutionResult] = useState<GuardedPublishExecutionResponse | null>(null);
   const [bloggerDraftPreviewResult, setBloggerDraftPreviewResult] = useState<BloggerDraftPayloadPreview | null>(null);
   const [bloggerDraftSavePreflightResult, setBloggerDraftSavePreflightResult] = useState<BloggerDraftSavePreflight | null>(null);
   const [stepwiseRuns, setStepwiseRuns] = useState<StepwiseDraftGenerationRunSummary[]>([]);
@@ -344,6 +346,7 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
   const [savingPublishExecutionAttempt, setSavingPublishExecutionAttempt] = useState(false);
   const [runningPublishExecutionAttemptReadback, setRunningPublishExecutionAttemptReadback] = useState(false);
   const [runningPublishOAuthGate, setRunningPublishOAuthGate] = useState(false);
+  const [runningGuardedPublishExecution, setRunningGuardedPublishExecution] = useState(false);
   const [runningBloggerDraftPreview, setRunningBloggerDraftPreview] = useState(false);
   const [runningBloggerDraftSavePreflight, setRunningBloggerDraftSavePreflight] = useState(false);
   const [approvingBloggerDraft, setApprovingBloggerDraft] = useState(false);
@@ -375,6 +378,7 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
   const [publishExecutionAttemptSaveError, setPublishExecutionAttemptSaveError] = useState<string | null>(null);
   const [publishExecutionAttemptReadbackError, setPublishExecutionAttemptReadbackError] = useState<string | null>(null);
   const [publishOAuthGateError, setPublishOAuthGateError] = useState<string | null>(null);
+  const [guardedPublishExecutionError, setGuardedPublishExecutionError] = useState<string | null>(null);
   const [bloggerDraftPreviewError, setBloggerDraftPreviewError] = useState<string | null>(null);
   const [bloggerDraftSavePreflightError, setBloggerDraftSavePreflightError] = useState<string | null>(null);
   const [bloggerDraftSaveError, setBloggerDraftSaveError] = useState<string | null>(null);
@@ -414,6 +418,7 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
   );
   const canRunPublishExecutionAttemptReadback = Boolean(!runningPublishExecutionAttemptReadback);
   const canRunPublishOAuthGate = Boolean(!runningPublishOAuthGate);
+  const canRunGuardedPublishExecution = Boolean(!runningGuardedPublishExecution);
   const publishApprovalPreviewMatchesOptions = Boolean(
     publishApprovalPreviewResult &&
       publishApprovalPreviewResult.approvalSnapshotPreview.publishMode === publishApprovalMode &&
@@ -1458,6 +1463,42 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
     }
   }
 
+  async function runGuardedPublishExecutionDryRun() {
+    setNotice(null);
+    setGuardedPublishExecutionError(null);
+    setRunningGuardedPublishExecution(true);
+
+    const designSummary = publishOAuthGateResult?.guardedPublishExecutionDesignSummary;
+    const latestApproval = publishApprovalReadbackResult?.latestApproval ?? null;
+    const latestAttempt = publishExecutionAttemptReadbackResult?.latestAttempt ?? null;
+
+    try {
+      const result = await requestJson<ApiResult<GuardedPublishExecutionResponse>>(`/api/content-items/${contentItemId}/guarded-publish-execution`, {
+        method: "POST",
+        body: JSON.stringify({
+          mode: "dry_run",
+          publishApprovalId: designSummary?.publishApprovalId ?? latestApproval?.id ?? null,
+          publishExecutionAttemptId: designSummary?.publishExecutionAttemptId ?? latestAttempt?.id ?? null,
+          expectedDraftMarkdownHash: latestApproval?.draftMarkdownHash ?? null,
+          expectedDraftHtmlHash: designSummary?.redactedBloggerRequestPlan.draftHtmlHash ?? latestApproval?.draftHtmlHash ?? latestAttempt?.draftHtmlHash ?? null,
+          expectedDraftHtmlLength: latestApproval?.draftHtmlLength ?? null,
+          expectedTargetBloggerBlogId: designSummary?.targetBloggerBlogId ?? latestApproval?.targetBloggerBlogId ?? latestAttempt?.targetBloggerBlogId ?? null,
+          expectedTargetBloggerBlogUrl: designSummary?.targetBloggerBlogUrl ?? latestApproval?.targetBloggerBlogUrl ?? null,
+          expectedBloggerPostId: designSummary?.existingBloggerPostId ?? latestApproval?.bloggerPostId ?? latestAttempt?.bloggerPostId ?? null,
+          rollbackPlanAcknowledged: false,
+          externalWriteRiskAcknowledged: false,
+          finalHumanApprovalConfirmed: false
+        })
+      });
+      setGuardedPublishExecutionResult(result.data);
+      setNotice("Guarded Publish Execution dry-run을 확인했습니다. Blogger publish/write, posts.update, draft save, OAuth reconnect, token refresh, DB mutation은 수행하지 않았습니다.");
+    } catch (caught) {
+      setGuardedPublishExecutionError(caught instanceof Error ? caught.message : "Guarded Publish Execution dry-run에 실패했습니다.");
+    } finally {
+      setRunningGuardedPublishExecution(false);
+    }
+  }
+
   async function runBloggerDraftPreview() {
     setNotice(null);
     setBloggerDraftPreviewError(null);
@@ -1909,6 +1950,9 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
               <button className="button secondary" type="button" disabled={!canRunPublishOAuthGate} onClick={() => void runPublishOAuthGate()}>
                 {runningPublishOAuthGate ? "OAuth Gate 확인 중" : "Check Publish OAuth Gate"}
               </button>
+              <button className="button secondary" type="button" disabled={!canRunGuardedPublishExecution} onClick={() => void runGuardedPublishExecutionDryRun()}>
+                {runningGuardedPublishExecution ? "Guarded Publish Dry-run 실행 중" : "Check Guarded Publish Execution"}
+              </button>
               <button className="button secondary" type="button" disabled>
                 Publish는 후속 패치에서 연결 예정
               </button>
@@ -1921,6 +1965,107 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
               Publish approval snapshot은 이제 local DB에 저장할 수 있지만, 저장은 publish 실행이 아닙니다. 저장된 approval이 있어도 canPublish=false,
               canSchedulePublish=false를 유지합니다.
             </div>
+            {guardedPublishExecutionError ? <div className="error">{guardedPublishExecutionError}</div> : null}
+
+            {guardedPublishExecutionResult ? (
+              <div className="read-block">
+                <h3>Guarded Publish Execution</h3>
+                <div className="notice warning">
+                  <strong>Guarded publish execution route is implemented, but live Blogger publish remains disabled by default.</strong>
+                  <p>
+                    Live Blogger publish requires the server feature flag, exact confirmation phrase, final human acknowledgements, OAuth readiness, final preflight,
+                    and matching approval/attempt/hash/blog metadata. This UI runs dry-run only.
+                  </p>
+                  <p>Blogger publish/write, posts.update, draft save, OAuth reconnect, token refresh, DB mutation, content mutation are not performed by this dry-run.</p>
+                </div>
+                <div className="detail-grid">
+                  <DetailItem label="Checked At" value={formatDate(guardedPublishExecutionResult.checkedAt)} />
+                  <DetailItem label="Mode" value={guardedPublishExecutionResult.guardedPublishExecutionSummary.mode} />
+                  <DetailItem label="Implementation Status" value={guardedPublishExecutionResult.guardedPublishExecutionSummary.implementationStatus} />
+                  <DetailItem label="Route Path" value={guardedPublishExecutionResult.guardedPublishExecutionSummary.routePath} />
+                  <DetailItem label="Dry-run Only" value={String(guardedPublishExecutionResult.guardedPublishExecutionSummary.dryRunOnly)} />
+                  <DetailItem label="Live Attempted" value={String(guardedPublishExecutionResult.guardedPublishExecutionSummary.liveExecutionAttempted)} />
+                  <DetailItem label="Live Blocked" value={String(guardedPublishExecutionResult.guardedPublishExecutionSummary.liveExecutionBlocked)} />
+                  <DetailItem label="Can Execute Publish" value={String(guardedPublishExecutionResult.guardedPublishExecutionSummary.canExecutePublish)} />
+                  <DetailItem label="Blogger API Call Allowed Now" value={String(guardedPublishExecutionResult.guardedPublishExecutionSummary.bloggerApiCallAllowedNow)} />
+                  <DetailItem label="Feature Flag Enabled" value={String(guardedPublishExecutionResult.guardedPublishExecutionSummary.featureFlagEnabled)} />
+                  <DetailItem label="Confirmation Accepted" value={String(guardedPublishExecutionResult.guardedPublishExecutionSummary.confirmationPhraseAccepted)} />
+                  <DetailItem label="Rollback Acknowledged" value={String(guardedPublishExecutionResult.guardedPublishExecutionSummary.rollbackPlanAcknowledged)} />
+                  <DetailItem label="External Write Risk Acknowledged" value={String(guardedPublishExecutionResult.guardedPublishExecutionSummary.externalWriteRiskAcknowledged)} />
+                  <DetailItem label="Final Human Approval Confirmed" value={String(guardedPublishExecutionResult.guardedPublishExecutionSummary.finalHumanApprovalConfirmed)} />
+                  <DetailItem label="OAuth Gate Satisfied" value={String(guardedPublishExecutionResult.guardedPublishExecutionSummary.oauthGateSatisfied)} />
+                  <DetailItem label="Manual Reconnect Ready" value={String(guardedPublishExecutionResult.guardedPublishExecutionSummary.manualReconnectCompletionReady)} />
+                  <DetailItem label="Final Preflight Ready" value={String(guardedPublishExecutionResult.guardedPublishExecutionSummary.finalPreflightReady)} />
+                  <DetailItem label="Guarded Design Ready" value={String(guardedPublishExecutionResult.guardedPublishExecutionSummary.guardedDesignReady)} />
+                  <DetailItem label="Approval Match" value={String(guardedPublishExecutionResult.guardedPublishExecutionSummary.publishApprovalMatchesRequest)} />
+                  <DetailItem label="Attempt Match" value={String(guardedPublishExecutionResult.guardedPublishExecutionSummary.publishExecutionAttemptMatchesRequest)} />
+                  <DetailItem label="Content Hash Match" value={String(guardedPublishExecutionResult.guardedPublishExecutionSummary.contentHashMatchesRequest)} />
+                  <DetailItem label="Target Blog Match" value={String(guardedPublishExecutionResult.guardedPublishExecutionSummary.targetBlogMatchesRequest)} />
+                  <DetailItem label="Blogger Post ID Match" value={String(guardedPublishExecutionResult.guardedPublishExecutionSummary.bloggerPostIdMatchesRequest)} />
+                  <DetailItem label="Publish Approval ID" value={guardedPublishExecutionResult.guardedPublishExecutionSummary.publishApprovalId ?? "-"} />
+                  <DetailItem label="Publish Attempt ID" value={guardedPublishExecutionResult.guardedPublishExecutionSummary.publishExecutionAttemptId ?? "-"} />
+                  <DetailItem label="Blogger Draft Save ID" value={guardedPublishExecutionResult.guardedPublishExecutionSummary.bloggerDraftSaveId ?? "-"} />
+                  <DetailItem label="Target Blog ID" value={guardedPublishExecutionResult.guardedPublishExecutionSummary.targetBloggerBlogId ?? "-"} />
+                  <DetailItem label="Target Blog Name" value={guardedPublishExecutionResult.guardedPublishExecutionSummary.targetBloggerBlogName ?? "-"} />
+                  <DetailItem label="Target Blog URL" value={guardedPublishExecutionResult.guardedPublishExecutionSummary.targetBloggerBlogUrl ?? "-"} />
+                  <DetailItem label="Blogger Post ID" value={guardedPublishExecutionResult.guardedPublishExecutionSummary.bloggerPostId ?? "-"} />
+                </div>
+                <ValidationList
+                  title="Guarded Publish Execution Blocking Reasons"
+                  items={guardedPublishExecutionResult.guardedPublishExecutionSummary.blockingReasons}
+                  emptyText="blocking reason이 없습니다."
+                  isError
+                />
+                <ValidationList
+                  title="Guarded Publish Execution Warnings"
+                  items={guardedPublishExecutionResult.guardedPublishExecutionSummary.warnings}
+                  emptyText="warning이 없습니다."
+                  isWarning
+                />
+                <div className="detail-grid">
+                  <DetailItem label="Request Method" value={guardedPublishExecutionResult.guardedPublishExecutionSummary.redactedBloggerRequestPlan.method} />
+                  <DetailItem label="Endpoint Kind" value={guardedPublishExecutionResult.guardedPublishExecutionSummary.redactedBloggerRequestPlan.endpointKind} />
+                  <DetailItem label="Request Blog ID" value={guardedPublishExecutionResult.guardedPublishExecutionSummary.redactedBloggerRequestPlan.bloggerBlogId ?? "-"} />
+                  <DetailItem label="Request Post ID" value={guardedPublishExecutionResult.guardedPublishExecutionSummary.redactedBloggerRequestPlan.bloggerPostId ?? "-"} />
+                  <DetailItem label="Uses Access Token" value={String(guardedPublishExecutionResult.guardedPublishExecutionSummary.redactedBloggerRequestPlan.usesAccessToken)} />
+                  <DetailItem label="Access Token Included" value={String(guardedPublishExecutionResult.guardedPublishExecutionSummary.redactedBloggerRequestPlan.accessTokenIncluded)} />
+                  <DetailItem label="Request Body Included" value={String(guardedPublishExecutionResult.guardedPublishExecutionSummary.redactedBloggerRequestPlan.requestBodyIncluded)} />
+                  <DetailItem label="Request Body Hash Only" value={String(guardedPublishExecutionResult.guardedPublishExecutionSummary.redactedBloggerRequestPlan.requestBodyHashOnly)} />
+                  <DetailItem label="Blogger Result Attempted" value={String(guardedPublishExecutionResult.guardedPublishExecutionSummary.bloggerResultRedacted.attempted)} />
+                  <DetailItem label="Blogger Result OK" value={String(guardedPublishExecutionResult.guardedPublishExecutionSummary.bloggerResultRedacted.ok)} />
+                  <DetailItem label="Blogger Result Status" value={String(guardedPublishExecutionResult.guardedPublishExecutionSummary.bloggerResultRedacted.status ?? "-")} />
+                  <DetailItem label="Blogger Result Post ID" value={guardedPublishExecutionResult.guardedPublishExecutionSummary.bloggerResultRedacted.bloggerPostId ?? "-"} />
+                  <DetailItem label="Blogger Result URL" value={guardedPublishExecutionResult.guardedPublishExecutionSummary.bloggerResultRedacted.bloggerPostUrl ?? "-"} />
+                  <DetailItem label="Blogger Result Published At" value={guardedPublishExecutionResult.guardedPublishExecutionSummary.bloggerResultRedacted.publishedAt ?? "-"} />
+                  <DetailItem label="Blogger Result Updated At" value={guardedPublishExecutionResult.guardedPublishExecutionSummary.bloggerResultRedacted.updatedAt ?? "-"} />
+                  <DetailItem label="Blogger Result Retryable" value={String(guardedPublishExecutionResult.guardedPublishExecutionSummary.bloggerResultRedacted.retryable)} />
+                  <DetailItem label="Blogger Result Error Code" value={guardedPublishExecutionResult.guardedPublishExecutionSummary.bloggerResultRedacted.errorCode ?? "-"} />
+                </div>
+                <div className="detail-grid">
+                  <DetailItem label="DB Read" value={String(guardedPublishExecutionResult.guardedPublishExecutionSummary.sideEffectSummary.dbRead)} />
+                  <DetailItem label="DB Write" value={String(guardedPublishExecutionResult.guardedPublishExecutionSummary.sideEffectSummary.dbWrite)} />
+                  <DetailItem label="Blogger Read" value={String(guardedPublishExecutionResult.guardedPublishExecutionSummary.sideEffectSummary.bloggerRead)} />
+                  <DetailItem label="Blogger Write" value={String(guardedPublishExecutionResult.guardedPublishExecutionSummary.sideEffectSummary.bloggerWrite)} />
+                  <DetailItem label="Blogger Publish" value={String(guardedPublishExecutionResult.guardedPublishExecutionSummary.sideEffectSummary.bloggerPublish)} />
+                  <DetailItem label="Blogger Update" value={String(guardedPublishExecutionResult.guardedPublishExecutionSummary.sideEffectSummary.bloggerUpdate)} />
+                  <DetailItem label="Blogger Draft Save" value={String(guardedPublishExecutionResult.guardedPublishExecutionSummary.sideEffectSummary.bloggerDraftSave)} />
+                  <DetailItem label="Token Refresh" value={String(guardedPublishExecutionResult.guardedPublishExecutionSummary.sideEffectSummary.tokenRefresh)} />
+                  <DetailItem label="OAuth Reconnect" value={String(guardedPublishExecutionResult.guardedPublishExecutionSummary.sideEffectSummary.oauthReconnect)} />
+                  <DetailItem label="Content Mutation" value={String(guardedPublishExecutionResult.guardedPublishExecutionSummary.sideEffectSummary.contentMutation)} />
+                  <DetailItem label="Approval Mutation" value={String(guardedPublishExecutionResult.guardedPublishExecutionSummary.sideEffectSummary.approvalMutation)} />
+                  <DetailItem label="Attempt Mutation" value={String(guardedPublishExecutionResult.guardedPublishExecutionSummary.sideEffectSummary.attemptMutation)} />
+                  <DetailItem label="LLM Call" value={String(guardedPublishExecutionResult.guardedPublishExecutionSummary.sideEffectSummary.llmCall)} />
+                  <DetailItem label="External Send" value={String(guardedPublishExecutionResult.guardedPublishExecutionSummary.sideEffectSummary.externalSend)} />
+                </div>
+                <div className="notice">
+                  Guarded Publish Execution 응답은 access token, refresh token, client secret, encryptedValue, raw Blogger request/response body, full draftHtml을 반환하지 않습니다.
+                </div>
+              </div>
+            ) : (
+              <div className="notice">
+                Check Guarded Publish Execution은 기본 dry-run으로만 실행되며, live Blogger publish/write는 별도 승인과 feature flag 없이는 실행되지 않습니다.
+              </div>
+            )}
 
             {publishOAuthGateResult ? (
               <div className="read-block">
@@ -2140,10 +2285,10 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
                 <div className="read-block">
                   <h3>Guarded Blogger Publish Execution Design</h3>
                   <div className="notice warning">
-                    <strong>Design-only guard remains active</strong>
+                    <strong>Guarded route is implemented, but live publish remains guarded and disabled by default.</strong>
                     <p>
-                      Final preflight가 ready여도 guarded Blogger publish implementation은 아직 추가되지 않았습니다. 이 check는 Blogger write/publish,
-                      posts.update, Blogger read API, OAuth reconnect, token refresh, DB mutation, content mutation을 수행하지 않습니다.
+                      Guarded Blogger publish execution route가 추가되었지만, 이 check는 여전히 Blogger write/publish, posts.update, Blogger read API,
+                      OAuth reconnect, token refresh, DB mutation, content mutation을 수행하지 않습니다.
                     </p>
                     <p>
                       canExecutePublish=false, canProceedToPublishExecution=false,
@@ -2154,6 +2299,7 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
                     <DetailItem label="Checked" value={String(publishOAuthGateResult.guardedPublishExecutionDesignSummary.checked)} />
                     <DetailItem label="Design Version" value={publishOAuthGateResult.guardedPublishExecutionDesignSummary.designVersion} />
                     <DetailItem label="Implementation Status" value={publishOAuthGateResult.guardedPublishExecutionDesignSummary.implementationStatus} />
+                    <DetailItem label="Route Path" value={publishOAuthGateResult.guardedPublishExecutionDesignSummary.routePath ?? "-"} />
                     <DetailItem label="Final Preflight Ready" value={String(publishOAuthGateResult.guardedPublishExecutionDesignSummary.finalPreflightReady)} />
                     <DetailItem
                       label="Guarded Publish Ready"

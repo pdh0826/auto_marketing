@@ -1241,3 +1241,30 @@ Not implemented:
 - publish approval insert/update/invalidation or publish execution attempt insert/update/execution
 - content item status, `publishedAt`, `scheduledAt`, `qualityScore`, `draftHtml`, or `draftMarkdown` mutation
 - LLM calls, `llm_call_logs`, deploy, push, or external service writes
+
+## Patch 9E-9B: Guarded Blogger Publish Execution Route
+
+Implemented after Patch 9E-9A:
+
+- Added `POST /api/content-items/[id]/guarded-publish-execution`.
+- Added `src/lib/content/guarded-publish-execution.ts` to validate approval, attempt, content hashes, target Blogger blog, Blogger post id, OAuth gate, final preflight, feature flag, confirmation phrase, and acknowledgements.
+- Added `src/lib/blogger/publish-post.ts` as the guarded Blogger `posts.publish` wrapper. It returns safe redacted metadata only and does not expose access tokens, request bodies, raw Blogger response bodies, or full `draftHtml`.
+- The route defaults to `mode=dry_run`; dry-run performs DB reads only, never calls Blogger, never writes DB rows, and keeps `canExecutePublish=false`.
+- Live mode is code-gated by `BLOGGER_GUARDED_PUBLISH_LIVE_ENABLED=true`, exact phrase `I_UNDERSTAND_THIS_WILL_PUBLISH_TO_BLOGGER`, matching approval/attempt/hash/blog/post metadata, OAuth/final-preflight readiness, rollback acknowledgement, external write risk acknowledgement, and final human approval.
+- Content Detail UI now includes a Guarded Publish Execution dry-run button/result block. It does not expose a live publish button.
+- Existing publish OAuth gate copy now reflects that the guarded route is implemented but live publish remains disabled by default.
+- Current expired OAuth state is handled as a safe blocker rather than a patch blocker.
+
+Validation notes:
+
+- Dry-run smoke returns `implementationStatus=implemented_live_guarded`, `liveExecutionAttempted=false`, `liveExecutionBlocked=true`, `dryRunOnly=true`, and write side effects false.
+- Live negative smoke with feature flag disabled returns `liveExecutionAttempted=false`, `bloggerWrite=false`, `bloggerPublish=false`, and `dbWrite=false`.
+- No live Blogger publish/write smoke was executed in this patch.
+- DB/hash/count guard remains unchanged.
+
+Not implemented or not executed:
+
+- Live Blogger publish/write smoke
+- Blogger `posts.update`, additional draft save, OAuth reconnect, token refresh, deploy, push, or external service write
+- `content_items.status`, `publishedAt`, `scheduledAt`, `draftMarkdown`, `draftHtml`, or `qualityScore` mutation
+- publish result readback/reconciliation and post-publish content mutation, both deferred to later patches
