@@ -1976,7 +1976,7 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
                       이 summary는 `/settings/blogger`에서 수동 OAuth 재연결을 완료한 뒤 publish execution 전에 다시 확인해야 할 조건을 보여줍니다.
                     </p>
                     <p>
-                      final publish preflight가 아직 구현되지 않았으므로 reconnectCompletionReady와 무관하게 canExecutePublish=false를 유지합니다.
+                      final publish preflight와 guarded publish execution design은 read-only로 제공되며, 실제 guarded Blogger publish 구현 전까지 canExecutePublish=false를 유지합니다.
                     </p>
                   </div>
                   <div className="detail-grid">
@@ -2135,6 +2135,187 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
                     <DetailItem label="Attempt Mutation" value={String(publishOAuthGateResult.finalPublishExecutionPreflightSummary.sideEffectSummary.attemptMutation)} />
                     <DetailItem label="LLM Call" value={String(publishOAuthGateResult.finalPublishExecutionPreflightSummary.sideEffectSummary.llmCall)} />
                     <DetailItem label="External Send" value={String(publishOAuthGateResult.finalPublishExecutionPreflightSummary.sideEffectSummary.externalSend)} />
+                  </div>
+                </div>
+                <div className="read-block">
+                  <h3>Guarded Blogger Publish Execution Design</h3>
+                  <div className="notice warning">
+                    <strong>Design-only guard remains active</strong>
+                    <p>
+                      Final preflight가 ready여도 guarded Blogger publish implementation은 아직 추가되지 않았습니다. 이 check는 Blogger write/publish,
+                      posts.update, Blogger read API, OAuth reconnect, token refresh, DB mutation, content mutation을 수행하지 않습니다.
+                    </p>
+                    <p>
+                      canExecutePublish=false, canProceedToPublishExecution=false,
+                      canProceedToScheduledPublishExecution=false를 유지합니다.
+                    </p>
+                  </div>
+                  <div className="detail-grid">
+                    <DetailItem label="Checked" value={String(publishOAuthGateResult.guardedPublishExecutionDesignSummary.checked)} />
+                    <DetailItem label="Design Version" value={publishOAuthGateResult.guardedPublishExecutionDesignSummary.designVersion} />
+                    <DetailItem label="Implementation Status" value={publishOAuthGateResult.guardedPublishExecutionDesignSummary.implementationStatus} />
+                    <DetailItem label="Final Preflight Ready" value={String(publishOAuthGateResult.guardedPublishExecutionDesignSummary.finalPreflightReady)} />
+                    <DetailItem
+                      label="Guarded Publish Ready"
+                      value={String(publishOAuthGateResult.guardedPublishExecutionDesignSummary.guardedPublishImplementationReady)}
+                    />
+                    <DetailItem
+                      label="Can Proceed To Publish Execution"
+                      value={String(publishOAuthGateResult.guardedPublishExecutionDesignSummary.canProceedToPublishExecution)}
+                    />
+                    <DetailItem
+                      label="Can Proceed To Scheduled Publish"
+                      value={String(publishOAuthGateResult.guardedPublishExecutionDesignSummary.canProceedToScheduledPublishExecution)}
+                    />
+                    <DetailItem label="Can Execute Publish" value={String(publishOAuthGateResult.guardedPublishExecutionDesignSummary.canExecutePublish)} />
+                    <DetailItem label="OAuth Gate Satisfied" value={String(publishOAuthGateResult.guardedPublishExecutionDesignSummary.oauthGateSatisfied)} />
+                    <DetailItem
+                      label="Manual Reconnect Ready"
+                      value={String(publishOAuthGateResult.guardedPublishExecutionDesignSummary.manualReconnectCompletionReady)}
+                    />
+                    <DetailItem
+                      label="Publish Approval Valid"
+                      value={String(publishOAuthGateResult.guardedPublishExecutionDesignSummary.publishApprovalStillValid)}
+                    />
+                    <DetailItem
+                      label="Attempt Planning Only"
+                      value={String(publishOAuthGateResult.guardedPublishExecutionDesignSummary.publishExecutionAttemptStillPlanningOnly)}
+                    />
+                    <DetailItem
+                      label="Content Snapshot Match"
+                      value={String(publishOAuthGateResult.guardedPublishExecutionDesignSummary.contentSnapshotMatchesApproval)}
+                    />
+                    <DetailItem
+                      label="Target Blog Snapshot Match"
+                      value={formatNullableBoolean(publishOAuthGateResult.guardedPublishExecutionDesignSummary.targetBlogSnapshotMatchesCurrentSelection)}
+                    />
+                    <DetailItem label="Content Item ID" value={publishOAuthGateResult.guardedPublishExecutionDesignSummary.contentItemId} />
+                    <DetailItem label="Publish Approval ID" value={publishOAuthGateResult.guardedPublishExecutionDesignSummary.publishApprovalId ?? "-"} />
+                    <DetailItem label="Publish Attempt ID" value={publishOAuthGateResult.guardedPublishExecutionDesignSummary.publishExecutionAttemptId ?? "-"} />
+                    <DetailItem label="Blogger Draft Save ID" value={publishOAuthGateResult.guardedPublishExecutionDesignSummary.bloggerDraftSaveId ?? "-"} />
+                    <DetailItem label="Target Blog ID" value={publishOAuthGateResult.guardedPublishExecutionDesignSummary.targetBloggerBlogId ?? "-"} />
+                    <DetailItem label="Target Blog Name" value={publishOAuthGateResult.guardedPublishExecutionDesignSummary.targetBloggerBlogName ?? "-"} />
+                    <DetailItem label="Target Blog URL" value={publishOAuthGateResult.guardedPublishExecutionDesignSummary.targetBloggerBlogUrl ?? "-"} />
+                    <DetailItem label="Existing Blogger Post ID" value={publishOAuthGateResult.guardedPublishExecutionDesignSummary.existingBloggerPostId ?? "-"} />
+                    <DetailItem label="Planned Operation" value={publishOAuthGateResult.guardedPublishExecutionDesignSummary.plannedOperationKind} />
+                    <DetailItem label="Planned Blogger API Action" value={publishOAuthGateResult.guardedPublishExecutionDesignSummary.plannedBloggerApiAction} />
+                    <DetailItem
+                      label="Blogger API Call Allowed Now"
+                      value={String(publishOAuthGateResult.guardedPublishExecutionDesignSummary.bloggerApiCallAllowedNow)}
+                    />
+                    <DetailItem
+                      label="Future Blogger Write Required"
+                      value={String(publishOAuthGateResult.guardedPublishExecutionDesignSummary.bloggerWriteWillBeRequiredInFuturePatch)}
+                    />
+                    <DetailItem
+                      label="Rollback Acknowledged"
+                      value={String(publishOAuthGateResult.guardedPublishExecutionDesignSummary.rollbackPlanAcknowledged)}
+                    />
+                    <DetailItem
+                      label="External Write Risk Acknowledged"
+                      value={String(publishOAuthGateResult.guardedPublishExecutionDesignSummary.externalWriteRiskAcknowledged)}
+                    />
+                    <DetailItem
+                      label="Final Human Approval Required"
+                      value={String(publishOAuthGateResult.guardedPublishExecutionDesignSummary.finalHumanApprovalRequired)}
+                    />
+                  </div>
+                  <ValidationList
+                    title="Required Before Guarded Publish Implementation"
+                    items={publishOAuthGateResult.guardedPublishExecutionDesignSummary.requiredBeforeImplementation}
+                    emptyText="implementation 전 필수 항목이 없습니다."
+                  />
+                  <ValidationList
+                    title="Required Before Guarded Publish Execution"
+                    items={publishOAuthGateResult.guardedPublishExecutionDesignSummary.requiredBeforeExecution}
+                    emptyText="execution 전 필수 항목이 없습니다."
+                  />
+                  <ValidationList
+                    title="Guarded Publish Design Blocking Reasons"
+                    items={publishOAuthGateResult.guardedPublishExecutionDesignSummary.blockingReasons}
+                    emptyText="blocking reason이 없습니다."
+                    isError
+                  />
+                  <ValidationList
+                    title="Guarded Publish Design Warnings"
+                    items={publishOAuthGateResult.guardedPublishExecutionDesignSummary.warnings}
+                    emptyText="warning이 없습니다."
+                    isWarning
+                  />
+                  <div className="detail-grid">
+                    <DetailItem label="Request Method" value={publishOAuthGateResult.guardedPublishExecutionDesignSummary.redactedBloggerRequestPlan.method} />
+                    <DetailItem label="Endpoint Kind" value={publishOAuthGateResult.guardedPublishExecutionDesignSummary.redactedBloggerRequestPlan.endpointKind} />
+                    <DetailItem
+                      label="Request Blog ID"
+                      value={publishOAuthGateResult.guardedPublishExecutionDesignSummary.redactedBloggerRequestPlan.bloggerBlogId ?? "-"}
+                    />
+                    <DetailItem
+                      label="Request Post ID"
+                      value={publishOAuthGateResult.guardedPublishExecutionDesignSummary.redactedBloggerRequestPlan.bloggerPostId ?? "-"}
+                    />
+                    <DetailItem
+                      label="Uses Access Token"
+                      value={String(publishOAuthGateResult.guardedPublishExecutionDesignSummary.redactedBloggerRequestPlan.usesAccessToken)}
+                    />
+                    <DetailItem
+                      label="Access Token Included"
+                      value={String(publishOAuthGateResult.guardedPublishExecutionDesignSummary.redactedBloggerRequestPlan.accessTokenIncluded)}
+                    />
+                    <DetailItem
+                      label="Request Body Included"
+                      value={String(publishOAuthGateResult.guardedPublishExecutionDesignSummary.redactedBloggerRequestPlan.requestBodyIncluded)}
+                    />
+                    <DetailItem
+                      label="Request Body Hash Only"
+                      value={String(publishOAuthGateResult.guardedPublishExecutionDesignSummary.redactedBloggerRequestPlan.requestBodyHashOnly)}
+                    />
+                    <DetailItem
+                      label="Draft HTML Hash"
+                      value={publishOAuthGateResult.guardedPublishExecutionDesignSummary.redactedBloggerRequestPlan.draftHtmlHash ?? "-"}
+                    />
+                    <DetailItem
+                      label="Title Candidate"
+                      value={publishOAuthGateResult.guardedPublishExecutionDesignSummary.redactedBloggerRequestPlan.titleCandidate ?? "-"}
+                    />
+                    <DetailItem
+                      label="Retry Eligible By Default"
+                      value={String(publishOAuthGateResult.guardedPublishExecutionDesignSummary.failurePolicyDraft.retryEligibleByDefault)}
+                    />
+                    <DetailItem
+                      label="Retry Requires Readback"
+                      value={String(publishOAuthGateResult.guardedPublishExecutionDesignSummary.failurePolicyDraft.retryRequiresReadback)}
+                    />
+                    <DetailItem
+                      label="Partial Failure Manual Review"
+                      value={String(publishOAuthGateResult.guardedPublishExecutionDesignSummary.failurePolicyDraft.partialFailureRequiresManualReview)}
+                    />
+                    <DetailItem
+                      label="Mutation After Blogger Success Only"
+                      value={String(publishOAuthGateResult.guardedPublishExecutionDesignSummary.failurePolicyDraft.contentMutationAfterBloggerSuccessOnly)}
+                    />
+                    <DetailItem
+                      label="No Mutation On Unknown Result"
+                      value={String(publishOAuthGateResult.guardedPublishExecutionDesignSummary.failurePolicyDraft.noContentMutationOnUnknownBloggerResult)}
+                    />
+                  </div>
+                  <div className="detail-grid">
+                    <DetailItem label="DB Read" value={String(publishOAuthGateResult.guardedPublishExecutionDesignSummary.sideEffectSummary.dbRead)} />
+                    <DetailItem label="DB Write" value={String(publishOAuthGateResult.guardedPublishExecutionDesignSummary.sideEffectSummary.dbWrite)} />
+                    <DetailItem label="Blogger Read" value={String(publishOAuthGateResult.guardedPublishExecutionDesignSummary.sideEffectSummary.bloggerRead)} />
+                    <DetailItem label="Blogger Write" value={String(publishOAuthGateResult.guardedPublishExecutionDesignSummary.sideEffectSummary.bloggerWrite)} />
+                    <DetailItem label="Blogger Publish" value={String(publishOAuthGateResult.guardedPublishExecutionDesignSummary.sideEffectSummary.bloggerPublish)} />
+                    <DetailItem label="Blogger Update" value={String(publishOAuthGateResult.guardedPublishExecutionDesignSummary.sideEffectSummary.bloggerUpdate)} />
+                    <DetailItem label="Blogger Draft Save" value={String(publishOAuthGateResult.guardedPublishExecutionDesignSummary.sideEffectSummary.bloggerDraftSave)} />
+                    <DetailItem label="Token Refresh" value={String(publishOAuthGateResult.guardedPublishExecutionDesignSummary.sideEffectSummary.tokenRefresh)} />
+                    <DetailItem label="OAuth Reconnect" value={String(publishOAuthGateResult.guardedPublishExecutionDesignSummary.sideEffectSummary.oauthReconnect)} />
+                    <DetailItem label="Content Mutation" value={String(publishOAuthGateResult.guardedPublishExecutionDesignSummary.sideEffectSummary.contentMutation)} />
+                    <DetailItem label="Approval Mutation" value={String(publishOAuthGateResult.guardedPublishExecutionDesignSummary.sideEffectSummary.approvalMutation)} />
+                    <DetailItem label="Attempt Mutation" value={String(publishOAuthGateResult.guardedPublishExecutionDesignSummary.sideEffectSummary.attemptMutation)} />
+                    <DetailItem label="LLM Call" value={String(publishOAuthGateResult.guardedPublishExecutionDesignSummary.sideEffectSummary.llmCall)} />
+                    <DetailItem label="External Send" value={String(publishOAuthGateResult.guardedPublishExecutionDesignSummary.sideEffectSummary.externalSend)} />
+                  </div>
+                  <div className="notice">
+                    Redacted request plan은 access token, refresh token, client secret, encryptedValue, raw Blogger request/response body, full draftHtml을 포함하지 않습니다.
                   </div>
                 </div>
                 <ValidationList

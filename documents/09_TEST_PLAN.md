@@ -1052,3 +1052,19 @@ Safety guard:
 - UI는 Final Publish Execution Preflight 블록을 표시하고 “Final publish execution is still disabled until guarded Blogger publish implementation is added.” 문구를 유지해야 한다.
 - 9E-8C 구현/스모크 중에는 Blogger publish/write, Blogger `posts.update`, OAuth reconnect, token refresh, DB/content/approval/attempt mutation, external send, LLM 호출이 발생하지 않아야 한다.
 - 9F 운영 자동화 로드맵 후보는 계속 유지한다: Blog Operation Profile, 기본 정책, 예외 중심 대시보드 기반 자동 운영 구조.
+
+## Patch 9E-9A Guarded Blogger publish execution design 검증
+
+- `POST /api/content-items/[id]/publish-oauth-gate`는 기존 route를 확장해 `guardedPublishExecutionDesignSummary`를 반환해야 한다.
+- 별도 publish execution route, Blogger write route, Blogger read route, OAuth reconnect route, token refresh route를 추가하지 않아야 한다.
+- post-reconnect 상태에서 final preflight가 ready이면 `finalPublishExecutionPreflightSummary.finalPreflightReady=true`가 유지되어야 한다.
+- `guardedPublishExecutionDesignSummary.designVersion=9E-9A`, `implementationStatus=design_only_not_implemented`, `guardedPublishImplementationReady=false`여야 한다.
+- `canProceedToPublishExecution=false`, `canProceedToScheduledPublishExecution=false`, `canExecutePublish=false`, `canPublish=false`, `canSchedulePublish=false`를 계속 유지해야 한다.
+- final preflight가 ready인 상태에서는 legacy blocker `final_publish_preflight_not_implemented`와 `publish_execution_still_disabled_until_final_preflight`가 top-level/manual reconnect blocker에 남지 않아야 한다.
+- blocker에는 `guarded_blogger_publish_not_implemented`, `publish_execution_still_disabled_until_guarded_publish_implementation`, `rollback_plan_not_acknowledged`, `external_write_risk_not_acknowledged`, `final_human_approval_required`가 남아야 한다.
+- summary는 publish approval id, publish execution attempt id, Blogger draft save id, target Blogger blog id/name/url, existing Blogger post id, planned operation kind, planned Blogger API action을 safe metadata로 표시해야 한다.
+- redacted request plan은 access token, refresh token, client secret, encrypted value, raw Blogger request/response body, full `draftHtml`을 포함하지 않아야 한다.
+- side effects는 `dbRead=true`이고 `dbWrite=false`, `bloggerRead=false`, `bloggerWrite=false`, `bloggerPublish=false`, `bloggerUpdate=false`, `bloggerDraftSave=false`, `tokenRefresh=false`, `oauthReconnect=false`, `contentMutation=false`, `approvalMutation=false`, `attemptMutation=false`, `llmCall=false`, `externalSend=false`여야 한다.
+- Content Detail UI는 Guarded Blogger Publish Execution Design 블록을 표시하고 design-only 상태, redacted request plan, required-before-implementation/execution, failure policy, blockers, warnings, side-effect summary를 보여야 한다.
+- UI는 publish/scheduled publish 실행 버튼을 활성화하거나 추가하면 안 된다.
+- 9E-9A 구현/스모크 중에는 Blogger publish/write, Blogger read API, Blogger `posts.update`, Blogger draft save, OAuth reconnect, token refresh, DB/content/approval/attempt mutation, external send, LLM 호출이 발생하지 않아야 한다.

@@ -1220,3 +1220,24 @@ Not implemented:
 - publish approval insert/update/invalidation or publish execution attempt insert/update
 - content item status, `publishedAt`, `scheduledAt`, `qualityScore`, `draftHtml`, or `draftMarkdown` mutation
 - LLM calls, `llm_call_logs`, deploy, push, or external service writes
+
+## Patch 9E-9A: Guarded Blogger Publish Execution Design
+
+Implemented after the 9E-8D post-reconnect validation milestone:
+
+- Extended the existing `POST /api/content-items/[id]/publish-oauth-gate` route instead of adding a new publish execution design route.
+- Added `guardedPublishExecutionDesignSummary` as a read-only design summary for the future guarded Blogger publish execution patch.
+- The summary reports the current final preflight status, approval/attempt ids, draft save id, target Blogger blog metadata, existing Blogger post id, planned operation kind, planned Blogger API action, redacted request plan, failure policy draft, and side-effect boundary.
+- The summary keeps `guardedPublishImplementationReady=false`, `canProceedToPublishExecution=false`, `canProceedToScheduledPublishExecution=false`, and `canExecutePublish=false`.
+- The post-reconnect/final-preflight-ready path now removes the old `final_publish_preflight_not_implemented` and `publish_execution_still_disabled_until_final_preflight` blockers from the manual reconnect completion taxonomy.
+- Guarded publish implementation, rollback acknowledgement, external write risk acknowledgement, and final human approval remain blockers.
+- Added Content Detail UI for the guarded publish design summary, redacted request plan, future implementation/execution requirements, failure policy, blockers, warnings, and side-effect summary.
+
+Not implemented:
+
+- Blogger publish or scheduled publish
+- Blogger API read/write, `posts.update`, `posts.insert`, or additional draft save
+- OAuth reconnect execution, OAuth callback/token exchange call, or token refresh
+- publish approval insert/update/invalidation or publish execution attempt insert/update/execution
+- content item status, `publishedAt`, `scheduledAt`, `qualityScore`, `draftHtml`, or `draftMarkdown` mutation
+- LLM calls, `llm_call_logs`, deploy, push, or external service writes

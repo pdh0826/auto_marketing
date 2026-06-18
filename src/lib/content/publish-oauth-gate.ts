@@ -15,6 +15,22 @@ export const REQUIRED_BEFORE_SCHEDULED_PUBLISH_OAUTH_GATE = [
   "Schedule mutation and partial failure policy must be approved separately"
 ] as const;
 
+export const REQUIRED_BEFORE_GUARDED_PUBLISH_IMPLEMENTATION = [
+  "Implement a guarded Blogger publish route in a separate patch",
+  "Use only the approved publish snapshot and saved execution attempt as inputs",
+  "Perform one explicit user-approved Blogger publish/write call",
+  "Record a redacted publish execution result without storing raw Blogger response bodies",
+  "Define readback and retry policy before enabling any content item mutation"
+] as const;
+
+export const REQUIRED_BEFORE_GUARDED_PUBLISH_EXECUTION = [
+  "Final publish execution preflight must be ready",
+  "Guarded publish implementation must be present",
+  "Rollback plan must be acknowledged",
+  "External write risk must be acknowledged",
+  "Final human approval must be captured immediately before execution"
+] as const;
+
 export interface BuildPublishOAuthGateInput {
   contentItemId: string;
   connection: {
@@ -58,10 +74,16 @@ export function buildPublishOAuthGate(input: BuildPublishOAuthGateInput): Publis
     input,
     reconnectCompletionSummary
   });
+  const guardedPublishExecutionDesignSummary = buildGuardedPublishExecutionDesignSummary({
+    input,
+    finalPublishExecutionPreflightSummary
+  });
   const blockingReasons = new Set<string>(reconnectCompletionSummary.blockingReasons);
   finalPublishExecutionPreflightSummary.blockingReasons.forEach((reason) => blockingReasons.add(reason));
+  guardedPublishExecutionDesignSummary.blockingReasons.forEach((reason) => blockingReasons.add(reason));
   const warnings = new Set<string>();
   finalPublishExecutionPreflightSummary.warnings.forEach((warning) => warnings.add(warning));
+  guardedPublishExecutionDesignSummary.warnings.forEach((warning) => warnings.add(warning));
 
   if (!input.connection) {
     blockingReasons.add("blogger_connection_missing");
@@ -128,6 +150,7 @@ export function buildPublishOAuthGate(input: BuildPublishOAuthGateInput): Publis
       warnings: Array.from(new Set([...reconnectCompletionSummary.warnings]))
     },
     finalPublishExecutionPreflightSummary,
+    guardedPublishExecutionDesignSummary,
     requiredBeforePublishExecution: [...REQUIRED_BEFORE_PUBLISH_OAUTH_GATE],
     requiredBeforeScheduledPublishExecution: [...REQUIRED_BEFORE_SCHEDULED_PUBLISH_OAUTH_GATE],
     sideEffectSummary: {
@@ -145,6 +168,110 @@ export function buildPublishOAuthGate(input: BuildPublishOAuthGateInput): Publis
       contentMutation: false,
       contentItemMutation: false,
       llmCall: false
+    }
+  };
+}
+
+function buildGuardedPublishExecutionDesignSummary(input: {
+  input: BuildPublishOAuthGateInput;
+  finalPublishExecutionPreflightSummary: PublishOAuthGateResponse["finalPublishExecutionPreflightSummary"];
+}): PublishOAuthGateResponse["guardedPublishExecutionDesignSummary"] {
+  const { input: gateInput, finalPublishExecutionPreflightSummary } = input;
+  const approval = gateInput.latestApproval;
+  const attempt = gateInput.latestAttempt;
+  const existingBloggerPostId = approval?.bloggerPostId ?? attempt?.bloggerPostId ?? null;
+  const plannedOperationKind = getPlannedOperationKind({
+    bloggerPostId: existingBloggerPostId,
+    bloggerDraftSaveId: approval?.bloggerDraftSaveId ?? null
+  });
+  const plannedBloggerApiAction = existingBloggerPostId ? "blogger.posts.publish" : "to_be_decided_in_9E_9B";
+  const blockingReasons = new Set<string>([
+    "guarded_blogger_publish_not_implemented",
+    "publish_execution_still_disabled_until_guarded_publish_implementation",
+    "rollback_plan_not_acknowledged",
+    "external_write_risk_not_acknowledged",
+    "final_human_approval_required"
+  ]);
+  const warnings = new Set<string>();
+
+  if (!finalPublishExecutionPreflightSummary.finalPreflightReady) {
+    blockingReasons.add("final_publish_execution_preflight_not_ready");
+  }
+  if (!existingBloggerPostId) {
+    warnings.add("blogger_post_id_missing_for_publish_design");
+  }
+  if (plannedBloggerApiAction === "to_be_decided_in_9E_9B") {
+    warnings.add("blogger_publish_api_action_to_be_decided");
+  }
+
+  return {
+    checked: true,
+    designVersion: "9E-9A",
+    implementationStatus: "design_only_not_implemented",
+    finalPreflightReady: finalPublishExecutionPreflightSummary.finalPreflightReady,
+    guardedPublishImplementationReady: false,
+    canProceedToPublishExecution: false,
+    canProceedToScheduledPublishExecution: false,
+    canExecutePublish: false,
+    oauthGateSatisfied: finalPublishExecutionPreflightSummary.oauthGateSatisfied,
+    manualReconnectCompletionReady: finalPublishExecutionPreflightSummary.manualReconnectCompletionReady,
+    publishApprovalStillValid: finalPublishExecutionPreflightSummary.publishApprovalStillValid,
+    publishExecutionAttemptStillPlanningOnly: finalPublishExecutionPreflightSummary.publishExecutionAttemptStillPlanningOnly,
+    contentSnapshotMatchesApproval: finalPublishExecutionPreflightSummary.contentSnapshotMatchesApproval,
+    targetBlogSnapshotMatchesCurrentSelection: finalPublishExecutionPreflightSummary.targetBlogSnapshotMatchesCurrentSelection,
+    contentItemId: gateInput.contentItemId,
+    publishApprovalId: approval?.id ?? null,
+    publishExecutionAttemptId: attempt?.id ?? null,
+    bloggerDraftSaveId: approval?.bloggerDraftSaveId ?? null,
+    targetBloggerBlogId: approval?.targetBloggerBlogId ?? attempt?.targetBloggerBlogId ?? gateInput.connection?.bloggerBlogId ?? null,
+    targetBloggerBlogName: approval?.targetBloggerBlogName ?? gateInput.connection?.bloggerBlogName ?? null,
+    targetBloggerBlogUrl: approval?.targetBloggerBlogUrl ?? gateInput.connection?.bloggerBlogUrl ?? null,
+    existingBloggerPostId,
+    plannedOperationKind,
+    plannedBloggerApiAction,
+    bloggerApiCallAllowedNow: false,
+    bloggerWriteWillBeRequiredInFuturePatch: true,
+    requiredBeforeImplementation: [...REQUIRED_BEFORE_GUARDED_PUBLISH_IMPLEMENTATION],
+    requiredBeforeExecution: [...REQUIRED_BEFORE_GUARDED_PUBLISH_EXECUTION],
+    rollbackPlanAcknowledged: false,
+    externalWriteRiskAcknowledged: false,
+    finalHumanApprovalRequired: true,
+    redactedBloggerRequestPlan: {
+      method: plannedBloggerApiAction === "blogger.posts.publish" ? "POST" : "UNKNOWN",
+      endpointKind: plannedBloggerApiAction === "blogger.posts.publish" ? "blogger.posts.publish" : "to_be_decided",
+      bloggerBlogId: approval?.targetBloggerBlogId ?? attempt?.targetBloggerBlogId ?? gateInput.connection?.bloggerBlogId ?? null,
+      bloggerPostId: existingBloggerPostId,
+      usesAccessToken: true,
+      accessTokenIncluded: false,
+      requestBodyIncluded: false,
+      requestBodyHashOnly: true,
+      draftHtmlHash: approval?.draftHtmlHash ?? attempt?.draftHtmlHash ?? null,
+      titleCandidate: approval?.titleCandidate ?? attempt?.titleCandidate ?? null
+    },
+    failurePolicyDraft: {
+      retryEligibleByDefault: false,
+      retryRequiresReadback: true,
+      partialFailureRequiresManualReview: true,
+      contentMutationAfterBloggerSuccessOnly: true,
+      noContentMutationOnUnknownBloggerResult: true
+    },
+    blockingReasons: Array.from(blockingReasons),
+    warnings: Array.from(warnings),
+    sideEffectSummary: {
+      dbRead: true,
+      dbWrite: false,
+      bloggerRead: false,
+      bloggerWrite: false,
+      bloggerPublish: false,
+      bloggerUpdate: false,
+      bloggerDraftSave: false,
+      tokenRefresh: false,
+      oauthReconnect: false,
+      contentMutation: false,
+      approvalMutation: false,
+      attemptMutation: false,
+      llmCall: false,
+      externalSend: false
     }
   };
 }
@@ -296,10 +423,7 @@ function buildManualReconnectCompletionSummary(input: {
   const draftHtmlHashMatchesApprovalSnapshot = approval ? compareNullable(input.currentDraftHtmlHash, approval.draftHtmlHash) : null;
   const targetBlogMatchesApprovalSnapshot = approval ? compareNullable(gateInput.connection?.bloggerBlogId ?? null, approval.targetBloggerBlogId) : null;
   const completionAccessTokenState = toManualReconnectCompletionAccessTokenState(input.accessTokenState);
-  const blockingReasons = new Set<string>([
-    "final_publish_preflight_not_implemented",
-    "publish_execution_still_disabled_until_final_preflight"
-  ]);
+  const blockingReasons = new Set<string>();
   const warnings = new Set<string>();
 
   if (!bloggerConnectionExists) {
@@ -425,6 +549,19 @@ function addFinalBlocker(condition: boolean, blockers: Set<string>, reason: stri
   if (condition) {
     blockers.add(reason);
   }
+}
+
+function getPlannedOperationKind(input: {
+  bloggerPostId: string | null;
+  bloggerDraftSaveId: string | null;
+}): PublishOAuthGateResponse["guardedPublishExecutionDesignSummary"]["plannedOperationKind"] {
+  if (!input.bloggerPostId) {
+    return "unknown_until_publish_implementation";
+  }
+  if (input.bloggerDraftSaveId) {
+    return "publish_existing_blogger_draft";
+  }
+  return "publish_existing_blogger_post";
 }
 
 function isExpired(value: string | null) {

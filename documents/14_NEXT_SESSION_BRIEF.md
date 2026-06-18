@@ -56,6 +56,9 @@ The current completed path is:
 - The gate links users to `/settings/blogger` for manual OAuth reconnect guidance but does not start OAuth, refresh tokens, call Blogger, update attempts, invalidate approvals, or mutate content items.
 - Manual OAuth Reconnect Completion Readiness is implemented inside the existing publish OAuth gate: it shows what must be rechecked after `/settings/blogger` reconnect, but still keeps `canExecutePublish=false`.
 - Final Publish Execution Preflight Summary is implemented inside the existing publish OAuth gate: it integrates approval, execution attempt, OAuth/manual reconnect readiness, content/hash, target blog snapshot, rollback/safety placeholders, blockers, warnings, and side-effect summary while keeping `canExecutePublish=false`.
+- Post-reconnect validation confirmed OAuth gate satisfied and final preflight ready, but publish execution remains disabled.
+- Guarded Blogger Publish Execution Design is implemented inside the existing publish OAuth gate: it shows the future publish operation plan, redacted request plan, failure policy draft, implementation/execution requirements, blockers, warnings, and side-effect summary while keeping `canExecutePublish=false`.
+- In the post-reconnect/final-preflight-ready path, legacy blockers `final_publish_preflight_not_implemented` and `publish_execution_still_disabled_until_final_preflight` should no longer appear; guarded publish implementation, rollback acknowledgement, external write risk acknowledgement, and final human approval remain blockers.
 - `content_items.status`, `publishedAt`, `scheduledAt`, `qualityScore`, and `draftHtml` are not changed by publish-readiness or policy UI.
 
 ## Next Patch Priorities
@@ -83,10 +86,10 @@ D. **Patch 9E-7G: publish execution attempt execution preflight design**
 - Preserve raw response redaction, retry-blocking on unknown side effects, and separate local content mutation ordering.
 - Do not call Blogger publish until design is explicitly approved.
 
-E. **Patch 9E-8D or 9E-9A: guarded publish execution design**
+E. **Patch 9E-9B: guarded publish execution implementation plan**
 
-- Decide the guarded Blogger publish execution design after OAuth reconnect completion and final preflight review.
-- Define final human approval, rollback acknowledgement, external write risk acknowledgement, audit write ordering, and local content mutation ordering before any Blogger call.
+- Review the 9E-9A guarded Blogger publish execution design summary after OAuth reconnect completion and final preflight review.
+- Decide the exact guarded publish implementation route, final human approval UX, rollback acknowledgement UX, external write risk acknowledgement UX, audit write ordering, and local content mutation ordering before any Blogger call.
 - Keep Blogger publish/scheduled publish execution disabled until explicit approval.
 - Continue to block token refresh unless a separate token refresh policy patch is approved.
 
@@ -177,6 +180,8 @@ Expected preflight condition after the successful save:
 - 9E-8A added read-only publish OAuth gate before future publish execution, while keeping no OAuth reconnect, no token refresh, no Blogger write, and no content mutation.
 - 9E-8B added manual OAuth reconnect completion readiness inside the publish OAuth gate, while keeping `canExecutePublish=false`.
 - 9E-8C added final publish execution preflight summary inside the publish OAuth gate, while keeping `canExecutePublish=false` and no publish/write/mutation side effects.
+- 9E-8D was a validation milestone after manual OAuth reconnect: OAuth gate satisfied and final preflight ready were confirmed without a code patch.
+- 9E-9A added guarded Blogger publish execution design inside the publish OAuth gate, cleaned up obsolete final-preflight-not-implemented blockers after final preflight is ready, and kept `canExecutePublish=false` with no publish/write/mutation side effects.
 
 ## Closeout Safety Notes
 
