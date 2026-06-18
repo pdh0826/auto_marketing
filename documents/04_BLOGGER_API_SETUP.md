@@ -564,3 +564,20 @@ The save route does not:
 - call an LLM
 
 Readback returns safe attempt summaries only. It does not expose full `attemptPlanJson`, raw Blogger bodies, token values, encrypted values, client secrets, full HTML, prompts, or raw LLM responses.
+
+## Patch 9E-8A Publish OAuth reconnect gate
+
+Patch 9E-8A adds a read-only OAuth gate before any future Blogger publish execution.
+
+The gate checks safe connection metadata only:
+
+- whether a Blogger connection exists for the content item's blog
+- whether a target Blogger blog is selected
+- whether an access token exists and is expired based on safe expiry metadata
+- whether saved publish approval and saved publish execution attempt records exist
+
+If the access token is expired, the gate returns `access_token_expired_reauth_required`, `manual_blogger_oauth_reconnect_required`, `token_refresh_not_implemented`, `oauth_gate_not_satisfied`, and `publish_execution_not_allowed_until_oauth_gate_passes` blockers.
+
+The UI links to `/settings/blogger` for manual OAuth reconnection guidance, but it does not start OAuth automatically.
+
+This patch does not implement OAuth reconnect execution, token refresh, Blogger publish, scheduled publish, `posts.update`, additional draft save, approval invalidation update, attempt status update, content item mutation, or LLM calls.

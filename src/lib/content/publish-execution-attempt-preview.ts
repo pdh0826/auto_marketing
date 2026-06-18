@@ -18,6 +18,7 @@ export const REQUIRED_BEFORE_PUBLISH_ATTEMPT_STORAGE = [
 
 export const REQUIRED_BEFORE_PUBLISH_ATTEMPT_EXECUTION = [
   "Publish execution route must be implemented in a separately approved patch",
+  "Publish OAuth Gate must pass immediately before any publish execution",
   "Blogger access token must be valid immediately before execution",
   "Saved publish approval and saved attempt must still match current content and Blogger draft state",
   "Blogger publish request/response redaction policy must be enforced",

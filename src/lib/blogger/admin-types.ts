@@ -804,3 +804,47 @@ export interface PublishExecutionAttemptReadbackResponse {
   warnings: string[];
   sideEffectSummary: PublishExecutionAttemptPreviewSideEffectSummary;
 }
+
+export type PublishOAuthAccessTokenState = "expired_reauth_required" | "valid_not_verified" | "missing" | "unknown";
+
+export interface PublishOAuthGateResponse {
+  contentItemId: string;
+  checkedAt: string;
+  canProceedToPublishExecution: false;
+  canProceedToScheduledPublishExecution: false;
+  canPublish: false;
+  canSchedulePublish: false;
+  blockingReasons: string[];
+  warnings: string[];
+  oauthGateSummary: {
+    connectionFound: boolean;
+    selectedBloggerBlogFound: boolean;
+    targetBloggerBlogId: string | null;
+    targetBloggerBlogName: string | null;
+    targetBloggerBlogUrl: string | null;
+    accessTokenState: PublishOAuthAccessTokenState;
+    accessTokenExpired: boolean;
+    reauthRequired: boolean;
+    manualReconnectRequired: boolean;
+    tokenRefreshImplemented: false;
+    autoReconnectImplemented: false;
+    reconnectSettingsPath: "/settings/blogger";
+    publishApprovalId: string | null;
+    publishExecutionAttemptId: string | null;
+  };
+  requiredBeforePublishExecution: string[];
+  requiredBeforeScheduledPublishExecution: string[];
+  sideEffectSummary: {
+    dbRead: true;
+    dbWrite: false;
+    oauthReconnect: false;
+    tokenRefresh: false;
+    bloggerApiWrite: false;
+    bloggerPublish: false;
+    bloggerScheduledPublish: false;
+    bloggerPostsUpdate: false;
+    bloggerDraftSave: false;
+    contentItemMutation: false;
+    llmCall: false;
+  };
+}

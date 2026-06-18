@@ -1015,3 +1015,15 @@ Safety guard:
 - Blogger Draft 저장 버튼은 duplicate save 상태에서 계속 disabled여야 한다.
 - 저장된 attempt에는 access token, refresh token, client secret, encrypted value, raw OAuth response, raw Blogger response/error body, full `draftHtml`이 없어야 한다.
 - 9E-7F 구현/스모크 중에는 Blogger API write, additional draft save, `posts.update`, publish/scheduled publish, token refresh, token endpoint call, approval invalidation DB update, LLM 호출, content item mutation이 발생하지 않아야 한다.
+
+## Patch 9E-8A Publish OAuth reconnect gate 검증
+
+- `POST /api/content-items/[id]/publish-oauth-gate`는 read-only로 동작해야 한다.
+- 응답은 safe Blogger connection metadata, selected blog metadata, access token expiry state, latest saved publish approval id, latest saved publish attempt id만 포함해야 한다.
+- access token이 만료된 경우 `accessTokenState=expired_reauth_required`, `reauthRequired=true`, `manualReconnectRequired=true`, `tokenRefreshImplemented=false`, `autoReconnectImplemented=false`를 반환해야 한다.
+- expired token 상태에서는 `access_token_expired_reauth_required`, `manual_blogger_oauth_reconnect_required`, `token_refresh_not_implemented`, `oauth_gate_not_satisfied`, `publish_execution_not_allowed_until_oauth_gate_passes` blocker가 보여야 한다.
+- saved publish approval과 saved publish execution attempt가 있어도 `canProceedToPublishExecution=false`, `canProceedToScheduledPublishExecution=false`, `canPublish=false`, `canSchedulePublish=false`를 유지해야 한다.
+- Content Detail UI는 `Check Publish OAuth Gate` 버튼, blocker/warning 목록, `/settings/blogger` 재연결 안내, side-effect summary를 표시해야 한다.
+- side effects는 `dbRead=true`이고 `dbWrite=false`, OAuth reconnect false, token refresh false, Blogger write/publish/scheduled publish/posts.update/draft save false, content mutation false, LLM false여야 한다.
+- UI/API/log/test output에는 access token, refresh token, client secret, encrypted value, raw OAuth response, raw Blogger response/error body가 노출되지 않아야 한다.
+- 9E-8A 구현/스모크 중에는 OAuth reconnect 실행, token endpoint call, Blogger API write, additional draft save, `posts.update`, publish/scheduled publish, token refresh, approval invalidation update, attempt status update, LLM 호출, content item mutation이 발생하지 않아야 한다.

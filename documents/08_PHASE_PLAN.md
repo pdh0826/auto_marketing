@@ -264,3 +264,12 @@ Patch 9E-7F 완료:
 - Content Detail UI에 attempt persistence/no Blogger write/no content mutation acknowledgement와 save/readback summary 추가
 - 저장된 attempt가 있어도 `canExecutePublish=false`, `canExecuteScheduledPublish=false` 유지
 - Blogger publish/scheduled publish/write, token refresh, posts.update, additional draft save, approval invalidation DB update, content item mutation, LLM 호출은 구현하지 않음
+
+Patch 9E-8A 완료:
+
+- `POST /api/content-items/[id]/publish-oauth-gate` read-only OAuth gate API 추가
+- safe Blogger connection/blog selection/access token expiry metadata와 saved publish approval/attempt metadata만 조회
+- access token expired 상태에서는 `oauth_gate_not_satisfied`, `manual_blogger_oauth_reconnect_required`, `token_refresh_not_implemented` blocker 표시
+- saved approval/attempt가 있어도 OAuth gate 통과 전 `canProceedToPublishExecution=false`, `canProceedToScheduledPublishExecution=false` 유지
+- Content Detail UI에 Publish OAuth Gate 확인 버튼, `/settings/blogger` 재연결 안내, side-effect summary 추가
+- OAuth reconnect 실행, token refresh, Blogger publish/scheduled publish/write, posts.update, additional draft save, approval invalidation update, attempt status update, content item mutation, LLM 호출은 구현하지 않음

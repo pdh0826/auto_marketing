@@ -15,6 +15,7 @@ import type {
   PublishExecutionAttemptReadbackResponse,
   PublishExecutionAttemptPreviewResponse,
   PublishExecutionAttemptSaveResponse,
+  PublishOAuthGateResponse,
   PublishPreflightDryRun
 } from "@/lib/blogger/admin-types";
 import type { BlogPostTemplatePreviewResult, BlogPostTemplatePreviewSource } from "@/lib/blog-renderer/blog-post-template-renderer";
@@ -275,6 +276,7 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
   const [publishExecutionAttemptPreviewResult, setPublishExecutionAttemptPreviewResult] = useState<PublishExecutionAttemptPreviewResponse | null>(null);
   const [publishExecutionAttemptSaveResult, setPublishExecutionAttemptSaveResult] = useState<PublishExecutionAttemptSaveResponse | null>(null);
   const [publishExecutionAttemptReadbackResult, setPublishExecutionAttemptReadbackResult] = useState<PublishExecutionAttemptReadbackResponse | null>(null);
+  const [publishOAuthGateResult, setPublishOAuthGateResult] = useState<PublishOAuthGateResponse | null>(null);
   const [bloggerDraftPreviewResult, setBloggerDraftPreviewResult] = useState<BloggerDraftPayloadPreview | null>(null);
   const [bloggerDraftSavePreflightResult, setBloggerDraftSavePreflightResult] = useState<BloggerDraftSavePreflight | null>(null);
   const [stepwiseRuns, setStepwiseRuns] = useState<StepwiseDraftGenerationRunSummary[]>([]);
@@ -341,6 +343,7 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
   const [runningPublishExecutionAttemptPreview, setRunningPublishExecutionAttemptPreview] = useState(false);
   const [savingPublishExecutionAttempt, setSavingPublishExecutionAttempt] = useState(false);
   const [runningPublishExecutionAttemptReadback, setRunningPublishExecutionAttemptReadback] = useState(false);
+  const [runningPublishOAuthGate, setRunningPublishOAuthGate] = useState(false);
   const [runningBloggerDraftPreview, setRunningBloggerDraftPreview] = useState(false);
   const [runningBloggerDraftSavePreflight, setRunningBloggerDraftSavePreflight] = useState(false);
   const [approvingBloggerDraft, setApprovingBloggerDraft] = useState(false);
@@ -371,6 +374,7 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
   const [publishExecutionAttemptPreviewError, setPublishExecutionAttemptPreviewError] = useState<string | null>(null);
   const [publishExecutionAttemptSaveError, setPublishExecutionAttemptSaveError] = useState<string | null>(null);
   const [publishExecutionAttemptReadbackError, setPublishExecutionAttemptReadbackError] = useState<string | null>(null);
+  const [publishOAuthGateError, setPublishOAuthGateError] = useState<string | null>(null);
   const [bloggerDraftPreviewError, setBloggerDraftPreviewError] = useState<string | null>(null);
   const [bloggerDraftSavePreflightError, setBloggerDraftSavePreflightError] = useState<string | null>(null);
   const [bloggerDraftSaveError, setBloggerDraftSaveError] = useState<string | null>(null);
@@ -409,6 +413,7 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
       !savingPublishExecutionAttempt
   );
   const canRunPublishExecutionAttemptReadback = Boolean(!runningPublishExecutionAttemptReadback);
+  const canRunPublishOAuthGate = Boolean(!runningPublishOAuthGate);
   const publishApprovalPreviewMatchesOptions = Boolean(
     publishApprovalPreviewResult &&
       publishApprovalPreviewResult.approvalSnapshotPreview.publishMode === publishApprovalMode &&
@@ -1434,6 +1439,25 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
     }
   }
 
+  async function runPublishOAuthGate() {
+    setNotice(null);
+    setPublishOAuthGateError(null);
+    setRunningPublishOAuthGate(true);
+
+    try {
+      const result = await requestJson<ApiResult<PublishOAuthGateResponse>>(`/api/content-items/${contentItemId}/publish-oauth-gate`, {
+        method: "POST",
+        body: JSON.stringify({})
+      });
+      setPublishOAuthGateResult(result.data);
+      setNotice("Publish OAuth Gate를 read-only로 확인했습니다. OAuth reconnect, token refresh, Blogger publish, scheduled publish, DB mutation은 수행하지 않았습니다.");
+    } catch (caught) {
+      setPublishOAuthGateError(caught instanceof Error ? caught.message : "Publish OAuth Gate 확인에 실패했습니다.");
+    } finally {
+      setRunningPublishOAuthGate(false);
+    }
+  }
+
   async function runBloggerDraftPreview() {
     setNotice(null);
     setBloggerDraftPreviewError(null);
@@ -1803,6 +1827,7 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
             {publishExecutionAttemptPreviewError ? <div className="notice error">{publishExecutionAttemptPreviewError}</div> : null}
             {publishExecutionAttemptSaveError ? <div className="notice error">{publishExecutionAttemptSaveError}</div> : null}
             {publishExecutionAttemptReadbackError ? <div className="notice error">{publishExecutionAttemptReadbackError}</div> : null}
+            {publishOAuthGateError ? <div className="notice error">{publishOAuthGateError}</div> : null}
 
             <div className="read-block">
               <h3>Publish Approval Storage Options</h3>
@@ -1881,6 +1906,9 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
               <button className="button secondary" type="button" disabled={!canRunPublishExecutionAttemptReadback} onClick={() => void runPublishExecutionAttemptReadback()}>
                 {runningPublishExecutionAttemptReadback ? "Attempt Readback 실행 중" : "Load Saved Execution Attempts"}
               </button>
+              <button className="button secondary" type="button" disabled={!canRunPublishOAuthGate} onClick={() => void runPublishOAuthGate()}>
+                {runningPublishOAuthGate ? "OAuth Gate 확인 중" : "Check Publish OAuth Gate"}
+              </button>
               <button className="button secondary" type="button" disabled>
                 Publish는 후속 패치에서 연결 예정
               </button>
@@ -1893,6 +1921,83 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
               Publish approval snapshot은 이제 local DB에 저장할 수 있지만, 저장은 publish 실행이 아닙니다. 저장된 approval이 있어도 canPublish=false,
               canSchedulePublish=false를 유지합니다.
             </div>
+
+            {publishOAuthGateResult ? (
+              <div className="read-block">
+                <h3>Publish OAuth Gate</h3>
+                <div className={publishOAuthGateResult.oauthGateSummary.reauthRequired ? "notice warning" : "notice"}>
+                  <strong>
+                    {publishOAuthGateResult.oauthGateSummary.reauthRequired
+                      ? "Blogger OAuth 재연결이 필요합니다"
+                      : "Blogger OAuth gate 상태를 확인했습니다"}
+                  </strong>
+                  <p>
+                    이 gate는 publish/scheduled publish 실행 직전에 필요한 OAuth 연결과 access token 상태만 read-only로 확인합니다. OAuth reconnect,
+                    token refresh, Blogger API write, publish, scheduled publish, content item mutation은 수행하지 않습니다.
+                  </p>
+                  <p>
+                    saved publish approval 또는 saved execution attempt가 있어도 OAuth Gate가 통과되지 않으면 publish execution은 계속 차단됩니다.
+                  </p>
+                  {publishOAuthGateResult.oauthGateSummary.manualReconnectRequired ? (
+                    <div className="form-actions">
+                      <Link className="button secondary" href={publishOAuthGateResult.oauthGateSummary.reconnectSettingsPath}>
+                        Blogger 설정에서 OAuth 재연결 확인
+                      </Link>
+                    </div>
+                  ) : null}
+                </div>
+                <div className="detail-grid">
+                  <DetailItem label="Checked At" value={formatDate(publishOAuthGateResult.checkedAt)} />
+                  <DetailItem label="Can Proceed To Publish Execution" value={String(publishOAuthGateResult.canProceedToPublishExecution)} />
+                  <DetailItem label="Can Proceed To Scheduled Publish" value={String(publishOAuthGateResult.canProceedToScheduledPublishExecution)} />
+                  <DetailItem label="Connection Found" value={String(publishOAuthGateResult.oauthGateSummary.connectionFound)} />
+                  <DetailItem label="Selected Blogger Blog Found" value={String(publishOAuthGateResult.oauthGateSummary.selectedBloggerBlogFound)} />
+                  <DetailItem label="Target Blog ID" value={publishOAuthGateResult.oauthGateSummary.targetBloggerBlogId ?? "-"} />
+                  <DetailItem label="Target Blog Name" value={publishOAuthGateResult.oauthGateSummary.targetBloggerBlogName ?? "-"} />
+                  <DetailItem label="Target Blog URL" value={publishOAuthGateResult.oauthGateSummary.targetBloggerBlogUrl ?? "-"} />
+                  <DetailItem label="Access Token State" value={publishOAuthGateResult.oauthGateSummary.accessTokenState} />
+                  <DetailItem label="Access Token Expired" value={String(publishOAuthGateResult.oauthGateSummary.accessTokenExpired)} />
+                  <DetailItem label="Reauth Required" value={String(publishOAuthGateResult.oauthGateSummary.reauthRequired)} />
+                  <DetailItem label="Manual Reconnect Required" value={String(publishOAuthGateResult.oauthGateSummary.manualReconnectRequired)} />
+                  <DetailItem label="Token Refresh Implemented" value={String(publishOAuthGateResult.oauthGateSummary.tokenRefreshImplemented)} />
+                  <DetailItem label="Auto Reconnect Implemented" value={String(publishOAuthGateResult.oauthGateSummary.autoReconnectImplemented)} />
+                  <DetailItem label="Publish Approval ID" value={publishOAuthGateResult.oauthGateSummary.publishApprovalId ?? "-"} />
+                  <DetailItem label="Publish Attempt ID" value={publishOAuthGateResult.oauthGateSummary.publishExecutionAttemptId ?? "-"} />
+                </div>
+                <ValidationList title="OAuth Gate Blocking Reasons" items={publishOAuthGateResult.blockingReasons} emptyText="blocking reason이 없습니다." isError />
+                <ValidationList title="OAuth Gate Warnings" items={publishOAuthGateResult.warnings} emptyText="warning이 없습니다." isWarning />
+                <ValidationList
+                  title="Required Before Publish Execution"
+                  items={publishOAuthGateResult.requiredBeforePublishExecution}
+                  emptyText="publish execution 전 필수 항목이 없습니다."
+                />
+                <ValidationList
+                  title="Required Before Scheduled Publish Execution"
+                  items={publishOAuthGateResult.requiredBeforeScheduledPublishExecution}
+                  emptyText="scheduled publish execution 전 필수 항목이 없습니다."
+                />
+                <div className="detail-grid">
+                  <DetailItem label="DB Read" value={String(publishOAuthGateResult.sideEffectSummary.dbRead)} />
+                  <DetailItem label="DB Write" value={String(publishOAuthGateResult.sideEffectSummary.dbWrite)} />
+                  <DetailItem label="OAuth Reconnect" value={String(publishOAuthGateResult.sideEffectSummary.oauthReconnect)} />
+                  <DetailItem label="Token Refresh" value={String(publishOAuthGateResult.sideEffectSummary.tokenRefresh)} />
+                  <DetailItem label="Blogger API Write" value={String(publishOAuthGateResult.sideEffectSummary.bloggerApiWrite)} />
+                  <DetailItem label="Blogger Publish" value={String(publishOAuthGateResult.sideEffectSummary.bloggerPublish)} />
+                  <DetailItem label="Blogger Scheduled Publish" value={String(publishOAuthGateResult.sideEffectSummary.bloggerScheduledPublish)} />
+                  <DetailItem label="Blogger posts.update" value={String(publishOAuthGateResult.sideEffectSummary.bloggerPostsUpdate)} />
+                  <DetailItem label="Blogger Draft Save" value={String(publishOAuthGateResult.sideEffectSummary.bloggerDraftSave)} />
+                  <DetailItem label="Content Item Mutation" value={String(publishOAuthGateResult.sideEffectSummary.contentItemMutation)} />
+                  <DetailItem label="LLM Call" value={String(publishOAuthGateResult.sideEffectSummary.llmCall)} />
+                </div>
+                <div className="notice">
+                  Publish OAuth Gate는 access token 원문, refresh token, client secret, encryptedValue, raw OAuth response를 반환하지 않습니다.
+                </div>
+              </div>
+            ) : (
+              <div className="notice">
+                Check Publish OAuth Gate를 실행하면 saved approval/attempt가 있는 상태에서도 OAuth reconnect 필요 여부를 read-only로 확인합니다.
+              </div>
+            )}
 
             {publishApprovalReadbackResult ? (
               <div className="read-block">

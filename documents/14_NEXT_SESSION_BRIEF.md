@@ -5,7 +5,7 @@
 ```text
 repo: ~/blog-growth-agent
 branch: master
-latest committed baseline before Patch 9E-6C: 1c3f241 Add Blogger publish preflight dry run
+latest committed baseline before Patch 9E-8A: b558ead Add Blogger publish execution attempt storage
 milestone: Stepwise draft -> publish-ready HTML -> manual draftHtml apply -> Blogger OAuth/blog selection -> approval -> Blogger draft save 1회 성공
 ```
 
@@ -52,6 +52,8 @@ The current completed path is:
 - Publish approval invalidation preview is implemented read-only: normal/manual invalidation dry-run plans can be checked, but invalidatedAt/invalidatedReason DB update remains unimplemented.
 - Publish execution attempt preview is implemented read-only: future attempt schema/policy, retry/partial failure handling, redaction, and content mutation ordering can be checked, but no attempt table/migration/insert or publish execution exists.
 - Publish execution attempt storage is implemented locally: `blogger_publish_execution_attempts` can store one planning-only attempt record after explicit acknowledgements, but publish execution remains unimplemented.
+- Publish OAuth Gate is implemented read-only: saved approval/attempt records still cannot proceed to publish execution while access token state is expired or otherwise not gate-satisfied.
+- The gate links users to `/settings/blogger` for manual OAuth reconnect guidance but does not start OAuth, refresh tokens, call Blogger, update attempts, invalidate approvals, or mutate content items.
 - `content_items.status`, `publishedAt`, `scheduledAt`, `qualityScore`, and `draftHtml` are not changed by publish-readiness or policy UI.
 
 ## Next Patch Priorities
@@ -78,6 +80,12 @@ D. **Patch 9E-7G: publish execution attempt execution preflight design**
 - Require valid OAuth state, active approval, matching attempt plan, no invalidation candidates, and explicit execution side-effect acknowledgement.
 - Preserve raw response redaction, retry-blocking on unknown side effects, and separate local content mutation ordering.
 - Do not call Blogger publish until design is explicitly approved.
+
+E. **Patch 9E-8B: manual OAuth reconnect readiness flow**
+
+- Decide whether to guide users through the existing Blogger settings reconnect flow or add a dedicated reconnect CTA.
+- Keep token refresh out of scope unless explicitly approved.
+- Do not execute publish/scheduled publish as part of reconnect readiness.
 
 General boundary:
 

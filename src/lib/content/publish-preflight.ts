@@ -65,6 +65,9 @@ export function buildPublishPreflightDryRun(input: BuildPublishPreflightInput): 
 
   if (input.accessTokenExpired) {
     blockingReasons.add("access_token_expired_reauth_required");
+    blockingReasons.add("oauth_gate_not_satisfied");
+    blockingReasons.add("manual_blogger_oauth_reconnect_required");
+    blockingReasons.add("token_refresh_not_implemented");
   }
   if (!draftSave) {
     blockingReasons.add("blogger_draft_not_saved");

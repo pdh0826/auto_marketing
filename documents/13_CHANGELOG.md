@@ -1157,3 +1157,24 @@ Not implemented:
 - approval invalidation DB update
 - content item status, `publishedAt`, `scheduledAt`, `qualityScore`, `draftHtml`, or `draftMarkdown` mutation
 - LLM calls or `llm_call_logs`
+
+## Patch 9E-8A: OAuth Reconnect Gate Before Publish
+
+Implemented after Patch 9E-7F:
+
+- Added `POST /api/content-items/[id]/publish-oauth-gate` as a read-only OAuth gate before future publish execution.
+- Added `src/lib/content/publish-oauth-gate.ts` for safe gate summary construction.
+- The gate reads safe Blogger connection metadata, selected blog metadata, access token expiry metadata, latest saved publish approval, and latest saved publish execution attempt.
+- The gate reports expired access tokens as `expired_reauth_required` with manual reconnect and token-refresh-not-implemented blockers.
+- Saved publish approvals and saved execution attempts do not bypass the OAuth gate.
+- Added Content Detail UI for `Check Publish OAuth Gate`, blocker/warning lists, `/settings/blogger` reconnect guidance, and side-effect summary.
+- Publish preflight and execution attempt required-before-execution copy now explicitly include the OAuth gate.
+
+Not implemented:
+
+- OAuth reconnect execution, OAuth callback/token exchange call, or token refresh
+- Blogger publish or scheduled publish
+- Blogger API write, `posts.update`, `posts.insert`, or additional draft save
+- approval invalidation DB update or attempt status update
+- content item status, `publishedAt`, `scheduledAt`, `qualityScore`, `draftHtml`, or `draftMarkdown` mutation
+- LLM calls or `llm_call_logs`

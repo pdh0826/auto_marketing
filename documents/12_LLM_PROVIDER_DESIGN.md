@@ -864,3 +864,12 @@ Patch 9E-7F adds local DB storage/readback for publish execution attempt plans, 
 - Stored attempt metadata is server-generated from safe approval/execution-guard metadata only.
 - Stored attempt metadata must not expose prompts, raw model responses, generated candidate text, Blogger tokens, encrypted values, client secrets, raw OAuth responses, raw Blogger response/error bodies, or full draft HTML.
 - Stored attempt plans do not authorize content generation, Blogger publish, scheduled publish, token refresh, `posts.update`, approval invalidation DB update, or content item mutation.
+
+## Patch 9E-8A publish OAuth gate boundary
+
+Patch 9E-8A adds a read-only publish OAuth gate, not an LLM routing change.
+
+- `POST /api/content-items/[id]/publish-oauth-gate` does not call LLM providers or create `llm_call_logs`.
+- The gate reads safe Blogger connection/token expiry metadata and saved publish approval/attempt metadata only.
+- The gate does not start OAuth, exchange codes, refresh tokens, call Blogger APIs, publish, schedule publish, call `posts.update`, save additional drafts, invalidate approvals, update attempts, or mutate content items.
+- UI output must not expose prompts, raw model responses, generated candidate text, Blogger tokens, encrypted values, client secrets, raw OAuth responses, raw Blogger response/error bodies, or full draft HTML.
