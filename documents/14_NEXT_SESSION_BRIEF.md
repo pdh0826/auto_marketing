@@ -1,5 +1,18 @@
 # 14_NEXT_SESSION_BRIEF
 
+## Current State: Patch 9E-9D
+
+- Post-publish DB reconciliation is implemented as a guarded route/lib at `POST /api/content-items/[id]/post-publish-reconciliation`.
+- Default `preview` mode compares Blogger readback state with internal DB state and returns proposed `content_items`/`blogger_publish_execution_attempts` patches without DB writes.
+- `apply` mode is implemented but strongly guarded by `BLOGGER_POST_PUBLISH_RECONCILIATION_APPLY_ENABLED=true`, exact phrase `I_UNDERSTAND_THIS_WILL_MARK_CONTENT_AS_PUBLISHED`, acknowledgements, readbackOk, external published state, expected post/blog/timestamp matches, and planned internal DB state.
+- Content Detail includes a Post-publish DB Reconciliation preview block. The UI does not expose an enabled apply button.
+- 9E-9D validation must not run apply mode. It may run preview and feature-flag-disabled apply-negative smoke only.
+- Next step after explicit user approval: `9E-9D-APPLY` can perform the one-time internal DB reconciliation after readback is valid.
+
+Operational roadmap note:
+
+- Long-term direction remains Blog Operation Profile / default policy / exception-focused dashboard operation rather than repeated per-item operator inputs.
+
 ## Current State: 2026-06-16 Closeout
 
 ```text

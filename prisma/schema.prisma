@@ -138,6 +138,7 @@ enum BloggerPublishApprovalStatus {
 enum BloggerPublishExecutionAttemptStatus {
   planned_only
   blocked_by_preflight
+  success
 }
 
 enum ContentDraftGenerationRunStatus {

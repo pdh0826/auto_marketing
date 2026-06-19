@@ -1,5 +1,20 @@
 # 13_CHANGELOG
 
+## Patch 9E-9D Post-publish DB Reconciliation
+
+Implemented after Blogger publish readback/token refresh work:
+
+- Added guarded post-publish reconciliation preview/apply route at `POST /api/content-items/[id]/post-publish-reconciliation`.
+- Added `src/lib/content/post-publish-reconciliation.ts` to compare Blogger readback state with internal content/attempt state and produce safe proposed patches.
+- Added `success` to `BloggerPublishExecutionAttemptStatus` for future guarded reconciliation of publish attempts after verified Blogger readback.
+- Added a Content Detail preview block for post-publish DB reconciliation with a disabled apply control and explicit safety copy.
+
+Policy:
+
+- Preview mode does not mutate DB and may only perform Blogger read-only post GET through the existing readback helper.
+- Apply mode is code-gated by `BLOGGER_POST_PUBLISH_RECONCILIATION_APPLY_ENABLED=true`, exact confirmation phrase, acknowledgements, current-state matches, successful readback, and transaction-based content/attempt updates.
+- This patch does not execute apply mode, Blogger publish/write, posts.update, draft save, OAuth reconnect, token refresh, or LLM calls during validation.
+
 ## 2026-06-14 Closeout
 
 Latest branch: `master`

@@ -221,6 +221,9 @@ function toPublishApprovalMode(value: string): PublishApprovalMode {
 }
 
 function toBloggerPublishExecutionAttemptStatus(value: string): BloggerPublishExecutionAttemptStatus {
+  if (value === "success") {
+    return "success";
+  }
   return value === "blocked_by_preflight" ? "blocked_by_preflight" : "planned_only";
 }
 

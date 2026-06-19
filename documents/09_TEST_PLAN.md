@@ -8,6 +8,15 @@ npm run typecheck
 npm run build
 ```
 
+## Patch 9E-9D Post-publish DB Reconciliation
+
+- `POST /api/content-items/[id]/post-publish-reconciliation` route가 있어야 한다.
+- 기본 `mode=preview`는 DB read와 필요한 경우 Blogger read-only GET만 수행하며, `content_items`와 `blogger_publish_execution_attempts`를 변경하지 않아야 한다.
+- Preview 결과는 readback 상태, external Blogger published 판단, internal DB before 상태, proposed content item patch, proposed attempt patch, blockers/warnings, side-effect summary를 표시해야 한다.
+- `mode=apply`는 `BLOGGER_POST_PUBLISH_RECONCILIATION_APPLY_ENABLED=true`, 정확한 confirmation phrase, content/attempt mutation acknowledgement, final DB reconciliation approval, readbackOk, expected post/blog/timestamp match, planned internal DB 상태가 모두 맞을 때만 transaction으로 허용되어야 한다.
+- Feature flag disabled 상태의 apply negative smoke는 `post_publish_reconciliation_apply_feature_flag_disabled`로 차단되어야 하며 DB write/content mutation/attempt mutation/Blogger write/publish가 모두 false여야 한다.
+- 이번 patch 검증에서는 실제 apply mode를 실행하지 않는다.
+
 ## MVP 기능 검증
 
 - LLM Provider 등록 가능
