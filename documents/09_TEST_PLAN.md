@@ -45,6 +45,20 @@ Historical pre-apply baseline:
 
 Next session start DB guard should use the published/success values above. The closeout documentation patch must not run Blogger publish/write, `posts.update`, draft save, OAuth reconnect, token refresh, DB mutation, content mutation, publish attempt mutation, or LLM calls.
 
+## Patch 9F-1A Blog Operation Profile + Default Publish Policy Preset
+
+- Prisma model/table `BlogOperationProfile` / `blog_operation_profiles` should exist.
+- `blog_operation_profiles_count` should remain `0` during 9F-1A validation unless rows existed before the patch.
+- `POST /api/blog-operation-profiles/default-policy` should support `mode=preview` and return the `safe_manual_publish` proposed profile without DB writes.
+- Preview should show `allowAutoPublish=false`, `allowScheduledPublish=false`, `requireFinalHumanApproval=true`, `requireOAuthGate=true`, `requireReadbackAfterPublish=true`, and `requirePostPublishReconciliation=true`.
+- Preview warnings should include `blog_operation_profile_preview_only`, `safe_manual_publish_preset_selected`, `auto_publish_disabled_by_default`, and `scheduled_publish_disabled_by_default`.
+- `mode=apply` is implemented but must be blocked unless `BLOG_OPERATION_PROFILE_WRITE_ENABLED=true` and confirmation phrase `I_UNDERSTAND_THIS_WILL_CREATE_OR_UPDATE_BLOG_OPERATION_PROFILE` are present.
+- Feature flag disabled apply-negative smoke should return `applyAttempted=false`, `applyBlocked=true`, `applyOk=false`, blocker `blog_operation_profile_write_feature_flag_disabled`, and `sideEffectSummary.dbWrite=false`.
+- `/settings/blogger` should show a `Blog Operation Profile` preview section and keep Apply/Save disabled with explicit CLI/feature-flag guidance.
+- 9F-1A must not wire operation profiles into publish execution gates yet.
+- 9F-1A validation must not run Blogger publish/write, `posts.update`, draft save, OAuth reconnect, token refresh, content generation, LLM calls, content mutation, publish approval mutation, publish attempt mutation, or profile row apply/write.
+- The 9E published/success milestone baseline must remain unchanged after preview and apply-negative smoke.
+
 ## Patch 9E-9D Post-publish DB Reconciliation
 
 - `POST /api/content-items/[id]/post-publish-reconciliation` route가 있어야 한다.

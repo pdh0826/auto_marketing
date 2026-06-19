@@ -655,6 +655,40 @@ model BloggerPublishExecutionAttempt {
   @@map("blogger_publish_execution_attempts")
 }
 
+model BlogOperationProfile {
+  id                                 String   @id @default(cuid())
+  createdAt                          DateTime @default(now())
+  updatedAt                          DateTime @updatedAt
+  targetBloggerBlogId                String
+  targetBloggerBlogName              String?
+  targetBloggerBlogUrl               String?
+  profileName                        String   @default("Default")
+  status                             String   @default("active")
+  operationMode                      String   @default("approval_required")
+  defaultPublishPolicyPreset         String   @default("safe_manual_publish")
+  timezone                           String   @default("Asia/Seoul")
+  allowAutoPublish                   Boolean  @default(false)
+  allowScheduledPublish              Boolean  @default(false)
+  requireOAuthGate                   Boolean  @default(true)
+  requireFinalHumanApproval          Boolean  @default(true)
+  requireExternalWriteRiskAck        Boolean  @default(true)
+  requireRollbackPlanAck             Boolean  @default(true)
+  requireReadbackAfterPublish        Boolean  @default(true)
+  requirePostPublishReconciliation   Boolean  @default(true)
+  maxPostsPerDay                     Int?
+  defaultPublishWindowStart          String?
+  defaultPublishWindowEnd            String?
+  policyJson                         Json?
+  guardrailJson                      Json?
+  exceptionRoutingJson               Json?
+
+  @@unique([targetBloggerBlogId])
+  @@index([status])
+  @@index([defaultPublishPolicyPreset])
+  @@index([operationMode])
+  @@map("blog_operation_profiles")
+}
+
 model BloggerConnectionSecret {
   id             String            @id @default(cuid())
   connectionId   String

@@ -12,6 +12,7 @@ import type {
   BloggerSecretSelfTestResult,
   BloggerTokenRefreshResponse
 } from "@/lib/blogger/admin-types";
+import type { BlogOperationProfileResponse } from "@/lib/blog-operation-profiles/operation-profile-summary";
 import type { BlogAdmin } from "@/lib/blogs/admin-types";
 import { ApiResult, formatListInput, optionalString, parseListInput, requestJson } from "@/lib/form-utils";
 
@@ -64,10 +65,12 @@ export function BloggerSettingsClient() {
   const [secretStatus, setSecretStatus] = useState<BloggerConnectionSecretStatus | null>(null);
   const [secretSelfTest, setSecretSelfTest] = useState<BloggerSecretSelfTestResult | null>(null);
   const [tokenRefreshResult, setTokenRefreshResult] = useState<BloggerTokenRefreshResponse | null>(null);
+  const [operationProfileResult, setOperationProfileResult] = useState<BlogOperationProfileResponse | null>(null);
   const [oauthDryRun, setOauthDryRun] = useState<BloggerOAuthStartDryRun | null>(null);
   const [blogListResult, setBlogListResult] = useState<BloggerBlogListResult | null>(null);
   const [blogListLoadingId, setBlogListLoadingId] = useState<string | null>(null);
   const [refreshingTokenId, setRefreshingTokenId] = useState<string | null>(null);
+  const [loadingOperationProfileId, setLoadingOperationProfileId] = useState<string | null>(null);
   const [selectingBlogId, setSelectingBlogId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -138,6 +141,7 @@ export function BloggerSettingsClient() {
       setSecretStatus(null);
       setSecretSelfTest(null);
       setTokenRefreshResult(null);
+      setOperationProfileResult(null);
       setOauthDryRun(null);
       setBlogListResult(null);
       setNotice("Blogger connection을 저장했습니다. Blogger draft/publish는 수행하지 않았습니다.");
@@ -211,6 +215,31 @@ export function BloggerSettingsClient() {
       setError(caught instanceof Error ? caught.message : "Blogger access token refresh에 실패했습니다.");
     } finally {
       setRefreshingTokenId(null);
+    }
+  }
+
+  async function previewOperationProfile(connection: BloggerConnectionAdmin) {
+    setError(null);
+    setNotice(null);
+    setLoadingOperationProfileId(connection.id);
+
+    try {
+      const result = await requestJson<ApiResult<BlogOperationProfileResponse>>("/api/blog-operation-profiles/default-policy", {
+        method: "POST",
+        body: JSON.stringify({
+          mode: "preview",
+          targetBloggerBlogId: connection.bloggerBlogId,
+          targetBloggerBlogName: connection.bloggerBlogName,
+          targetBloggerBlogUrl: connection.bloggerBlogUrl,
+          defaultPublishPolicyPreset: "safe_manual_publish"
+        })
+      });
+      setOperationProfileResult(result.data);
+      setNotice("Blog Operation Profile preview를 생성했습니다. Profile row 저장, Blogger write/publish, token refresh는 수행하지 않았습니다.");
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Blog Operation Profile preview에 실패했습니다.");
+    } finally {
+      setLoadingOperationProfileId(null);
     }
   }
 
@@ -392,6 +421,7 @@ export function BloggerSettingsClient() {
                   setSecretStatus(null);
                   setSecretSelfTest(null);
                   setTokenRefreshResult(null);
+                  setOperationProfileResult(null);
                   setOauthDryRun(null);
                   setBlogListResult(null);
                 }}
@@ -478,6 +508,14 @@ export function BloggerSettingsClient() {
                       <button className="button secondary" type="button" disabled={blogListLoadingId === connection.id} onClick={() => void loadBloggerBlogs(connection)}>
                         {blogListLoadingId === connection.id ? "조회 중" : "Blogger 목록 조회"}
                       </button>
+                      <button
+                        className="button secondary"
+                        type="button"
+                        disabled={!connection.bloggerBlogId || loadingOperationProfileId === connection.id}
+                        onClick={() => void previewOperationProfile(connection)}
+                      >
+                        {loadingOperationProfileId === connection.id ? "Profile Preview 중" : "Operation Profile Preview"}
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -485,6 +523,90 @@ export function BloggerSettingsClient() {
             </tbody>
           </table>
         ) : null}
+      </section>
+
+      <section className="admin-section">
+        <div className="section-heading">
+          <div>
+            <h2>Blog Operation Profile</h2>
+            <p className="muted">9F-1A foundation입니다. 블로그별 기본 운영 정책을 preview하지만, profile write는 feature flag와 명시 승인 전까지 실행하지 않습니다.</p>
+          </div>
+        </div>
+        <div className="notice warning">
+          <strong>Profile write is CLI/explicit-gated only for now</strong>
+          <p>Preview 버튼은 safe_manual_publish preset을 보여주며 DB row를 생성하지 않습니다.</p>
+          <p>Apply/Save는 이번 UI에서 비활성입니다. Blogger publish/write, posts.update, draft save, OAuth reconnect, token refresh도 실행하지 않습니다.</p>
+        </div>
+        <div className="form-actions">
+          <button className="button secondary" type="button" disabled>
+            Profile Apply/Save disabled
+          </button>
+        </div>
+        {operationProfileResult ? (
+          <div className="read-block">
+            <h3>Operation Profile Preview</h3>
+            <div className="detail-grid">
+              <DetailItem label="Checked At" value={new Date(operationProfileResult.checkedAt).toLocaleString()} />
+              <DetailItem label="Mode" value={operationProfileResult.blogOperationProfileSummary.mode} />
+              <DetailItem label="Profile Found" value={String(operationProfileResult.blogOperationProfileSummary.profileFound)} />
+              <DetailItem label="Would Create" value={String(operationProfileResult.blogOperationProfileSummary.profileWouldBeCreated)} />
+              <DetailItem label="Would Update" value={String(operationProfileResult.blogOperationProfileSummary.profileWouldBeUpdated)} />
+              <DetailItem label="Apply Attempted" value={String(operationProfileResult.blogOperationProfileSummary.applyAttempted)} />
+              <DetailItem label="Apply Blocked" value={String(operationProfileResult.blogOperationProfileSummary.applyBlocked)} />
+              <DetailItem label="Apply OK" value={String(operationProfileResult.blogOperationProfileSummary.applyOk)} />
+              <DetailItem label="Feature Flag Enabled" value={String(operationProfileResult.blogOperationProfileSummary.featureFlagEnabled)} />
+              <DetailItem label="Confirmation Accepted" value={String(operationProfileResult.blogOperationProfileSummary.confirmationPhraseAccepted)} />
+              <DetailItem label="Target Blogger Blog" value={operationProfileResult.blogOperationProfileSummary.targetBloggerBlogName ?? "-"} />
+              <DetailItem label="Target Blogger Blog ID" value={operationProfileResult.blogOperationProfileSummary.targetBloggerBlogId ?? "-"} />
+              <DetailItem label="Target Blogger Blog URL" value={operationProfileResult.blogOperationProfileSummary.targetBloggerBlogUrl ?? "-"} />
+            </div>
+            <div className="detail-grid">
+              <DetailItem label="Profile Status" value={operationProfileResult.blogOperationProfileSummary.proposedProfile.status} />
+              <DetailItem label="Default Publish Policy" value={operationProfileResult.blogOperationProfileSummary.proposedProfile.defaultPublishPolicyPreset} />
+              <DetailItem label="Operation Mode" value={operationProfileResult.blogOperationProfileSummary.proposedProfile.operationMode} />
+              <DetailItem label="Timezone" value={operationProfileResult.blogOperationProfileSummary.proposedProfile.timezone} />
+              <DetailItem label="Auto Publish Enabled" value={String(operationProfileResult.blogOperationProfileSummary.proposedProfile.allowAutoPublish)} />
+              <DetailItem label="Scheduled Publish Enabled" value={String(operationProfileResult.blogOperationProfileSummary.proposedProfile.allowScheduledPublish)} />
+              <DetailItem label="Human Approval Required" value={String(operationProfileResult.blogOperationProfileSummary.proposedProfile.requireFinalHumanApproval)} />
+              <DetailItem label="OAuth Gate Required" value={String(operationProfileResult.blogOperationProfileSummary.proposedProfile.requireOAuthGate)} />
+              <DetailItem label="External Write Risk Ack" value={String(operationProfileResult.blogOperationProfileSummary.proposedProfile.requireExternalWriteRiskAck)} />
+              <DetailItem label="Rollback Plan Ack" value={String(operationProfileResult.blogOperationProfileSummary.proposedProfile.requireRollbackPlanAck)} />
+              <DetailItem label="Readback After Publish" value={String(operationProfileResult.blogOperationProfileSummary.proposedProfile.requireReadbackAfterPublish)} />
+              <DetailItem label="Post-publish Reconciliation" value={String(operationProfileResult.blogOperationProfileSummary.proposedProfile.requirePostPublishReconciliation)} />
+            </div>
+            <div className="detail-grid">
+              <DetailItem label="Policy: Feature Flag" value={String(operationProfileResult.blogOperationProfileSummary.defaultPublishPolicy.bloggerWriteRequiresFeatureFlag)} />
+              <DetailItem label="Policy: Confirmation Phrase" value={String(operationProfileResult.blogOperationProfileSummary.defaultPublishPolicy.bloggerWriteRequiresConfirmationPhrase)} />
+              <DetailItem label="Policy: Unknown Result Review" value={String(operationProfileResult.blogOperationProfileSummary.defaultPublishPolicy.unknownExternalResultRequiresManualReview)} />
+              <DetailItem label="Policy: Retry Unknown Result" value={String(operationProfileResult.blogOperationProfileSummary.defaultPublishPolicy.retryOnUnknownExternalResult)} />
+              <DetailItem label="Raw Response Storage" value={String(operationProfileResult.blogOperationProfileSummary.defaultPublishPolicy.rawBloggerResponseStorageAllowed)} />
+              <DetailItem label="Readback Content Returned" value={String(operationProfileResult.blogOperationProfileSummary.defaultPublishPolicy.contentReturnedInReadbackResponse)} />
+              <DetailItem label="Operator Exceptions Only" value={String(operationProfileResult.blogOperationProfileSummary.defaultPublishPolicy.operatorSeesExceptionsOnly)} />
+            </div>
+            <ValidationList title="Operation Profile Blocking Reasons" items={operationProfileResult.blogOperationProfileSummary.blockingReasons} emptyText="blocking reason이 없습니다." isError />
+            <ValidationList title="Operation Profile Warnings" items={operationProfileResult.blogOperationProfileSummary.warnings} emptyText="warning이 없습니다." isWarning />
+            <div className="detail-grid">
+              <DetailItem label="DB Read" value={String(operationProfileResult.blogOperationProfileSummary.sideEffectSummary.dbRead)} />
+              <DetailItem label="DB Write" value={String(operationProfileResult.blogOperationProfileSummary.sideEffectSummary.dbWrite)} />
+              <DetailItem label="Schema Migration" value={String(operationProfileResult.blogOperationProfileSummary.sideEffectSummary.schemaMigration)} />
+              <DetailItem label="Blogger Read" value={String(operationProfileResult.blogOperationProfileSummary.sideEffectSummary.bloggerRead)} />
+              <DetailItem label="Blogger Write" value={String(operationProfileResult.blogOperationProfileSummary.sideEffectSummary.bloggerWrite)} />
+              <DetailItem label="Blogger Publish" value={String(operationProfileResult.blogOperationProfileSummary.sideEffectSummary.bloggerPublish)} />
+              <DetailItem label="Blogger Update" value={String(operationProfileResult.blogOperationProfileSummary.sideEffectSummary.bloggerUpdate)} />
+              <DetailItem label="Blogger Draft Save" value={String(operationProfileResult.blogOperationProfileSummary.sideEffectSummary.bloggerDraftSave)} />
+              <DetailItem label="Token Refresh" value={String(operationProfileResult.blogOperationProfileSummary.sideEffectSummary.tokenRefresh)} />
+              <DetailItem label="OAuth Reconnect" value={String(operationProfileResult.blogOperationProfileSummary.sideEffectSummary.oauthReconnect)} />
+              <DetailItem label="Content Mutation" value={String(operationProfileResult.blogOperationProfileSummary.sideEffectSummary.contentMutation)} />
+              <DetailItem label="Approval Mutation" value={String(operationProfileResult.blogOperationProfileSummary.sideEffectSummary.approvalMutation)} />
+              <DetailItem label="Attempt Mutation" value={String(operationProfileResult.blogOperationProfileSummary.sideEffectSummary.attemptMutation)} />
+              <DetailItem label="LLM Call" value={String(operationProfileResult.blogOperationProfileSummary.sideEffectSummary.llmCall)} />
+              <DetailItem label="External Send" value={String(operationProfileResult.blogOperationProfileSummary.sideEffectSummary.externalSend)} />
+            </div>
+            <div className="notice">Operation Profile preview는 access token, refresh token, raw Blogger response, raw HTML/content를 표시하지 않습니다.</div>
+          </div>
+        ) : (
+          <div className="notice">Connection List에서 verified Blogger Blog가 있는 connection의 Operation Profile Preview를 실행하세요.</div>
+        )}
       </section>
 
       {statusPreview ? (

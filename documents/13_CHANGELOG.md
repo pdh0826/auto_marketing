@@ -1,5 +1,28 @@
 # 13_CHANGELOG
 
+## Patch 9F-1A Blog Operation Profile + Default Publish Policy Preset
+
+Implemented after the 9E first publish milestone closeout:
+
+- Added `BlogOperationProfile` / `blog_operation_profiles` schema foundation.
+- Added the `safe_manual_publish` default publish policy preset.
+- Added `POST /api/blog-operation-profiles/default-policy` for operation profile preview and guarded apply.
+- Added `/settings/blogger` Blog Operation Profile preview UI with Apply/Save disabled.
+- Added feature flag guard `BLOG_OPERATION_PROFILE_WRITE_ENABLED=true` and confirmation phrase `I_UNDERSTAND_THIS_WILL_CREATE_OR_UPDATE_BLOG_OPERATION_PROFILE` for future profile writes.
+
+Validation:
+
+- Preview smoke returned `profileWouldBeCreated=true`, `defaultPublishPolicyPreset=safe_manual_publish`, `allowAutoPublish=false`, `allowScheduledPublish=false`, human approval/OAuth/readback/reconciliation requirements true, and `dbWrite=false`.
+- Apply-negative smoke with the feature flag disabled returned `blog_operation_profile_write_feature_flag_disabled`, `applyAttempted=false`, `applyBlocked=true`, `applyOk=false`, and `dbWrite=false`.
+- `blog_operation_profiles_count` remained `0`.
+- The 9E published/success baseline remained unchanged.
+
+Policy:
+
+- Profile apply/write was implemented but not executed during validation.
+- Operation profiles are not wired into publish gates yet.
+- No Blogger publish/write, Blogger `posts.update`, Blogger draft save, OAuth reconnect, token refresh, content generation, LLM call, content item mutation, publish approval mutation, publish attempt mutation, deploy, push, or external service write occurred.
+
 ## Patch 9E-9E Publish Milestone Closeout
 
 Documented after `9E-9D-APPLY`:

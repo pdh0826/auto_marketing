@@ -1,13 +1,13 @@
 # 14_NEXT_SESSION_BRIEF
 
-## Current State: Patch 9E-9E Closeout
+## Current State: Patch 9F-1A
 
 ```text
 repo: ~/blog-growth-agent
 branch: master
-previous HEAD before closeout: 198bcf0 Add post-publish reconciliation preview
-expected HEAD after closeout commit: local commit `Document first Blogger publish milestone` (verify exact hash with `git log --oneline -8`)
-milestone: 9E first end-to-end Blogger publish completed
+previous HEAD before 9F-1A: 78c1fee Document first Blogger publish milestone
+expected HEAD after 9F-1A commit: local commit `Add blog operation profile preset foundation` (verify exact hash with `git log --oneline -8`)
+milestone: 9E first end-to-end Blogger publish completed; 9F operation automation foundation started
 ```
 
 Current baseline:
@@ -22,7 +22,18 @@ Current baseline:
 - publish execution attempt has redacted Blogger readback/result metadata.
 - publish execution attempt error fields are cleared.
 - token refresh is implemented and `tokenRefreshImplemented=true` is reflected in publish OAuth gate summaries.
-- `posts.update`, scheduled publish, bulk publish automation, and operation profiles are not implemented yet.
+- Blog Operation Profile schema, safe default policy preset, preview API, and `/settings/blogger` preview UI are implemented.
+- Profile apply/write code is guarded but was not executed; `blog_operation_profiles_count = 0`.
+- `posts.update`, scheduled publish, bulk publish automation, and operation profile publish-gate wiring are not implemented yet.
+
+9F-1A foundation:
+
+- New table: `blog_operation_profiles`
+- New route: `POST /api/blog-operation-profiles/default-policy`
+- Default preset: `safe_manual_publish`
+- Safe defaults: auto publish false, scheduled publish false, human approval true, OAuth gate true, readback true, post-publish reconciliation true.
+- Apply/write guard: `BLOG_OPERATION_PROFILE_WRITE_ENABLED=true` plus exact phrase `I_UNDERSTAND_THIS_WILL_CREATE_OR_UPDATE_BLOG_OPERATION_PROFILE`.
+- Settings UI: `/settings/blogger` has a Blog Operation Profile preview section and disabled Apply/Save guidance.
 
 9E first end-to-end publish path:
 
@@ -34,17 +45,21 @@ Current baseline:
 6. `9E-9C` read back `https://mathlearningappl.blogspot.com/2026/06/blog-post.html`.
 7. `9E-9D-APPLY` reconciled internal DB state from `planned`/`planned_only` to `published`/`success`.
 
-Recommended next:
+Recommended next after 9F-1A:
 
-**9F-1A Blog Operation Profile + Default Publish Policy Preset**
+**9F-1B — Create/Apply Default Blog Operation Profile**
 
-Reason: the first end-to-end publish path is now proven. Before expanding scheduled publish/update/retry too far, reduce operator burden by defining blog-level default policies, so the system does not require repeated manual inputs.
+Goal:
+
+- 사용자 명시 승인 후 `safe_manual_publish` profile row를 실제로 1회 생성한다.
+- 생성 후 readback/guard 검증을 추가한다.
+- 기존 publish gates에는 아직 연결하지 않거나 read-only advisory로만 연결한다.
 
 Alternative:
 
-**9E-11A Retry/recovery workflow before 9F automation**
+**9F-1C — Wire Operation Profile into publish gate as read-only advisory**
 
-Use this route first if the next priority is failure recovery for publish/readback/reconciliation, idempotent re-run guards, and unknown-result manual review.
+Use this route first if the next priority is showing profile-derived defaults/blockers in publish gate UI without executing profile writes or Blogger writes.
 
 ## 9F Automation Roadmap
 
@@ -77,6 +92,7 @@ DATABASE_URL="postgresql://pdh0826@localhost/blog_growth_agent_dev?host=/tmp&sch
 psql -d blog_growth_agent_dev -c "select id, status, \"publishedAt\", \"scheduledAt\", md5(coalesce(\"draftMarkdown\", '')) as draft_markdown_md5, md5(coalesce(\"draftHtml\", '')) as draft_html_md5, length(coalesce(\"draftHtml\", '')) as draft_html_len from content_items where id = 'cmqc2xqbr00011y70sxmgl65v';"
 psql -d blog_growth_agent_dev -c "select id, status, \"bloggerPostId\", \"errorType\", \"errorCode\", \"errorMessageRedacted\", \"contentStatusBefore\", \"contentStatusAfter\", \"contentMutationPlanned\", \"contentMutationCompleted\", \"publishedAtApplied\" from blogger_publish_execution_attempts where id = 'cmqitdsdj0001iwfw7cbyeznu';"
 psql -d blog_growth_agent_dev -c "select (select count(*) from blogger_draft_saves) as blogger_draft_saves_count, (select count(*) from blogger_draft_approvals) as blogger_draft_approvals_count, (select count(*) from blogger_publish_approvals) as blogger_publish_approvals_count, (select count(*) from blogger_publish_execution_attempts) as blogger_publish_execution_attempts_count, (select count(*) from llm_call_logs) as llm_call_log_count;"
+psql -d blog_growth_agent_dev -c "select count(*) as blog_operation_profiles_count from blog_operation_profiles;"
 ```
 
 Expected DB baseline:
@@ -90,6 +106,7 @@ Expected DB baseline:
 - publish attempt error fields are null
 - `contentMutationCompleted = true`
 - counts: `1 / 1 / 1 / 1 / 22`
+- `blog_operation_profiles_count = 0` until 9F-1B explicitly applies the default profile row.
 
 ## Current State: 2026-06-16 Closeout
 

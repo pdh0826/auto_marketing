@@ -866,3 +866,44 @@ Persistence policy:
 - Stored attempt rows keep `canExecutePublish=false` and `canExecuteScheduledPublish=false`.
 - Raw Blogger response/error bodies, access tokens, refresh tokens, client secrets, encrypted values, full HTML, prompts, and raw LLM responses are not stored.
 - This patch does not mutate `content_items.status`, `publishedAt`, `scheduledAt`, `qualityScore`, `draftHtml`, or `draftMarkdown`.
+
+## Patch 9F-1A Blog Operation Profile
+
+Patch 9F-1A adds a blog-level operation profile foundation for reducing repeated per-content operator input.
+
+New Prisma model and table:
+
+- model: `BlogOperationProfile`
+- table: `blog_operation_profiles`
+
+Core identity:
+
+- `targetBloggerBlogId` is unique so each Blogger blog has one default operation profile.
+- `targetBloggerBlogName` and `targetBloggerBlogUrl` are safe metadata only.
+
+Safe-by-default policy fields:
+
+- `operationMode = approval_required`
+- `defaultPublishPolicyPreset = safe_manual_publish`
+- `allowAutoPublish = false`
+- `allowScheduledPublish = false`
+- `requireOAuthGate = true`
+- `requireFinalHumanApproval = true`
+- `requireExternalWriteRiskAck = true`
+- `requireRollbackPlanAck = true`
+- `requireReadbackAfterPublish = true`
+- `requirePostPublishReconciliation = true`
+- `timezone = Asia/Seoul`
+
+Extensibility fields:
+
+- `policyJson`
+- `guardrailJson`
+- `exceptionRoutingJson`
+
+Policy:
+
+- 9F-1A implements preview and strongly guarded apply/write code, but validation does not create or update profile rows.
+- Profile write requires `BLOG_OPERATION_PROFILE_WRITE_ENABLED=true` and the exact confirmation phrase `I_UNDERSTAND_THIS_WILL_CREATE_OR_UPDATE_BLOG_OPERATION_PROFILE`.
+- The profile is not wired into publish gates yet. That remains a future 9F-1B/9F-1C step.
+- No Blogger write/publish/update/draft save, OAuth reconnect, token refresh, content generation, LLM call, content mutation, approval mutation, or attempt mutation is performed by the 9F-1A validation flow.
