@@ -869,6 +869,11 @@ export interface GuardedPublishExecutionResponse {
     };
     blockingReasons: string[];
     warnings: string[];
+    postPublishDeferredActions: Array<{
+      action: "content_items_status_mutation";
+      deferredToPatch: "9E-9D";
+      reason: string;
+    }>;
     sideEffectSummary: {
       dbRead: true;
       dbWrite: boolean;

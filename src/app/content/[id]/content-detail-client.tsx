@@ -2022,6 +2022,21 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
                   emptyText="warning이 없습니다."
                   isWarning
                 />
+                {guardedPublishExecutionResult.guardedPublishExecutionSummary.postPublishDeferredActions.length > 0 ? (
+                  <div className="notice warning">
+                    <strong>Deferred post-publish action</strong>
+                    <p>content_items status/publishedAt mutation is deferred to 9E-9D.</p>
+                    <p>This does not block the Blogger publish call itself.</p>
+                    <p>Internal DB state will remain planned until the post-publish mutation patch is executed.</p>
+                    <ul>
+                      {guardedPublishExecutionResult.guardedPublishExecutionSummary.postPublishDeferredActions.map((action) => (
+                        <li key={`${action.action}-${action.deferredToPatch}`}>
+                          {action.action} / deferredToPatch: {action.deferredToPatch} / reason: {action.reason}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
                 <div className="detail-grid">
                   <DetailItem label="Request Method" value={guardedPublishExecutionResult.guardedPublishExecutionSummary.redactedBloggerRequestPlan.method} />
                   <DetailItem label="Endpoint Kind" value={guardedPublishExecutionResult.guardedPublishExecutionSummary.redactedBloggerRequestPlan.endpointKind} />

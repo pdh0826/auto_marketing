@@ -13,6 +13,7 @@ import { prisma } from "@/lib/db/client";
 export const GUARDED_BLOGGER_PUBLISH_LIVE_FEATURE_FLAG = "BLOGGER_GUARDED_PUBLISH_LIVE_ENABLED";
 export const GUARDED_BLOGGER_PUBLISH_CONFIRMATION_PHRASE = "I_UNDERSTAND_THIS_WILL_PUBLISH_TO_BLOGGER";
 export const GUARDED_PUBLISH_EXECUTION_ROUTE_PATH = "/api/content-items/[id]/guarded-publish-execution";
+const CONTENT_MUTATION_DEFERRED_WARNING = "content_mutation_deferred_to_post_publish_patch";
 
 export interface GuardedPublishExecutionRequest {
   mode?: unknown;
@@ -151,10 +152,11 @@ export async function buildGuardedPublishExecutionResponse(
   if (!oauthGate.finalPublishExecutionPreflightSummary.finalPreflightReady && oauthGate.oauthGateSummary.accessTokenExpired) {
     warnings.add("oauth_reconnect_required_before_live_publish");
   }
+  warnings.add(CONTENT_MUTATION_DEFERRED_WARNING);
 
   let bloggerResultRedacted: GuardedPublishSummary["bloggerResultRedacted"] = emptyBloggerResult();
   let liveExecutionAttempted = false;
-  const hardBlockersForLive = Array.from(blockingReasons).filter((reason) => reason !== "content_mutation_deferred_to_post_publish_patch");
+  const hardBlockersForLive = Array.from(blockingReasons);
   let bloggerApiCallAllowedNow = request.mode === "live" && hardBlockersForLive.length === 0;
 
   if (bloggerApiCallAllowedNow && bloggerConnection?.id && actualBloggerPostId && expected.expectedTargetBloggerBlogId) {
@@ -244,6 +246,13 @@ export async function buildGuardedPublishExecutionResponse(
     bloggerResultRedacted,
     blockingReasons: Array.from(blockingReasons),
     warnings: Array.from(warnings),
+    postPublishDeferredActions: [
+      {
+        action: "content_items_status_mutation",
+        deferredToPatch: "9E-9D",
+        reason: "Content item mutation must only happen after Blogger publish result readback is verified."
+      }
+    ],
     sideEffectSummary: {
       dbRead: true,
       dbWrite: false,
@@ -412,7 +421,6 @@ function buildBlockingReasons(input: {
     blockers.add("content_already_scheduled");
   }
 
-  blockers.add("content_mutation_deferred_to_post_publish_patch");
   return blockers;
 }
 

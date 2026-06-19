@@ -62,6 +62,7 @@ The current completed path is:
 - Guarded Blogger Publish Execution route is implemented at `POST /api/content-items/[id]/guarded-publish-execution`.
 - The route defaults to `mode=dry_run`, performs DB reads only, and keeps `canExecutePublish=false`.
 - Live publish is code-gated by `BLOGGER_GUARDED_PUBLISH_LIVE_ENABLED=true`, exact confirmation phrase `I_UNDERSTAND_THIS_WILL_PUBLISH_TO_BLOGGER`, matching approval/attempt/hash/blog/post metadata, OAuth/final-preflight readiness, rollback acknowledgement, external write risk acknowledgement, and final human approval.
+- `content_mutation_deferred_to_post_publish_patch` is no longer a live publish hard blocker. It is surfaced as a warning/post-publish deferred action for 9E-9D, because local `content_items.status`/`publishedAt` mutation must wait for publish result readback.
 - Current OAuth expiry is a guarded route blocker, not a code implementation blocker. Live publish requires manual OAuth reconnect immediately before a separate live smoke.
 - `content_items.status`, `publishedAt`, `scheduledAt`, `qualityScore`, and `draftHtml` are not changed by publish-readiness or policy UI.
 
@@ -94,6 +95,7 @@ E. **Patch 9E-9B-LIVE or 9E-9C: live publish approval/readback**
 
 - For `9E-9B-LIVE`, first complete manual OAuth reconnect in `/settings/blogger`, then get explicit user approval before running one live Blogger publish smoke.
 - For `9E-9C`, design publish result readback/reconciliation and manual review policy before any content item mutation.
+- Treat post-publish `content_items.status`/`publishedAt` mutation as a separate 9E-9D action after Blogger publish readback verifies the result.
 - Keep scheduled publish execution disabled until a separate policy patch.
 - Continue to block token refresh unless a separate token refresh policy patch is approved.
 

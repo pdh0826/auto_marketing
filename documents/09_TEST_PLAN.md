@@ -1078,7 +1078,8 @@ Safety guard:
 - dry-run은 `implementationStatus=implemented_live_guarded`, `liveExecutionAttempted=false`, `liveExecutionBlocked=true`, `dryRunOnly=true`, `canExecutePublish=false`를 반환해야 한다.
 - dry-run side effects는 `dbRead=true`, `dbWrite=false`, `bloggerWrite=false`, `bloggerPublish=false`, `bloggerUpdate=false`, `bloggerDraftSave=false`, `tokenRefresh=false`, `oauthReconnect=false`, `contentMutation=false`, `approvalMutation=false`, `attemptMutation=false`, `llmCall=false`여야 한다.
 - OAuth token이 expired이면 dry-run은 `access_token_expired_reauth_required`, `oauth_gate_not_satisfied`, `manual_reconnect_completion_not_ready`, `final_publish_execution_preflight_not_ready` 같은 blocker를 안전하게 반환할 수 있다. 이는 구현 중단 사유가 아니다.
-- 기본 dry-run blocker에는 `guarded_blogger_publish_route_implemented_but_live_disabled`, `live_blogger_publish_feature_flag_disabled`, `rollback_plan_not_acknowledged`, `external_write_risk_not_acknowledged`, `final_human_approval_required`, `content_mutation_deferred_to_post_publish_patch`가 포함될 수 있다.
+- 기본 dry-run blocker에는 `guarded_blogger_publish_route_implemented_but_live_disabled`, `live_blogger_publish_feature_flag_disabled`, `rollback_plan_not_acknowledged`, `external_write_risk_not_acknowledged`, `final_human_approval_required`가 포함될 수 있다.
+- `content_mutation_deferred_to_post_publish_patch`는 live publish hard blocker가 아니며 `warnings` 또는 `postPublishDeferredActions`에 표시되어야 한다.
 - live mode는 `BLOGGER_GUARDED_PUBLISH_LIVE_ENABLED=true`, exact confirmation phrase `I_UNDERSTAND_THIS_WILL_PUBLISH_TO_BLOGGER`, rollback/external/final-human acknowledgements, OAuth valid state, final preflight ready state, and matching expected metadata가 모두 필요하다.
 - feature flag 없이 live mode negative smoke를 실행하면 `featureFlagEnabled=false`, `confirmationPhraseAccepted=true`, `liveExecutionAttempted=false`, `liveExecutionBlocked=true`, `canExecutePublish=false`, `bloggerWrite=false`, `bloggerPublish=false`, `dbWrite=false`여야 한다.
 - `src/lib/blogger/publish-post.ts`는 live guard가 통과한 뒤에만 Blogger `posts.publish`를 호출할 수 있으며, safe redacted metadata만 반환해야 한다.
@@ -1087,3 +1088,11 @@ Safety guard:
 - DB guard는 unchanged여야 한다: content item status `planned`, `publishedAt=null`, `scheduledAt=null`, draft hashes unchanged, `blogger_draft_saves=1`, `blogger_draft_approvals=1`, `blogger_publish_approvals=1`, `blogger_publish_execution_attempts=1`, `llm_call_logs=22`.
 - 다음 단계는 사용자 명시 승인 후 `9E-9B-LIVE` 또는 `9E-9C publish result readback`이다.
 - 9F 운영 자동화 로드맵 후보는 계속 유지한다: Blog Operation Profile, 기본 정책, 예외 중심 대시보드 기반 자동 운영 구조.
+
+## Patch 9E-9B-LIVE-READY deferred content mutation taxonomy 검증
+
+- `POST /api/content-items/[id]/guarded-publish-execution` dry-run 응답의 `blockingReasons`에는 `content_mutation_deferred_to_post_publish_patch`가 포함되지 않아야 한다.
+- 같은 응답의 `warnings` 또는 `postPublishDeferredActions`에는 `content_mutation_deferred_to_post_publish_patch` 또는 `content_items_status_mutation` deferred action이 포함되어야 한다.
+- feature flag 없이 live mode negative smoke를 실행하면 `live_blogger_publish_feature_flag_disabled` 때문에 `liveExecutionAttempted=false`, `liveExecutionBlocked=true`, `bloggerWrite=false`, `bloggerPublish=false`, `dbWrite=false`여야 한다.
+- 9E-9B-LIVE-READY 구현/스모크 중에는 live Blogger publish/write, `posts.update`, draft save, OAuth reconnect, token refresh, approval/attempt/content mutation, external service write, LLM 호출이 발생하지 않아야 한다.
+- DB guard는 unchanged여야 한다: content item status `planned`, `publishedAt=null`, `scheduledAt=null`, draft hashes unchanged, `blogger_draft_saves=1`, `blogger_draft_approvals=1`, `blogger_publish_approvals=1`, `blogger_publish_execution_attempts=1`, `llm_call_logs=22`.

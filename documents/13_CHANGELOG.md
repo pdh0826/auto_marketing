@@ -1268,3 +1268,16 @@ Not implemented or not executed:
 - Blogger `posts.update`, additional draft save, OAuth reconnect, token refresh, deploy, push, or external service write
 - `content_items.status`, `publishedAt`, `scheduledAt`, `draftMarkdown`, `draftHtml`, or `qualityScore` mutation
 - publish result readback/reconciliation and post-publish content mutation, both deferred to later patches
+
+## Patch 9E-9B-LIVE-READY: Deferred Content Mutation Taxonomy
+
+Implemented after Patch 9E-9B:
+
+- Moved `content_mutation_deferred_to_post_publish_patch` out of guarded publish execution hard blockers.
+- Exposed the deferred `content_items` status/publishedAt mutation as a warning and `postPublishDeferredActions` metadata instead.
+- Updated the Content Detail guarded publish execution result block so the deferred content mutation appears as a post-publish next step, not a Blogger publish call blocker.
+- Kept `canExecutePublish=false`; live publish remains gated by feature flag, exact confirmation phrase, acknowledgements, OAuth/final preflight readiness, and request metadata matches.
+
+Not executed:
+
+- Live Blogger publish/write, Blogger `posts.update`, additional draft save, OAuth reconnect, token refresh, deploy, push, external service write, content item mutation, approval/attempt mutation, or LLM call.
