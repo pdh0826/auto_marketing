@@ -995,3 +995,62 @@ Policy boundary:
 - Profile advisory does not change `canExecutePublish`, `canPublish`, `canProceedToPublishExecution`, or blocker semantics.
 - Profile missing/mismatch/preset issues are advisory warnings only in 9F-1C.
 - No auto publish, scheduled publish, retry, recovery, Blogger write, OAuth reconnect, token refresh, content generation, LLM call, content mutation, approval mutation, attempt mutation, schema migration, or profile write is performed by the 9F-1C flow.
+
+## Patch 9F-1D Operation Profile Exception Dashboard
+
+Patch 9F-1D adds an exception-only dashboard draft on top of the read-only Operation Profile advisory.
+
+New response field:
+
+- `operationProfileExceptionDashboardSummary`
+
+Surfaces:
+
+- `POST /api/content-items/[id]/publish-oauth-gate`
+- `POST /api/blog-operation-profiles/default-policy`
+
+Core semantics:
+
+- `dashboardVersion = 9F-1D`
+- `dashboardMode = exception_only_draft`
+- `advisoryOnly = true`
+- `policyEnforced = false`
+- `blockerImpact = false`
+- `executionPermissionImpact = false`
+- `blockingReasons = []`
+
+Dashboard shape:
+
+- `profileFound`
+- `profileHealthy`
+- `attentionLevel`
+- `normalItemCount`
+- `warningItemCount`
+- `exceptionItemCount`
+- `headline`
+- `operatorSummary`
+- `focusItems`
+- `collapsedNormalItems`
+- `profilePolicySnapshot`
+- `advisoryWarnings`
+- `advisoryNotes`
+- `sideEffectSummary`
+
+Current healthy baseline:
+
+- `profileFound = true`
+- `profileHealthy = true`
+- `defaultPublishPolicyPreset = safe_manual_publish`
+- `operationMode = approval_required`
+- `allowAutoPublish = false`
+- `allowScheduledPublish = false`
+- `requireOAuthGate = true`
+- `requireFinalHumanApproval = true`
+- `requireReadbackAfterPublish = true`
+- `requirePostPublishReconciliation = true`
+
+Policy boundary:
+
+- Dashboard focus items are advisory-only and do not become publish blockers in 9F-1D.
+- Existing publish blockers, `canExecutePublish`, `canPublish`, and publish/scheduled publish permissions are unchanged.
+- No auto publish, scheduled publish, retry, recovery, Blogger write, OAuth reconnect, token refresh, content generation, LLM call, business DB mutation, content mutation, approval mutation, attempt mutation, schema migration, or profile write is performed by the 9F-1D flow.

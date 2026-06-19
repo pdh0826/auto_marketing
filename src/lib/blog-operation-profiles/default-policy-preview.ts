@@ -1,6 +1,8 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db/client";
 import { buildSafeManualPublishPolicy, SAFE_MANUAL_PUBLISH_PRESET } from "@/lib/blog-operation-profiles/default-publish-policy";
+import { buildOperationProfileAdvisorySummary } from "@/lib/blog-operation-profiles/operation-profile-advisory";
+import { buildOperationProfileExceptionDashboardSummary } from "@/lib/blog-operation-profiles/operation-profile-exception-dashboard";
 import type { BlogOperationProfileResponse, BlogOperationProfileSummary } from "@/lib/blog-operation-profiles/operation-profile-summary";
 
 const WRITE_FEATURE_FLAG = "BLOG_OPERATION_PROFILE_WRITE_ENABLED";
@@ -137,9 +139,19 @@ export async function buildBlogOperationProfileDefaultPolicyResponse(rawRequest:
     }
   };
 
+  const operationProfileAdvisorySummary = await buildOperationProfileAdvisorySummary({
+    targetBloggerBlogId,
+    targetBloggerBlogName,
+    targetBloggerBlogUrl
+  });
+  const operationProfileExceptionDashboardSummary = buildOperationProfileExceptionDashboardSummary({
+    advisorySummary: operationProfileAdvisorySummary
+  });
+
   return {
     checkedAt: checkedAt.toISOString(),
-    blogOperationProfileSummary: summary
+    blogOperationProfileSummary: summary,
+    operationProfileExceptionDashboardSummary
   };
 }
 

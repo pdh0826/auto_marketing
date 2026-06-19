@@ -52,6 +52,7 @@ export interface BlogOperationProfileSummary {
 export interface BlogOperationProfileResponse {
   checkedAt: string;
   blogOperationProfileSummary: BlogOperationProfileSummary;
+  operationProfileExceptionDashboardSummary: OperationProfileExceptionDashboardSummary;
 }
 
 export interface OperationProfileAdvisorySummary {
@@ -94,6 +95,68 @@ export interface OperationProfileAdvisorySummary {
   blockingReasons: [];
   sideEffectSummary: {
     dbRead: true;
+    dbWrite: false;
+    schemaMigration: false;
+    bloggerRead: false;
+    bloggerWrite: false;
+    bloggerPublish: false;
+    bloggerUpdate: false;
+    bloggerDraftSave: false;
+    tokenRefresh: false;
+    oauthReconnect: false;
+    contentMutation: false;
+    approvalMutation: false;
+    attemptMutation: false;
+    llmCall: false;
+    externalSend: false;
+  };
+}
+
+export interface OperationProfileExceptionDashboardSummary {
+  checked: true;
+  dashboardVersion: "9F-1D";
+  dashboardMode: "exception_only_draft";
+  advisoryOnly: true;
+  policyEnforced: false;
+  blockerImpact: false;
+  executionPermissionImpact: false;
+  profileFound: boolean;
+  profileHealthy: boolean;
+  attentionLevel: "ok" | "info" | "warning" | "blocked_by_existing_gate";
+  normalItemCount: number;
+  warningItemCount: number;
+  exceptionItemCount: number;
+  headline: string;
+  operatorSummary: string;
+  focusItems: Array<{
+    severity: "info" | "warning" | "exception";
+    code: string;
+    label: string;
+    detail: string;
+    source: "operation_profile" | "publish_gate" | "oauth_gate" | "system";
+  }>;
+  collapsedNormalItems: Array<{
+    code: string;
+    label: string;
+    value: string | boolean | number | null;
+  }>;
+  profilePolicySnapshot: {
+    targetBloggerBlogId: string | null;
+    targetBloggerBlogName: string | null;
+    operationMode: string | null;
+    defaultPublishPolicyPreset: string | null;
+    allowAutoPublish: boolean | null;
+    allowScheduledPublish: boolean | null;
+    requireOAuthGate: boolean | null;
+    requireFinalHumanApproval: boolean | null;
+    requireReadbackAfterPublish: boolean | null;
+    requirePostPublishReconciliation: boolean | null;
+  };
+  advisoryWarnings: string[];
+  advisoryNotes: string[];
+  blockingReasons: [];
+  sideEffectSummary: {
+    dbRead: boolean;
     dbWrite: false;
     schemaMigration: false;
     bloggerRead: false;

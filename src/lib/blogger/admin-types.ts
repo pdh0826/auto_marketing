@@ -1,4 +1,4 @@
-import type { OperationProfileAdvisorySummary } from "@/lib/blog-operation-profiles/operation-profile-summary";
+import type { OperationProfileAdvisorySummary, OperationProfileExceptionDashboardSummary } from "@/lib/blog-operation-profiles/operation-profile-summary";
 
 export type BloggerConnectionStatus = "not_configured" | "configured" | "oauth_required" | "connected" | "expired" | "error";
 
@@ -1124,6 +1124,7 @@ export interface PublishOAuthGateResponse {
   blockingReasons: string[];
   warnings: string[];
   operationProfileAdvisorySummary: OperationProfileAdvisorySummary;
+  operationProfileExceptionDashboardSummary: OperationProfileExceptionDashboardSummary;
   oauthGateSummary: {
     connectionFound: boolean;
     selectedBloggerBlogFound: boolean;

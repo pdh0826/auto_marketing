@@ -1,12 +1,12 @@
 # 14_NEXT_SESSION_BRIEF
 
-## Current State: Patch 9F-1C
+## Current State: Patch 9F-1D
 
 ```text
 repo: ~/blog-growth-agent
 branch: master
-previous HEAD before 9F-1C: 7f06583 Document default blog operation profile creation
-expected HEAD after 9F-1C commit: local commit `Show operation profile advisory in publish gate` (verify exact hash with `git log --oneline -8`)
+previous HEAD before 9F-1D: 19ca894 Show operation profile advisory in publish gate
+expected HEAD after 9F-1D commit: local commit `Polish operation profile exception dashboard` (verify exact hash with `git log --oneline -8`)
 milestone: 9E first end-to-end Blogger publish completed; 9F operation automation foundation started
 ```
 
@@ -27,6 +27,7 @@ Current baseline:
 - `blog_operation_profiles_count = 1`.
 - Profile apply remains guarded by `BLOG_OPERATION_PROFILE_WRITE_ENABLED=true` plus exact confirmation phrase.
 - Publish OAuth Gate now includes `operationProfileAdvisorySummary` as read-only advisory metadata.
+- Publish OAuth Gate and Operation Profile preview now include `operationProfileExceptionDashboardSummary` as an exception-only dashboard draft.
 - Operation Profile advisory is not policy-enforced and does not affect blockers, `canExecutePublish`, or `canPublish`.
 - `posts.update`, scheduled publish, bulk publish automation, and policy-enforced operation profile gate behavior are not implemented yet.
 
@@ -43,6 +44,7 @@ Current baseline:
 - Policy fields: `allowAutoPublish=false`, `allowScheduledPublish=false`, `requireOAuthGate=true`, `requireFinalHumanApproval=true`, `requireExternalWriteRiskAck=true`, `requireRollbackPlanAck=true`, `requireReadbackAfterPublish=true`, `requirePostPublishReconciliation=true`.
 - 9F-1B apply was performed exactly once with the write flag enabled and then verified with flag-disabled apply-negative smoke.
 - 9F-1C added read-only advisory wiring into publish gate/preflight responses: `advisoryOnly=true`, `policyEnforced=false`, `blockerImpact=false`, `executionPermissionImpact=false`, and `blockingReasons=[]` inside the profile advisory.
+- 9F-1D added exception-only dashboard draft wiring: `dashboardMode=exception_only_draft`, `profileHealthy=true` for the current baseline, focus items first, normal details collapsed, and no blocker/canExecute changes.
 
 9E first end-to-end publish path:
 
@@ -54,17 +56,7 @@ Current baseline:
 6. `9E-9C` read back `https://mathlearningappl.blogspot.com/2026/06/blog-post.html`.
 7. `9E-9D-APPLY` reconciled internal DB state from `planned`/`planned_only` to `published`/`success`.
 
-Recommended next after 9F-1C:
-
-**9F-1D — Operation Profile Settings UX polish and exception-only dashboard draft**
-
-Goal:
-
-- settings/blogger와 content detail의 profile advisory 표시를 운영자 친화적으로 정리한다.
-- 정상 항목은 접고 예외/주의만 먼저 보여주는 exception-only dashboard 초안을 만든다.
-- 아직 policy-enforced blocker나 auto publish는 활성화하지 않는다.
-
-Alternative:
+Recommended next after 9F-1D:
 
 **9F-1E — Policy-enforced publish gate simulation, dry-run only**
 
@@ -72,6 +64,17 @@ Goal:
 
 - operation profile policy를 실제 gate blocker에 반영하기 전, dry-run simulation summary로만 평가한다.
 - 어떤 blocker가 추가/해제될지 preview만 제공한다.
+- 실제 `canExecutePublish`, `canPublish`, `blockingReasons`는 변경하지 않는다.
+- auto publish는 계속 비활성이다.
+
+Alternative:
+
+**9F-2A — Daily Auto Content Plan draft, no publish execution**
+
+Goal:
+
+- 발행 실행이 아니라 일일 콘텐츠 계획/큐 생성 초안만 만든다.
+- Operation Profile의 `safe_manual_publish` 정책을 참고하되, Blogger write는 수행하지 않는다.
 
 ## 9F Automation Roadmap
 

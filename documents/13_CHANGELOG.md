@@ -1,5 +1,26 @@
 # 13_CHANGELOG
 
+## Patch 9F-1D Operation Profile Exception Dashboard Draft
+
+Implemented after Patch 9F-1C:
+
+- Added `operationProfileExceptionDashboardSummary` as an advisory/read-only exception-only dashboard draft.
+- Added reusable dashboard summary logic that turns `operationProfileAdvisorySummary` into focus items, collapsed normal items, a compact policy snapshot, attention level, headline, and operator summary.
+- Added the dashboard summary to `POST /api/content-items/[id]/publish-oauth-gate`.
+- Added the dashboard summary to `POST /api/blog-operation-profiles/default-policy` preview responses without changing the existing profile summary contract.
+- Polished `/settings/blogger` Blog Operation Profile preview so the healthy summary and focus items appear first, with detailed policy fields in a collapsed section.
+- Polished Content Detail Publish OAuth Gate UI so the Blog Operation Profile block shows the exception-only dashboard first and keeps detailed advisory metadata collapsed.
+- Current baseline loads `safe_manual_publish`, reports `profileFound=true`, `profileHealthy=true`, `advisoryOnly=true`, `policyEnforced=false`, `blockerImpact=false`, and `executionPermissionImpact=false`.
+- Existing publish blockers, `canExecutePublish`, `canPublish`, and publish/scheduled publish execution permissions are unchanged.
+- `blog_operation_profiles_count` remains `1`, and the 9E published/success milestone baseline remains unchanged.
+
+Policy:
+
+- Operation Profile remains advisory-only in this patch.
+- This patch does not enable auto publish, scheduled publish, retry, recovery, or policy-enforced gate behavior.
+- This patch did not run Blogger publish/write, Blogger `posts.update`, Blogger draft save, OAuth reconnect, token refresh, content generation, LLM calls, business DB mutation, content item mutation, publish approval mutation, publish attempt mutation, deploy, push, or external service writes.
+- The next recommended patch is `9F-1E — Policy-enforced publish gate simulation, dry-run only`.
+
 ## Patch 9F-1C Operation Profile Advisory In Publish Gate
 
 Implemented after Patch 9F-1B:

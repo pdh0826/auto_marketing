@@ -2470,11 +2470,60 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
                   <div className="notice">
                     <strong>Advisory only</strong>
                     <p>
-                      이 summary는 Blog Operation Profile을 read-only로 조회해 현재 publish gate 옆에 보여줍니다. 이번 단계에서는 policy를 blocker로 적용하거나
-                      publish 실행 권한을 바꾸지 않습니다.
+                      This profile is advisory-only and does not change publish blockers yet. 정상 항목은 접고, 운영자가 봐야 할 예외/주의만 먼저 표시합니다.
                     </p>
                     <p>Profile advisory는 Blogger publish/write, posts.update, draft save, OAuth reconnect, token refresh, DB mutation, LLM 호출을 수행하지 않습니다.</p>
                   </div>
+                  <div className={publishOAuthGateResult.operationProfileExceptionDashboardSummary.profileHealthy ? "notice" : "notice warning"}>
+                    <strong>{publishOAuthGateResult.operationProfileExceptionDashboardSummary.headline}</strong>
+                    <p>{publishOAuthGateResult.operationProfileExceptionDashboardSummary.operatorSummary}</p>
+                    <p>
+                      dashboard: {publishOAuthGateResult.operationProfileExceptionDashboardSummary.dashboardMode} / policy enforced:{" "}
+                      {String(publishOAuthGateResult.operationProfileExceptionDashboardSummary.policyEnforced)} / blocker impact:{" "}
+                      {String(publishOAuthGateResult.operationProfileExceptionDashboardSummary.blockerImpact)} / execution permission impact:{" "}
+                      {String(publishOAuthGateResult.operationProfileExceptionDashboardSummary.executionPermissionImpact)}
+                    </p>
+                  </div>
+                  <div className="detail-grid">
+                    <DetailItem label="Profile Found" value={String(publishOAuthGateResult.operationProfileExceptionDashboardSummary.profileFound)} />
+                    <DetailItem label="Profile Healthy" value={String(publishOAuthGateResult.operationProfileExceptionDashboardSummary.profileHealthy)} />
+                    <DetailItem label="Attention Level" value={publishOAuthGateResult.operationProfileExceptionDashboardSummary.attentionLevel} />
+                    <DetailItem
+                      label="Default Publish Policy"
+                      value={publishOAuthGateResult.operationProfileExceptionDashboardSummary.profilePolicySnapshot.defaultPublishPolicyPreset ?? "-"}
+                    />
+                    <DetailItem label="Operation Mode" value={publishOAuthGateResult.operationProfileExceptionDashboardSummary.profilePolicySnapshot.operationMode ?? "-"} />
+                    <DetailItem
+                      label="Auto Publish"
+                      value={formatNullableBoolean(publishOAuthGateResult.operationProfileExceptionDashboardSummary.profilePolicySnapshot.allowAutoPublish)}
+                    />
+                    <DetailItem
+                      label="Scheduled Publish"
+                      value={formatNullableBoolean(publishOAuthGateResult.operationProfileExceptionDashboardSummary.profilePolicySnapshot.allowScheduledPublish)}
+                    />
+                    <DetailItem
+                      label="Human Approval"
+                      value={formatNullableBoolean(publishOAuthGateResult.operationProfileExceptionDashboardSummary.profilePolicySnapshot.requireFinalHumanApproval)}
+                    />
+                    <DetailItem
+                      label="OAuth Gate"
+                      value={formatNullableBoolean(publishOAuthGateResult.operationProfileExceptionDashboardSummary.profilePolicySnapshot.requireOAuthGate)}
+                    />
+                  </div>
+                  <ValidationList
+                    title="Operation Profile Focus Items"
+                    items={publishOAuthGateResult.operationProfileExceptionDashboardSummary.focusItems.map((item) => `${item.severity}: ${item.label} - ${item.detail}`)}
+                    emptyText="No profile exceptions found."
+                    isWarning
+                  />
+                  <ValidationList
+                    title="Operation Profile Dashboard Warnings"
+                    items={publishOAuthGateResult.operationProfileExceptionDashboardSummary.advisoryWarnings}
+                    emptyText="advisory warning이 없습니다."
+                    isWarning
+                  />
+                  <details className="read-block">
+                    <summary>Detailed Operation Profile advisory snapshot</summary>
                   <div className="detail-grid">
                     <DetailItem label="Checked" value={String(publishOAuthGateResult.operationProfileAdvisorySummary.checked)} />
                     <DetailItem label="Advisory Only" value={String(publishOAuthGateResult.operationProfileAdvisorySummary.advisoryOnly)} />
@@ -2575,6 +2624,7 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
                     <DetailItem label="LLM Call" value={String(publishOAuthGateResult.operationProfileAdvisorySummary.sideEffectSummary.llmCall)} />
                     <DetailItem label="External Send" value={String(publishOAuthGateResult.operationProfileAdvisorySummary.sideEffectSummary.externalSend)} />
                   </div>
+                  </details>
                 </div>
                 <div className="read-block">
                   <h3>Manual Reconnect Completion Readiness</h3>

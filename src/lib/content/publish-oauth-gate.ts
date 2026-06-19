@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { buildOperationProfileExceptionDashboardSummary } from "@/lib/blog-operation-profiles/operation-profile-exception-dashboard";
 import type { OperationProfileAdvisorySummary } from "@/lib/blog-operation-profiles/operation-profile-summary";
 import type { BloggerPublishApprovalAdmin, BloggerPublishExecutionAttemptAdmin, PublishOAuthAccessTokenState, PublishOAuthGateResponse } from "@/lib/blogger/admin-types";
 
@@ -117,6 +118,11 @@ export function buildPublishOAuthGate(input: BuildPublishOAuthGateInput): Publis
   if (input.latestAttempt && reauthRequired) {
     warnings.add("saved_publish_attempt_exists_but_oauth_gate_blocks_execution");
   }
+  const topLevelBlockingReasons = Array.from(blockingReasons);
+  const operationProfileExceptionDashboardSummary = buildOperationProfileExceptionDashboardSummary({
+    advisorySummary: input.operationProfileAdvisorySummary,
+    existingGateBlockingReasons: topLevelBlockingReasons
+  });
 
   return {
     contentItemId: input.contentItemId,
@@ -127,9 +133,10 @@ export function buildPublishOAuthGate(input: BuildPublishOAuthGateInput): Publis
     canExecuteScheduledPublish: false,
     canPublish: false,
     canSchedulePublish: false,
-    blockingReasons: Array.from(blockingReasons),
+    blockingReasons: topLevelBlockingReasons,
     warnings: Array.from(warnings),
     operationProfileAdvisorySummary: input.operationProfileAdvisorySummary,
+    operationProfileExceptionDashboardSummary,
     oauthGateSummary: {
       connectionFound: Boolean(input.connection),
       selectedBloggerBlogFound: Boolean(input.connection?.bloggerBlogId),

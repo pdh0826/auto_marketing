@@ -545,6 +545,49 @@ export function BloggerSettingsClient() {
         {operationProfileResult ? (
           <div className="read-block">
             <h3>Operation Profile Preview</h3>
+            <div className={operationProfileResult.operationProfileExceptionDashboardSummary.profileHealthy ? "notice" : "notice warning"}>
+              <strong>{operationProfileResult.operationProfileExceptionDashboardSummary.headline}</strong>
+              <p>{operationProfileResult.operationProfileExceptionDashboardSummary.operatorSummary}</p>
+              <p>
+                dashboard: {operationProfileResult.operationProfileExceptionDashboardSummary.dashboardMode} / advisory only:{" "}
+                {String(operationProfileResult.operationProfileExceptionDashboardSummary.advisoryOnly)} / policy enforced:{" "}
+                {String(operationProfileResult.operationProfileExceptionDashboardSummary.policyEnforced)} / blocker impact:{" "}
+                {String(operationProfileResult.operationProfileExceptionDashboardSummary.blockerImpact)}
+              </p>
+            </div>
+            <div className="detail-grid">
+              <DetailItem label="Profile Found" value={String(operationProfileResult.operationProfileExceptionDashboardSummary.profileFound)} />
+              <DetailItem label="Profile Healthy" value={String(operationProfileResult.operationProfileExceptionDashboardSummary.profileHealthy)} />
+              <DetailItem label="Attention Level" value={operationProfileResult.operationProfileExceptionDashboardSummary.attentionLevel} />
+              <DetailItem
+                label="Default Publish Policy"
+                value={operationProfileResult.operationProfileExceptionDashboardSummary.profilePolicySnapshot.defaultPublishPolicyPreset ?? "-"}
+              />
+              <DetailItem label="Operation Mode" value={operationProfileResult.operationProfileExceptionDashboardSummary.profilePolicySnapshot.operationMode ?? "-"} />
+              <DetailItem label="Auto Publish" value={formatNullableBoolean(operationProfileResult.operationProfileExceptionDashboardSummary.profilePolicySnapshot.allowAutoPublish)} />
+              <DetailItem
+                label="Scheduled Publish"
+                value={formatNullableBoolean(operationProfileResult.operationProfileExceptionDashboardSummary.profilePolicySnapshot.allowScheduledPublish)}
+              />
+              <DetailItem
+                label="Human Approval"
+                value={formatNullableBoolean(operationProfileResult.operationProfileExceptionDashboardSummary.profilePolicySnapshot.requireFinalHumanApproval)}
+              />
+            </div>
+            <ValidationList
+              title="Exception Dashboard Focus Items"
+              items={operationProfileResult.operationProfileExceptionDashboardSummary.focusItems.map((item) => `${item.severity}: ${item.label} - ${item.detail}`)}
+              emptyText="No profile exceptions found."
+              isWarning
+            />
+            <ValidationList
+              title="Exception Dashboard Advisory Warnings"
+              items={operationProfileResult.operationProfileExceptionDashboardSummary.advisoryWarnings}
+              emptyText="advisory warning이 없습니다."
+              isWarning
+            />
+            <details className="read-block">
+              <summary>Detailed policy snapshot</summary>
             <div className="detail-grid">
               <DetailItem label="Checked At" value={new Date(operationProfileResult.checkedAt).toLocaleString()} />
               <DetailItem label="Mode" value={operationProfileResult.blogOperationProfileSummary.mode} />
@@ -583,6 +626,7 @@ export function BloggerSettingsClient() {
               <DetailItem label="Readback Content Returned" value={String(operationProfileResult.blogOperationProfileSummary.defaultPublishPolicy.contentReturnedInReadbackResponse)} />
               <DetailItem label="Operator Exceptions Only" value={String(operationProfileResult.blogOperationProfileSummary.defaultPublishPolicy.operatorSeesExceptionsOnly)} />
             </div>
+            </details>
             <ValidationList title="Operation Profile Blocking Reasons" items={operationProfileResult.blogOperationProfileSummary.blockingReasons} emptyText="blocking reason이 없습니다." isError />
             <ValidationList title="Operation Profile Warnings" items={operationProfileResult.blogOperationProfileSummary.warnings} emptyText="warning이 없습니다." isWarning />
             <div className="detail-grid">
@@ -848,6 +892,13 @@ function DetailItem({ label, value }: { label: string; value: string }) {
       <span>{value}</span>
     </div>
   );
+}
+
+function formatNullableBoolean(value: boolean | null | undefined) {
+  if (value === null || value === undefined) {
+    return "-";
+  }
+  return value ? "true" : "false";
 }
 
 function ValidationList({ title, items, emptyText, isError, isWarning }: { title: string; items: string[]; emptyText: string; isError?: boolean; isWarning?: boolean }) {

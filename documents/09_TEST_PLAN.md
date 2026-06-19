@@ -89,6 +89,20 @@ Next session start DB guard should use the published/success values above. The c
 - 9F-1C must not run Blogger publish/write, `posts.update`, draft save, OAuth reconnect, token refresh, content generation, LLM calls, business DB mutation, content mutation, publish approval mutation, or publish attempt mutation.
 - DB baseline must remain unchanged: 9E published/success values unchanged, counts `1 / 1 / 1 / 1 / 22`, and `blog_operation_profiles_count=1`.
 
+## Patch 9F-1D Operation Profile Exception Dashboard Draft
+
+- `POST /api/content-items/[id]/publish-oauth-gate` should include `operationProfileExceptionDashboardSummary`.
+- `POST /api/blog-operation-profiles/default-policy` preview should also include `operationProfileExceptionDashboardSummary` without breaking `blogOperationProfileSummary`.
+- The dashboard should report `checked=true`, `dashboardVersion=9F-1D`, `dashboardMode=exception_only_draft`, `advisoryOnly=true`, `policyEnforced=false`, `blockerImpact=false`, and `executionPermissionImpact=false`.
+- Current baseline should return `profileFound=true`, `profileHealthy=true`, `defaultPublishPolicyPreset=safe_manual_publish`, `allowAutoPublish=false`, `allowScheduledPublish=false`, `requireFinalHumanApproval=true`, and `requireOAuthGate=true`.
+- Dashboard `blockingReasons` must remain an empty array.
+- Profile-related issues must appear only as dashboard focus items/advisory warnings and must not leak into top-level publish `blockingReasons`.
+- `/settings/blogger` should show a compact Operation Profile status card, exception dashboard focus items first, and detailed policy fields in a collapsed section.
+- Content Detail Publish OAuth Gate should show the Operation Profile exception dashboard before detailed advisory metadata.
+- 9F-1D must not change existing `canProceedToPublishExecution`, `canProceedToScheduledPublishExecution`, `canExecutePublish`, `canExecuteScheduledPublish`, `canPublish`, `canSchedulePublish`, or publish blocker semantics.
+- 9F-1D must not run Blogger publish/write, `posts.update`, draft save, OAuth reconnect, token refresh, content generation, LLM calls, business DB mutation, content mutation, publish approval mutation, or publish attempt mutation.
+- DB baseline must remain unchanged: 9E published/success values unchanged, counts `1 / 1 / 1 / 1 / 22`, and `blog_operation_profiles_count=1`.
+
 ## Patch 9E-9D Post-publish DB Reconciliation
 
 - `POST /api/content-items/[id]/post-publish-reconciliation` route가 있어야 한다.
