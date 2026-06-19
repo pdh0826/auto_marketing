@@ -1096,3 +1096,15 @@ Safety guard:
 - feature flag 없이 live mode negative smoke를 실행하면 `live_blogger_publish_feature_flag_disabled` 때문에 `liveExecutionAttempted=false`, `liveExecutionBlocked=true`, `bloggerWrite=false`, `bloggerPublish=false`, `dbWrite=false`여야 한다.
 - 9E-9B-LIVE-READY 구현/스모크 중에는 live Blogger publish/write, `posts.update`, draft save, OAuth reconnect, token refresh, approval/attempt/content mutation, external service write, LLM 호출이 발생하지 않아야 한다.
 - DB guard는 unchanged여야 한다: content item status `planned`, `publishedAt=null`, `scheduledAt=null`, draft hashes unchanged, `blogger_draft_saves=1`, `blogger_draft_approvals=1`, `blogger_publish_approvals=1`, `blogger_publish_execution_attempts=1`, `llm_call_logs=22`.
+
+## Patch 9E-9C publish result readback/reconciliation preview 검증
+
+- `POST /api/content-items/[id]/publish-result-readback` route가 있어야 한다.
+- Route는 DB read와 Blogger read-only `posts.get`만 허용하며 DB write, Blogger publish/write, `posts.update`, draft save, OAuth reconnect, token refresh, content mutation, approval mutation, attempt mutation, LLM 호출을 수행하지 않아야 한다.
+- 정상 readback에서는 `readbackAttempted=true`, `readbackOk=true`, `readbackBlocked=false`, `bloggerReadbackRedacted.status=200`, `bloggerPostId=6376467965797870330`이 기대된다.
+- 응답은 Blogger raw response body, post content/body/HTML, access token, refresh token, client secret, encryptedValue를 반환하지 않아야 한다.
+- `matches`는 approval/attempt/draft save/current target blog/post id 및 expected URL/time 비교 결과를 safe boolean/null metadata로 표시해야 한다.
+- external Blogger state가 published로 보이고 internal DB가 아직 `planned`이면 `reconciliationPreview.reconciliationNeeded=true`, `recommendedNextPatch=9E-9D`, `contentMutationRequired=true`, `attemptMutationRequired=true`가 기대된다.
+- OAuth token이 만료되어 readback이 차단되면 `blogger_readback_unauthorized_reauth_required` 또는 OAuth blocker를 표시하고, `/settings/blogger` manual reconnect 후 smoke를 재실행해야 한다.
+- 9E-9C 구현/스모크 후 DB guard는 unchanged여야 한다: content item status `planned`, `publishedAt=null`, `scheduledAt=null`, draft hashes unchanged, attempt status `planned_only`, `bloggerResponseRedactedJson=null`, counts `1/1/1/1/22`.
+- 다음 단계는 9E-9D post-publish DB reconciliation/mutation이며, 그 전까지 내부 content/attempt 상태를 자동 변경하지 않는다.

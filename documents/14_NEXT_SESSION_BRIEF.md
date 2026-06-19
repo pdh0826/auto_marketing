@@ -63,6 +63,8 @@ The current completed path is:
 - The route defaults to `mode=dry_run`, performs DB reads only, and keeps `canExecutePublish=false`.
 - Live publish is code-gated by `BLOGGER_GUARDED_PUBLISH_LIVE_ENABLED=true`, exact confirmation phrase `I_UNDERSTAND_THIS_WILL_PUBLISH_TO_BLOGGER`, matching approval/attempt/hash/blog/post metadata, OAuth/final-preflight readiness, rollback acknowledgement, external write risk acknowledgement, and final human approval.
 - `content_mutation_deferred_to_post_publish_patch` is no longer a live publish hard blocker. It is surfaced as a warning/post-publish deferred action for 9E-9D, because local `content_items.status`/`publishedAt` mutation must wait for publish result readback.
+- Publish Result Readback is implemented at `POST /api/content-items/[id]/publish-result-readback`. It can perform Blogger read-only `posts.get`, returns redacted post metadata only, and previews the 9E-9D reconciliation plan without writing DB rows.
+- After the 9E-9B-LIVE publish smoke, internal DB state intentionally remains unreconciled: content item status is still `planned`, `publishedAt=null`, and the saved publish execution attempt is still `planned_only` with no `bloggerResponseRedactedJson`.
 - Current OAuth expiry is a guarded route blocker, not a code implementation blocker. Live publish requires manual OAuth reconnect immediately before a separate live smoke.
 - `content_items.status`, `publishedAt`, `scheduledAt`, `qualityScore`, and `draftHtml` are not changed by publish-readiness or policy UI.
 
@@ -94,7 +96,7 @@ D. **Patch 9E-7G: publish execution attempt execution preflight design**
 E. **Patch 9E-9B-LIVE or 9E-9C: live publish approval/readback**
 
 - For `9E-9B-LIVE`, first complete manual OAuth reconnect in `/settings/blogger`, then get explicit user approval before running one live Blogger publish smoke.
-- For `9E-9C`, design publish result readback/reconciliation and manual review policy before any content item mutation.
+- For `9E-9C`, publish result readback/reconciliation preview is now implemented; use it to verify Blogger readback before 9E-9D mutation.
 - Treat post-publish `content_items.status`/`publishedAt` mutation as a separate 9E-9D action after Blogger publish readback verifies the result.
 - Keep scheduled publish execution disabled until a separate policy patch.
 - Continue to block token refresh unless a separate token refresh policy patch is approved.

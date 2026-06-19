@@ -1281,3 +1281,18 @@ Implemented after Patch 9E-9B:
 Not executed:
 
 - Live Blogger publish/write, Blogger `posts.update`, additional draft save, OAuth reconnect, token refresh, deploy, push, external service write, content item mutation, approval/attempt mutation, or LLM call.
+
+## Patch 9E-9C: Publish Result Readback And Reconciliation Preview
+
+Implemented after the 9E-9B-LIVE successful Blogger publish smoke:
+
+- Added `src/lib/blogger/read-post.ts` for Blogger `posts.get` read-only post readback with redacted safe metadata only.
+- Added `POST /api/content-items/[id]/publish-result-readback`.
+- Added a read-only reconciliation preview that compares saved approval, saved publish attempt, successful draft save, content item state, target Blogger blog/post id, and Blogger readback metadata.
+- The preview reports external Blogger state, internal DB state, match booleans, deferred mutation warnings, and a proposed 9E-9D content/attempt reconciliation plan.
+- Content Detail UI now includes a Publish Result Readback button/result block.
+
+Not executed or not implemented:
+
+- Blogger publish/write, Blogger `posts.update`, additional draft save, OAuth reconnect, token refresh, content item mutation, approval mutation, attempt mutation, deploy, push, external service write, or LLM call.
+- 9E-9D is still required before local `content_items.status`/`publishedAt` or publish attempt response fields are updated.

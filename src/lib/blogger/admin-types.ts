@@ -893,6 +893,106 @@ export interface GuardedPublishExecutionResponse {
   };
 }
 
+export interface PublishResultReadbackResponse {
+  contentItemId: string;
+  checkedAt: string;
+  publishResultReadbackSummary: {
+    checked: true;
+    readbackAttempted: boolean;
+    readbackOk: boolean;
+    readbackBlocked: boolean;
+    contentItemId: string;
+    publishApprovalId: string | null;
+    publishExecutionAttemptId: string | null;
+    bloggerDraftSaveId: string | null;
+    targetBloggerBlogId: string | null;
+    targetBloggerBlogName: string | null;
+    targetBloggerBlogUrl: string | null;
+    bloggerPostId: string | null;
+    expectedBloggerPostUrl: string | null;
+    expectedPublishedAt: string | null;
+    expectedUpdatedAt: string | null;
+    bloggerReadbackRedacted: {
+      ok: boolean;
+      status: number;
+      bloggerPostId: string | null;
+      bloggerPostUrl: string | null;
+      title: string | null;
+      publishedAt: string | null;
+      updatedAt: string | null;
+      statusLabel: string | null;
+      retryable: boolean | null;
+      errorCode: string | null;
+      errorMessageRedacted: string | null;
+    };
+    matches: {
+      approvalMatchesCurrentState: boolean;
+      attemptMatchesCurrentState: boolean;
+      draftSaveMatchesCurrentState: boolean;
+      targetBlogMatches: boolean;
+      bloggerPostIdMatches: boolean;
+      bloggerPostUrlMatchesExpected: boolean;
+      publishedAtMatchesExpected: boolean | null;
+      updatedAtMatchesExpected: boolean | null;
+    };
+    externalBloggerState: {
+      postExists: boolean;
+      appearsPublished: boolean;
+      urlAvailable: boolean;
+      publishedAtAvailable: boolean;
+      updatedAtAvailable: boolean;
+    };
+    internalDbState: {
+      contentStatus: string | null;
+      contentPublishedAt: string | null;
+      contentScheduledAt: string | null;
+      attemptStatus: string | null;
+      attemptHasRedactedResponse: boolean;
+      attemptErrorCode: string | null;
+    };
+    reconciliationPreview: {
+      reconciliationNeeded: boolean;
+      recommendedNextPatch: "9E-9D";
+      contentMutationRequired: boolean;
+      attemptMutationRequired: boolean;
+      approvalMutationRequired: boolean;
+      safeToMutateContentAfterReadback: boolean;
+      proposedContentItemPatch: {
+        status: "published";
+        publishedAt: string | null;
+        scheduledAt: null;
+        bloggerPostId: string | null;
+        bloggerPostUrl: string | null;
+      } | null;
+      proposedAttemptPatch: {
+        status: "success";
+        bloggerResponseRedactedJson: "redacted_readback_result";
+        errorType: null;
+        errorCode: null;
+        errorMessageRedacted: null;
+      } | null;
+    };
+    blockingReasons: string[];
+    warnings: string[];
+    sideEffectSummary: {
+      dbRead: true;
+      dbWrite: false;
+      bloggerRead: boolean;
+      bloggerWrite: false;
+      bloggerPublish: false;
+      bloggerUpdate: false;
+      bloggerDraftSave: false;
+      tokenRefresh: false;
+      oauthReconnect: false;
+      contentMutation: false;
+      approvalMutation: false;
+      attemptMutation: false;
+      llmCall: false;
+      externalSend: false;
+    };
+  };
+}
+
 export interface PublishOAuthGateResponse {
   contentItemId: string;
   checkedAt: string;

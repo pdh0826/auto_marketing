@@ -16,6 +16,7 @@ import type {
   PublishExecutionAttemptPreviewResponse,
   PublishExecutionAttemptSaveResponse,
   GuardedPublishExecutionResponse,
+  PublishResultReadbackResponse,
   PublishOAuthGateResponse,
   PublishPreflightDryRun
 } from "@/lib/blogger/admin-types";
@@ -279,6 +280,7 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
   const [publishExecutionAttemptReadbackResult, setPublishExecutionAttemptReadbackResult] = useState<PublishExecutionAttemptReadbackResponse | null>(null);
   const [publishOAuthGateResult, setPublishOAuthGateResult] = useState<PublishOAuthGateResponse | null>(null);
   const [guardedPublishExecutionResult, setGuardedPublishExecutionResult] = useState<GuardedPublishExecutionResponse | null>(null);
+  const [publishResultReadbackResult, setPublishResultReadbackResult] = useState<PublishResultReadbackResponse | null>(null);
   const [bloggerDraftPreviewResult, setBloggerDraftPreviewResult] = useState<BloggerDraftPayloadPreview | null>(null);
   const [bloggerDraftSavePreflightResult, setBloggerDraftSavePreflightResult] = useState<BloggerDraftSavePreflight | null>(null);
   const [stepwiseRuns, setStepwiseRuns] = useState<StepwiseDraftGenerationRunSummary[]>([]);
@@ -347,6 +349,7 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
   const [runningPublishExecutionAttemptReadback, setRunningPublishExecutionAttemptReadback] = useState(false);
   const [runningPublishOAuthGate, setRunningPublishOAuthGate] = useState(false);
   const [runningGuardedPublishExecution, setRunningGuardedPublishExecution] = useState(false);
+  const [runningPublishResultReadback, setRunningPublishResultReadback] = useState(false);
   const [runningBloggerDraftPreview, setRunningBloggerDraftPreview] = useState(false);
   const [runningBloggerDraftSavePreflight, setRunningBloggerDraftSavePreflight] = useState(false);
   const [approvingBloggerDraft, setApprovingBloggerDraft] = useState(false);
@@ -379,6 +382,7 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
   const [publishExecutionAttemptReadbackError, setPublishExecutionAttemptReadbackError] = useState<string | null>(null);
   const [publishOAuthGateError, setPublishOAuthGateError] = useState<string | null>(null);
   const [guardedPublishExecutionError, setGuardedPublishExecutionError] = useState<string | null>(null);
+  const [publishResultReadbackError, setPublishResultReadbackError] = useState<string | null>(null);
   const [bloggerDraftPreviewError, setBloggerDraftPreviewError] = useState<string | null>(null);
   const [bloggerDraftSavePreflightError, setBloggerDraftSavePreflightError] = useState<string | null>(null);
   const [bloggerDraftSaveError, setBloggerDraftSaveError] = useState<string | null>(null);
@@ -419,6 +423,7 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
   const canRunPublishExecutionAttemptReadback = Boolean(!runningPublishExecutionAttemptReadback);
   const canRunPublishOAuthGate = Boolean(!runningPublishOAuthGate);
   const canRunGuardedPublishExecution = Boolean(!runningGuardedPublishExecution);
+  const canRunPublishResultReadback = Boolean(!runningPublishResultReadback);
   const publishApprovalPreviewMatchesOptions = Boolean(
     publishApprovalPreviewResult &&
       publishApprovalPreviewResult.approvalSnapshotPreview.publishMode === publishApprovalMode &&
@@ -1499,6 +1504,38 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
     }
   }
 
+  async function runPublishResultReadback() {
+    setNotice(null);
+    setPublishResultReadbackError(null);
+    setRunningPublishResultReadback(true);
+
+    const executionSummary = guardedPublishExecutionResult?.guardedPublishExecutionSummary;
+    const latestApproval = publishApprovalReadbackResult?.latestApproval ?? null;
+    const latestAttempt = publishExecutionAttemptReadbackResult?.latestAttempt ?? null;
+
+    try {
+      const result = await requestJson<ApiResult<PublishResultReadbackResponse>>(`/api/content-items/${contentItemId}/publish-result-readback`, {
+        method: "POST",
+        body: JSON.stringify({
+          publishApprovalId: executionSummary?.publishApprovalId ?? latestApproval?.id ?? null,
+          publishExecutionAttemptId: executionSummary?.publishExecutionAttemptId ?? latestAttempt?.id ?? null,
+          expectedTargetBloggerBlogId: executionSummary?.targetBloggerBlogId ?? latestApproval?.targetBloggerBlogId ?? latestAttempt?.targetBloggerBlogId ?? null,
+          expectedTargetBloggerBlogUrl: executionSummary?.targetBloggerBlogUrl ?? latestApproval?.targetBloggerBlogUrl ?? null,
+          expectedBloggerPostId: executionSummary?.bloggerPostId ?? latestApproval?.bloggerPostId ?? latestAttempt?.bloggerPostId ?? null,
+          expectedBloggerPostUrl: executionSummary?.bloggerResultRedacted.bloggerPostUrl ?? null,
+          expectedPublishedAt: executionSummary?.bloggerResultRedacted.publishedAt ?? null,
+          expectedUpdatedAt: executionSummary?.bloggerResultRedacted.updatedAt ?? null
+        })
+      });
+      setPublishResultReadbackResult(result.data);
+      setNotice("Publish result readback을 실행했습니다. Blogger read-only post GET만 허용되며 publish/write, posts.update, DB mutation은 수행하지 않았습니다.");
+    } catch (caught) {
+      setPublishResultReadbackError(caught instanceof Error ? caught.message : "Publish result readback에 실패했습니다.");
+    } finally {
+      setRunningPublishResultReadback(false);
+    }
+  }
+
   async function runBloggerDraftPreview() {
     setNotice(null);
     setBloggerDraftPreviewError(null);
@@ -1953,6 +1990,9 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
               <button className="button secondary" type="button" disabled={!canRunGuardedPublishExecution} onClick={() => void runGuardedPublishExecutionDryRun()}>
                 {runningGuardedPublishExecution ? "Guarded Publish Dry-run 실행 중" : "Check Guarded Publish Execution"}
               </button>
+              <button className="button secondary" type="button" disabled={!canRunPublishResultReadback} onClick={() => void runPublishResultReadback()}>
+                {runningPublishResultReadback ? "Publish Result Readback 실행 중" : "Publish Result Readback"}
+              </button>
               <button className="button secondary" type="button" disabled>
                 Publish는 후속 패치에서 연결 예정
               </button>
@@ -1966,6 +2006,7 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
               canSchedulePublish=false를 유지합니다.
             </div>
             {guardedPublishExecutionError ? <div className="error">{guardedPublishExecutionError}</div> : null}
+            {publishResultReadbackError ? <div className="error">{publishResultReadbackError}</div> : null}
 
             {guardedPublishExecutionResult ? (
               <div className="read-block">
@@ -2079,6 +2120,115 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
             ) : (
               <div className="notice">
                 Check Guarded Publish Execution은 기본 dry-run으로만 실행되며, live Blogger publish/write는 별도 승인과 feature flag 없이는 실행되지 않습니다.
+              </div>
+            )}
+
+            {publishResultReadbackResult ? (
+              <div className="read-block">
+                <h3>Publish Result Readback</h3>
+                <div className="notice warning">
+                  <strong>Read-only Blogger post readback and reconciliation preview</strong>
+                  <p>Blogger post 상태를 GET으로만 확인합니다. Blogger publish/write, posts.update, draft save, OAuth reconnect, token refresh는 실행하지 않습니다.</p>
+                  <p>이 preview는 내부 DB를 변경하지 않습니다. content item/attempt mutation은 9E-9D에서 별도 승인 후 처리합니다.</p>
+                </div>
+                <div className="detail-grid">
+                  <DetailItem label="Checked At" value={formatDate(publishResultReadbackResult.checkedAt)} />
+                  <DetailItem label="Readback Attempted" value={String(publishResultReadbackResult.publishResultReadbackSummary.readbackAttempted)} />
+                  <DetailItem label="Readback OK" value={String(publishResultReadbackResult.publishResultReadbackSummary.readbackOk)} />
+                  <DetailItem label="Readback Blocked" value={String(publishResultReadbackResult.publishResultReadbackSummary.readbackBlocked)} />
+                  <DetailItem label="Publish Approval ID" value={publishResultReadbackResult.publishResultReadbackSummary.publishApprovalId ?? "-"} />
+                  <DetailItem label="Publish Attempt ID" value={publishResultReadbackResult.publishResultReadbackSummary.publishExecutionAttemptId ?? "-"} />
+                  <DetailItem label="Blogger Draft Save ID" value={publishResultReadbackResult.publishResultReadbackSummary.bloggerDraftSaveId ?? "-"} />
+                  <DetailItem label="Target Blog ID" value={publishResultReadbackResult.publishResultReadbackSummary.targetBloggerBlogId ?? "-"} />
+                  <DetailItem label="Target Blog Name" value={publishResultReadbackResult.publishResultReadbackSummary.targetBloggerBlogName ?? "-"} />
+                  <DetailItem label="Target Blog URL" value={publishResultReadbackResult.publishResultReadbackSummary.targetBloggerBlogUrl ?? "-"} />
+                  <DetailItem label="Blogger Post ID" value={publishResultReadbackResult.publishResultReadbackSummary.bloggerPostId ?? "-"} />
+                  <DetailItem label="Readback Status" value={String(publishResultReadbackResult.publishResultReadbackSummary.bloggerReadbackRedacted.status)} />
+                  <DetailItem label="Readback Post ID" value={publishResultReadbackResult.publishResultReadbackSummary.bloggerReadbackRedacted.bloggerPostId ?? "-"} />
+                  <DetailItem label="Readback URL" value={publishResultReadbackResult.publishResultReadbackSummary.bloggerReadbackRedacted.bloggerPostUrl ?? "-"} />
+                  <DetailItem label="Readback Title" value={publishResultReadbackResult.publishResultReadbackSummary.bloggerReadbackRedacted.title ?? "-"} />
+                  <DetailItem label="Published At" value={publishResultReadbackResult.publishResultReadbackSummary.bloggerReadbackRedacted.publishedAt ?? "-"} />
+                  <DetailItem label="Updated At" value={publishResultReadbackResult.publishResultReadbackSummary.bloggerReadbackRedacted.updatedAt ?? "-"} />
+                  <DetailItem label="Status Label" value={publishResultReadbackResult.publishResultReadbackSummary.bloggerReadbackRedacted.statusLabel ?? "-"} />
+                  <DetailItem label="Post Exists" value={String(publishResultReadbackResult.publishResultReadbackSummary.externalBloggerState.postExists)} />
+                  <DetailItem label="Appears Published" value={String(publishResultReadbackResult.publishResultReadbackSummary.externalBloggerState.appearsPublished)} />
+                  <DetailItem label="URL Available" value={String(publishResultReadbackResult.publishResultReadbackSummary.externalBloggerState.urlAvailable)} />
+                  <DetailItem label="PublishedAt Available" value={String(publishResultReadbackResult.publishResultReadbackSummary.externalBloggerState.publishedAtAvailable)} />
+                  <DetailItem label="UpdatedAt Available" value={String(publishResultReadbackResult.publishResultReadbackSummary.externalBloggerState.updatedAtAvailable)} />
+                </div>
+                <div className="detail-grid">
+                  <DetailItem label="Approval Matches" value={String(publishResultReadbackResult.publishResultReadbackSummary.matches.approvalMatchesCurrentState)} />
+                  <DetailItem label="Attempt Matches" value={String(publishResultReadbackResult.publishResultReadbackSummary.matches.attemptMatchesCurrentState)} />
+                  <DetailItem label="Draft Save Matches" value={String(publishResultReadbackResult.publishResultReadbackSummary.matches.draftSaveMatchesCurrentState)} />
+                  <DetailItem label="Target Blog Matches" value={String(publishResultReadbackResult.publishResultReadbackSummary.matches.targetBlogMatches)} />
+                  <DetailItem label="Blogger Post ID Matches" value={String(publishResultReadbackResult.publishResultReadbackSummary.matches.bloggerPostIdMatches)} />
+                  <DetailItem label="Blogger URL Matches Expected" value={String(publishResultReadbackResult.publishResultReadbackSummary.matches.bloggerPostUrlMatchesExpected)} />
+                  <DetailItem label="PublishedAt Matches Expected" value={formatNullableBoolean(publishResultReadbackResult.publishResultReadbackSummary.matches.publishedAtMatchesExpected)} />
+                  <DetailItem label="UpdatedAt Matches Expected" value={formatNullableBoolean(publishResultReadbackResult.publishResultReadbackSummary.matches.updatedAtMatchesExpected)} />
+                  <DetailItem label="Internal Content Status" value={publishResultReadbackResult.publishResultReadbackSummary.internalDbState.contentStatus ?? "-"} />
+                  <DetailItem label="Internal PublishedAt" value={publishResultReadbackResult.publishResultReadbackSummary.internalDbState.contentPublishedAt ?? "-"} />
+                  <DetailItem label="Internal ScheduledAt" value={publishResultReadbackResult.publishResultReadbackSummary.internalDbState.contentScheduledAt ?? "-"} />
+                  <DetailItem label="Attempt Status" value={publishResultReadbackResult.publishResultReadbackSummary.internalDbState.attemptStatus ?? "-"} />
+                  <DetailItem label="Attempt Has Redacted Response" value={String(publishResultReadbackResult.publishResultReadbackSummary.internalDbState.attemptHasRedactedResponse)} />
+                  <DetailItem label="Attempt Error Code" value={publishResultReadbackResult.publishResultReadbackSummary.internalDbState.attemptErrorCode ?? "-"} />
+                </div>
+                <div className="detail-grid">
+                  <DetailItem label="Reconciliation Needed" value={String(publishResultReadbackResult.publishResultReadbackSummary.reconciliationPreview.reconciliationNeeded)} />
+                  <DetailItem label="Recommended Next Patch" value={publishResultReadbackResult.publishResultReadbackSummary.reconciliationPreview.recommendedNextPatch} />
+                  <DetailItem label="Content Mutation Required" value={String(publishResultReadbackResult.publishResultReadbackSummary.reconciliationPreview.contentMutationRequired)} />
+                  <DetailItem label="Attempt Mutation Required" value={String(publishResultReadbackResult.publishResultReadbackSummary.reconciliationPreview.attemptMutationRequired)} />
+                  <DetailItem label="Approval Mutation Required" value={String(publishResultReadbackResult.publishResultReadbackSummary.reconciliationPreview.approvalMutationRequired)} />
+                  <DetailItem
+                    label="Safe To Mutate After Readback"
+                    value={String(publishResultReadbackResult.publishResultReadbackSummary.reconciliationPreview.safeToMutateContentAfterReadback)}
+                  />
+                  <DetailItem
+                    label="Proposed Content Status"
+                    value={publishResultReadbackResult.publishResultReadbackSummary.reconciliationPreview.proposedContentItemPatch?.status ?? "-"}
+                  />
+                  <DetailItem
+                    label="Proposed Content PublishedAt"
+                    value={publishResultReadbackResult.publishResultReadbackSummary.reconciliationPreview.proposedContentItemPatch?.publishedAt ?? "-"}
+                  />
+                  <DetailItem
+                    label="Proposed Attempt Status"
+                    value={publishResultReadbackResult.publishResultReadbackSummary.reconciliationPreview.proposedAttemptPatch?.status ?? "-"}
+                  />
+                </div>
+                <ValidationList
+                  title="Publish Result Readback Blocking Reasons"
+                  items={publishResultReadbackResult.publishResultReadbackSummary.blockingReasons}
+                  emptyText="blocking reason이 없습니다."
+                  isError
+                />
+                <ValidationList
+                  title="Publish Result Readback Warnings"
+                  items={publishResultReadbackResult.publishResultReadbackSummary.warnings}
+                  emptyText="warning이 없습니다."
+                  isWarning
+                />
+                <div className="detail-grid">
+                  <DetailItem label="DB Read" value={String(publishResultReadbackResult.publishResultReadbackSummary.sideEffectSummary.dbRead)} />
+                  <DetailItem label="DB Write" value={String(publishResultReadbackResult.publishResultReadbackSummary.sideEffectSummary.dbWrite)} />
+                  <DetailItem label="Blogger Read" value={String(publishResultReadbackResult.publishResultReadbackSummary.sideEffectSummary.bloggerRead)} />
+                  <DetailItem label="Blogger Write" value={String(publishResultReadbackResult.publishResultReadbackSummary.sideEffectSummary.bloggerWrite)} />
+                  <DetailItem label="Blogger Publish" value={String(publishResultReadbackResult.publishResultReadbackSummary.sideEffectSummary.bloggerPublish)} />
+                  <DetailItem label="Blogger Update" value={String(publishResultReadbackResult.publishResultReadbackSummary.sideEffectSummary.bloggerUpdate)} />
+                  <DetailItem label="Blogger Draft Save" value={String(publishResultReadbackResult.publishResultReadbackSummary.sideEffectSummary.bloggerDraftSave)} />
+                  <DetailItem label="Token Refresh" value={String(publishResultReadbackResult.publishResultReadbackSummary.sideEffectSummary.tokenRefresh)} />
+                  <DetailItem label="OAuth Reconnect" value={String(publishResultReadbackResult.publishResultReadbackSummary.sideEffectSummary.oauthReconnect)} />
+                  <DetailItem label="Content Mutation" value={String(publishResultReadbackResult.publishResultReadbackSummary.sideEffectSummary.contentMutation)} />
+                  <DetailItem label="Approval Mutation" value={String(publishResultReadbackResult.publishResultReadbackSummary.sideEffectSummary.approvalMutation)} />
+                  <DetailItem label="Attempt Mutation" value={String(publishResultReadbackResult.publishResultReadbackSummary.sideEffectSummary.attemptMutation)} />
+                  <DetailItem label="LLM Call" value={String(publishResultReadbackResult.publishResultReadbackSummary.sideEffectSummary.llmCall)} />
+                </div>
+                <div className="notice">
+                  Publish Result Readback 응답은 access token, refresh token, client secret, encryptedValue, raw Blogger response body, Blogger post content/full HTML을 반환하지 않습니다.
+                </div>
+              </div>
+            ) : (
+              <div className="notice">
+                Publish Result Readback은 실제 Blogger publish 이후 외부 post 상태를 read-only로 재확인하고, 9E-9D에서 필요한 내부 DB reconciliation plan만 표시합니다.
               </div>
             )}
 
