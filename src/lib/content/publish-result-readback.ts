@@ -1,6 +1,7 @@
 import { readBloggerPost } from "@/lib/blogger/read-post";
 import { decryptBloggerSecret, isBloggerSecretEncryptionConfigured } from "@/lib/blogger/secrets";
 import type { PublishResultReadbackResponse } from "@/lib/blogger/admin-types";
+import { buildOperationProfileAdvisorySummary } from "@/lib/blog-operation-profiles/operation-profile-advisory";
 import { buildPublishOAuthGate } from "@/lib/content/publish-oauth-gate";
 import { getEncryptedBloggerConnectionSecret, getBloggerConnectionSecretStatus } from "@/lib/db/blogger-connection-secrets";
 import { listBloggerConnectionsForBlog } from "@/lib/db/blogger-connections";
@@ -76,6 +77,11 @@ export async function buildPublishResultReadbackResponse(
         }
       })
     : null;
+  const operationProfileAdvisorySummary = await buildOperationProfileAdvisorySummary({
+    targetBloggerBlogId: approval?.targetBloggerBlogId ?? latestDraftSave?.targetBloggerBlogId ?? bloggerConnection?.bloggerBlogId ?? null,
+    targetBloggerBlogName: approval?.targetBloggerBlogName ?? latestDraftSave?.targetBloggerBlogName ?? bloggerConnection?.bloggerBlogName ?? null,
+    targetBloggerBlogUrl: approval?.targetBloggerBlogUrl ?? latestDraftSave?.targetBloggerBlogUrl ?? bloggerConnection?.bloggerBlogUrl ?? null
+  });
 
   const oauthGate = buildPublishOAuthGate({
     contentItemId,
@@ -97,6 +103,7 @@ export async function buildPublishResultReadbackResponse(
     draftHtml: contentItem.draftHtml,
     latestApproval: approval,
     latestAttempt: attempt,
+    operationProfileAdvisorySummary,
     checkedAt
   });
 

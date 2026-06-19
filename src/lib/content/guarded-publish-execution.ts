@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import type { GuardedPublishExecutionResponse } from "@/lib/blogger/admin-types";
 import { publishExistingBloggerPost } from "@/lib/blogger/publish-post";
 import { decryptBloggerSecret, isBloggerSecretEncryptionConfigured } from "@/lib/blogger/secrets";
+import { buildOperationProfileAdvisorySummary } from "@/lib/blog-operation-profiles/operation-profile-advisory";
 import { buildPublishOAuthGate } from "@/lib/content/publish-oauth-gate";
 import { getEncryptedBloggerConnectionSecret, getBloggerConnectionSecretStatus } from "@/lib/db/blogger-connection-secrets";
 import { listBloggerConnectionsForBlog } from "@/lib/db/blogger-connections";
@@ -72,6 +73,11 @@ export async function buildGuardedPublishExecutionResponse(
   const currentDraftMarkdownHash = md5Hex(contentItem.draftMarkdown ?? "");
   const currentDraftHtmlHash = md5Hex(contentItem.draftHtml ?? "");
   const currentDraftHtmlLength = (contentItem.draftHtml ?? "").length;
+  const operationProfileAdvisorySummary = await buildOperationProfileAdvisorySummary({
+    targetBloggerBlogId: latestApproval?.targetBloggerBlogId ?? latestAttempt?.targetBloggerBlogId ?? bloggerConnection?.bloggerBlogId ?? null,
+    targetBloggerBlogName: latestApproval?.targetBloggerBlogName ?? bloggerConnection?.bloggerBlogName ?? null,
+    targetBloggerBlogUrl: latestApproval?.targetBloggerBlogUrl ?? bloggerConnection?.bloggerBlogUrl ?? null
+  });
 
   const oauthGate = buildPublishOAuthGate({
     contentItemId,
@@ -93,6 +99,7 @@ export async function buildGuardedPublishExecutionResponse(
     draftHtml: contentItem.draftHtml,
     latestApproval,
     latestAttempt,
+    operationProfileAdvisorySummary,
     checkedAt
   });
 

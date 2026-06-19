@@ -53,3 +53,60 @@ export interface BlogOperationProfileResponse {
   checkedAt: string;
   blogOperationProfileSummary: BlogOperationProfileSummary;
 }
+
+export interface OperationProfileAdvisorySummary {
+  checked: true;
+  advisoryOnly: true;
+  policyEnforced: false;
+  blockerImpact: false;
+  executionPermissionImpact: false;
+  profileLookupAttempted: true;
+  profileFound: boolean;
+  profileId: string | null;
+  targetBloggerBlogId: string | null;
+  targetBloggerBlogName: string | null;
+  targetBloggerBlogUrl: string | null;
+  profileStatus: string | null;
+  operationMode: string | null;
+  defaultPublishPolicyPreset: string | null;
+  timezone: string | null;
+  allowAutoPublish: boolean | null;
+  allowScheduledPublish: boolean | null;
+  requireOAuthGate: boolean | null;
+  requireFinalHumanApproval: boolean | null;
+  requireExternalWriteRiskAck: boolean | null;
+  requireRollbackPlanAck: boolean | null;
+  requireReadbackAfterPublish: boolean | null;
+  requirePostPublishReconciliation: boolean | null;
+  matches: {
+    targetBloggerBlogIdMatches: boolean;
+    targetBloggerBlogUrlMatches: boolean;
+    profileIsActive: boolean;
+    presetIsSafeManualPublish: boolean;
+    operationModeIsApprovalRequired: boolean;
+    autoPublishDisabled: boolean;
+    scheduledPublishDisabled: boolean;
+    requiredManualGuardsEnabled: boolean;
+  };
+  defaultPublishPolicyPreview: Record<string, unknown>;
+  advisoryWarnings: string[];
+  advisoryNotes: string[];
+  blockingReasons: [];
+  sideEffectSummary: {
+    dbRead: true;
+    dbWrite: false;
+    schemaMigration: false;
+    bloggerRead: false;
+    bloggerWrite: false;
+    bloggerPublish: false;
+    bloggerUpdate: false;
+    bloggerDraftSave: false;
+    tokenRefresh: false;
+    oauthReconnect: false;
+    contentMutation: false;
+    approvalMutation: false;
+    attemptMutation: false;
+    llmCall: false;
+    externalSend: false;
+  };
+}

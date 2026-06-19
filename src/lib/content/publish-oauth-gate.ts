@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import type { OperationProfileAdvisorySummary } from "@/lib/blog-operation-profiles/operation-profile-summary";
 import type { BloggerPublishApprovalAdmin, BloggerPublishExecutionAttemptAdmin, PublishOAuthAccessTokenState, PublishOAuthGateResponse } from "@/lib/blogger/admin-types";
 
 export const REQUIRED_BEFORE_PUBLISH_OAUTH_GATE = [
@@ -49,6 +50,7 @@ export interface BuildPublishOAuthGateInput {
   draftHtml: string | null;
   latestApproval: BloggerPublishApprovalAdmin | null;
   latestAttempt: BloggerPublishExecutionAttemptAdmin | null;
+  operationProfileAdvisorySummary: OperationProfileAdvisorySummary;
   checkedAt?: Date;
 }
 
@@ -127,6 +129,7 @@ export function buildPublishOAuthGate(input: BuildPublishOAuthGateInput): Publis
     canSchedulePublish: false,
     blockingReasons: Array.from(blockingReasons),
     warnings: Array.from(warnings),
+    operationProfileAdvisorySummary: input.operationProfileAdvisorySummary,
     oauthGateSummary: {
       connectionFound: Boolean(input.connection),
       selectedBloggerBlogFound: Boolean(input.connection?.bloggerBlogId),

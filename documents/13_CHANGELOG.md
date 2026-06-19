@@ -1,5 +1,24 @@
 # 13_CHANGELOG
 
+## Patch 9F-1C Operation Profile Advisory In Publish Gate
+
+Implemented after Patch 9F-1B:
+
+- Added read-only Operation Profile advisory wiring to `POST /api/content-items/[id]/publish-oauth-gate`.
+- Added `operationProfileAdvisorySummary` with `advisoryOnly=true`, `policyEnforced=false`, `blockerImpact=false`, and `executionPermissionImpact=false`.
+- The advisory loads the existing `safe_manual_publish` profile for `급등포착` / `3065973490356135805`.
+- The summary reports profile status, operation mode, default policy preset, target blog metadata, safe manual policy booleans, advisory matches, warnings/notes, and side-effect summary.
+- Content Detail now displays a `Blog Operation Profile Advisory` block inside the Publish OAuth Gate result area.
+- Existing publish blockers, `canExecutePublish`, `canPublish`, and publish/scheduled publish execution permissions are unchanged by the profile advisory.
+- `blog_operation_profiles_count` remains `1`, and the 9E published/success milestone baseline remains unchanged.
+
+Policy:
+
+- Operation Profile is advisory-only in this patch.
+- This patch does not enable auto publish, scheduled publish, retry, recovery, or policy-enforced gate behavior.
+- This patch did not run Blogger publish/write, Blogger `posts.update`, Blogger draft save, OAuth reconnect, token refresh, content generation, LLM calls, business DB mutation, content item mutation, publish approval mutation, publish attempt mutation, deploy, push, or external service writes.
+- The next recommended patch is `9F-1D — Operation Profile Settings UX polish and exception-only dashboard draft`.
+
 ## Patch 9F-1B Create/Apply Default Blog Operation Profile
 
 Applied after Patch 9F-1A:

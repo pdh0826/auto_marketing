@@ -74,6 +74,21 @@ Next session start DB guard should use the published/success values above. The c
 - 9F-1B must not run Blogger publish/write, `posts.update`, draft save, OAuth reconnect, token refresh, content generation, LLM calls, content mutation, publish approval mutation, or publish attempt mutation.
 - Operation profiles should not affect publish gates yet; that is deferred to `9F-1C` as read-only advisory wiring.
 
+## Patch 9F-1C Operation Profile Advisory In Publish Gate
+
+- `POST /api/content-items/[id]/publish-oauth-gate` should include `operationProfileAdvisorySummary`.
+- `operationProfileAdvisorySummary.checked` should be `true`.
+- `advisoryOnly=true`, `policyEnforced=false`, `blockerImpact=false`, and `executionPermissionImpact=false`.
+- `profileLookupAttempted=true`, `profileFound=true`, and `targetBloggerBlogId=3065973490356135805` for the current test content item.
+- The advisory should show `operationMode=approval_required`, `defaultPublishPolicyPreset=safe_manual_publish`, `allowAutoPublish=false`, `allowScheduledPublish=false`, `requireOAuthGate=true`, `requireFinalHumanApproval=true`, `requireReadbackAfterPublish=true`, and `requirePostPublishReconciliation=true`.
+- `operationProfileAdvisorySummary.blockingReasons` must be an empty array.
+- The advisory side-effect summary should report `dbRead=true`, `dbWrite=false`, Blogger read/write/publish/update/draft save false, token refresh false, OAuth reconnect false, content/approval/attempt mutation false, LLM false, and external send false.
+- Profile missing, mismatch, or preset problems must stay in advisory warnings only and must not be added to top-level `blockingReasons`.
+- 9F-1C must not change existing `canProceedToPublishExecution`, `canProceedToScheduledPublishExecution`, `canExecutePublish`, `canExecuteScheduledPublish`, `canPublish`, `canSchedulePublish`, or existing publish blocker semantics.
+- Content Detail should show a `Blog Operation Profile Advisory` result block after running Publish OAuth Gate.
+- 9F-1C must not run Blogger publish/write, `posts.update`, draft save, OAuth reconnect, token refresh, content generation, LLM calls, business DB mutation, content mutation, publish approval mutation, or publish attempt mutation.
+- DB baseline must remain unchanged: 9E published/success values unchanged, counts `1 / 1 / 1 / 1 / 22`, and `blog_operation_profiles_count=1`.
+
 ## Patch 9E-9D Post-publish DB Reconciliation
 
 - `POST /api/content-items/[id]/post-publish-reconciliation` route가 있어야 한다.

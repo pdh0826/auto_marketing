@@ -2466,6 +2466,117 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
                 <ValidationList title="OAuth Gate Blocking Reasons" items={publishOAuthGateResult.blockingReasons} emptyText="blocking reason이 없습니다." isError />
                 <ValidationList title="OAuth Gate Warnings" items={publishOAuthGateResult.warnings} emptyText="warning이 없습니다." isWarning />
                 <div className="read-block">
+                  <h3>Blog Operation Profile Advisory</h3>
+                  <div className="notice">
+                    <strong>Advisory only</strong>
+                    <p>
+                      이 summary는 Blog Operation Profile을 read-only로 조회해 현재 publish gate 옆에 보여줍니다. 이번 단계에서는 policy를 blocker로 적용하거나
+                      publish 실행 권한을 바꾸지 않습니다.
+                    </p>
+                    <p>Profile advisory는 Blogger publish/write, posts.update, draft save, OAuth reconnect, token refresh, DB mutation, LLM 호출을 수행하지 않습니다.</p>
+                  </div>
+                  <div className="detail-grid">
+                    <DetailItem label="Checked" value={String(publishOAuthGateResult.operationProfileAdvisorySummary.checked)} />
+                    <DetailItem label="Advisory Only" value={String(publishOAuthGateResult.operationProfileAdvisorySummary.advisoryOnly)} />
+                    <DetailItem label="Policy Enforced" value={String(publishOAuthGateResult.operationProfileAdvisorySummary.policyEnforced)} />
+                    <DetailItem label="Blocker Impact" value={String(publishOAuthGateResult.operationProfileAdvisorySummary.blockerImpact)} />
+                    <DetailItem
+                      label="Execution Permission Impact"
+                      value={String(publishOAuthGateResult.operationProfileAdvisorySummary.executionPermissionImpact)}
+                    />
+                    <DetailItem label="Profile Lookup Attempted" value={String(publishOAuthGateResult.operationProfileAdvisorySummary.profileLookupAttempted)} />
+                    <DetailItem label="Profile Found" value={String(publishOAuthGateResult.operationProfileAdvisorySummary.profileFound)} />
+                    <DetailItem label="Target Blog ID" value={publishOAuthGateResult.operationProfileAdvisorySummary.targetBloggerBlogId ?? "-"} />
+                    <DetailItem label="Target Blog Name" value={publishOAuthGateResult.operationProfileAdvisorySummary.targetBloggerBlogName ?? "-"} />
+                    <DetailItem label="Target Blog URL" value={publishOAuthGateResult.operationProfileAdvisorySummary.targetBloggerBlogUrl ?? "-"} />
+                    <DetailItem label="Profile Status" value={publishOAuthGateResult.operationProfileAdvisorySummary.profileStatus ?? "-"} />
+                    <DetailItem label="Operation Mode" value={publishOAuthGateResult.operationProfileAdvisorySummary.operationMode ?? "-"} />
+                    <DetailItem label="Default Publish Policy" value={publishOAuthGateResult.operationProfileAdvisorySummary.defaultPublishPolicyPreset ?? "-"} />
+                    <DetailItem label="Timezone" value={publishOAuthGateResult.operationProfileAdvisorySummary.timezone ?? "-"} />
+                    <DetailItem label="Auto Publish Enabled" value={formatNullableBoolean(publishOAuthGateResult.operationProfileAdvisorySummary.allowAutoPublish)} />
+                    <DetailItem
+                      label="Scheduled Publish Enabled"
+                      value={formatNullableBoolean(publishOAuthGateResult.operationProfileAdvisorySummary.allowScheduledPublish)}
+                    />
+                    <DetailItem
+                      label="Human Approval Required"
+                      value={formatNullableBoolean(publishOAuthGateResult.operationProfileAdvisorySummary.requireFinalHumanApproval)}
+                    />
+                    <DetailItem label="OAuth Gate Required" value={formatNullableBoolean(publishOAuthGateResult.operationProfileAdvisorySummary.requireOAuthGate)} />
+                    <DetailItem
+                      label="External Write Risk Ack"
+                      value={formatNullableBoolean(publishOAuthGateResult.operationProfileAdvisorySummary.requireExternalWriteRiskAck)}
+                    />
+                    <DetailItem
+                      label="Rollback Plan Ack"
+                      value={formatNullableBoolean(publishOAuthGateResult.operationProfileAdvisorySummary.requireRollbackPlanAck)}
+                    />
+                    <DetailItem
+                      label="Readback After Publish"
+                      value={formatNullableBoolean(publishOAuthGateResult.operationProfileAdvisorySummary.requireReadbackAfterPublish)}
+                    />
+                    <DetailItem
+                      label="Post-publish Reconciliation"
+                      value={formatNullableBoolean(publishOAuthGateResult.operationProfileAdvisorySummary.requirePostPublishReconciliation)}
+                    />
+                    <DetailItem
+                      label="Target Blog ID Match"
+                      value={String(publishOAuthGateResult.operationProfileAdvisorySummary.matches.targetBloggerBlogIdMatches)}
+                    />
+                    <DetailItem
+                      label="Target Blog URL Match"
+                      value={String(publishOAuthGateResult.operationProfileAdvisorySummary.matches.targetBloggerBlogUrlMatches)}
+                    />
+                    <DetailItem label="Profile Active" value={String(publishOAuthGateResult.operationProfileAdvisorySummary.matches.profileIsActive)} />
+                    <DetailItem
+                      label="Safe Manual Preset"
+                      value={String(publishOAuthGateResult.operationProfileAdvisorySummary.matches.presetIsSafeManualPublish)}
+                    />
+                    <DetailItem
+                      label="Approval Required Mode"
+                      value={String(publishOAuthGateResult.operationProfileAdvisorySummary.matches.operationModeIsApprovalRequired)}
+                    />
+                    <DetailItem
+                      label="Manual Guards Enabled"
+                      value={String(publishOAuthGateResult.operationProfileAdvisorySummary.matches.requiredManualGuardsEnabled)}
+                    />
+                  </div>
+                  <ValidationList
+                    title="Operation Profile Advisory Warnings"
+                    items={publishOAuthGateResult.operationProfileAdvisorySummary.advisoryWarnings}
+                    emptyText="advisory warning이 없습니다."
+                    isWarning
+                  />
+                  <ValidationList
+                    title="Operation Profile Advisory Notes"
+                    items={publishOAuthGateResult.operationProfileAdvisorySummary.advisoryNotes}
+                    emptyText="advisory note가 없습니다."
+                  />
+                  <ValidationList
+                    title="Operation Profile Blocking Reasons"
+                    items={publishOAuthGateResult.operationProfileAdvisorySummary.blockingReasons}
+                    emptyText="advisory profile은 blocking reason을 만들지 않습니다."
+                    isError
+                  />
+                  <div className="detail-grid">
+                    <DetailItem label="DB Read" value={String(publishOAuthGateResult.operationProfileAdvisorySummary.sideEffectSummary.dbRead)} />
+                    <DetailItem label="DB Write" value={String(publishOAuthGateResult.operationProfileAdvisorySummary.sideEffectSummary.dbWrite)} />
+                    <DetailItem label="Schema Migration" value={String(publishOAuthGateResult.operationProfileAdvisorySummary.sideEffectSummary.schemaMigration)} />
+                    <DetailItem label="Blogger Read" value={String(publishOAuthGateResult.operationProfileAdvisorySummary.sideEffectSummary.bloggerRead)} />
+                    <DetailItem label="Blogger Write" value={String(publishOAuthGateResult.operationProfileAdvisorySummary.sideEffectSummary.bloggerWrite)} />
+                    <DetailItem label="Blogger Publish" value={String(publishOAuthGateResult.operationProfileAdvisorySummary.sideEffectSummary.bloggerPublish)} />
+                    <DetailItem label="Blogger Update" value={String(publishOAuthGateResult.operationProfileAdvisorySummary.sideEffectSummary.bloggerUpdate)} />
+                    <DetailItem label="Blogger Draft Save" value={String(publishOAuthGateResult.operationProfileAdvisorySummary.sideEffectSummary.bloggerDraftSave)} />
+                    <DetailItem label="Token Refresh" value={String(publishOAuthGateResult.operationProfileAdvisorySummary.sideEffectSummary.tokenRefresh)} />
+                    <DetailItem label="OAuth Reconnect" value={String(publishOAuthGateResult.operationProfileAdvisorySummary.sideEffectSummary.oauthReconnect)} />
+                    <DetailItem label="Content Mutation" value={String(publishOAuthGateResult.operationProfileAdvisorySummary.sideEffectSummary.contentMutation)} />
+                    <DetailItem label="Approval Mutation" value={String(publishOAuthGateResult.operationProfileAdvisorySummary.sideEffectSummary.approvalMutation)} />
+                    <DetailItem label="Attempt Mutation" value={String(publishOAuthGateResult.operationProfileAdvisorySummary.sideEffectSummary.attemptMutation)} />
+                    <DetailItem label="LLM Call" value={String(publishOAuthGateResult.operationProfileAdvisorySummary.sideEffectSummary.llmCall)} />
+                    <DetailItem label="External Send" value={String(publishOAuthGateResult.operationProfileAdvisorySummary.sideEffectSummary.externalSend)} />
+                  </div>
+                </div>
+                <div className="read-block">
                   <h3>Manual Reconnect Completion Readiness</h3>
                   <div className="notice warning">
                     <strong>Read-only completion gate</strong>

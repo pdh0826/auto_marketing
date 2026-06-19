@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { buildOperationProfileAdvisorySummary } from "@/lib/blog-operation-profiles/operation-profile-advisory";
 import { buildPublishOAuthGate } from "@/lib/content/publish-oauth-gate";
 import { getBloggerConnectionSecretStatus } from "@/lib/db/blogger-connection-secrets";
 import { listBloggerConnectionsForBlog } from "@/lib/db/blogger-connections";
@@ -42,6 +43,15 @@ export async function POST(_request: Request, { params }: RouteContext) {
       findLatestBloggerPublishExecutionAttemptForContentItem(params.id)
     ]);
 
+    const targetBloggerBlogId = latestApproval?.targetBloggerBlogId ?? latestAttempt?.targetBloggerBlogId ?? bloggerConnection?.bloggerBlogId ?? null;
+    const targetBloggerBlogName = latestApproval?.targetBloggerBlogName ?? bloggerConnection?.bloggerBlogName ?? null;
+    const targetBloggerBlogUrl = latestApproval?.targetBloggerBlogUrl ?? bloggerConnection?.bloggerBlogUrl ?? null;
+    const operationProfileAdvisorySummary = await buildOperationProfileAdvisorySummary({
+      targetBloggerBlogId,
+      targetBloggerBlogName,
+      targetBloggerBlogUrl
+    });
+
     const result = buildPublishOAuthGate({
       contentItemId: params.id,
       connection: bloggerConnection
@@ -61,7 +71,8 @@ export async function POST(_request: Request, { params }: RouteContext) {
       draftMarkdown: contentItem.draftMarkdown,
       draftHtml: contentItem.draftHtml,
       latestApproval: latestApproval ? toBloggerPublishApprovalAdmin(latestApproval) : null,
-      latestAttempt: latestAttempt ? toBloggerPublishExecutionAttemptAdmin(latestAttempt) : null
+      latestAttempt: latestAttempt ? toBloggerPublishExecutionAttemptAdmin(latestAttempt) : null,
+      operationProfileAdvisorySummary
     });
 
     return NextResponse.json({ data: result });

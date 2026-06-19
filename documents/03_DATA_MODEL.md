@@ -947,3 +947,51 @@ Policy boundary:
 - 9F-1B does not wire operation profiles into publish gates.
 - 9F-1B does not perform Blogger publish/write, Blogger `posts.update`, Blogger draft save, OAuth reconnect, token refresh, content generation, LLM calls, content item mutation, publish approval mutation, or publish attempt mutation.
 - 9F-1C should attach the profile summary to publish gates as read-only advisory metadata before any policy-enforced gate behavior is added.
+
+## Patch 9F-1C Operation Profile Advisory
+
+Patch 9F-1C wires the existing `BlogOperationProfile` row into publish gate/preflight responses as read-only advisory metadata.
+
+New publish gate response field:
+
+- `operationProfileAdvisorySummary`
+
+Core semantics:
+
+- `advisoryOnly = true`
+- `policyEnforced = false`
+- `blockerImpact = false`
+- `executionPermissionImpact = false`
+- `blockingReasons = []`
+
+The advisory summary reads the profile for the current target Blogger blog and returns safe metadata:
+
+- profile id presence
+- target Blogger blog id/name/url
+- profile status
+- operation mode
+- default publish policy preset
+- timezone
+- auto/scheduled publish booleans
+- OAuth, human approval, external write risk, rollback, readback, and post-publish reconciliation requirements
+- advisory match booleans for target blog, active status, safe preset, approval-required mode, disabled auto/scheduled publish, and required manual guards
+- advisory warnings and notes
+- side-effect summary
+
+The current profile row remains:
+
+- `targetBloggerBlogId = 3065973490356135805`
+- `defaultPublishPolicyPreset = safe_manual_publish`
+- `operationMode = approval_required`
+- `allowAutoPublish = false`
+- `allowScheduledPublish = false`
+- `requireOAuthGate = true`
+- `requireFinalHumanApproval = true`
+- `requireReadbackAfterPublish = true`
+- `requirePostPublishReconciliation = true`
+
+Policy boundary:
+
+- Profile advisory does not change `canExecutePublish`, `canPublish`, `canProceedToPublishExecution`, or blocker semantics.
+- Profile missing/mismatch/preset issues are advisory warnings only in 9F-1C.
+- No auto publish, scheduled publish, retry, recovery, Blogger write, OAuth reconnect, token refresh, content generation, LLM call, content mutation, approval mutation, attempt mutation, schema migration, or profile write is performed by the 9F-1C flow.
