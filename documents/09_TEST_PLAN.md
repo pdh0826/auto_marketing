@@ -8,6 +8,43 @@ npm run typecheck
 npm run build
 ```
 
+## 9E Publish Milestone Closeout Baseline
+
+Expected current state after `9E-9D-APPLY`:
+
+- `content_items.status = published`
+- `content_items.publishedAt = 2026-06-19 00:44:03`
+- `content_items.scheduledAt = null`
+- `draftMarkdown md5 = 9e0921e7edc9e4a8464a0a52ba369d3d`
+- `draftHtml md5 = a7393df8fb009566201daeea18796027`
+- `draftHtml length = 2789`
+- `blogger_publish_execution_attempts.status = success`
+- `blogger_publish_execution_attempts.bloggerPostId = 6376467965797870330`
+- `blogger_publish_execution_attempts.bloggerResponseRedactedJson is not null`
+- `errorType/errorCode/errorMessageRedacted = null`
+- `contentStatusBefore = planned`
+- `contentStatusAfter = published`
+- `contentMutationPlanned = true`
+- `contentMutationCompleted = true`
+- `publishedAtApplied = 2026-06-19 00:44:03`
+- `blogger_publish_approvals.invalidatedAt = null`
+- counts: `blogger_draft_saves / blogger_draft_approvals / blogger_publish_approvals / blogger_publish_execution_attempts / llm_call_logs = 1 / 1 / 1 / 1 / 22`
+
+Closeout verification:
+
+- `9E-9B-LIVE` completed one guarded Blogger `posts.publish` call for post `6376467965797870330`.
+- `9E-9C` readback verified the external Blogger post exists, has the expected URL, and appears published.
+- `9E-9C-R1` implemented token refresh and confirmed `tokenRefreshImplemented=true`.
+- `9E-9D` added guarded post-publish reconciliation preview/apply code with feature flag and confirmation phrase.
+- `9E-9D-APPLY` reconciled local DB once after explicit approval: content is now `published` and the publish execution attempt is `success`.
+
+Historical pre-apply baseline:
+
+- Before `9E-9D-APPLY`, the expected local state was `content_items.status=planned`, `publishedAt=null`, and `blogger_publish_execution_attempts.status=planned_only`.
+- That planned/planned_only state is now a historical pre-reconciliation baseline, not the current session-start baseline.
+
+Next session start DB guard should use the published/success values above. The closeout documentation patch must not run Blogger publish/write, `posts.update`, draft save, OAuth reconnect, token refresh, DB mutation, content mutation, publish attempt mutation, or LLM calls.
+
 ## Patch 9E-9D Post-publish DB Reconciliation
 
 - `POST /api/content-items/[id]/post-publish-reconciliation` route가 있어야 한다.
@@ -15,7 +52,8 @@ npm run build
 - Preview 결과는 readback 상태, external Blogger published 판단, internal DB before 상태, proposed content item patch, proposed attempt patch, blockers/warnings, side-effect summary를 표시해야 한다.
 - `mode=apply`는 `BLOGGER_POST_PUBLISH_RECONCILIATION_APPLY_ENABLED=true`, 정확한 confirmation phrase, content/attempt mutation acknowledgement, final DB reconciliation approval, readbackOk, expected post/blog/timestamp match, planned internal DB 상태가 모두 맞을 때만 transaction으로 허용되어야 한다.
 - Feature flag disabled 상태의 apply negative smoke는 `post_publish_reconciliation_apply_feature_flag_disabled`로 차단되어야 하며 DB write/content mutation/attempt mutation/Blogger write/publish가 모두 false여야 한다.
-- 이번 patch 검증에서는 실제 apply mode를 실행하지 않는다.
+- Preview/negative smoke에서는 실제 apply mode를 실행하지 않는다.
+- 사용자 명시 승인 후 `9E-9D-APPLY`를 1회 실행하면 `content_items.status=published`, `publishedAt=2026-06-19 00:44:03`, publish attempt `status=success`, `contentMutationCompleted=true`가 되어야 한다.
 
 ## MVP 기능 검증
 

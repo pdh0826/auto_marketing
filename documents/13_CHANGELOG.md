@@ -1,5 +1,26 @@
 # 13_CHANGELOG
 
+## Patch 9E-9E Publish Milestone Closeout
+
+Documented after `9E-9D-APPLY`:
+
+- Closed out the first end-to-end Blogger publish milestone.
+- Recorded the final published/success DB baseline for content item `cmqc2xqbr00011y70sxmgl65v`.
+- Moved the earlier `planned` / `planned_only` state into historical pre-reconciliation context.
+- Updated the next-session direction toward operation automation, with `9F-1A Blog Operation Profile + Default Publish Policy Preset` as the recommended next patch.
+
+Milestone path:
+
+- `9E-9B-LIVE`: ran one guarded Blogger `posts.publish` through feature flag, exact confirmation phrase, acknowledgements, OAuth readiness, final preflight, and matching metadata. Blogger URL: `https://mathlearningappl.blogspot.com/2026/06/blog-post.html`. Local content mutation was intentionally deferred at publish time.
+- `9E-9C`: added Blogger post readback route/lib and verified external Blogger published state from redacted readback metadata.
+- `9E-9C-R1`: implemented OAuth token refresh, reflected `tokenRefreshImplemented=true`, and verified the Google OAuth token endpoint path for reducing repeated manual reconnect pressure.
+- `9E-9D`: added guarded post-publish reconciliation route/lib, preview mode, feature-flag-disabled apply negative guard, and transaction-based apply implementation.
+- `9E-9D-APPLY`: after explicit approval, reconciled the local DB once: `content_items.status=published`, `content_items.publishedAt=2026-06-19 00:44:03`, publish execution attempt `status=success`, redacted response stored, error fields cleared, `contentStatusBefore=planned`, `contentStatusAfter=published`, and `contentMutationCompleted=true`.
+
+Policy:
+
+- This documentation closeout performs no Blogger publish/write, Blogger `posts.update`, Blogger draft save, OAuth reconnect, token refresh, DB mutation, content mutation, publish attempt mutation, external service write, deploy, or LLM call.
+
 ## Patch 9E-9D Post-publish DB Reconciliation
 
 Implemented after Blogger publish readback/token refresh work:

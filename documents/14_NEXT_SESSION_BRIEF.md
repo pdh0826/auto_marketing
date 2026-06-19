@@ -1,17 +1,95 @@
 # 14_NEXT_SESSION_BRIEF
 
-## Current State: Patch 9E-9D
+## Current State: Patch 9E-9E Closeout
 
-- Post-publish DB reconciliation is implemented as a guarded route/lib at `POST /api/content-items/[id]/post-publish-reconciliation`.
-- Default `preview` mode compares Blogger readback state with internal DB state and returns proposed `content_items`/`blogger_publish_execution_attempts` patches without DB writes.
-- `apply` mode is implemented but strongly guarded by `BLOGGER_POST_PUBLISH_RECONCILIATION_APPLY_ENABLED=true`, exact phrase `I_UNDERSTAND_THIS_WILL_MARK_CONTENT_AS_PUBLISHED`, acknowledgements, readbackOk, external published state, expected post/blog/timestamp matches, and planned internal DB state.
-- Content Detail includes a Post-publish DB Reconciliation preview block. The UI does not expose an enabled apply button.
-- 9E-9D validation must not run apply mode. It may run preview and feature-flag-disabled apply-negative smoke only.
-- Next step after explicit user approval: `9E-9D-APPLY` can perform the one-time internal DB reconciliation after readback is valid.
+```text
+repo: ~/blog-growth-agent
+branch: master
+previous HEAD before closeout: 198bcf0 Add post-publish reconciliation preview
+expected HEAD after closeout commit: local commit `Document first Blogger publish milestone` (verify exact hash with `git log --oneline -8`)
+milestone: 9E first end-to-end Blogger publish completed
+```
 
-Operational roadmap note:
+Current baseline:
 
-- Long-term direction remains Blog Operation Profile / default policy / exception-focused dashboard operation rather than repeated per-item operator inputs.
+- Blogger post was published once through the guarded `posts.publish` path.
+- Blogger post readback verified the external published state.
+- Post-publish DB reconciliation has been applied once after explicit approval.
+- `content_items.status = published`
+- `content_items.publishedAt = 2026-06-19 00:44:03`
+- `content_items.scheduledAt = null`
+- publish execution attempt `status = success`
+- publish execution attempt has redacted Blogger readback/result metadata.
+- publish execution attempt error fields are cleared.
+- token refresh is implemented and `tokenRefreshImplemented=true` is reflected in publish OAuth gate summaries.
+- `posts.update`, scheduled publish, bulk publish automation, and operation profiles are not implemented yet.
+
+9E first end-to-end publish path:
+
+1. Stepwise/local draft generation and deterministic HTML preview produced publish-ready local content.
+2. `draftHtml` was applied manually through guarded validation.
+3. Blogger OAuth, verified blog selection, draft payload preview, manual approval, and guarded draft save succeeded.
+4. Publish approval, publish attempt storage, OAuth/final preflight, and guarded publish execution were completed.
+5. `9E-9B-LIVE` performed one Blogger publish for post `6376467965797870330`.
+6. `9E-9C` read back `https://mathlearningappl.blogspot.com/2026/06/blog-post.html`.
+7. `9E-9D-APPLY` reconciled internal DB state from `planned`/`planned_only` to `published`/`success`.
+
+Recommended next:
+
+**9F-1A Blog Operation Profile + Default Publish Policy Preset**
+
+Reason: the first end-to-end publish path is now proven. Before expanding scheduled publish/update/retry too far, reduce operator burden by defining blog-level default policies, so the system does not require repeated manual inputs.
+
+Alternative:
+
+**9E-11A Retry/recovery workflow before 9F automation**
+
+Use this route first if the next priority is failure recovery for publish/readback/reconciliation, idempotent re-run guards, and unknown-result manual review.
+
+## 9F Automation Roadmap
+
+| Patch | Focus |
+| --- | --- |
+| 9F-1A | Blog Operation Profile |
+| 9F-1B | Default Publish Policy Preset |
+| 9F-1C | Auto Publish Mode Selector |
+| 9F-1D | Exception-only Dashboard |
+| 9F-1E | Batch Approval UX |
+| 9F-2A | Daily Auto Content Plan |
+| 9F-2B | Auto Quality Gate |
+| 9F-2C | Auto Publish Scheduler |
+| 9F-3A | Alert & Recovery Center |
+
+Core operation principles:
+
+- 운영자는 매번 글마다 설정을 입력하지 않는다.
+- 블로그별 operation profile과 default policy를 저장한다.
+- 정상 케이스는 자동 진행하고, 예외/승인 필요 항목만 보여준다.
+- 실제 Blogger write는 항상 mode/flag/confirmation/recovery policy가 있어야 한다.
+
+## Next Session Start Checks
+
+```bash
+git status --short --untracked-files=all
+git log --oneline -8
+DATABASE_URL="postgresql://placeholder:placeholder@127.0.0.1:5432/placeholder?schema=public" npx prisma validate
+DATABASE_URL="postgresql://pdh0826@localhost/blog_growth_agent_dev?host=/tmp&schema=public" npx prisma migrate status
+psql -d blog_growth_agent_dev -c "select id, status, \"publishedAt\", \"scheduledAt\", md5(coalesce(\"draftMarkdown\", '')) as draft_markdown_md5, md5(coalesce(\"draftHtml\", '')) as draft_html_md5, length(coalesce(\"draftHtml\", '')) as draft_html_len from content_items where id = 'cmqc2xqbr00011y70sxmgl65v';"
+psql -d blog_growth_agent_dev -c "select id, status, \"bloggerPostId\", \"errorType\", \"errorCode\", \"errorMessageRedacted\", \"contentStatusBefore\", \"contentStatusAfter\", \"contentMutationPlanned\", \"contentMutationCompleted\", \"publishedAtApplied\" from blogger_publish_execution_attempts where id = 'cmqitdsdj0001iwfw7cbyeznu';"
+psql -d blog_growth_agent_dev -c "select (select count(*) from blogger_draft_saves) as blogger_draft_saves_count, (select count(*) from blogger_draft_approvals) as blogger_draft_approvals_count, (select count(*) from blogger_publish_approvals) as blogger_publish_approvals_count, (select count(*) from blogger_publish_execution_attempts) as blogger_publish_execution_attempts_count, (select count(*) from llm_call_logs) as llm_call_log_count;"
+```
+
+Expected DB baseline:
+
+- `content_items.status = published`
+- `content_items.publishedAt = 2026-06-19 00:44:03`
+- `draftMarkdown md5 = 9e0921e7edc9e4a8464a0a52ba369d3d`
+- `draftHtml md5 = a7393df8fb009566201daeea18796027`
+- `draftHtml length = 2789`
+- publish attempt `status = success`
+- publish attempt error fields are null
+- `contentMutationCompleted = true`
+- counts: `1 / 1 / 1 / 1 / 22`
 
 ## Current State: 2026-06-16 Closeout
 
