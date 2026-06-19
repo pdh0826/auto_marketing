@@ -65,6 +65,8 @@ The current completed path is:
 - `content_mutation_deferred_to_post_publish_patch` is no longer a live publish hard blocker. It is surfaced as a warning/post-publish deferred action for 9E-9D, because local `content_items.status`/`publishedAt` mutation must wait for publish result readback.
 - Publish Result Readback is implemented at `POST /api/content-items/[id]/publish-result-readback`. It can perform Blogger read-only `posts.get`, returns redacted post metadata only, and previews the 9E-9D reconciliation plan without writing DB rows.
 - After the 9E-9B-LIVE publish smoke, internal DB state intentionally remains unreconciled: content item status is still `planned`, `publishedAt=null`, and the saved publish execution attempt is still `planned_only` with no `bloggerResponseRedactedJson`.
+- Blogger OAuth token refresh is implemented at `POST /api/settings/blogger/[id]/refresh-token` and in `/settings/blogger`. It uses Google OAuth refresh-token grant and may update only encrypted token secret storage plus token connection metadata.
+- Publish OAuth gate now reports `tokenRefreshImplemented=true`, but R1 does not automatically refresh inside publish-oauth-gate, publish-result-readback, or guarded publish execution.
 - Current OAuth expiry is a guarded route blocker, not a code implementation blocker. Live publish requires manual OAuth reconnect immediately before a separate live smoke.
 - `content_items.status`, `publishedAt`, `scheduledAt`, `qualityScore`, and `draftHtml` are not changed by publish-readiness or policy UI.
 
@@ -97,6 +99,7 @@ E. **Patch 9E-9B-LIVE or 9E-9C: live publish approval/readback**
 
 - For `9E-9B-LIVE`, first complete manual OAuth reconnect in `/settings/blogger`, then get explicit user approval before running one live Blogger publish smoke.
 - For `9E-9C`, publish result readback/reconciliation preview is now implemented; use it to verify Blogger readback before 9E-9D mutation.
+- For `9E-9C-R2`, consider wiring readback to call the token refresh helper automatically when the access token is expired, with side effects clearly marked.
 - Treat post-publish `content_items.status`/`publishedAt` mutation as a separate 9E-9D action after Blogger publish readback verifies the result.
 - Keep scheduled publish execution disabled until a separate policy patch.
 - Continue to block token refresh unless a separate token refresh policy patch is approved.

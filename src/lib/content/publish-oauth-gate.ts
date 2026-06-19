@@ -5,8 +5,8 @@ export const REQUIRED_BEFORE_PUBLISH_OAUTH_GATE = [
   "Blogger connection must exist for the content item's blog",
   "Verified target Blogger blog selection must exist",
   "Blogger access token must be present and not expired",
-  "Manual OAuth reconnect must be completed in Blogger settings when token is expired",
-  "Token refresh remains unimplemented and must not be called automatically"
+  "Use the Blogger settings token refresh action when the access token is expired",
+  "Manual OAuth reconnect is still required if refresh token is missing or invalid"
 ] as const;
 
 export const REQUIRED_BEFORE_SCHEDULED_PUBLISH_OAUTH_GATE = [
@@ -101,8 +101,7 @@ export function buildPublishOAuthGate(input: BuildPublishOAuthGateInput): Publis
   }
   if (accessTokenState === "expired_reauth_required") {
     blockingReasons.add("access_token_expired_reauth_required");
-    blockingReasons.add("manual_blogger_oauth_reconnect_required");
-    blockingReasons.add("token_refresh_not_implemented");
+    blockingReasons.add("manual_token_refresh_required");
   } else if (accessTokenState === "missing") {
     blockingReasons.add("access_token_missing");
     blockingReasons.add("manual_blogger_oauth_reconnect_required");
@@ -138,7 +137,7 @@ export function buildPublishOAuthGate(input: BuildPublishOAuthGateInput): Publis
       accessTokenExpired,
       reauthRequired,
       manualReconnectRequired: reauthRequired,
-      tokenRefreshImplemented: false,
+      tokenRefreshImplemented: true,
       autoReconnectImplemented: false,
       reconnectSettingsPath: "/settings/blogger",
       publishApprovalId: input.latestApproval?.id ?? null,
@@ -364,7 +363,7 @@ function buildFinalPublishExecutionPreflightSummary(input: {
     accessTokenState: reconnectCompletionSummary.accessTokenState,
     reauthRequired: reconnectCompletionSummary.reauthRequired,
     manualReconnectRequired: reconnectCompletionSummary.manualReconnectRequired,
-    tokenRefreshImplemented: false,
+    tokenRefreshImplemented: true,
     autoReconnectImplemented: false,
     bloggerConnectionExists: reconnectCompletionSummary.bloggerConnectionExists,
     selectedBlogExists: reconnectCompletionSummary.selectedBlogExists,
@@ -501,7 +500,7 @@ function buildManualReconnectCompletionSummary(input: {
     accessTokenState: completionAccessTokenState,
     reauthRequired: input.reauthRequired,
     manualReconnectRequired: input.reauthRequired,
-    tokenRefreshImplemented: false,
+    tokenRefreshImplemented: true,
     autoReconnectImplemented: false,
     publishApprovalExists: Boolean(approval),
     publishApprovalStillValid,

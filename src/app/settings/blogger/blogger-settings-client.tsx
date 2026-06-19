@@ -9,7 +9,8 @@ import type {
   BloggerConnectionStatus,
   BloggerConnectionStatusSummary,
   BloggerOAuthStartDryRun,
-  BloggerSecretSelfTestResult
+  BloggerSecretSelfTestResult,
+  BloggerTokenRefreshResponse
 } from "@/lib/blogger/admin-types";
 import type { BlogAdmin } from "@/lib/blogs/admin-types";
 import { ApiResult, formatListInput, optionalString, parseListInput, requestJson } from "@/lib/form-utils";
@@ -62,9 +63,11 @@ export function BloggerSettingsClient() {
   const [statusPreview, setStatusPreview] = useState<BloggerConnectionStatusSummary | null>(null);
   const [secretStatus, setSecretStatus] = useState<BloggerConnectionSecretStatus | null>(null);
   const [secretSelfTest, setSecretSelfTest] = useState<BloggerSecretSelfTestResult | null>(null);
+  const [tokenRefreshResult, setTokenRefreshResult] = useState<BloggerTokenRefreshResponse | null>(null);
   const [oauthDryRun, setOauthDryRun] = useState<BloggerOAuthStartDryRun | null>(null);
   const [blogListResult, setBlogListResult] = useState<BloggerBlogListResult | null>(null);
   const [blogListLoadingId, setBlogListLoadingId] = useState<string | null>(null);
+  const [refreshingTokenId, setRefreshingTokenId] = useState<string | null>(null);
   const [selectingBlogId, setSelectingBlogId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -134,6 +137,7 @@ export function BloggerSettingsClient() {
       setStatusPreview(null);
       setSecretStatus(null);
       setSecretSelfTest(null);
+      setTokenRefreshResult(null);
       setOauthDryRun(null);
       setBlogListResult(null);
       setNotice("Blogger connection을 저장했습니다. Blogger draft/publish는 수행하지 않았습니다.");
@@ -181,6 +185,32 @@ export function BloggerSettingsClient() {
       setNotice(result.data.message);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Blogger token encryption self-test에 실패했습니다.");
+    }
+  }
+
+  async function refreshAccessToken(connection: BloggerConnectionAdmin) {
+    setError(null);
+    setNotice(null);
+    setRefreshingTokenId(connection.id);
+
+    try {
+      const result = await requestJson<ApiResult<BloggerTokenRefreshResponse>>(`/api/settings/blogger/${connection.id}/refresh-token`, {
+        method: "POST",
+        body: JSON.stringify({ reason: "manual_settings_refresh", force: false })
+      });
+      setTokenRefreshResult(result.data);
+      setSecretStatus(null);
+      setStatusPreview(null);
+      setNotice(
+        result.data.tokenRefreshSummary.refreshOk
+          ? "Blogger access token을 갱신했습니다. token/client secret 원문은 반환하지 않았습니다."
+          : "Blogger access token refresh가 차단되거나 실패했습니다. blocking reason을 확인하세요."
+      );
+      await loadData();
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Blogger access token refresh에 실패했습니다.");
+    } finally {
+      setRefreshingTokenId(null);
     }
   }
 
@@ -361,6 +391,7 @@ export function BloggerSettingsClient() {
                   setStatusPreview(null);
                   setSecretStatus(null);
                   setSecretSelfTest(null);
+                  setTokenRefreshResult(null);
                   setOauthDryRun(null);
                   setBlogListResult(null);
                 }}
@@ -438,6 +469,9 @@ export function BloggerSettingsClient() {
                       <button className="button secondary" type="button" onClick={() => void runSecretSelfTest(connection)}>
                         암호화 Self-test
                       </button>
+                      <button className="button secondary" type="button" disabled={refreshingTokenId === connection.id} onClick={() => void refreshAccessToken(connection)}>
+                        {refreshingTokenId === connection.id ? "갱신 중" : "Access Token Refresh"}
+                      </button>
                       <button className="button secondary" type="button" onClick={() => void createOAuthDryRun(connection)}>
                         OAuth URL 생성
                       </button>
@@ -479,7 +513,7 @@ export function BloggerSettingsClient() {
         </section>
       ) : null}
 
-      {secretStatus || secretSelfTest ? (
+      {secretStatus || secretSelfTest || tokenRefreshResult ? (
         <section className="admin-section">
           <div className="section-heading">
             <div>
@@ -535,6 +569,46 @@ export function BloggerSettingsClient() {
               {secretSelfTest.message} Secret material returned: {secretSelfTest.secretMaterialReturned ? "yes" : "no"}.
             </div>
           ) : null}
+          {tokenRefreshResult ? (
+            <div className="read-block">
+              <h3>Access Token Refresh Result</h3>
+              <div className={tokenRefreshResult.tokenRefreshSummary.refreshOk ? "notice success" : "notice warning"}>
+                <strong>{tokenRefreshResult.tokenRefreshSummary.refreshOk ? "Access token refresh succeeded" : "Access token refresh did not complete"}</strong>
+                <p>Google OAuth token endpoint만 호출합니다. Blogger read/write, publish, posts.update, draft save, content mutation은 수행하지 않습니다.</p>
+                <p>응답은 token/client secret 원문과 Google raw response body를 반환하지 않습니다.</p>
+              </div>
+              <div className="detail-grid">
+                <DetailItem label="Connection ID" value={tokenRefreshResult.tokenRefreshSummary.connectionId} />
+                <DetailItem label="Reason" value={tokenRefreshResult.tokenRefreshSummary.reason} />
+                <DetailItem label="Refresh Attempted" value={String(tokenRefreshResult.tokenRefreshSummary.refreshAttempted)} />
+                <DetailItem label="Refresh OK" value={String(tokenRefreshResult.tokenRefreshSummary.refreshOk)} />
+                <DetailItem label="Refresh Blocked" value={String(tokenRefreshResult.tokenRefreshSummary.refreshBlocked)} />
+                <DetailItem label="Has Refresh Token" value={String(tokenRefreshResult.tokenRefreshSummary.hasRefreshToken)} />
+                <DetailItem label="Has Client Secret Ref" value={String(tokenRefreshResult.tokenRefreshSummary.hasClientSecretRef)} />
+                <DetailItem label="Client Secret Configured" value={String(tokenRefreshResult.tokenRefreshSummary.clientSecretConfigured)} />
+                <DetailItem label="Old Access Token State" value={tokenRefreshResult.tokenRefreshSummary.oldAccessTokenState} />
+                <DetailItem label="New Access Token State" value={tokenRefreshResult.tokenRefreshSummary.newAccessTokenState} />
+                <DetailItem label="Access Token Updated" value={String(tokenRefreshResult.tokenRefreshSummary.accessTokenUpdated)} />
+                <DetailItem label="Refresh Token Updated" value={String(tokenRefreshResult.tokenRefreshSummary.refreshTokenUpdated)} />
+                <DetailItem label="Expires At" value={tokenRefreshResult.tokenRefreshSummary.expiresAt ? new Date(tokenRefreshResult.tokenRefreshSummary.expiresAt).toLocaleString() : "-"} />
+                <DetailItem label="Token Last 4" value={tokenRefreshResult.tokenRefreshSummary.tokenLast4 ?? "-"} />
+                <DetailItem label="DB Write" value={String(tokenRefreshResult.tokenRefreshSummary.sideEffectSummary.dbWrite)} />
+                <DetailItem label="Google Token Endpoint" value={String(tokenRefreshResult.tokenRefreshSummary.sideEffectSummary.googleTokenEndpointCall)} />
+                <DetailItem label="Blogger Read" value={String(tokenRefreshResult.tokenRefreshSummary.sideEffectSummary.bloggerRead)} />
+                <DetailItem label="Blogger Write" value={String(tokenRefreshResult.tokenRefreshSummary.sideEffectSummary.bloggerWrite)} />
+                <DetailItem label="Blogger Publish" value={String(tokenRefreshResult.tokenRefreshSummary.sideEffectSummary.bloggerPublish)} />
+                <DetailItem label="Blogger Update" value={String(tokenRefreshResult.tokenRefreshSummary.sideEffectSummary.bloggerUpdate)} />
+                <DetailItem label="Blogger Draft Save" value={String(tokenRefreshResult.tokenRefreshSummary.sideEffectSummary.bloggerDraftSave)} />
+                <DetailItem label="OAuth Reconnect" value={String(tokenRefreshResult.tokenRefreshSummary.sideEffectSummary.oauthReconnect)} />
+                <DetailItem label="Content Mutation" value={String(tokenRefreshResult.tokenRefreshSummary.sideEffectSummary.contentMutation)} />
+                <DetailItem label="Approval Mutation" value={String(tokenRefreshResult.tokenRefreshSummary.sideEffectSummary.approvalMutation)} />
+                <DetailItem label="Attempt Mutation" value={String(tokenRefreshResult.tokenRefreshSummary.sideEffectSummary.attemptMutation)} />
+                <DetailItem label="LLM Call" value={String(tokenRefreshResult.tokenRefreshSummary.sideEffectSummary.llmCall)} />
+              </div>
+              <ValidationList title="Token Refresh Blocking Reasons" items={tokenRefreshResult.tokenRefreshSummary.blockingReasons} emptyText="blocking reason이 없습니다." isError />
+              <ValidationList title="Token Refresh Warnings" items={tokenRefreshResult.tokenRefreshSummary.warnings} emptyText="warning이 없습니다." isWarning />
+            </div>
+          ) : null}
         </section>
       ) : null}
 
@@ -580,7 +654,7 @@ export function BloggerSettingsClient() {
             <DetailItem label="Fetched At" value={new Date(blogListResult.metadata.fetchedAt).toLocaleString()} />
           </div>
           <div className="notice">
-            token refresh는 아직 구현되지 않았습니다. 선택 저장은 verified metadata로만 반영되며 Blogger draft/publish는 후속 패치에서 처리 예정입니다.
+            token refresh는 Settings의 Access Token Refresh 버튼으로만 수동 실행합니다. Blog list 조회는 자동 refresh를 수행하지 않으며 Blogger draft/publish도 실행하지 않습니다.
           </div>
           {blogListResult.blogs.length > 0 ? (
             <table className="admin-table">
@@ -650,6 +724,24 @@ function DetailItem({ label, value }: { label: string; value: string }) {
     <div>
       <strong>{label}</strong>
       <span>{value}</span>
+    </div>
+  );
+}
+
+function ValidationList({ title, items, emptyText, isError, isWarning }: { title: string; items: string[]; emptyText: string; isError?: boolean; isWarning?: boolean }) {
+  const className = isError ? "notice error" : isWarning ? "notice warning" : "notice";
+  return (
+    <div className={className}>
+      <strong>{title}</strong>
+      {items.length > 0 ? (
+        <ul>
+          {items.map((item) => (
+            <li key={item}>{item}</li>
+          ))}
+        </ul>
+      ) : (
+        <p>{emptyText}</p>
+      )}
     </div>
   );
 }

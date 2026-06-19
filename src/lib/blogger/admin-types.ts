@@ -105,6 +105,7 @@ export interface BloggerConnectionSecretStatus {
   secrets: BloggerConnectionSecretAdmin[];
   secretMaterialReturned: false;
   tokenExchangeImplemented: boolean;
+  tokenRefreshImplemented?: boolean;
   bloggerApiImplemented: boolean;
 }
 
@@ -116,6 +117,55 @@ export interface BloggerSecretSelfTestResult {
   secretMaterialReturned: false;
   tokenExchangeImplemented: boolean;
   bloggerApiImplemented: boolean;
+}
+
+export type BloggerTokenRefreshReason =
+  | "manual_settings_refresh"
+  | "publish_oauth_gate"
+  | "publish_result_readback"
+  | "guarded_publish_execution"
+  | "scheduled_publish_preflight";
+
+export type BloggerTokenRefreshAccessTokenState = "valid" | "expired_reauth_required" | "missing" | "unknown";
+
+export interface BloggerTokenRefreshSummary {
+  checked: true;
+  refreshAttempted: boolean;
+  refreshOk: boolean;
+  refreshBlocked: boolean;
+  reason: BloggerTokenRefreshReason;
+  connectionId: string;
+  hasRefreshToken: boolean;
+  hasClientSecretRef: boolean;
+  clientSecretConfigured: boolean;
+  oldAccessTokenState: BloggerTokenRefreshAccessTokenState;
+  newAccessTokenState: BloggerTokenRefreshAccessTokenState;
+  accessTokenUpdated: boolean;
+  refreshTokenUpdated: boolean;
+  expiresAt: string | null;
+  tokenLast4: string | null;
+  blockingReasons: string[];
+  warnings: string[];
+  sideEffectSummary: {
+    dbRead: true;
+    dbWrite: boolean;
+    googleTokenEndpointCall: boolean;
+    bloggerRead: false;
+    bloggerWrite: false;
+    bloggerPublish: false;
+    bloggerUpdate: false;
+    bloggerDraftSave: false;
+    oauthReconnect: false;
+    contentMutation: false;
+    approvalMutation: false;
+    attemptMutation: false;
+    llmCall: false;
+    externalSend: boolean;
+  };
+}
+
+export interface BloggerTokenRefreshResponse {
+  tokenRefreshSummary: BloggerTokenRefreshSummary;
 }
 
 export interface BloggerBlogListItem {
@@ -299,7 +349,7 @@ export interface BloggerDraftSavePreflight {
     hasRefreshToken: boolean;
     accessTokenExpiresAt: string | null;
     accessTokenExpired: boolean;
-    tokenRefreshImplemented: false;
+    tokenRefreshImplemented: boolean;
     secretMaterialReturned: false;
   };
   approvalSnapshotStatus: {
@@ -1014,7 +1064,7 @@ export interface PublishOAuthGateResponse {
     accessTokenExpired: boolean;
     reauthRequired: boolean;
     manualReconnectRequired: boolean;
-    tokenRefreshImplemented: false;
+    tokenRefreshImplemented: boolean;
     autoReconnectImplemented: false;
     reconnectSettingsPath: "/settings/blogger";
     publishApprovalId: string | null;
@@ -1029,7 +1079,7 @@ export interface PublishOAuthGateResponse {
     accessTokenState: ManualReconnectCompletionAccessTokenState;
     reauthRequired: boolean;
     manualReconnectRequired: boolean;
-    tokenRefreshImplemented: false;
+    tokenRefreshImplemented: boolean;
     autoReconnectImplemented: false;
     publishApprovalExists: boolean;
     publishApprovalStillValid: boolean;
@@ -1057,7 +1107,7 @@ export interface PublishOAuthGateResponse {
     accessTokenState: ManualReconnectCompletionAccessTokenState;
     reauthRequired: boolean;
     manualReconnectRequired: boolean;
-    tokenRefreshImplemented: false;
+    tokenRefreshImplemented: boolean;
     autoReconnectImplemented: false;
     bloggerConnectionExists: boolean;
     selectedBlogExists: boolean;

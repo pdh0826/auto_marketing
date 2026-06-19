@@ -1108,3 +1108,16 @@ Safety guard:
 - OAuth token이 만료되어 readback이 차단되면 `blogger_readback_unauthorized_reauth_required` 또는 OAuth blocker를 표시하고, `/settings/blogger` manual reconnect 후 smoke를 재실행해야 한다.
 - 9E-9C 구현/스모크 후 DB guard는 unchanged여야 한다: content item status `planned`, `publishedAt=null`, `scheduledAt=null`, draft hashes unchanged, attempt status `planned_only`, `bloggerResponseRedactedJson=null`, counts `1/1/1/1/22`.
 - 다음 단계는 9E-9D post-publish DB reconciliation/mutation이며, 그 전까지 내부 content/attempt 상태를 자동 변경하지 않는다.
+
+## Patch 9E-9C-R1 Blogger OAuth token refresh 검증
+
+- `POST /api/settings/blogger/[id]/refresh-token` route가 있어야 한다.
+- Route는 Google OAuth token endpoint refresh grant만 호출할 수 있으며 Blogger read/write, Blogger publish, `posts.update`, draft save, content mutation, approval mutation, attempt mutation, LLM 호출을 수행하지 않아야 한다.
+- 성공 시 access token은 `blogger_connection_secrets.secretKind=access_token`으로 암호화 갱신되고 `expiresAt`, `tokenType`, scopes, last4 safe metadata만 갱신되어야 한다.
+- Google이 새 refresh token을 반환하지 않으면 기존 refresh token을 유지해야 한다.
+- 실패 시 raw Google response body, access token, refresh token, client secret, encryptedValue를 응답/UI/log에 노출하지 않아야 한다.
+- invalid grant는 `token_refresh_invalid_grant_reconnect_required`, client config 실패는 `token_refresh_unauthorized_client` 또는 safe equivalent blocker로 표시해야 한다.
+- `/settings/blogger`는 Access Token Refresh 버튼과 safe summary, blockers/warnings, side-effect summary를 표시해야 한다.
+- `publish-oauth-gate`는 `tokenRefreshImplemented=true`를 표시하되 R1에서는 자동 refresh를 실행하지 않아야 한다.
+- R1 smoke 후 content/publish 관련 DB guard는 unchanged여야 한다: content item status `planned`, `publishedAt=null`, `scheduledAt=null`, draft hashes unchanged, attempt status `planned_only`, `bloggerResponseRedactedJson=null`, counts `1/1/1/1/22`.
+- 다음 단계는 9E-9C-R2 readback auto-refresh integration 또는 9E-9D post-publish DB reconciliation/mutation이다.

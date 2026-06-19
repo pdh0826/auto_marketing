@@ -1296,3 +1296,19 @@ Not executed or not implemented:
 
 - Blogger publish/write, Blogger `posts.update`, additional draft save, OAuth reconnect, token refresh, content item mutation, approval mutation, attempt mutation, deploy, push, external service write, or LLM call.
 - 9E-9D is still required before local `content_items.status`/`publishedAt` or publish attempt response fields are updated.
+
+## Patch 9E-9C-R1: Blogger OAuth Token Refresh
+
+Implemented after Patch 9E-9C:
+
+- Added `src/lib/blogger/token-refresh.ts` for Google OAuth refresh-token grant.
+- Added `POST /api/settings/blogger/[id]/refresh-token`.
+- Added `/settings/blogger` Access Token Refresh UI with safe refresh summary, blockers, warnings, and side-effect summary.
+- Updated publish OAuth gate summaries to report `tokenRefreshImplemented=true` while keeping automatic refresh out of the gate for R1.
+- Refresh success can update only encrypted Blogger token secret storage and connection token metadata.
+- Refresh failure returns safe blocker codes such as `token_refresh_invalid_grant_reconnect_required` or `token_refresh_unauthorized_client`.
+
+Not executed or not implemented:
+
+- Blogger publish/write, Blogger `posts.update`, additional draft save, content item mutation, publish approval mutation, publish execution attempt mutation, LLM call, deploy, push, or external service write beyond the Google OAuth token endpoint.
+- R1 does not automatically refresh from publish readback or guarded publish execution; that remains a candidate for 9E-9C-R2.
