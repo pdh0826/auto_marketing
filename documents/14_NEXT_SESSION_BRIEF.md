@@ -1,12 +1,12 @@
 # 14_NEXT_SESSION_BRIEF
 
-## Current State: Patch 9F-1A
+## Current State: Patch 9F-1B
 
 ```text
 repo: ~/blog-growth-agent
 branch: master
-previous HEAD before 9F-1A: 78c1fee Document first Blogger publish milestone
-expected HEAD after 9F-1A commit: local commit `Add blog operation profile preset foundation` (verify exact hash with `git log --oneline -8`)
+previous HEAD before 9F-1B: dbeffed Add blog operation profile preset foundation
+expected HEAD after 9F-1B commit: local commit `Document default blog operation profile creation` (verify exact hash with `git log --oneline -8`)
 milestone: 9E first end-to-end Blogger publish completed; 9F operation automation foundation started
 ```
 
@@ -23,10 +23,12 @@ Current baseline:
 - publish execution attempt error fields are cleared.
 - token refresh is implemented and `tokenRefreshImplemented=true` is reflected in publish OAuth gate summaries.
 - Blog Operation Profile schema, safe default policy preset, preview API, and `/settings/blogger` preview UI are implemented.
-- Profile apply/write code is guarded but was not executed; `blog_operation_profiles_count = 0`.
+- Default `safe_manual_publish` Blog Operation Profile row was created once for `급등포착` / `3065973490356135805`.
+- `blog_operation_profiles_count = 1`.
+- Profile apply remains guarded by `BLOG_OPERATION_PROFILE_WRITE_ENABLED=true` plus exact confirmation phrase.
 - `posts.update`, scheduled publish, bulk publish automation, and operation profile publish-gate wiring are not implemented yet.
 
-9F-1A foundation:
+9F-1A/9F-1B operation profile state:
 
 - New table: `blog_operation_profiles`
 - New route: `POST /api/blog-operation-profiles/default-policy`
@@ -34,6 +36,10 @@ Current baseline:
 - Safe defaults: auto publish false, scheduled publish false, human approval true, OAuth gate true, readback true, post-publish reconciliation true.
 - Apply/write guard: `BLOG_OPERATION_PROFILE_WRITE_ENABLED=true` plus exact phrase `I_UNDERSTAND_THIS_WILL_CREATE_OR_UPDATE_BLOG_OPERATION_PROFILE`.
 - Settings UI: `/settings/blogger` has a Blog Operation Profile preview section and disabled Apply/Save guidance.
+- Created target profile: `targetBloggerBlogId=3065973490356135805`, `targetBloggerBlogName=급등포착`, `targetBloggerBlogUrl=https://mathlearningappl.blogspot.com/`.
+- Created profile fields: `profileName=Default`, `status=active`, `operationMode=approval_required`, `defaultPublishPolicyPreset=safe_manual_publish`, `timezone=Asia/Seoul`.
+- Policy fields: `allowAutoPublish=false`, `allowScheduledPublish=false`, `requireOAuthGate=true`, `requireFinalHumanApproval=true`, `requireExternalWriteRiskAck=true`, `requireRollbackPlanAck=true`, `requireReadbackAfterPublish=true`, `requirePostPublishReconciliation=true`.
+- 9F-1B apply was performed exactly once with the write flag enabled and then verified with flag-disabled apply-negative smoke.
 
 9E first end-to-end publish path:
 
@@ -45,30 +51,31 @@ Current baseline:
 6. `9E-9C` read back `https://mathlearningappl.blogspot.com/2026/06/blog-post.html`.
 7. `9E-9D-APPLY` reconciled internal DB state from `planned`/`planned_only` to `published`/`success`.
 
-Recommended next after 9F-1A:
-
-**9F-1B — Create/Apply Default Blog Operation Profile**
-
-Goal:
-
-- 사용자 명시 승인 후 `safe_manual_publish` profile row를 실제로 1회 생성한다.
-- 생성 후 readback/guard 검증을 추가한다.
-- 기존 publish gates에는 아직 연결하지 않거나 read-only advisory로만 연결한다.
-
-Alternative:
+Recommended next after 9F-1B:
 
 **9F-1C — Wire Operation Profile into publish gate as read-only advisory**
 
-Use this route first if the next priority is showing profile-derived defaults/blockers in publish gate UI without executing profile writes or Blogger writes.
+Goal:
+
+- publish-oauth-gate/final preflight/guarded publish summary에 operation profile summary를 read-only로 붙인다.
+- 아직 profile policy로 publish를 자동 실행하거나 blocker를 변경하지 않는다.
+- profile mismatch, profile missing, preset summary를 warnings/advisory로만 표시한다.
+- 후속 9F-1D/1E에서 policy-enforced gate와 exception-only dashboard로 확장한다.
+
+Alternative:
+
+**9F-1D — Operation Profile Settings UX polish and exception-only dashboard draft**
+
+Use this route if the next priority is operator-facing settings clarity and the exception-only operations dashboard outline.
 
 ## 9F Automation Roadmap
 
 | Patch | Focus |
 | --- | --- |
-| 9F-1A | Blog Operation Profile |
-| 9F-1B | Default Publish Policy Preset |
-| 9F-1C | Auto Publish Mode Selector |
-| 9F-1D | Exception-only Dashboard |
+| 9F-1A | Blog Operation Profile foundation |
+| 9F-1B | Default Publish Policy Preset row |
+| 9F-1C | Read-only publish gate advisory |
+| 9F-1D | Operation Profile settings UX / exception-only dashboard draft |
 | 9F-1E | Batch Approval UX |
 | 9F-2A | Daily Auto Content Plan |
 | 9F-2B | Auto Quality Gate |
@@ -93,6 +100,7 @@ psql -d blog_growth_agent_dev -c "select id, status, \"publishedAt\", \"schedule
 psql -d blog_growth_agent_dev -c "select id, status, \"bloggerPostId\", \"errorType\", \"errorCode\", \"errorMessageRedacted\", \"contentStatusBefore\", \"contentStatusAfter\", \"contentMutationPlanned\", \"contentMutationCompleted\", \"publishedAtApplied\" from blogger_publish_execution_attempts where id = 'cmqitdsdj0001iwfw7cbyeznu';"
 psql -d blog_growth_agent_dev -c "select (select count(*) from blogger_draft_saves) as blogger_draft_saves_count, (select count(*) from blogger_draft_approvals) as blogger_draft_approvals_count, (select count(*) from blogger_publish_approvals) as blogger_publish_approvals_count, (select count(*) from blogger_publish_execution_attempts) as blogger_publish_execution_attempts_count, (select count(*) from llm_call_logs) as llm_call_log_count;"
 psql -d blog_growth_agent_dev -c "select count(*) as blog_operation_profiles_count from blog_operation_profiles;"
+psql -d blog_growth_agent_dev -c "select id, \"targetBloggerBlogId\", \"targetBloggerBlogName\", \"targetBloggerBlogUrl\", \"profileName\", status, \"operationMode\", \"defaultPublishPolicyPreset\", timezone, \"allowAutoPublish\", \"allowScheduledPublish\", \"requireOAuthGate\", \"requireFinalHumanApproval\", \"requireExternalWriteRiskAck\", \"requireRollbackPlanAck\", \"requireReadbackAfterPublish\", \"requirePostPublishReconciliation\" from blog_operation_profiles where \"targetBloggerBlogId\" = '3065973490356135805';"
 ```
 
 Expected DB baseline:
@@ -106,7 +114,8 @@ Expected DB baseline:
 - publish attempt error fields are null
 - `contentMutationCompleted = true`
 - counts: `1 / 1 / 1 / 1 / 22`
-- `blog_operation_profiles_count = 0` until 9F-1B explicitly applies the default profile row.
+- `blog_operation_profiles_count = 1`
+- Blog Operation Profile row exists for `targetBloggerBlogId=3065973490356135805`, preset `safe_manual_publish`, `operationMode=approval_required`, auto/scheduled publish false, and OAuth/human approval/readback/reconciliation requirements true.
 
 ## Current State: 2026-06-16 Closeout
 

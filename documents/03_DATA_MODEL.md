@@ -907,3 +907,43 @@ Policy:
 - Profile write requires `BLOG_OPERATION_PROFILE_WRITE_ENABLED=true` and the exact confirmation phrase `I_UNDERSTAND_THIS_WILL_CREATE_OR_UPDATE_BLOG_OPERATION_PROFILE`.
 - The profile is not wired into publish gates yet. That remains a future 9F-1B/9F-1C step.
 - No Blogger write/publish/update/draft save, OAuth reconnect, token refresh, content generation, LLM call, content mutation, approval mutation, or attempt mutation is performed by the 9F-1A validation flow.
+
+## Patch 9F-1B Default Blog Operation Profile Row
+
+Patch 9F-1B applies the `safe_manual_publish` profile row for the verified Blogger blog used in the first publish milestone.
+
+Applied row:
+
+- `targetBloggerBlogId = 3065973490356135805`
+- `targetBloggerBlogName = 급등포착`
+- `targetBloggerBlogUrl = https://mathlearningappl.blogspot.com/`
+- `profileName = Default`
+- `status = active`
+- `operationMode = approval_required`
+- `defaultPublishPolicyPreset = safe_manual_publish`
+- `timezone = Asia/Seoul`
+
+Persisted policy values:
+
+- `allowAutoPublish = false`
+- `allowScheduledPublish = false`
+- `requireOAuthGate = true`
+- `requireFinalHumanApproval = true`
+- `requireExternalWriteRiskAck = true`
+- `requireRollbackPlanAck = true`
+- `requireReadbackAfterPublish = true`
+- `requirePostPublishReconciliation = true`
+
+Apply guard:
+
+- The row was created through the existing guarded default-policy route.
+- The only allowed business mutation was a single create/upsert in `blog_operation_profiles`.
+- Apply required `BLOG_OPERATION_PROFILE_WRITE_ENABLED=true` and the exact confirmation phrase `I_UNDERSTAND_THIS_WILL_CREATE_OR_UPDATE_BLOG_OPERATION_PROFILE`.
+- After apply, `blog_operation_profiles_count = 1`.
+- With the write flag disabled, apply is still blocked by `blog_operation_profile_write_feature_flag_disabled`.
+
+Policy boundary:
+
+- 9F-1B does not wire operation profiles into publish gates.
+- 9F-1B does not perform Blogger publish/write, Blogger `posts.update`, Blogger draft save, OAuth reconnect, token refresh, content generation, LLM calls, content item mutation, publish approval mutation, or publish attempt mutation.
+- 9F-1C should attach the profile summary to publish gates as read-only advisory metadata before any policy-enforced gate behavior is added.

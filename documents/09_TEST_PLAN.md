@@ -59,6 +59,21 @@ Next session start DB guard should use the published/success values above. The c
 - 9F-1A validation must not run Blogger publish/write, `posts.update`, draft save, OAuth reconnect, token refresh, content generation, LLM calls, content mutation, publish approval mutation, publish attempt mutation, or profile row apply/write.
 - The 9E published/success milestone baseline must remain unchanged after preview and apply-negative smoke.
 
+## Patch 9F-1B Create/Apply Default Blog Operation Profile
+
+- `blog_operation_profiles_count` should be `0` before the first controlled apply, unless a matching idempotent profile row already exists.
+- Pre-apply preview for target Blogger blog `3065973490356135805` / `급등포착` / `https://mathlearningappl.blogspot.com/` should return `mode=preview`, `profileFound=false`, `profileWouldBeCreated=true`, `applyAttempted=false`, `applyOk=false`, `blockingReasons=[]`, and `sideEffectSummary.dbWrite=false`.
+- The single allowed apply requires `BLOG_OPERATION_PROFILE_WRITE_ENABLED=true` and confirmation phrase `I_UNDERSTAND_THIS_WILL_CREATE_OR_UPDATE_BLOG_OPERATION_PROFILE`.
+- Successful apply should return `mode=apply`, `featureFlagEnabled=true`, `confirmationPhraseAccepted=true`, `applyAttempted=true`, `applyBlocked=false`, `applyOk=true`, and `sideEffectSummary.dbWrite=true`.
+- Successful apply must keep Blogger, OAuth, token refresh, content mutation, approval mutation, attempt mutation, external send, and LLM side-effect flags false.
+- DB readback after apply should show exactly one profile row for `targetBloggerBlogId=3065973490356135805`.
+- The created row should have `profileName=Default`, `status=active`, `operationMode=approval_required`, `defaultPublishPolicyPreset=safe_manual_publish`, `timezone=Asia/Seoul`, `allowAutoPublish=false`, `allowScheduledPublish=false`, `requireOAuthGate=true`, `requireFinalHumanApproval=true`, `requireExternalWriteRiskAck=true`, `requireRollbackPlanAck=true`, `requireReadbackAfterPublish=true`, and `requirePostPublishReconciliation=true`.
+- After disabling `BLOG_OPERATION_PROFILE_WRITE_ENABLED`, preview should return `profileFound=true`, `profileWouldBeCreated=false`, `profileWouldBeUpdated=false`, and `sideEffectSummary.dbWrite=false`.
+- After disabling the write flag, apply-negative smoke should return blocker `blog_operation_profile_write_feature_flag_disabled`, `applyAttempted=false`, `applyBlocked=true`, `applyOk=false`, and `sideEffectSummary.dbWrite=false`.
+- The 9E published/success milestone baseline must remain unchanged: content status `published`, published timestamp `2026-06-19 00:44:03`, draft hashes unchanged, publish attempt status `success`, and counts `1 / 1 / 1 / 1 / 22`.
+- 9F-1B must not run Blogger publish/write, `posts.update`, draft save, OAuth reconnect, token refresh, content generation, LLM calls, content mutation, publish approval mutation, or publish attempt mutation.
+- Operation profiles should not affect publish gates yet; that is deferred to `9F-1C` as read-only advisory wiring.
+
 ## Patch 9E-9D Post-publish DB Reconciliation
 
 - `POST /api/content-items/[id]/post-publish-reconciliation` route가 있어야 한다.

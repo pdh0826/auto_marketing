@@ -1,5 +1,25 @@
 # 13_CHANGELOG
 
+## Patch 9F-1B Create/Apply Default Blog Operation Profile
+
+Applied after Patch 9F-1A:
+
+- Created the default `safe_manual_publish` Blog Operation Profile row for the verified Blogger blog `급등포착`.
+- Target Blogger blog: `3065973490356135805` / `https://mathlearningappl.blogspot.com/`.
+- The created profile uses `profileName=Default`, `status=active`, `operationMode=approval_required`, and `defaultPublishPolicyPreset=safe_manual_publish`.
+- Safe policy values remain `allowAutoPublish=false`, `allowScheduledPublish=false`, `requireOAuthGate=true`, `requireFinalHumanApproval=true`, `requireReadbackAfterPublish=true`, and `requirePostPublishReconciliation=true`.
+- The guarded apply was executed once with `BLOG_OPERATION_PROFILE_WRITE_ENABLED=true` and confirmation phrase `I_UNDERSTAND_THIS_WILL_CREATE_OR_UPDATE_BLOG_OPERATION_PROFILE`.
+- After apply, `blog_operation_profiles_count=1`.
+- After disabling the write flag, apply-negative smoke returned `blog_operation_profile_write_feature_flag_disabled`, `applyAttempted=false`, `applyBlocked=true`, `applyOk=false`, and `dbWrite=false`.
+- After-apply preview returned `profileFound=true`, `profileWouldBeCreated=false`, `profileWouldBeUpdated=false`, and `dbWrite=false`.
+- The 9E published/success milestone baseline remained unchanged.
+
+Policy:
+
+- This patch performed exactly one allowed business DB mutation in `blog_operation_profiles`.
+- This patch did not run Blogger publish/write, Blogger `posts.update`, Blogger draft save, OAuth reconnect, token refresh, content generation, LLM calls, content item mutation, publish approval mutation, publish attempt mutation, deploy, push, or external service writes.
+- Operation profiles are still not wired into publish gates. The next recommended patch is `9F-1C — Wire Operation Profile into publish gate as read-only advisory`.
+
 ## Patch 9F-1A Blog Operation Profile + Default Publish Policy Preset
 
 Implemented after the 9E first publish milestone closeout:
