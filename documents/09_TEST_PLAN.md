@@ -204,6 +204,21 @@ Next session start DB guard should use the published/success values above. The c
 - After-apply feature-flag-disabled apply-negative should still return blocker `daily_plan_content_item_fixture_write_feature_flag_disabled` with `dbWrite=false`.
 - 9F-2D must not rerun 9F-2B apply, mutate daily plan rows, mutate other daily plan items, mutate the 9E published content item, run content generation, call LLM providers, run Blogger publish/write/update/draft save/schedule, reconnect OAuth, refresh tokens, mutate publish approvals, mutate publish attempts, deploy, or push.
 
+## Patch 9F-2E Daily Content Queue Operator Approval Workflow Draft
+
+- `POST /api/daily-content-plans/operator-approval-workflow` should support `mode=preview` for the existing daily content plan `cmqlr1v1d0000iwj2smxcsajr`.
+- Preview mode should return `patchVersion=9F-2E`, `workflowMode=draft_preview`, `workflowWriteEnabled=false`, `applyAttempted=false`, `applyBlocked=false`, `applyOk=false`, and `blockingReasons=[]`.
+- Preview should report `queueSummary.totalItems=3`, `linkedContentItemCount=1`, `unlinkedItemCount=2`, `approvalRequiredCount=3`, `readyForOperatorReviewCount=1`, `waitingForContentFixtureCount=2`, and generation/publish blocked counts of `3`.
+- Queue item 1 should be `ready_for_operator_review` because it is linked to fixture `daily_fixture_cmqlr1v1y0001iwj2gpv2875r`.
+- Queue items 2 and 3 should be `waiting_for_content_fixture`.
+- Preview should expose disabled operator decision drafts only; it must not create approval rows or enable draft generation, LLM calls, Blogger writes, publish execution, or scheduled publish.
+- Non-preview mode should be blocked with `operator_approval_workflow_is_preview_only`, `applyAttempted=false`, `applyBlocked=true`, `applyOk=false`, and all write/external side-effect flags false.
+- `/settings/blogger` should show an `운영자 검토 워크플로우` block with queue status, disabled approval/action buttons, side-effect summary, and guardrail summary.
+- Post-change DB checks should remain `blog_daily_content_plans_count=1`, `blog_daily_content_plan_items_count=3`, `content_items_count=2`, and publish milestone counts `1 / 1 / 1 / 1 / 22`.
+- 9F-2E must not rerun 9F-2B apply or 9F-2D apply.
+- 9F-2E must not create/update/delete daily plan rows, daily plan item rows, `content_items`, approval rows, publish attempts, or Blogger rows.
+- 9F-2E must not run content generation, LLM calls, Blogger publish/write/update/draft save/schedule, OAuth reconnect, token refresh, publish approval mutation, publish attempt mutation, deploy, push, or external service writes.
+
 ## Patch 9E-9D Post-publish DB Reconciliation
 
 - `POST /api/content-items/[id]/post-publish-reconciliation` route가 있어야 한다.

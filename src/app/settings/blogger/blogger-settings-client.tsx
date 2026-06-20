@@ -16,6 +16,7 @@ import type { BlogOperationProfileResponse } from "@/lib/blog-operation-profiles
 import type { BlogAdmin } from "@/lib/blogs/admin-types";
 import type { DailyPlanContentItemFixtureResponse } from "@/lib/daily-content-plans/content-item-fixture";
 import type { DailyContentPlanResponse } from "@/lib/daily-content-plans/daily-content-plan-summary";
+import type { DailyContentQueueOperatorWorkflowResponse } from "@/lib/daily-content-plans/operator-approval-workflow";
 import { ApiResult, formatListInput, optionalString, parseListInput, requestJson } from "@/lib/form-utils";
 
 interface BloggerConnectionForm {
@@ -74,6 +75,7 @@ export function BloggerSettingsClient() {
   const [operationProfileResult, setOperationProfileResult] = useState<BlogOperationProfileResponse | null>(null);
   const [dailyContentPlanResult, setDailyContentPlanResult] = useState<DailyContentPlanResponse | null>(null);
   const [contentItemFixtureResult, setContentItemFixtureResult] = useState<DailyPlanContentItemFixtureResponse | null>(null);
+  const [operatorWorkflowResult, setOperatorWorkflowResult] = useState<DailyContentQueueOperatorWorkflowResponse | null>(null);
   const [oauthDryRun, setOauthDryRun] = useState<BloggerOAuthStartDryRun | null>(null);
   const [blogListResult, setBlogListResult] = useState<BloggerBlogListResult | null>(null);
   const [blogListLoadingId, setBlogListLoadingId] = useState<string | null>(null);
@@ -81,6 +83,7 @@ export function BloggerSettingsClient() {
   const [loadingOperationProfileId, setLoadingOperationProfileId] = useState<string | null>(null);
   const [loadingDailyContentPlanId, setLoadingDailyContentPlanId] = useState<string | null>(null);
   const [loadingContentItemFixtureId, setLoadingContentItemFixtureId] = useState<string | null>(null);
+  const [loadingOperatorWorkflowPlanId, setLoadingOperatorWorkflowPlanId] = useState<string | null>(null);
   const [selectingBlogId, setSelectingBlogId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -153,6 +156,7 @@ export function BloggerSettingsClient() {
       setTokenRefreshResult(null);
       setOperationProfileResult(null);
       setDailyContentPlanResult(null);
+      setOperatorWorkflowResult(null);
       setOauthDryRun(null);
       setBlogListResult(null);
       setNotice("Blogger connection을 저장했습니다. Blogger draft/publish는 수행하지 않았습니다.");
@@ -273,6 +277,7 @@ export function BloggerSettingsClient() {
         })
       });
       setDailyContentPlanResult(result.data);
+      setOperatorWorkflowResult(null);
       setNotice("Daily Content Plan preview를 생성했습니다. Plan row 저장, content generation, LLM call, Blogger write/publish는 수행하지 않았습니다.");
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Daily Content Plan preview에 실패했습니다.");
@@ -306,6 +311,33 @@ export function BloggerSettingsClient() {
       setError(caught instanceof Error ? caught.message : "content_items fixture preview에 실패했습니다.");
     } finally {
       setLoadingContentItemFixtureId(null);
+    }
+  }
+
+  async function previewOperatorWorkflow(planId: string | null | undefined) {
+    if (!planId) {
+      setError("Daily plan id가 필요합니다.");
+      return;
+    }
+
+    setError(null);
+    setNotice(null);
+    setLoadingOperatorWorkflowPlanId(planId);
+
+    try {
+      const result = await requestJson<ApiResult<DailyContentQueueOperatorWorkflowResponse>>("/api/daily-content-plans/operator-approval-workflow", {
+        method: "POST",
+        body: JSON.stringify({
+          mode: "preview",
+          planId
+        })
+      });
+      setOperatorWorkflowResult(result.data);
+      setNotice("운영자 검토 워크플로우 preview를 확인했습니다. approval 저장, content generation, LLM call, Blogger write/publish는 수행하지 않았습니다.");
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "운영자 검토 워크플로우 preview에 실패했습니다.");
+    } finally {
+      setLoadingOperatorWorkflowPlanId(null);
     }
   }
 
@@ -489,6 +521,9 @@ export function BloggerSettingsClient() {
                   setSecretSelfTest(null);
                   setTokenRefreshResult(null);
                   setOperationProfileResult(null);
+                  setDailyContentPlanResult(null);
+                  setContentItemFixtureResult(null);
+                  setOperatorWorkflowResult(null);
                   setOauthDryRun(null);
                   setBlogListResult(null);
                 }}
@@ -914,6 +949,14 @@ export function BloggerSettingsClient() {
               <DetailItem label="content_items 연결" value={`${dailyContentPlanSummary.persistedContentItemLinkedCount}개 연결됨`} />
             </div>
             <div className="button-row">
+              <button
+                className="button secondary"
+                type="button"
+                disabled={!dailyContentPlanSummary.persistedPlanId || loadingOperatorWorkflowPlanId === dailyContentPlanSummary.persistedPlanId}
+                onClick={() => void previewOperatorWorkflow(dailyContentPlanSummary.persistedPlanId)}
+              >
+                {loadingOperatorWorkflowPlanId === dailyContentPlanSummary.persistedPlanId ? "워크플로우 확인 중" : "운영자 워크플로우 preview"}
+              </button>
               <button className="button secondary" type="button" disabled>
                 본문 생성 준비 - 비활성
               </button>
@@ -995,6 +1038,124 @@ export function BloggerSettingsClient() {
                 </div>
               </div>
             ) : null}
+
+            <div className="read-block">
+              <h3>운영자 검토 워크플로우</h3>
+              <div className="notice">
+                <strong>9F-2E preview only</strong>
+                <p>이 워크플로우는 후보 큐를 읽고 운영자가 다음에 무엇을 검토해야 하는지 보여줍니다. approval row 저장, content_items 변경, 본문 생성, LLM 호출, Blogger write/publish는 실행하지 않습니다.</p>
+              </div>
+              <div className="button-row">
+                <button className="button small secondary" type="button" disabled>
+                  초안 생성 준비 승인 - 비활성
+                </button>
+                <button className="button small secondary" type="button" disabled>
+                  주제 보류 - 비활성
+                </button>
+                <button className="button small secondary" type="button" disabled>
+                  재검토 요청 - 비활성
+                </button>
+              </div>
+              {operatorWorkflowResult ? (
+                <>
+                  <div className={operatorWorkflowResult.operatorApprovalWorkflowSummary.blockingReasons.length > 0 ? "notice warning" : "notice success"}>
+                    <strong>
+                      {operatorWorkflowResult.operatorApprovalWorkflowSummary.queueSummary.readyForOperatorReviewCount}개 검토 가능 /{" "}
+                      {operatorWorkflowResult.operatorApprovalWorkflowSummary.queueSummary.waitingForContentFixtureCount}개 fixture 대기
+                    </strong>
+                    <p>
+                      Item 1은 linked fixture가 있으면 운영자 검토 후보가 됩니다. Items 2/3은 content_items fixture 연결 전까지 대기 상태입니다.
+                    </p>
+                  </div>
+                  <div className="detail-grid">
+                    <DetailItem label="Patch" value={operatorWorkflowResult.operatorApprovalWorkflowSummary.patchVersion} />
+                    <DetailItem label="Workflow Mode" value={operatorWorkflowResult.operatorApprovalWorkflowSummary.workflowMode} />
+                    <DetailItem label="Plan ID" value={operatorWorkflowResult.operatorApprovalWorkflowSummary.targetPlanId || "-"} />
+                    <DetailItem label="Plan Date" value={operatorWorkflowResult.operatorApprovalWorkflowSummary.planDateLocal ?? "-"} />
+                    <DetailItem label="Total Items" value={String(operatorWorkflowResult.operatorApprovalWorkflowSummary.queueSummary.totalItems)} />
+                    <DetailItem label="Linked Fixtures" value={String(operatorWorkflowResult.operatorApprovalWorkflowSummary.queueSummary.linkedContentItemCount)} />
+                    <DetailItem label="Unlinked Items" value={String(operatorWorkflowResult.operatorApprovalWorkflowSummary.queueSummary.unlinkedItemCount)} />
+                    <DetailItem label="Approval Required" value={String(operatorWorkflowResult.operatorApprovalWorkflowSummary.queueSummary.approvalRequiredCount)} />
+                  </div>
+                  <table className="admin-table">
+                    <thead>
+                      <tr>
+                        <th>순서</th>
+                        <th>후보</th>
+                        <th>연결 상태</th>
+                        <th>검토 상태</th>
+                        <th>다음 안전 단계</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {operatorWorkflowResult.operatorApprovalWorkflowSummary.queueItems.map((item) => (
+                        <tr key={item.planItemId}>
+                          <td>#{item.itemOrder}</td>
+                          <td>
+                            <strong>{item.topicSeed}</strong>
+                            <div className="muted">
+                              {item.slotLabel} / {item.contentIntent}
+                            </div>
+                          </td>
+                          <td>
+                            {item.contentItemId ? item.contentItemId : "content_items fixture 대기"}
+                            <div className="muted">
+                              status: {item.linkedContentStatus ?? "-"} / mode: {item.linkedContentMode ?? "-"}
+                            </div>
+                          </td>
+                          <td>
+                            {formatOperatorApprovalState(item.approvalStateDraft)}
+                            <div className="muted">
+                              generation {formatDisabledFlag(item.guardrails.draftGenerationAllowed)} / LLM {formatDisabledFlag(item.guardrails.llmGenerationAllowed)} / publish{" "}
+                              {formatDisabledFlag(item.guardrails.publishExecutionAllowed)}
+                            </div>
+                          </td>
+                          <td>{item.nextSafeStepDraft}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  <details className="read-block">
+                    <summary>운영자 워크플로우 기술 상세</summary>
+                    <ValidationList
+                      title="Workflow Blocking Reasons"
+                      items={operatorWorkflowResult.operatorApprovalWorkflowSummary.blockingReasons}
+                      emptyText="blocking reason이 없습니다."
+                      isError
+                    />
+                    <ValidationList
+                      title="Workflow Warnings"
+                      items={operatorWorkflowResult.operatorApprovalWorkflowSummary.warnings}
+                      emptyText="warning이 없습니다."
+                      isWarning
+                    />
+                    <div className="detail-grid">
+                      <DetailItem label="DB Read" value={String(operatorWorkflowResult.operatorApprovalWorkflowSummary.sideEffectSummary.dbRead)} />
+                      <DetailItem label="DB Write" value={String(operatorWorkflowResult.operatorApprovalWorkflowSummary.sideEffectSummary.dbWrite)} />
+                      <DetailItem label="Approval Mutation" value={String(operatorWorkflowResult.operatorApprovalWorkflowSummary.sideEffectSummary.approvalMutation)} />
+                      <DetailItem label="Content Generation" value={String(operatorWorkflowResult.operatorApprovalWorkflowSummary.sideEffectSummary.contentGeneration)} />
+                      <DetailItem label="LLM Call" value={String(operatorWorkflowResult.operatorApprovalWorkflowSummary.sideEffectSummary.llmCall)} />
+                      <DetailItem label="Content Mutation" value={String(operatorWorkflowResult.operatorApprovalWorkflowSummary.sideEffectSummary.contentMutation)} />
+                      <DetailItem label="Blogger Write" value={String(operatorWorkflowResult.operatorApprovalWorkflowSummary.sideEffectSummary.bloggerWrite)} />
+                      <DetailItem label="Blogger Publish" value={String(operatorWorkflowResult.operatorApprovalWorkflowSummary.sideEffectSummary.bloggerPublish)} />
+                      <DetailItem label="Scheduled Publish" value={String(operatorWorkflowResult.operatorApprovalWorkflowSummary.sideEffectSummary.scheduledPublish)} />
+                      <DetailItem label="OAuth Reconnect" value={String(operatorWorkflowResult.operatorApprovalWorkflowSummary.sideEffectSummary.oauthReconnect)} />
+                      <DetailItem label="Token Refresh" value={String(operatorWorkflowResult.operatorApprovalWorkflowSummary.sideEffectSummary.tokenRefresh)} />
+                    </div>
+                    <div className="detail-grid">
+                      <DetailItem label="No Business DB Write" value={String(operatorWorkflowResult.operatorApprovalWorkflowSummary.guardrailSummary.noBusinessDbWrite)} />
+                      <DetailItem label="No Approval Mutation" value={String(operatorWorkflowResult.operatorApprovalWorkflowSummary.guardrailSummary.noApprovalMutation)} />
+                      <DetailItem label="No Content Generation" value={String(operatorWorkflowResult.operatorApprovalWorkflowSummary.guardrailSummary.noContentGeneration)} />
+                      <DetailItem label="No LLM Call" value={String(operatorWorkflowResult.operatorApprovalWorkflowSummary.guardrailSummary.noLlmCall)} />
+                      <DetailItem label="No Blogger Write" value={String(operatorWorkflowResult.operatorApprovalWorkflowSummary.guardrailSummary.noBloggerWrite)} />
+                      <DetailItem label="No Publish Execution" value={String(operatorWorkflowResult.operatorApprovalWorkflowSummary.guardrailSummary.noPublishExecution)} />
+                    </div>
+                  </details>
+                </>
+              ) : (
+                <div className="notice">위의 “운영자 워크플로우 preview” 버튼으로 후보 큐의 운영자 검토 상태를 확인하세요.</div>
+              )}
+            </div>
 
             <details className="read-block">
               <summary>기술 상세</summary>
@@ -1329,6 +1490,15 @@ function getDailyPlanItemContentItemId(item: DailyContentPlanQueueItem) {
 
 function formatDisabledFlag(value: boolean) {
   return value ? "켜짐" : "꺼짐";
+}
+
+function formatOperatorApprovalState(value: string) {
+  const labels: Record<string, string> = {
+    ready_for_operator_review: "운영자 검토 가능",
+    waiting_for_content_fixture: "content fixture 대기",
+    blocked_by_guardrail: "가드레일 차단"
+  };
+  return labels[value] ?? value;
 }
 
 function ValidationList({ title, items, emptyText, isError, isWarning }: { title: string; items: string[]; emptyText: string; isError?: boolean; isWarning?: boolean }) {

@@ -1,5 +1,28 @@
 # 13_CHANGELOG
 
+## Patch 9F-2E Daily Content Queue Operator Approval Workflow Draft
+
+Implemented after Patch 9F-2D:
+
+- Added read-only route `POST /api/daily-content-plans/operator-approval-workflow`.
+- Added deterministic queue workflow summary logic for the existing Daily Content Plan fixture.
+- Added `/settings/blogger` `운영자 검토 워크플로우` preview UI.
+- Item 1 is shown as ready for operator review when linked to fixture `daily_fixture_cmqlr1v1y0001iwj2gpv2875r`.
+- Items 2 and 3 are shown as waiting for `content_items` fixtures.
+- Approval actions are displayed as disabled/coming-soon only: draft-generation preparation approval, topic hold, and review request.
+- Non-preview mode is blocked with `operator_approval_workflow_is_preview_only`.
+
+Policy:
+
+- 9F-2E did not rerun 9F-2B apply.
+- 9F-2E did not rerun 9F-2D apply.
+- 9F-2E did not create, update, or delete Daily Content Plan rows, Daily Content Plan item rows, `content_items`, approval rows, publish attempts, or Blogger rows.
+- This patch did not run content generation, LLM calls, Blogger publish/write/update/draft save/schedule, OAuth reconnect, token refresh, publish approval mutation, publish attempt mutation, deploy, push, or external service writes.
+- Daily plan rows remain `1`, daily plan item rows remain `3`, and `content_items` count remains `2`.
+- The 9E published/success milestone baseline remained unchanged.
+- Recommended next patch: `9F-2F — Draft-generation readiness preflight for linked content item, no LLM/no Blogger write`.
+- Alternative next patch: `9F-2G — Operator approval persistence design, schema proposal only, no apply/no mutation`.
+
 ## Patch 9F-2D Daily Plan To Content Item Fixture Apply
 
 Implemented after Patch 9F-2C:

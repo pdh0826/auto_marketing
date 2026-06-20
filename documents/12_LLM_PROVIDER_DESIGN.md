@@ -61,6 +61,8 @@ Patch 9F-1F extends this same deterministic/read-only policy work with `operatio
 
 Patch 9F-2A adds Daily Auto Content Plan draft preview using deterministic/static planning metadata only. It must not call LLM providers, generate article bodies, create `content_items`, or create `llm_call_logs`.
 
+Patch 9F-2E adds a Daily Content Queue operator approval workflow draft using existing persisted plan/item/content fixture metadata only. It must not call LLM providers, generate article bodies, create approval rows, mutate `content_items`, or create `llm_call_logs`.
+
 ## Patch 3 설정 화면
 
 `/settings/llm` 화면은 Patch 2의 PostgreSQL + Prisma CRUD API를 사용해 다음 데이터를 관리한다.

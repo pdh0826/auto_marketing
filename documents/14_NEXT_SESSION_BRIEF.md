@@ -1,12 +1,12 @@
 # 14_NEXT_SESSION_BRIEF
 
-## Current State: Patch 9F-2D Applied
+## Current State: Patch 9F-2E Applied
 
 ```text
 repo: ~/blog-growth-agent
 branch: master
 previous HEAD before 9F-2D apply closeout: b3cf210 Link daily plan item to content fixture
-expected HEAD after 9F-2D apply closeout commit: local commit `Document 9F-2D content fixture apply` (verify exact hash with `git log --oneline -8`)
+expected HEAD after 9F-2E commit: local commit `Draft daily content queue approval workflow` (verify exact hash with `git log --oneline -8`)
 milestone: 9E first end-to-end Blogger publish completed; 9F operation automation foundation started
 ```
 
@@ -81,6 +81,13 @@ Current baseline:
 - 9F-2B created or idempotently confirmed the default daily content plan row and three item rows once after explicit operator approval, while keeping content generation, LLM calls, content item mutation, Blogger writes, publish execution, scheduling, OAuth reconnect, token refresh, publish approval mutation, and publish attempt mutation disabled.
 - 9F-2C added persisted daily plan readback fields and an operator-friendly queue dashboard draft in `/settings/blogger`, without rerunning apply or mutating business rows.
 - 9F-2D added guarded content item fixture preview/apply code, UI preview affordance, and then executed the approved one-time apply to create/link fixture `daily_fixture_cmqlr1v1y0001iwj2gpv2875r`.
+- 9F-2E added a read-only Daily Content Queue operator approval workflow draft.
+- `POST /api/daily-content-plans/operator-approval-workflow` returns a preview-only workflow summary for existing plan `cmqlr1v1d0000iwj2smxcsajr`.
+- `/settings/blogger` now shows `운영자 검토 워크플로우` with queue status, disabled operator decision buttons, side-effect summary, and guardrails.
+- Item 1 is ready for operator review because it is linked to fixture `daily_fixture_cmqlr1v1y0001iwj2gpv2875r`.
+- Items 2 and 3 remain waiting for `content_items` fixtures.
+- 9F-2E did not create approval rows, approval statuses, new content items, or daily plan mutations.
+- 9F-2E did not perform content generation, LLM calls, Blogger writes, publish/scheduled publish, OAuth reconnect, token refresh, publish approval mutation, or publish attempt mutation.
 
 9E first end-to-end publish path:
 
@@ -92,23 +99,22 @@ Current baseline:
 6. `9E-9C` read back `https://mathlearningappl.blogspot.com/2026/06/blog-post.html`.
 7. `9E-9D-APPLY` reconciled internal DB state from `planned`/`planned_only` to `published`/`success`.
 
-Recommended next after 9F-2D:
-
-**9F-2E — Daily Content Queue operator approval workflow draft, no generation/no publish execution**
-
-Goal:
-
-- Design the operator approval workflow for queue items before generation or publish execution.
-- Keep generation, Blogger write, publish execution, and scheduling disabled.
-
-Alternative:
+Recommended next after 9F-2E:
 
 **9F-2F — Draft-generation readiness preflight for linked content item, no LLM/no Blogger write**
 
 Goal:
 
-- Once the 9F-2D fixture is linked, preview whether that linked content item is ready for future draft generation.
-- Keep actual LLM generation, Blogger write, publish execution, and scheduling disabled.
+- Preview whether linked content item fixture `daily_fixture_cmqlr1v1y0001iwj2gpv2875r` is ready for future draft generation.
+- Keep actual LLM generation, content mutation, Blogger write, publish execution, and scheduling disabled.
+
+Alternative:
+
+**9F-2G — Operator approval persistence design, schema proposal only, no apply/no mutation**
+
+Goal:
+
+- Design approval persistence for operator decisions without applying schema or mutating approval rows.
 
 ## 9F Automation Roadmap
 
