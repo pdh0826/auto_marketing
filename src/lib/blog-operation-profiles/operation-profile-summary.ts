@@ -53,6 +53,7 @@ export interface BlogOperationProfileResponse {
   checkedAt: string;
   blogOperationProfileSummary: BlogOperationProfileSummary;
   operationProfileExceptionDashboardSummary: OperationProfileExceptionDashboardSummary;
+  operationProfilePolicySimulationSummary: OperationProfilePolicySimulationSummary;
 }
 
 export interface OperationProfileAdvisorySummary {
@@ -154,6 +155,84 @@ export interface OperationProfileExceptionDashboardSummary {
   };
   advisoryWarnings: string[];
   advisoryNotes: string[];
+  blockingReasons: [];
+  sideEffectSummary: {
+    dbRead: boolean;
+    dbWrite: false;
+    schemaMigration: false;
+    bloggerRead: false;
+    bloggerWrite: false;
+    bloggerPublish: false;
+    bloggerUpdate: false;
+    bloggerDraftSave: false;
+    tokenRefresh: false;
+    oauthReconnect: false;
+    contentMutation: false;
+    approvalMutation: false;
+    attemptMutation: false;
+    llmCall: false;
+    externalSend: false;
+  };
+}
+
+export interface OperationProfilePolicySimulationSummary {
+  checked: true;
+  simulationVersion: "9F-1E";
+  simulationMode: "policy_enforcement_dry_run";
+  advisoryOnly: true;
+  policyEnforced: false;
+  actualBlockerImpact: false;
+  actualExecutionPermissionImpact: false;
+  profileFound: boolean;
+  profileHealthy: boolean;
+  profileWouldBeApplicable: boolean;
+  targetBloggerBlogId: string | null;
+  targetBloggerBlogName: string | null;
+  targetBloggerBlogUrl: string | null;
+  operationMode: string | null;
+  defaultPublishPolicyPreset: string | null;
+  actualGateState: {
+    canProceedToPublishExecution: boolean | null;
+    canProceedToScheduledPublishExecution: boolean | null;
+    canExecutePublish: boolean | null;
+    canExecuteScheduledPublish: boolean | null;
+    canPublish: boolean | null;
+    canSchedulePublish: boolean | null;
+    blockingReasons: string[];
+    warnings: string[];
+  };
+  simulatedPolicyState: {
+    wouldRequireOAuthGate: true;
+    wouldRequireFinalHumanApproval: true;
+    wouldRequireExternalWriteRiskAck: true;
+    wouldRequireRollbackPlanAck: true;
+    wouldRequireReadbackAfterPublish: true;
+    wouldRequirePostPublishReconciliation: true;
+    wouldAllowAutoPublish: false;
+    wouldAllowScheduledPublish: false;
+    wouldAllowPublishWithoutHumanApproval: false;
+  };
+  simulatedAdditionalBlockers: string[];
+  simulatedRemovedBlockers: string[];
+  simulatedWarnings: string[];
+  simulatedDecision: {
+    wouldAllowPublishExecution: false;
+    wouldAllowScheduledPublishExecution: false;
+    wouldRequireManualApproval: true;
+    wouldRequireExceptionReview: boolean;
+    wouldKeepCurrentGateDecision: boolean;
+  };
+  comparison: {
+    actualCanExecutePublish: boolean | null;
+    simulatedCanExecutePublish: false;
+    actualCanPublish: boolean | null;
+    simulatedCanPublish: false;
+    actualBlockingReasonCount: number;
+    simulatedAdditionalBlockerCount: number;
+    simulatedRemovedBlockerCount: number;
+    actualDecisionChangedBySimulation: false;
+  };
+  notes: string[];
   blockingReasons: [];
   sideEffectSummary: {
     dbRead: boolean;

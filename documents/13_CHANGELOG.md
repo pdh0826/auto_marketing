@@ -1,5 +1,27 @@
 # 13_CHANGELOG
 
+## Patch 9F-1E Policy-enforced Publish Gate Simulation
+
+Implemented after Patch 9F-1D:
+
+- Added `operationProfilePolicySimulationSummary` as an advisory/read-only dry-run simulation of future Operation Profile policy enforcement.
+- Added reusable simulation logic for the stored `safe_manual_publish` policy.
+- Added the simulation summary to `POST /api/content-items/[id]/publish-oauth-gate`.
+- Added the simulation summary to `POST /api/blog-operation-profiles/default-policy` preview responses.
+- Added Content Detail UI for the Publish OAuth Gate simulation summary, including simulated policy state, simulated additional/removed blockers, simulated decision, comparison, notes, and explicit dry-run-only copy.
+- Added `/settings/blogger` Operation Profile simulation guidance showing that auto publish and scheduled publish remain disabled while human approval, OAuth/readback/reconciliation guards remain required.
+- Current baseline reports `simulationVersion=9F-1E`, `simulationMode=policy_enforcement_dry_run`, `advisoryOnly=true`, `policyEnforced=false`, `actualBlockerImpact=false`, and `actualExecutionPermissionImpact=false`.
+- Existing publish blockers, `canExecutePublish`, `canPublish`, scheduled publish permissions, and publish execution semantics are unchanged.
+- `operation_profile_policy_*` blockers are simulation-only and are not copied into top-level publish `blockingReasons`.
+
+Policy:
+
+- Operation Profile policy enforcement remains simulation-only in this patch.
+- This patch does not enable auto publish, scheduled publish, retry, recovery, or actual policy-enforced gate behavior.
+- This patch did not run Blogger publish/write, Blogger `posts.update`, Blogger draft save, OAuth reconnect, token refresh, content generation, LLM calls, business DB mutation, content item mutation, publish approval mutation, publish attempt mutation, deploy, push, or external service writes.
+- The next recommended patch is `9F-1F — Policy simulation UX refinement and scenario matrix`.
+- Alternative next patch: `9F-2A — Daily Auto Content Plan draft, no publish execution`.
+
 ## Patch 9F-1D Operation Profile Exception Dashboard Draft
 
 Implemented after Patch 9F-1C:

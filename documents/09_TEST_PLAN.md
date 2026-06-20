@@ -103,6 +103,23 @@ Next session start DB guard should use the published/success values above. The c
 - 9F-1D must not run Blogger publish/write, `posts.update`, draft save, OAuth reconnect, token refresh, content generation, LLM calls, business DB mutation, content mutation, publish approval mutation, or publish attempt mutation.
 - DB baseline must remain unchanged: 9E published/success values unchanged, counts `1 / 1 / 1 / 1 / 22`, and `blog_operation_profiles_count=1`.
 
+## Patch 9F-1E Policy-enforced Publish Gate Simulation
+
+- `POST /api/blog-operation-profiles/default-policy` should include `operationProfilePolicySimulationSummary`.
+- `POST /api/content-items/[id]/publish-oauth-gate` should include `operationProfilePolicySimulationSummary`.
+- The simulation should report `checked=true`, `simulationVersion=9F-1E`, `simulationMode=policy_enforcement_dry_run`, `advisoryOnly=true`, `policyEnforced=false`, `actualBlockerImpact=false`, and `actualExecutionPermissionImpact=false`.
+- Current baseline should return `profileFound=true`, `profileHealthy=true`, `profileWouldBeApplicable=true`, and `defaultPublishPolicyPreset=safe_manual_publish`.
+- Simulated policy state should require OAuth gate, final human approval, external write risk acknowledgement, rollback plan acknowledgement, readback, and post-publish reconciliation.
+- Simulated policy state should keep auto publish disabled, scheduled publish disabled, and publish without human approval disabled.
+- `simulatedAdditionalBlockers` may include `operation_profile_policy_*` codes, but these codes must stay inside the simulation summary.
+- Top-level publish `blockingReasons` must not include `operation_profile*` or `operation_profile_policy*` codes from the simulation.
+- The simulation `blockingReasons` array must remain empty and side-effect summary must report DB write false, Blogger write/publish/update/draft save false, token refresh false, OAuth reconnect false, content/approval/attempt mutation false, LLM false, and external send false.
+- 9F-1E must not change existing `canProceedToPublishExecution`, `canProceedToScheduledPublishExecution`, `canExecutePublish`, `canExecuteScheduledPublish`, `canPublish`, `canSchedulePublish`, or publish blocker semantics.
+- `/settings/blogger` should show a policy simulation block explaining that auto publish and scheduled publish remain disabled and human approval/readback/reconciliation remain required.
+- Content Detail Publish OAuth Gate should show the policy simulation block with simulated policy state, simulated blockers, simulated decision, and notes.
+- 9F-1E must not run Blogger publish/write, `posts.update`, draft save, OAuth reconnect, token refresh, content generation, LLM calls, business DB mutation, content mutation, publish approval mutation, publish attempt mutation, migration, deploy, or push.
+- DB baseline must remain unchanged: 9E published/success values unchanged, counts `1 / 1 / 1 / 1 / 22`, and `blog_operation_profiles_count=1`.
+
 ## Patch 9E-9D Post-publish DB Reconciliation
 
 - `POST /api/content-items/[id]/post-publish-reconciliation` route가 있어야 한다.

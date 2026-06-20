@@ -44,6 +44,19 @@ Content Tasks
 - 로그에 API Key 출력 금지
 - 민감 자료는 로컬 LLM 우선 처리 가능해야 함
 
+## Patch 9F-1E Operation Profile Policy Simulation
+
+Patch 9F-1E does not use an LLM provider.
+
+The Operation Profile policy simulation is a deterministic, read-only summary built from existing publish gate metadata and the stored `safe_manual_publish` profile. It must not:
+
+- call OpenAI, local HTTP, CLI, or any LLM provider
+- create `llm_call_logs`
+- store prompt, raw response, candidate, draft, or HTML text
+- change publish blockers or execution permissions
+
+The simulation is advisory-only and reports `policyEnforced=false`, `actualBlockerImpact=false`, and `actualExecutionPermissionImpact=false`.
+
 ## Patch 3 설정 화면
 
 `/settings/llm` 화면은 Patch 2의 PostgreSQL + Prisma CRUD API를 사용해 다음 데이터를 관리한다.

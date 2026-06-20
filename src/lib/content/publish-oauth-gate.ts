@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { buildOperationProfileExceptionDashboardSummary } from "@/lib/blog-operation-profiles/operation-profile-exception-dashboard";
+import { buildOperationProfilePolicySimulationSummary } from "@/lib/blog-operation-profiles/operation-profile-policy-simulation";
 import type { OperationProfileAdvisorySummary } from "@/lib/blog-operation-profiles/operation-profile-summary";
 import type { BloggerPublishApprovalAdmin, BloggerPublishExecutionAttemptAdmin, PublishOAuthAccessTokenState, PublishOAuthGateResponse } from "@/lib/blogger/admin-types";
 
@@ -123,6 +124,20 @@ export function buildPublishOAuthGate(input: BuildPublishOAuthGateInput): Publis
     advisorySummary: input.operationProfileAdvisorySummary,
     existingGateBlockingReasons: topLevelBlockingReasons
   });
+  const topLevelWarnings = Array.from(warnings);
+  const operationProfilePolicySimulationSummary = buildOperationProfilePolicySimulationSummary({
+    advisorySummary: input.operationProfileAdvisorySummary,
+    actualGateState: {
+      canProceedToPublishExecution: false,
+      canProceedToScheduledPublishExecution: false,
+      canExecutePublish: false,
+      canExecuteScheduledPublish: false,
+      canPublish: false,
+      canSchedulePublish: false,
+      blockingReasons: topLevelBlockingReasons,
+      warnings: topLevelWarnings
+    }
+  });
 
   return {
     contentItemId: input.contentItemId,
@@ -134,9 +149,10 @@ export function buildPublishOAuthGate(input: BuildPublishOAuthGateInput): Publis
     canPublish: false,
     canSchedulePublish: false,
     blockingReasons: topLevelBlockingReasons,
-    warnings: Array.from(warnings),
+    warnings: topLevelWarnings,
     operationProfileAdvisorySummary: input.operationProfileAdvisorySummary,
     operationProfileExceptionDashboardSummary,
+    operationProfilePolicySimulationSummary,
     oauthGateSummary: {
       connectionFound: Boolean(input.connection),
       selectedBloggerBlogFound: Boolean(input.connection?.bloggerBlogId),

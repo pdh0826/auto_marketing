@@ -586,6 +586,81 @@ export function BloggerSettingsClient() {
               emptyText="advisory warning이 없습니다."
               isWarning
             />
+            <div className="read-block">
+              <h3>Operation Profile Policy Simulation</h3>
+              <div className="notice">
+                <strong>safe_manual_publish dry-run simulation</strong>
+                <p>This is a dry-run simulation. It does not change current publish blockers or execution permissions.</p>
+                <p>
+                  Auto publish remains disabled. Scheduled publish remains disabled. Human approval, readback, and post-publish reconciliation remain required.
+                </p>
+              </div>
+              <div className="detail-grid">
+                <DetailItem label="Simulation Version" value={operationProfileResult.operationProfilePolicySimulationSummary.simulationVersion} />
+                <DetailItem label="Simulation Mode" value={operationProfileResult.operationProfilePolicySimulationSummary.simulationMode} />
+                <DetailItem label="Advisory Only" value={String(operationProfileResult.operationProfilePolicySimulationSummary.advisoryOnly)} />
+                <DetailItem label="Policy Enforced" value={String(operationProfileResult.operationProfilePolicySimulationSummary.policyEnforced)} />
+                <DetailItem label="Actual Blocker Impact" value={String(operationProfileResult.operationProfilePolicySimulationSummary.actualBlockerImpact)} />
+                <DetailItem
+                  label="Actual Permission Impact"
+                  value={String(operationProfileResult.operationProfilePolicySimulationSummary.actualExecutionPermissionImpact)}
+                />
+                <DetailItem label="Profile Found" value={String(operationProfileResult.operationProfilePolicySimulationSummary.profileFound)} />
+                <DetailItem label="Profile Healthy" value={String(operationProfileResult.operationProfilePolicySimulationSummary.profileHealthy)} />
+                <DetailItem label="Profile Applicable" value={String(operationProfileResult.operationProfilePolicySimulationSummary.profileWouldBeApplicable)} />
+                <DetailItem label="Default Publish Policy" value={operationProfileResult.operationProfilePolicySimulationSummary.defaultPublishPolicyPreset ?? "-"} />
+              </div>
+              <div className="detail-grid">
+                <DetailItem
+                  label="Require OAuth Gate"
+                  value={String(operationProfileResult.operationProfilePolicySimulationSummary.simulatedPolicyState.wouldRequireOAuthGate)}
+                />
+                <DetailItem
+                  label="Require Human Approval"
+                  value={String(operationProfileResult.operationProfilePolicySimulationSummary.simulatedPolicyState.wouldRequireFinalHumanApproval)}
+                />
+                <DetailItem
+                  label="Require External Risk Ack"
+                  value={String(operationProfileResult.operationProfilePolicySimulationSummary.simulatedPolicyState.wouldRequireExternalWriteRiskAck)}
+                />
+                <DetailItem
+                  label="Require Rollback Ack"
+                  value={String(operationProfileResult.operationProfilePolicySimulationSummary.simulatedPolicyState.wouldRequireRollbackPlanAck)}
+                />
+                <DetailItem
+                  label="Require Readback"
+                  value={String(operationProfileResult.operationProfilePolicySimulationSummary.simulatedPolicyState.wouldRequireReadbackAfterPublish)}
+                />
+                <DetailItem
+                  label="Require Reconciliation"
+                  value={String(operationProfileResult.operationProfilePolicySimulationSummary.simulatedPolicyState.wouldRequirePostPublishReconciliation)}
+                />
+                <DetailItem
+                  label="Allow Auto Publish"
+                  value={String(operationProfileResult.operationProfilePolicySimulationSummary.simulatedPolicyState.wouldAllowAutoPublish)}
+                />
+                <DetailItem
+                  label="Allow Scheduled Publish"
+                  value={String(operationProfileResult.operationProfilePolicySimulationSummary.simulatedPolicyState.wouldAllowScheduledPublish)}
+                />
+              </div>
+              <ValidationList
+                title="Simulated Additional Blockers"
+                items={operationProfileResult.operationProfilePolicySimulationSummary.simulatedAdditionalBlockers}
+                emptyText="simulation blocker가 없습니다."
+                isWarning
+              />
+              <ValidationList
+                title="Simulated Removed Blockers"
+                items={operationProfileResult.operationProfilePolicySimulationSummary.simulatedRemovedBlockers}
+                emptyText="simulation에서 제거할 blocker가 없습니다."
+              />
+              <ValidationList
+                title="Simulation Notes"
+                items={operationProfileResult.operationProfilePolicySimulationSummary.notes}
+                emptyText="simulation note가 없습니다."
+              />
+            </div>
             <details className="read-block">
               <summary>Detailed policy snapshot</summary>
             <div className="detail-grid">

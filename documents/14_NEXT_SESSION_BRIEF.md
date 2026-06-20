@@ -1,12 +1,12 @@
 # 14_NEXT_SESSION_BRIEF
 
-## Current State: Patch 9F-1D
+## Current State: Patch 9F-1E
 
 ```text
 repo: ~/blog-growth-agent
 branch: master
-previous HEAD before 9F-1D: 19ca894 Show operation profile advisory in publish gate
-expected HEAD after 9F-1D commit: local commit `Polish operation profile exception dashboard` (verify exact hash with `git log --oneline -8`)
+previous HEAD before 9F-1E: 420953b Polish operation profile exception dashboard
+expected HEAD after 9F-1E commit: local commit `Add operation profile policy simulation` (verify exact hash with `git log --oneline -8`)
 milestone: 9E first end-to-end Blogger publish completed; 9F operation automation foundation started
 ```
 
@@ -28,7 +28,10 @@ Current baseline:
 - Profile apply remains guarded by `BLOG_OPERATION_PROFILE_WRITE_ENABLED=true` plus exact confirmation phrase.
 - Publish OAuth Gate now includes `operationProfileAdvisorySummary` as read-only advisory metadata.
 - Publish OAuth Gate and Operation Profile preview now include `operationProfileExceptionDashboardSummary` as an exception-only dashboard draft.
+- Publish OAuth Gate and Operation Profile preview now include `operationProfilePolicySimulationSummary` as a dry-run-only policy enforcement simulation.
 - Operation Profile advisory is not policy-enforced and does not affect blockers, `canExecutePublish`, or `canPublish`.
+- Operation Profile policy simulation is not policy-enforced and does not affect blockers, `canExecutePublish`, `canPublish`, `canProceedToPublishExecution`, or scheduled publish permissions.
+- Simulation-only `operation_profile_policy_*` blockers are contained inside `operationProfilePolicySimulationSummary` and must not be copied into top-level publish `blockingReasons`.
 - `posts.update`, scheduled publish, bulk publish automation, and policy-enforced operation profile gate behavior are not implemented yet.
 
 9F-1A/9F-1B operation profile state:
@@ -45,6 +48,7 @@ Current baseline:
 - 9F-1B apply was performed exactly once with the write flag enabled and then verified with flag-disabled apply-negative smoke.
 - 9F-1C added read-only advisory wiring into publish gate/preflight responses: `advisoryOnly=true`, `policyEnforced=false`, `blockerImpact=false`, `executionPermissionImpact=false`, and `blockingReasons=[]` inside the profile advisory.
 - 9F-1D added exception-only dashboard draft wiring: `dashboardMode=exception_only_draft`, `profileHealthy=true` for the current baseline, focus items first, normal details collapsed, and no blocker/canExecute changes.
+- 9F-1E added policy enforcement dry-run simulation wiring: `simulationVersion=9F-1E`, `simulationMode=policy_enforcement_dry_run`, `advisoryOnly=true`, `policyEnforced=false`, `actualBlockerImpact=false`, `actualExecutionPermissionImpact=false`, simulated policy blockers only inside the simulation summary, and no blocker/canExecute/canPublish changes.
 
 9E first end-to-end publish path:
 
@@ -56,16 +60,16 @@ Current baseline:
 6. `9E-9C` read back `https://mathlearningappl.blogspot.com/2026/06/blog-post.html`.
 7. `9E-9D-APPLY` reconciled internal DB state from `planned`/`planned_only` to `published`/`success`.
 
-Recommended next after 9F-1D:
+Recommended next after 9F-1E:
 
-**9F-1E — Policy-enforced publish gate simulation, dry-run only**
+**9F-1F — Policy simulation UX refinement and scenario matrix**
 
 Goal:
 
-- operation profile policy를 실제 gate blocker에 반영하기 전, dry-run simulation summary로만 평가한다.
-- 어떤 blocker가 추가/해제될지 preview만 제공한다.
-- 실제 `canExecutePublish`, `canPublish`, `blockingReasons`는 변경하지 않는다.
-- auto publish는 계속 비활성이다.
+- Operation Profile simulation results를 운영자가 더 쉽게 비교할 수 있게 scenario matrix로 정리한다.
+- 정상/current published item, missing profile, preset mismatch, manual approval missing, OAuth expired 같은 scenario를 read-only로 비교한다.
+- 여전히 실제 `canExecutePublish`, `canPublish`, `blockingReasons`는 변경하지 않는다.
+- auto publish와 scheduled publish는 계속 비활성이다.
 
 Alternative:
 
@@ -84,7 +88,8 @@ Goal:
 | 9F-1B | Default Publish Policy Preset row |
 | 9F-1C | Read-only publish gate advisory |
 | 9F-1D | Operation Profile settings UX / exception-only dashboard draft |
-| 9F-1E | Batch Approval UX |
+| 9F-1E | Policy-enforced publish gate simulation, dry-run only |
+| 9F-1F | Policy simulation UX refinement and scenario matrix |
 | 9F-2A | Daily Auto Content Plan |
 | 9F-2B | Auto Quality Gate |
 | 9F-2C | Auto Publish Scheduler |

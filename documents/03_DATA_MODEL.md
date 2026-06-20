@@ -13,6 +13,29 @@
 - llm_task_routes
 - llm_call_logs
 
+## Patch 9F-1E Operation Profile Policy Simulation
+
+Patch 9F-1E does not add a table or migration.
+
+The existing `blog_operation_profiles` row is read to build an advisory-only `operationProfilePolicySimulationSummary` for:
+
+- `POST /api/blog-operation-profiles/default-policy`
+- `POST /api/content-items/[id]/publish-oauth-gate`
+
+The simulation compares the current gate state with the stored `safe_manual_publish` policy and reports dry-run-only fields:
+
+- `simulationVersion = 9F-1E`
+- `simulationMode = policy_enforcement_dry_run`
+- `advisoryOnly = true`
+- `policyEnforced = false`
+- `actualBlockerImpact = false`
+- `actualExecutionPermissionImpact = false`
+- simulated additional/removed blockers
+- simulated decision/comparison metadata
+- side-effect flags with `dbWrite=false`, Blogger write/publish false, token refresh false, OAuth reconnect false, content/approval/attempt mutation false, and LLM false
+
+These simulation blockers are not copied into top-level publish `blockingReasons` and do not change `canExecutePublish`, `canPublish`, or scheduled publish permissions.
+
 ## Patch 2 구현 테이블
 
 Patch 2는 PostgreSQL + Prisma 기준으로 다음 테이블을 우선 구현한다.

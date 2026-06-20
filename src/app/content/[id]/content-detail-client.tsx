@@ -2522,6 +2522,129 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
                     emptyText="advisory warning이 없습니다."
                     isWarning
                   />
+                  <div className="read-block">
+                    <h3>Operation Profile Policy Simulation</h3>
+                    <div className="notice">
+                      <strong>Policy enforcement dry-run only</strong>
+                      <p>This is a dry-run simulation. It does not change current publish blockers or execution permissions.</p>
+                      <p>
+                        Auto publish and scheduled publish remain disabled. Human approval, OAuth gate, external write risk acknowledgement, rollback acknowledgement,
+                        readback, and reconciliation remain required in the simulated policy.
+                      </p>
+                    </div>
+                    <div className="detail-grid">
+                      <DetailItem label="Simulation Version" value={publishOAuthGateResult.operationProfilePolicySimulationSummary.simulationVersion} />
+                      <DetailItem label="Simulation Mode" value={publishOAuthGateResult.operationProfilePolicySimulationSummary.simulationMode} />
+                      <DetailItem label="Advisory Only" value={String(publishOAuthGateResult.operationProfilePolicySimulationSummary.advisoryOnly)} />
+                      <DetailItem label="Policy Enforced" value={String(publishOAuthGateResult.operationProfilePolicySimulationSummary.policyEnforced)} />
+                      <DetailItem label="Actual Blocker Impact" value={String(publishOAuthGateResult.operationProfilePolicySimulationSummary.actualBlockerImpact)} />
+                      <DetailItem
+                        label="Actual Permission Impact"
+                        value={String(publishOAuthGateResult.operationProfilePolicySimulationSummary.actualExecutionPermissionImpact)}
+                      />
+                      <DetailItem label="Profile Found" value={String(publishOAuthGateResult.operationProfilePolicySimulationSummary.profileFound)} />
+                      <DetailItem label="Profile Healthy" value={String(publishOAuthGateResult.operationProfilePolicySimulationSummary.profileHealthy)} />
+                      <DetailItem
+                        label="Profile Applicable"
+                        value={String(publishOAuthGateResult.operationProfilePolicySimulationSummary.profileWouldBeApplicable)}
+                      />
+                      <DetailItem
+                        label="Default Publish Policy"
+                        value={publishOAuthGateResult.operationProfilePolicySimulationSummary.defaultPublishPolicyPreset ?? "-"}
+                      />
+                      <DetailItem label="Operation Mode" value={publishOAuthGateResult.operationProfilePolicySimulationSummary.operationMode ?? "-"} />
+                    </div>
+                    <div className="detail-grid">
+                      <DetailItem
+                        label="Require OAuth Gate"
+                        value={String(publishOAuthGateResult.operationProfilePolicySimulationSummary.simulatedPolicyState.wouldRequireOAuthGate)}
+                      />
+                      <DetailItem
+                        label="Require Human Approval"
+                        value={String(publishOAuthGateResult.operationProfilePolicySimulationSummary.simulatedPolicyState.wouldRequireFinalHumanApproval)}
+                      />
+                      <DetailItem
+                        label="Require External Risk Ack"
+                        value={String(publishOAuthGateResult.operationProfilePolicySimulationSummary.simulatedPolicyState.wouldRequireExternalWriteRiskAck)}
+                      />
+                      <DetailItem
+                        label="Require Rollback Ack"
+                        value={String(publishOAuthGateResult.operationProfilePolicySimulationSummary.simulatedPolicyState.wouldRequireRollbackPlanAck)}
+                      />
+                      <DetailItem
+                        label="Require Readback"
+                        value={String(publishOAuthGateResult.operationProfilePolicySimulationSummary.simulatedPolicyState.wouldRequireReadbackAfterPublish)}
+                      />
+                      <DetailItem
+                        label="Require Reconciliation"
+                        value={String(publishOAuthGateResult.operationProfilePolicySimulationSummary.simulatedPolicyState.wouldRequirePostPublishReconciliation)}
+                      />
+                      <DetailItem
+                        label="Allow Auto Publish"
+                        value={String(publishOAuthGateResult.operationProfilePolicySimulationSummary.simulatedPolicyState.wouldAllowAutoPublish)}
+                      />
+                      <DetailItem
+                        label="Allow Scheduled Publish"
+                        value={String(publishOAuthGateResult.operationProfilePolicySimulationSummary.simulatedPolicyState.wouldAllowScheduledPublish)}
+                      />
+                    </div>
+                    <div className="detail-grid">
+                      <DetailItem
+                        label="Actual Can Execute"
+                        value={formatNullableBoolean(publishOAuthGateResult.operationProfilePolicySimulationSummary.comparison.actualCanExecutePublish)}
+                      />
+                      <DetailItem
+                        label="Simulated Can Execute"
+                        value={String(publishOAuthGateResult.operationProfilePolicySimulationSummary.comparison.simulatedCanExecutePublish)}
+                      />
+                      <DetailItem
+                        label="Actual Can Publish"
+                        value={formatNullableBoolean(publishOAuthGateResult.operationProfilePolicySimulationSummary.comparison.actualCanPublish)}
+                      />
+                      <DetailItem
+                        label="Simulated Can Publish"
+                        value={String(publishOAuthGateResult.operationProfilePolicySimulationSummary.comparison.simulatedCanPublish)}
+                      />
+                      <DetailItem
+                        label="Decision Changed"
+                        value={String(publishOAuthGateResult.operationProfilePolicySimulationSummary.comparison.actualDecisionChangedBySimulation)}
+                      />
+                      <DetailItem
+                        label="Keep Current Decision"
+                        value={String(publishOAuthGateResult.operationProfilePolicySimulationSummary.simulatedDecision.wouldKeepCurrentGateDecision)}
+                      />
+                      <DetailItem
+                        label="Manual Approval Required"
+                        value={String(publishOAuthGateResult.operationProfilePolicySimulationSummary.simulatedDecision.wouldRequireManualApproval)}
+                      />
+                      <DetailItem
+                        label="Exception Review Required"
+                        value={String(publishOAuthGateResult.operationProfilePolicySimulationSummary.simulatedDecision.wouldRequireExceptionReview)}
+                      />
+                    </div>
+                    <ValidationList
+                      title="Simulated Additional Blockers"
+                      items={publishOAuthGateResult.operationProfilePolicySimulationSummary.simulatedAdditionalBlockers}
+                      emptyText="simulation blocker가 없습니다."
+                      isWarning
+                    />
+                    <ValidationList
+                      title="Simulated Removed Blockers"
+                      items={publishOAuthGateResult.operationProfilePolicySimulationSummary.simulatedRemovedBlockers}
+                      emptyText="simulation에서 제거할 blocker가 없습니다."
+                    />
+                    <ValidationList
+                      title="Simulation Warnings"
+                      items={publishOAuthGateResult.operationProfilePolicySimulationSummary.simulatedWarnings}
+                      emptyText="simulation warning이 없습니다."
+                      isWarning
+                    />
+                    <ValidationList
+                      title="Simulation Notes"
+                      items={publishOAuthGateResult.operationProfilePolicySimulationSummary.notes}
+                      emptyText="simulation note가 없습니다."
+                    />
+                  </div>
                   <details className="read-block">
                     <summary>Detailed Operation Profile advisory snapshot</summary>
                   <div className="detail-grid">
