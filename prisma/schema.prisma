@@ -231,15 +231,17 @@ model ContentItem {
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
 
-  blog                    Blog?                       @relation(fields: [blogId], references: [id], onDelete: SetNull)
-  brandProfile            BrandProfile?               @relation(fields: [brandProfileId], references: [id], onDelete: SetNull)
-  llmCallLogs             LlmCallLog[]
-  assets                  ContentAsset[]
-  bloggerDraftApprovals   BloggerDraftApproval[]
-  bloggerDraftSaves       BloggerDraftSave[]
-  bloggerPublishApprovals BloggerPublishApproval[]
-  bloggerPublishExecutionAttempts BloggerPublishExecutionAttempt[]
-  draftGenerationRuns     ContentDraftGenerationRun[]
+  blog                               Blog?                                   @relation(fields: [blogId], references: [id], onDelete: SetNull)
+  brandProfile                       BrandProfile?                           @relation(fields: [brandProfileId], references: [id], onDelete: SetNull)
+  llmCallLogs                        LlmCallLog[]
+  assets                             ContentAsset[]
+  bloggerDraftApprovals              BloggerDraftApproval[]
+  bloggerDraftSaves                  BloggerDraftSave[]
+  bloggerPublishApprovals            BloggerPublishApproval[]
+  bloggerPublishExecutionAttempts    BloggerPublishExecutionAttempt[]
+  draftGenerationRuns                ContentDraftGenerationRun[]
+  dailyContentOperatorApprovals      BlogDailyContentOperatorApproval[]
+  dailyContentOperatorApprovalEvents BlogDailyContentOperatorApprovalEvent[]
 
   @@index([blogId])
   @@index([brandProfileId])
@@ -585,9 +587,9 @@ model BloggerPublishApproval {
   invalidatedReason               String?
   supersededByApprovalId          String?
 
-  contentItem          ContentItem           @relation(fields: [contentItemId], references: [id], onDelete: Cascade)
-  bloggerDraftSave     BloggerDraftSave?     @relation(fields: [bloggerDraftSaveId], references: [id], onDelete: SetNull)
-  bloggerDraftApproval BloggerDraftApproval? @relation(fields: [bloggerDraftApprovalId], references: [id], onDelete: SetNull)
+  contentItem          ContentItem                      @relation(fields: [contentItemId], references: [id], onDelete: Cascade)
+  bloggerDraftSave     BloggerDraftSave?                @relation(fields: [bloggerDraftSaveId], references: [id], onDelete: SetNull)
+  bloggerDraftApproval BloggerDraftApproval?            @relation(fields: [bloggerDraftApprovalId], references: [id], onDelete: SetNull)
   executionAttempts    BloggerPublishExecutionAttempt[]
 
   @@index([contentItemId])
@@ -641,8 +643,8 @@ model BloggerPublishExecutionAttempt {
   createdAt                   DateTime                             @default(now())
   updatedAt                   DateTime                             @updatedAt
 
-  contentItem     ContentItem             @relation(fields: [contentItemId], references: [id], onDelete: Cascade)
-  publishApproval BloggerPublishApproval  @relation(fields: [publishApprovalId], references: [id], onDelete: Restrict)
+  contentItem     ContentItem            @relation(fields: [contentItemId], references: [id], onDelete: Cascade)
+  publishApproval BloggerPublishApproval @relation(fields: [publishApprovalId], references: [id], onDelete: Restrict)
 
   @@unique([contentItemId, publishApprovalId, attemptPlanHash])
   @@index([contentItemId])
@@ -656,31 +658,31 @@ model BloggerPublishExecutionAttempt {
 }
 
 model BlogOperationProfile {
-  id                                 String   @id @default(cuid())
-  createdAt                          DateTime @default(now())
-  updatedAt                          DateTime @updatedAt
-  targetBloggerBlogId                String
-  targetBloggerBlogName              String?
-  targetBloggerBlogUrl               String?
-  profileName                        String   @default("Default")
-  status                             String   @default("active")
-  operationMode                      String   @default("approval_required")
-  defaultPublishPolicyPreset         String   @default("safe_manual_publish")
-  timezone                           String   @default("Asia/Seoul")
-  allowAutoPublish                   Boolean  @default(false)
-  allowScheduledPublish              Boolean  @default(false)
-  requireOAuthGate                   Boolean  @default(true)
-  requireFinalHumanApproval          Boolean  @default(true)
-  requireExternalWriteRiskAck        Boolean  @default(true)
-  requireRollbackPlanAck             Boolean  @default(true)
-  requireReadbackAfterPublish        Boolean  @default(true)
-  requirePostPublishReconciliation   Boolean  @default(true)
-  maxPostsPerDay                     Int?
-  defaultPublishWindowStart          String?
-  defaultPublishWindowEnd            String?
-  policyJson                         Json?
-  guardrailJson                      Json?
-  exceptionRoutingJson               Json?
+  id                               String   @id @default(cuid())
+  createdAt                        DateTime @default(now())
+  updatedAt                        DateTime @updatedAt
+  targetBloggerBlogId              String
+  targetBloggerBlogName            String?
+  targetBloggerBlogUrl             String?
+  profileName                      String   @default("Default")
+  status                           String   @default("active")
+  operationMode                    String   @default("approval_required")
+  defaultPublishPolicyPreset       String   @default("safe_manual_publish")
+  timezone                         String   @default("Asia/Seoul")
+  allowAutoPublish                 Boolean  @default(false)
+  allowScheduledPublish            Boolean  @default(false)
+  requireOAuthGate                 Boolean  @default(true)
+  requireFinalHumanApproval        Boolean  @default(true)
+  requireExternalWriteRiskAck      Boolean  @default(true)
+  requireRollbackPlanAck           Boolean  @default(true)
+  requireReadbackAfterPublish      Boolean  @default(true)
+  requirePostPublishReconciliation Boolean  @default(true)
+  maxPostsPerDay                   Int?
+  defaultPublishWindowStart        String?
+  defaultPublishWindowEnd          String?
+  policyJson                       Json?
+  guardrailJson                    Json?
+  exceptionRoutingJson             Json?
 
   @@unique([targetBloggerBlogId])
   @@index([status])
@@ -713,7 +715,9 @@ model BlogDailyContentPlan {
   planSummaryJson            Json?
   guardrailJson              Json?
 
-  items BlogDailyContentPlanItem[]
+  items                  BlogDailyContentPlanItem[]
+  operatorApprovals      BlogDailyContentOperatorApproval[]
+  operatorApprovalEvents BlogDailyContentOperatorApprovalEvent[]
 
   @@unique([targetBloggerBlogId, planDateLocal])
   @@index([targetBloggerBlogId])
@@ -724,33 +728,125 @@ model BlogDailyContentPlan {
 }
 
 model BlogDailyContentPlanItem {
-  id                        String   @id @default(cuid())
-  createdAt                 DateTime @default(now())
-  updatedAt                 DateTime @updatedAt
-  planId                    String
-  itemOrder                 Int
-  slotKey                   String
-  status                    String   @default("candidate")
-  topicSeed                 String
-  contentIntent             String
-  audienceHint              String?
-  riskNote                  String?
-  publishMode               String   @default("approval_required")
-  contentItemId             String?
-  draftGenerationAllowed    Boolean  @default(false)
-  llmGenerationAllowed      Boolean  @default(false)
-  publishExecutionAllowed   Boolean  @default(false)
-  scheduledPublishAllowed   Boolean  @default(false)
-  requiresHumanApproval     Boolean  @default(true)
-  policySnapshotJson        Json?
-  itemPlanJson              Json?
+  id                      String   @id @default(cuid())
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+  planId                  String
+  itemOrder               Int
+  slotKey                 String
+  status                  String   @default("candidate")
+  topicSeed               String
+  contentIntent           String
+  audienceHint            String?
+  riskNote                String?
+  publishMode             String   @default("approval_required")
+  contentItemId           String?
+  draftGenerationAllowed  Boolean  @default(false)
+  llmGenerationAllowed    Boolean  @default(false)
+  publishExecutionAllowed Boolean  @default(false)
+  scheduledPublishAllowed Boolean  @default(false)
+  requiresHumanApproval   Boolean  @default(true)
+  policySnapshotJson      Json?
+  itemPlanJson            Json?
 
-  plan BlogDailyContentPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  plan                   BlogDailyContentPlan                    @relation(fields: [planId], references: [id], onDelete: Cascade)
+  operatorApprovals      BlogDailyContentOperatorApproval[]
+  operatorApprovalEvents BlogDailyContentOperatorApprovalEvent[]
 
   @@index([planId])
   @@index([status])
   @@index([contentItemId])
   @@map("blog_daily_content_plan_items")
+}
+
+model BlogDailyContentOperatorApproval {
+  id String @id @default(cuid())
+
+  planId        String
+  planItemId    String
+  contentItemId String
+
+  approvalPurpose      String
+  approvalStatus       String
+  operatorAction       String?
+  operatorLabel        String?
+  operatorNoteRedacted String?
+
+  riskAcknowledged              Boolean @default(false)
+  externalWriteRiskAcknowledged Boolean @default(false)
+  llmExecutionAcknowledged      Boolean @default(false)
+  contentMutationAcknowledged   Boolean @default(false)
+  bloggerWriteAcknowledged      Boolean @default(false)
+
+  approvalPolicyPreset String?
+  operationMode        String?
+
+  guardrailSnapshotJson     Json?
+  readinessSnapshotJson     Json?
+  sideEffectExpectationJson Json?
+
+  approvedAt DateTime?
+  heldAt     DateTime?
+  rejectedAt DateTime?
+  revokedAt  DateTime?
+
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  createdByOperatorId String?
+  updatedByOperatorId String?
+
+  idempotencyKey String
+
+  plan        BlogDailyContentPlan                    @relation(fields: [planId], references: [id])
+  planItem    BlogDailyContentPlanItem                @relation(fields: [planItemId], references: [id])
+  contentItem ContentItem                             @relation(fields: [contentItemId], references: [id])
+  events      BlogDailyContentOperatorApprovalEvent[]
+
+  @@unique([idempotencyKey])
+  @@index([planId, createdAt])
+  @@index([planItemId, approvalPurpose])
+  @@index([contentItemId, approvalPurpose])
+  @@index([approvalStatus, approvalPurpose])
+  @@index([approvalPurpose, createdAt])
+  @@map("blog_daily_content_operator_approvals")
+}
+
+model BlogDailyContentOperatorApprovalEvent {
+  id String @id @default(cuid())
+
+  approvalId    String
+  planId        String
+  planItemId    String
+  contentItemId String
+
+  eventType            String
+  fromStatus           String?
+  toStatus             String
+  operatorAction       String?
+  operatorNoteRedacted String?
+
+  requestId      String?
+  idempotencyKey String
+
+  guardrailSnapshotJson     Json?
+  readinessSnapshotJson     Json?
+  sideEffectExpectationJson Json?
+
+  createdAt           DateTime @default(now())
+  createdByOperatorId String?
+
+  approval    BlogDailyContentOperatorApproval @relation(fields: [approvalId], references: [id])
+  plan        BlogDailyContentPlan             @relation(fields: [planId], references: [id])
+  planItem    BlogDailyContentPlanItem         @relation(fields: [planItemId], references: [id])
+  contentItem ContentItem                      @relation(fields: [contentItemId], references: [id])
+
+  @@unique([idempotencyKey])
+  @@index([approvalId, createdAt])
+  @@index([planId, createdAt])
+  @@index([planItemId, createdAt])
+  @@index([contentItemId, createdAt])
+  @@index([eventType, createdAt])
+  @@map("blog_daily_content_operator_approval_events")
 }
 
 model BloggerConnectionSecret {

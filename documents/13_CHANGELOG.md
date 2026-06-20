@@ -1,5 +1,28 @@
 # 13_CHANGELOG
 
+## Patch 9F-2I Operator Approval Persistence Scaffold Migration Draft
+
+Implemented after Patch 9F-2H:
+
+- Added Prisma models `BlogDailyContentOperatorApproval` and `BlogDailyContentOperatorApprovalEvent`.
+- Added relation arrays from `ContentItem`, `BlogDailyContentPlan`, and `BlogDailyContentPlanItem` to the operator approval scaffold.
+- Added one unapplied migration draft at `prisma/migrations/20260620000200_add_daily_content_operator_approval_scaffold/migration.sql`.
+- The migration draft creates `blog_daily_content_operator_approvals` and `blog_daily_content_operator_approval_events`, idempotency unique indexes, supporting lookup indexes, and foreign keys.
+- Updated Data Model, Operator Approval Persistence Design, Test Plan, LLM Provider Design, Changelog, and Next Session Brief to record the scaffold/no-apply state.
+
+Policy:
+
+- 9F-2I did not apply the migration.
+- Operator approval tables do not exist in the DB yet.
+- 9F-2I did not create, update, or delete business rows.
+- 9F-2I did not create approval rows or events.
+- 9F-2I did not rerun 9F-2B apply or 9F-2D apply.
+- This patch did not run content generation, LLM calls, Blogger publish/write/update/draft save/schedule, OAuth reconnect, token refresh, publish approval mutation, publish attempt mutation, deploy, push, or external service writes.
+- Daily plan rows remain `1`, daily plan item rows remain `3`, and `content_items` count remains `2`.
+- The 9E published/success milestone baseline remained unchanged.
+- Recommended next patch: `9F-2J — Draft-generation execution gate preview API, no LLM/no mutation`.
+- Alternative next patch: `9F-2I-APPLY — Apply operator approval persistence migration, approval tables only, no approval rows`.
+
 ## Patch 9F-2H Draft-generation Execution Gate Design
 
 Implemented after Patch 9F-2G:

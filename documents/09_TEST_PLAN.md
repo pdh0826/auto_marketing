@@ -267,6 +267,22 @@ Next session start DB guard should use the published/success values above. The c
 - 9F-2H must not create `draftMarkdown` or `draftHtml`.
 - 9F-2H must not run content generation, LLM calls, Blogger publish/write/update/draft save/schedule, OAuth reconnect, token refresh, publish approval mutation, publish attempt mutation, deploy, push, or external service writes.
 
+## Patch 9F-2I Operator Approval Persistence Scaffold Migration Draft
+
+- `prisma/schema.prisma` should include `BlogDailyContentOperatorApproval` and `BlogDailyContentOperatorApprovalEvent`.
+- Exactly one new migration draft should exist: `prisma/migrations/20260620000200_add_daily_content_operator_approval_scaffold/migration.sql`.
+- The migration draft should include only `CREATE TABLE`, index creation, and foreign key statements for `blog_daily_content_operator_approvals` and `blog_daily_content_operator_approval_events`.
+- The migration draft must not include `INSERT`, row-level `UPDATE`, row-level `DELETE`, `DROP TABLE`, `DROP COLUMN`, or destructive changes.
+- 9F-2I must not run `prisma migrate dev`, `prisma migrate deploy`, `prisma migrate reset`, or `prisma db push`.
+- `npx prisma migrate status` may report the new 9F-2I migration as pending/unapplied. This is expected and must not be fixed in this patch.
+- DB checks after the scaffold should still show no operator approval tables: `to_regclass('public.blog_daily_content_operator_approvals') = null` and `to_regclass('public.blog_daily_content_operator_approval_events') = null`.
+- Post-change DB checks should remain `blog_daily_content_plans_count=1`, `blog_daily_content_plan_items_count=3`, `content_items_count=2`, and publish milestone counts `1 / 1 / 1 / 1 / 22`.
+- 9F-2I must not create approval rows or events.
+- 9F-2I must not rerun 9F-2B apply or 9F-2D apply.
+- 9F-2I must not create/update/delete daily plan rows, daily plan item rows, `content_items`, approval rows, publish attempts, Blogger rows, or operation profile rows.
+- 9F-2I must not create `draftMarkdown` or `draftHtml`.
+- 9F-2I must not run content generation, LLM calls, Blogger publish/write/update/draft save/schedule, OAuth reconnect, token refresh, publish approval mutation, publish attempt mutation, deploy, push, or external service writes.
+
 ## Patch 9E-9D Post-publish DB Reconciliation
 
 - `POST /api/content-items/[id]/post-publish-reconciliation` route가 있어야 한다.

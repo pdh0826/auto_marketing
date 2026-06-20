@@ -69,6 +69,8 @@ Patch 9F-2G is an operator approval persistence design only. It proposes future 
 
 Patch 9F-2H is a draft-generation execution gate design only. It defines the future layers that must pass before a Daily Content Plan item can call an LLM and mutate one target content draft. It must not call OpenAI, local HTTP, CLI, or any LLM provider; it must not create `llm_call_logs`; and it must not generate or save `draftMarkdown` or `draftHtml`. In the future implementation, `BLOG_DAILY_CONTENT_DRAFT_GENERATION_LLM_ENABLED=true` is necessary but not sufficient: operator approval, content mutation/write flags, confirmation phrase, idempotency, provider/model health, and publish isolation gates must also pass.
 
+Patch 9F-2I adds only the Prisma schema scaffold and unapplied migration draft for operator approval persistence. It must not call OpenAI, local HTTP, CLI, or any LLM provider; it must not create `llm_call_logs`; it must not generate or save `draftMarkdown` or `draftHtml`; and it must not apply the migration or create approval rows/events.
+
 ## Patch 3 설정 화면
 
 `/settings/llm` 화면은 Patch 2의 PostgreSQL + Prisma CRUD API를 사용해 다음 데이터를 관리한다.

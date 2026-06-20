@@ -162,18 +162,27 @@ Post-apply baseline:
 
 The guarded apply updated only the target daily plan item `contentItemId` and inserted exactly one deterministic fixture row. It did not modify the daily plan row, other daily plan items, the published 9E content item, Blogger tables, publish approvals, publish attempts, operation profiles, or LLM call logs.
 
-## Patch 9F-2G Operator Approval Persistence Design
+## Patch 9F-2G / 9F-2I Operator Approval Persistence
 
-Patch 9F-2G does not add a table, migration, Prisma model, or business row.
+Patch 9F-2G did not add a table, migration, Prisma model, or business row.
 
 The proposed future design is documented in `documents/15_OPERATOR_APPROVAL_PERSISTENCE_DESIGN.md`.
 
-Recommended future tables:
+Patch 9F-2I adds the Prisma schema scaffold and one unapplied migration draft for:
 
 - `blog_daily_content_operator_approvals`
 - `blog_daily_content_operator_approval_events`
 
-The current-state approval table would hold the latest durable operator decision per plan item, linked content item, and approval purpose. The event table would hold an append-only audit trail of approval state transitions.
+The current-state approval table holds the latest durable operator decision per plan item, linked content item, and approval purpose. The event table holds an append-only audit trail of approval state transitions.
+
+9F-2I migration state:
+
+- Prisma models exist in `prisma/schema.prisma`.
+- Migration draft exists at `prisma/migrations/20260620000200_add_daily_content_operator_approval_scaffold/migration.sql`.
+- The migration was not applied.
+- The operator approval tables do not exist in the current DB yet.
+- No approval row or approval event was created.
+- Future apply must be a separate explicitly approved patch.
 
 The proposal keeps approval persistence separate from:
 
