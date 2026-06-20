@@ -127,6 +127,33 @@ All 9F-2B item rows keep generation and publishing disabled:
 - `scheduledPublishAllowed = false`
 - `requiresHumanApproval = true`
 
+## Patch 9F-2D Daily Plan To Content Item Fixture Guard
+
+Patch 9F-2D adds a guarded bridge from one daily plan item to one deterministic `content_items` fixture. The code path is prepared, but the fixture write requires explicit operator approval before execution.
+
+Target item:
+
+- `planId = cmqlr1v1d0000iwj2smxcsajr`
+- `planItemId = cmqlr1v1y0001iwj2gpv2875r`
+- `itemOrder = 1`
+- `slotKey = morning_education`
+- `contentIntent = beginner_education`
+
+The proposed fixture is deterministic and non-publishable:
+
+- deterministic content item id: `daily_fixture_cmqlr1v1y0001iwj2gpv2875r`
+- `mode = memo_expand`
+- `status = planned`
+- `title` and `targetKeyword` come from the plan item `topicSeed`
+- `sourceMemo = 9F-2D fixture only. No LLM generation has been executed.`
+- `draftMarkdown = null`
+- `draftHtml = null`
+- `qualityScore = null`
+- `publishedAt = null`
+- `scheduledAt = null`
+
+The guarded apply route may update only the target daily plan item `contentItemId` and may insert or idempotently confirm only the deterministic fixture row. It must not modify the daily plan row, other daily plan items, the published 9E content item, Blogger tables, publish approvals, publish attempts, operation profiles, or LLM call logs.
+
 ## Patch 2 구현 테이블
 
 Patch 2는 PostgreSQL + Prisma 기준으로 다음 테이블을 우선 구현한다.

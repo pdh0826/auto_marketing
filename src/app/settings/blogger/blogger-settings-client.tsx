@@ -14,6 +14,7 @@ import type {
 } from "@/lib/blogger/admin-types";
 import type { BlogOperationProfileResponse } from "@/lib/blog-operation-profiles/operation-profile-summary";
 import type { BlogAdmin } from "@/lib/blogs/admin-types";
+import type { DailyPlanContentItemFixtureResponse } from "@/lib/daily-content-plans/content-item-fixture";
 import type { DailyContentPlanResponse } from "@/lib/daily-content-plans/daily-content-plan-summary";
 import { ApiResult, formatListInput, optionalString, parseListInput, requestJson } from "@/lib/form-utils";
 
@@ -72,12 +73,14 @@ export function BloggerSettingsClient() {
   const [tokenRefreshResult, setTokenRefreshResult] = useState<BloggerTokenRefreshResponse | null>(null);
   const [operationProfileResult, setOperationProfileResult] = useState<BlogOperationProfileResponse | null>(null);
   const [dailyContentPlanResult, setDailyContentPlanResult] = useState<DailyContentPlanResponse | null>(null);
+  const [contentItemFixtureResult, setContentItemFixtureResult] = useState<DailyPlanContentItemFixtureResponse | null>(null);
   const [oauthDryRun, setOauthDryRun] = useState<BloggerOAuthStartDryRun | null>(null);
   const [blogListResult, setBlogListResult] = useState<BloggerBlogListResult | null>(null);
   const [blogListLoadingId, setBlogListLoadingId] = useState<string | null>(null);
   const [refreshingTokenId, setRefreshingTokenId] = useState<string | null>(null);
   const [loadingOperationProfileId, setLoadingOperationProfileId] = useState<string | null>(null);
   const [loadingDailyContentPlanId, setLoadingDailyContentPlanId] = useState<string | null>(null);
+  const [loadingContentItemFixtureId, setLoadingContentItemFixtureId] = useState<string | null>(null);
   const [selectingBlogId, setSelectingBlogId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -275,6 +278,34 @@ export function BloggerSettingsClient() {
       setError(caught instanceof Error ? caught.message : "Daily Content Plan preview에 실패했습니다.");
     } finally {
       setLoadingDailyContentPlanId(null);
+    }
+  }
+
+  async function previewContentItemFixture(planId: string | null | undefined, planItemId: string | null | undefined) {
+    if (!planId || !planItemId) {
+      setError("Daily plan id와 item id가 필요합니다.");
+      return;
+    }
+
+    setError(null);
+    setNotice(null);
+    setLoadingContentItemFixtureId(planItemId);
+
+    try {
+      const result = await requestJson<ApiResult<DailyPlanContentItemFixtureResponse>>("/api/daily-content-plans/content-item-fixture", {
+        method: "POST",
+        body: JSON.stringify({
+          mode: "preview",
+          planId,
+          planItemId
+        })
+      });
+      setContentItemFixtureResult(result.data);
+      setNotice("content_items fixture preview를 확인했습니다. DB write, LLM call, Blogger write/publish는 수행하지 않았습니다.");
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "content_items fixture preview에 실패했습니다.");
+    } finally {
+      setLoadingContentItemFixtureId(null);
     }
   }
 
@@ -929,14 +960,41 @@ export function BloggerSettingsClient() {
                       </div>
                     </td>
                     <td>
+                      <button
+                        className="button small secondary"
+                        type="button"
+                        disabled={!dailyContentPlanSummary.persistedPlanId || !getDailyPlanItemId(item) || loadingContentItemFixtureId === getDailyPlanItemId(item)}
+                        onClick={() => previewContentItemFixture(dailyContentPlanSummary.persistedPlanId, getDailyPlanItemId(item))}
+                      >
+                        {loadingContentItemFixtureId === getDailyPlanItemId(item) ? "확인 중" : "fixture preview"}
+                      </button>
                       <button className="button small secondary" type="button" disabled>
-                        Coming soon
+                        생성/연결 비활성
                       </button>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
+            {contentItemFixtureResult ? (
+              <div className="notice">
+                <strong>content_items fixture preview</strong>
+                <p>이 preview는 DB write를 수행하지 않습니다. 실제 fixture 생성/연결은 feature flag와 명시 승인 문구가 필요합니다.</p>
+                <div className="detail-grid">
+                  <DetailItem label="Patch" value={contentItemFixtureResult.contentItemFixtureSummary.patchVersion} />
+                  <DetailItem label="Mode" value={contentItemFixtureResult.contentItemFixtureSummary.mode} />
+                  <DetailItem label="Plan Item" value={contentItemFixtureResult.contentItemFixtureSummary.targetPlanItemId || "-"} />
+                  <DetailItem label="Slot" value={contentItemFixtureResult.contentItemFixtureSummary.targetSlotKey ?? "-"} />
+                  <DetailItem label="Would Create" value={String(contentItemFixtureResult.contentItemFixtureSummary.fixtureWouldBeCreated)} />
+                  <DetailItem label="Already Linked" value={String(contentItemFixtureResult.contentItemFixtureSummary.fixtureAlreadyLinked)} />
+                  <DetailItem label="Proposed Content Item" value={contentItemFixtureResult.contentItemFixtureSummary.proposedFixtureSummary.id ?? "-"} />
+                  <DetailItem label="Applied Content Item" value={contentItemFixtureResult.contentItemFixtureSummary.appliedContentItemId ?? "-"} />
+                  <DetailItem label="DB Write" value={String(contentItemFixtureResult.contentItemFixtureSummary.sideEffectSummary.dbWrite)} />
+                  <DetailItem label="LLM Call" value={String(contentItemFixtureResult.contentItemFixtureSummary.sideEffectSummary.llmCall)} />
+                  <DetailItem label="Blogger Write" value={String(contentItemFixtureResult.contentItemFixtureSummary.sideEffectSummary.bloggerWrite)} />
+                </div>
+              </div>
+            ) : null}
 
             <details className="read-block">
               <summary>기술 상세</summary>
@@ -1259,6 +1317,10 @@ function getDailyPlanSlotLabel(slotKey: string) {
 
 function getDailyPlanItemStatus(item: DailyContentPlanQueueItem) {
   return "status" in item ? item.status : "preview";
+}
+
+function getDailyPlanItemId(item: DailyContentPlanQueueItem) {
+  return "id" in item ? item.id : null;
 }
 
 function getDailyPlanItemContentItemId(item: DailyContentPlanQueueItem) {

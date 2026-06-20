@@ -1,12 +1,12 @@
 # 14_NEXT_SESSION_BRIEF
 
-## Current State: Patch 9F-2C
+## Current State: Patch 9F-2D Guard Implemented, Fixture Apply Pending Approval
 
 ```text
 repo: ~/blog-growth-agent
 branch: master
-previous HEAD before 9F-2C: b180c69 Document 9F-2B daily content plan creation
-expected HEAD after 9F-2C commit: local commit `Polish daily content plan queue preview` (verify exact hash with `git log --oneline -8`)
+previous HEAD before 9F-2D: eaee70f Polish daily content plan queue preview
+expected HEAD after 9F-2D guard commit: local commit `Link daily plan item to content fixture` (verify exact hash with `git log --oneline -8`)
 milestone: 9E first end-to-end Blogger publish completed; 9F operation automation foundation started
 ```
 
@@ -52,6 +52,12 @@ Current baseline:
 - Future apply summaries can populate `appliedPlan` and `appliedItemCount`, addressing the 9F-2B follow-up without rerunning apply.
 - `/settings/blogger` now shows `오늘 콘텐츠 계획`, safety guardrails, and a draft `후보 큐` for the three persisted candidate items.
 - The UI keeps content generation, LLM calls, content item creation, Blogger write, publish execution, and scheduled publish as disabled/coming-soon only.
+- 9F-2D guarded route is implemented at `POST /api/daily-content-plans/content-item-fixture`.
+- 9F-2D target item is `cmqlr1v1y0001iwj2gpv2875r` (`itemOrder=1`, `slotKey=morning_education`).
+- Proposed deterministic fixture id is `daily_fixture_cmqlr1v1y0001iwj2gpv2875r`.
+- The route supports preview and feature-flagged apply, but the fixture apply has not been executed yet because the explicit operator approval phrase was not provided in the implementation pass.
+- Before approval, do not start a server with `BLOG_DAILY_PLAN_CONTENT_ITEM_FIXTURE_WRITE_ENABLED=true` and do not call the fixture route with a successful apply path.
+- Current expected DB state remains: `content_items_count=1`, target daily plan item `contentItemId=null`, daily plan rows `1`, daily plan item rows `3`, and publish milestone counts `1 / 1 / 1 / 1 / 22`.
 - `posts.update`, scheduled publish, bulk publish automation, and policy-enforced operation profile gate behavior are not implemented yet.
 
 9F-1A/9F-1B operation profile state:
@@ -73,6 +79,7 @@ Current baseline:
 - 9F-2A added Daily Auto Content Plan draft foundation: schema-only migration, preview API, deterministic plan item metadata, feature-flagged apply implementation, Settings UI preview, no content generation, no LLM call, no content item creation, no Blogger write/publish/schedule, and no daily plan business row writes during validation.
 - 9F-2B created or idempotently confirmed the default daily content plan row and three item rows once after explicit operator approval, while keeping content generation, LLM calls, content item mutation, Blogger writes, publish execution, scheduling, OAuth reconnect, token refresh, publish approval mutation, and publish attempt mutation disabled.
 - 9F-2C added persisted daily plan readback fields and an operator-friendly queue dashboard draft in `/settings/blogger`, without rerunning apply or mutating business rows.
+- 9F-2D added guarded content item fixture preview/apply code and UI preview affordance, but did not execute the fixture apply without explicit operator approval.
 
 9E first end-to-end publish path:
 
@@ -84,24 +91,33 @@ Current baseline:
 6. `9E-9C` read back `https://mathlearningappl.blogspot.com/2026/06/blog-post.html`.
 7. `9E-9D-APPLY` reconciled internal DB state from `planned`/`planned_only` to `published`/`success`.
 
-Recommended next after 9F-2C:
+Recommended next operational step:
 
-**9F-2D — Daily plan to content-item draft fixture, no LLM/no Blogger write**
+**Approve and run the one-time 9F-2D fixture apply only if desired**
 
-Goal:
+Required approval phrase:
 
-- Convert one selected daily plan item into a controlled local content-item draft fixture only after explicit approval.
-- Keep LLM, Blogger write, publish execution, and scheduled publish disabled.
-- Preserve daily plan item safety flags unless a dedicated approval workflow changes them in a later patch.
+```text
+승인합니다. 9F-2D로 Daily Plan item 1개를 content_items draft fixture로 1회 연결합니다.
+```
 
-Alternative:
+After approved apply, recommended next patch:
 
 **9F-2E — Daily Content Queue operator approval workflow draft, no generation/no publish execution**
 
 Goal:
 
-- Design the operator approval workflow for queue items before creating content item fixtures.
+- Design the operator approval workflow for queue items before generation or publish execution.
 - Keep generation, Blogger write, publish execution, and scheduling disabled.
+
+Alternative:
+
+**9F-2F — Draft-generation readiness preflight for linked content item, no LLM/no Blogger write**
+
+Goal:
+
+- Once the 9F-2D fixture is linked, preview whether that linked content item is ready for future draft generation.
+- Keep actual LLM generation, Blogger write, publish execution, and scheduling disabled.
 
 ## 9F Automation Roadmap
 
@@ -118,6 +134,7 @@ Goal:
 | 9F-2C | Daily Content Plan UI polish and queue dashboard draft |
 | 9F-2D | Daily plan to content-item draft fixture, no LLM/no Blogger write |
 | 9F-2E | Daily Content Queue operator approval workflow draft |
+| 9F-2F | Draft-generation readiness preflight for linked content item |
 | 9F-3A | Alert & Recovery Center |
 
 Core operation principles:
@@ -143,6 +160,8 @@ psql -d blog_growth_agent_dev -c "select count(*) as blog_daily_content_plans_co
 psql -d blog_growth_agent_dev -c "select count(*) as blog_daily_content_plan_items_count from blog_daily_content_plan_items;"
 psql -d blog_growth_agent_dev -c "select id, \"targetBloggerBlogId\", \"targetBloggerBlogName\", \"targetBloggerBlogUrl\", \"operationProfileId\", \"planDateLocal\", timezone, \"planName\", status, \"planKind\", \"operationMode\", \"defaultPublishPolicyPreset\", \"contentGenerationEnabled\", \"llmCallEnabled\", \"publishExecutionEnabled\", \"scheduledPublishEnabled\", \"plannedItemCount\" from blog_daily_content_plans where id = 'cmqlr1v1d0000iwj2smxcsajr';"
 psql -d blog_growth_agent_dev -c "select \"itemOrder\", \"slotKey\", status, \"topicSeed\", \"contentIntent\", \"publishMode\", \"contentItemId\", \"draftGenerationAllowed\", \"llmGenerationAllowed\", \"publishExecutionAllowed\", \"scheduledPublishAllowed\", \"requiresHumanApproval\" from blog_daily_content_plan_items where \"planId\" = 'cmqlr1v1d0000iwj2smxcsajr' order by \"itemOrder\";"
+psql -d blog_growth_agent_dev -c "select count(*) as content_items_count from content_items;"
+psql -d blog_growth_agent_dev -c "select id, \"planId\", \"itemOrder\", \"slotKey\", status, \"topicSeed\", \"contentIntent\", \"publishMode\", \"contentItemId\", \"draftGenerationAllowed\", \"llmGenerationAllowed\", \"publishExecutionAllowed\", \"scheduledPublishAllowed\", \"requiresHumanApproval\" from blog_daily_content_plan_items where id = 'cmqlr1v1y0001iwj2gpv2875r';"
 ```
 
 Expected DB baseline:
@@ -164,6 +183,7 @@ Expected DB baseline:
 - Daily plan generation/publish flags remain false: `contentGenerationEnabled=false`, `llmCallEnabled=false`, `publishExecutionEnabled=false`, and `scheduledPublishEnabled=false`.
 - All daily plan items have `contentItemId=null`, generation/publish flags false, and `requiresHumanApproval=true`.
 - Do not rerun 9F-2B apply for the same date unless the user explicitly approves a new date-specific write.
+- Until 9F-2D apply is explicitly approved, `content_items_count = 1` and target item `cmqlr1v1y0001iwj2gpv2875r.contentItemId = null`.
 
 ## Current State: 2026-06-16 Closeout
 
