@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db/client";
 
 const PATCH_VERSION = "9F-2J";
 const OPERATOR_APPROVAL_MIGRATION = "20260620000200_add_daily_content_operator_approval_scaffold";
+const OPERATOR_APPROVAL_PURPOSE = "draft_generation_execution";
 
 type DraftGenerationExecutionGateMode = "preview" | "blocked_non_preview";
 type GateLayerStatus = "pass" | "blocked" | "not_applicable";
@@ -45,7 +46,7 @@ export interface DailyContentDraftGenerationExecutionGatePreviewSummary {
   executionGateSummary: {
     executionAllowed: false;
     readinessStructuralReady: boolean;
-    operatorApprovalSatisfied: false;
+    operatorApprovalSatisfied: boolean;
     llmProviderGateSatisfied: false;
     contentMutationGateSatisfied: false;
     confirmationSatisfied: false;
@@ -228,7 +229,21 @@ export async function buildDailyContentDraftGenerationExecutionGatePreviewRespon
     blockingReasons.add("operator_approval_tables_not_applied");
   }
 
-  blockingReasons.add("operator_approval_missing");
+  const operatorApprovalReadState = await readPersistedOperatorApproval({
+    operatorApprovalTablesExist,
+    planItemId: request.planItemId,
+    contentItemId: linkedContentItemId
+  });
+  if (!operatorApprovalReadState.readOk) {
+    blockingReasons.add("operator_approval_read_failed");
+    warnings.add("operator_approval_table_permission_or_read_error");
+  }
+  const operatorApproval = operatorApprovalReadState.approval;
+  const operatorApprovalSatisfied = Boolean(operatorApproval);
+
+  if (!operatorApprovalSatisfied) {
+    blockingReasons.add("operator_approval_missing");
+  }
   blockingReasons.add("llm_execution_feature_flag_disabled");
   blockingReasons.add("content_mutation_feature_flag_disabled");
   blockingReasons.add("draft_generation_write_feature_flag_disabled");
@@ -270,7 +285,7 @@ export async function buildDailyContentDraftGenerationExecutionGatePreviewRespon
     executionGateSummary: {
       executionAllowed: false,
       readinessStructuralReady,
-      operatorApprovalSatisfied: false,
+      operatorApprovalSatisfied,
       llmProviderGateSatisfied: false,
       contentMutationGateSatisfied: false,
       confirmationSatisfied: false,
@@ -290,6 +305,7 @@ export async function buildDailyContentDraftGenerationExecutionGatePreviewRespon
       itemGenerationFlagsDisabled,
       readinessStructuralReady,
       operatorApprovalTablesExist,
+      operatorApprovalSatisfied,
       publishIsolationSatisfied
     }),
     canonicalBlockingReasons,
@@ -370,6 +386,37 @@ async function readOperatorApprovalTableState() {
   };
 }
 
+async function readPersistedOperatorApproval(input: { operatorApprovalTablesExist: boolean; planItemId: string | null; contentItemId: string | null }) {
+  if (!input.operatorApprovalTablesExist || !input.planItemId || !input.contentItemId) {
+    return {
+      readOk: true,
+      approval: null
+    };
+  }
+
+  try {
+    const approval = await prisma.blogDailyContentOperatorApproval.findFirst({
+      where: {
+        planItemId: input.planItemId,
+        contentItemId: input.contentItemId,
+        approvalPurpose: OPERATOR_APPROVAL_PURPOSE,
+        approvalStatus: "approved",
+        revokedAt: null
+      },
+      orderBy: { createdAt: "asc" }
+    });
+    return {
+      readOk: true,
+      approval
+    };
+  } catch {
+    return {
+      readOk: false,
+      approval: null
+    };
+  }
+}
+
 function buildGateLayers(input: {
   requestMode: DraftGenerationExecutionGateMode;
   planItemFound: boolean;
@@ -382,6 +429,7 @@ function buildGateLayers(input: {
   itemGenerationFlagsDisabled: boolean;
   readinessStructuralReady: boolean;
   operatorApprovalTablesExist: boolean;
+  operatorApprovalSatisfied: boolean;
   publishIsolationSatisfied: boolean;
 }): DailyContentDraftGenerationExecutionGateLayer[] {
   return [
@@ -427,8 +475,11 @@ function buildGateLayers(input: {
       layer: 3,
       key: "operator_approval_persistence_gate",
       labelKo: "운영자 승인 저장",
-      status: "blocked",
-      blockingReasons: compact([input.operatorApprovalTablesExist ? null : "operator_approval_tables_not_applied", "operator_approval_missing"]),
+      status: input.operatorApprovalTablesExist && input.operatorApprovalSatisfied ? "pass" : "blocked",
+      blockingReasons: compact([
+        input.operatorApprovalTablesExist ? null : "operator_approval_tables_not_applied",
+        input.operatorApprovalSatisfied ? null : "operator_approval_missing"
+      ]),
       allowedSideEffects: ["db_read"],
       prohibitedSideEffects: ["approval_mutation", "llm_call", "draft_write"]
     },

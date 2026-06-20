@@ -18,6 +18,7 @@ import type { DailyPlanContentItemFixtureResponse } from "@/lib/daily-content-pl
 import type { DailyContentPlanResponse } from "@/lib/daily-content-plans/daily-content-plan-summary";
 import type { DailyContentDraftGenerationExecutionGatePreviewResponse } from "@/lib/daily-content-plans/draft-generation-execution-gate-preview";
 import type { DailyContentDraftGenerationReadinessResponse } from "@/lib/daily-content-plans/draft-generation-readiness";
+import type { DailyContentOperatorApprovalPersistenceResponse } from "@/lib/daily-content-plans/operator-approval-persistence";
 import type { DailyContentQueueOperatorWorkflowResponse } from "@/lib/daily-content-plans/operator-approval-workflow";
 import { ApiResult, formatListInput, optionalString, parseListInput, requestJson } from "@/lib/form-utils";
 
@@ -78,6 +79,7 @@ export function BloggerSettingsClient() {
   const [dailyContentPlanResult, setDailyContentPlanResult] = useState<DailyContentPlanResponse | null>(null);
   const [contentItemFixtureResult, setContentItemFixtureResult] = useState<DailyPlanContentItemFixtureResponse | null>(null);
   const [operatorWorkflowResult, setOperatorWorkflowResult] = useState<DailyContentQueueOperatorWorkflowResponse | null>(null);
+  const [operatorApprovalPersistenceResult, setOperatorApprovalPersistenceResult] = useState<DailyContentOperatorApprovalPersistenceResponse | null>(null);
   const [draftGenerationReadinessResult, setDraftGenerationReadinessResult] = useState<DailyContentDraftGenerationReadinessResponse | null>(null);
   const [draftGenerationExecutionGateResult, setDraftGenerationExecutionGateResult] = useState<DailyContentDraftGenerationExecutionGatePreviewResponse | null>(null);
   const [oauthDryRun, setOauthDryRun] = useState<BloggerOAuthStartDryRun | null>(null);
@@ -88,6 +90,7 @@ export function BloggerSettingsClient() {
   const [loadingDailyContentPlanId, setLoadingDailyContentPlanId] = useState<string | null>(null);
   const [loadingContentItemFixtureId, setLoadingContentItemFixtureId] = useState<string | null>(null);
   const [loadingOperatorWorkflowPlanId, setLoadingOperatorWorkflowPlanId] = useState<string | null>(null);
+  const [loadingOperatorApprovalItemId, setLoadingOperatorApprovalItemId] = useState<string | null>(null);
   const [loadingDraftGenerationReadinessItemId, setLoadingDraftGenerationReadinessItemId] = useState<string | null>(null);
   const [loadingDraftGenerationExecutionGateItemId, setLoadingDraftGenerationExecutionGateItemId] = useState<string | null>(null);
   const [selectingBlogId, setSelectingBlogId] = useState<string | null>(null);
@@ -348,6 +351,44 @@ export function BloggerSettingsClient() {
       setError(caught instanceof Error ? caught.message : "운영자 검토 워크플로우 preview에 실패했습니다.");
     } finally {
       setLoadingOperatorWorkflowPlanId(null);
+    }
+  }
+
+  async function previewOperatorApprovalPersistence(
+    planId: string | null | undefined,
+    planItemId: string | null | undefined,
+    contentItemId: string | null | undefined
+  ) {
+    if (!planId || !planItemId || !contentItemId) {
+      setError("Daily plan id, item id, linked content item id가 필요합니다.");
+      return;
+    }
+
+    const idempotencyKey = `9F-2K:draft_generation_execution:${planItemId}:${contentItemId}`;
+
+    setError(null);
+    setNotice(null);
+    setLoadingOperatorApprovalItemId(planItemId);
+
+    try {
+      const result = await requestJson<ApiResult<DailyContentOperatorApprovalPersistenceResponse>>("/api/daily-content-plans/operator-approvals", {
+        method: "POST",
+        body: JSON.stringify({
+          mode: "preview",
+          planId,
+          planItemId,
+          contentItemId,
+          approvalPurpose: "draft_generation_execution",
+          operatorAction: "approve_for_draft_generation_execution",
+          idempotencyKey
+        })
+      });
+      setOperatorApprovalPersistenceResult(result.data);
+      setNotice("운영자 승인 저장 preview를 확인했습니다. approval row/event 저장, draft 생성, LLM call, content_items 수정, Blogger write/publish는 수행하지 않았습니다.");
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "운영자 승인 저장 preview에 실패했습니다.");
+    } finally {
+      setLoadingOperatorApprovalItemId(null);
     }
   }
 
@@ -1088,6 +1129,25 @@ export function BloggerSettingsClient() {
                       <button
                         className="button small secondary"
                         type="button"
+                        disabled={
+                          !dailyContentPlanSummary.persistedPlanId ||
+                          !getDailyPlanItemId(item) ||
+                          !getDailyPlanItemContentItemId(item) ||
+                          loadingOperatorApprovalItemId === getDailyPlanItemId(item)
+                        }
+                        onClick={() =>
+                          void previewOperatorApprovalPersistence(
+                            dailyContentPlanSummary.persistedPlanId,
+                            getDailyPlanItemId(item),
+                            getDailyPlanItemContentItemId(item)
+                          )
+                        }
+                      >
+                        {loadingOperatorApprovalItemId === getDailyPlanItemId(item) ? "승인 preview 중" : "승인 저장 preview"}
+                      </button>
+                      <button
+                        className="button small secondary"
+                        type="button"
                         disabled={!getDailyPlanItemId(item) || !getDailyPlanItemContentItemId(item) || loadingDraftGenerationReadinessItemId === getDailyPlanItemId(item)}
                         onClick={() => void previewDraftGenerationReadiness(getDailyPlanItemId(item), getDailyPlanItemContentItemId(item))}
                       >
@@ -1248,6 +1308,123 @@ export function BloggerSettingsClient() {
             </div>
 
             <div className="read-block">
+              <h3>운영자 승인 저장</h3>
+              <div className="notice">
+                <strong>9F-2K guarded persistence preview</strong>
+                <p>초안 생성 실행을 위한 운영자 승인 row/event 저장 가능성을 확인합니다. 이 화면 호출은 preview만 수행하며 approval 저장, 본문 생성, LLM 호출, content_items 수정, Blogger 쓰기/발행은 실행하지 않습니다.</p>
+              </div>
+              <div className="button-row">
+                <button className="button small secondary" type="button" disabled>
+                  승인 저장 - feature flag/확인 문구 필요
+                </button>
+                <button className="button small secondary" type="button" disabled>
+                  승인 row만 생성 - 비활성
+                </button>
+                <button className="button small secondary" type="button" disabled>
+                  event row만 생성 - 비활성
+                </button>
+                <button className="button small secondary" type="button" disabled>
+                  초안 생성 실행 - 비활성
+                </button>
+              </div>
+              {operatorApprovalPersistenceResult ? (
+                <>
+                  <div
+                    className={
+                      operatorApprovalPersistenceResult.operatorApprovalPersistenceSummary.existingApprovalFound
+                        ? "notice success"
+                        : operatorApprovalPersistenceResult.operatorApprovalPersistenceSummary.blockingReasons.length > 0
+                          ? "notice warning"
+                          : "notice"
+                    }
+                  >
+                    <strong>{operatorApprovalPersistenceResult.operatorApprovalPersistenceSummary.existingApprovalFound ? "승인 저장됨" : "승인 미저장"}</strong>
+                    <p>
+                      목적: {operatorApprovalPersistenceResult.operatorApprovalPersistenceSummary.approvalPurpose} / 액션:{" "}
+                      {operatorApprovalPersistenceResult.operatorApprovalPersistenceSummary.operatorLabel}
+                    </p>
+                    <p>
+                      Preview만 실행했습니다. 승인 저장 apply는 별도 feature flag, idempotency key, 확인 문구와 명시 승인이 있어야 하며, 이 UI에서는 자동 실행하지 않습니다.
+                    </p>
+                  </div>
+                  <div className="detail-grid">
+                    <DetailItem label="Patch" value={operatorApprovalPersistenceResult.operatorApprovalPersistenceSummary.patchVersion} />
+                    <DetailItem label="Mode" value={operatorApprovalPersistenceResult.operatorApprovalPersistenceSummary.mode} />
+                    <DetailItem label="Plan ID" value={operatorApprovalPersistenceResult.operatorApprovalPersistenceSummary.targetPlanId || "-"} />
+                    <DetailItem label="Plan Item" value={operatorApprovalPersistenceResult.operatorApprovalPersistenceSummary.targetPlanItemId || "-"} />
+                    <DetailItem label="Content Item" value={operatorApprovalPersistenceResult.operatorApprovalPersistenceSummary.targetContentItemId || "-"} />
+                    <DetailItem label="Existing Approval" value={operatorApprovalPersistenceResult.operatorApprovalPersistenceSummary.existingApprovalFound ? "있음" : "없음"} />
+                    <DetailItem label="Approval ID" value={operatorApprovalPersistenceResult.operatorApprovalPersistenceSummary.existingApprovalId ?? "-"} />
+                    <DetailItem label="Event Count" value={String(operatorApprovalPersistenceResult.operatorApprovalPersistenceSummary.existingEventCount)} />
+                    <DetailItem label="Approval Would Be Created" value={String(operatorApprovalPersistenceResult.operatorApprovalPersistenceSummary.approvalWouldBeCreated)} />
+                    <DetailItem label="Event Would Be Created" value={String(operatorApprovalPersistenceResult.operatorApprovalPersistenceSummary.eventWouldBeCreated)} />
+                  </div>
+                  <div className="detail-grid">
+                    <DetailItem label="Plan Found" value={String(operatorApprovalPersistenceResult.operatorApprovalPersistenceSummary.targetIntegrity.planFound)} />
+                    <DetailItem label="Plan Item Found" value={String(operatorApprovalPersistenceResult.operatorApprovalPersistenceSummary.targetIntegrity.planItemFound)} />
+                    <DetailItem label="Content Item Found" value={String(operatorApprovalPersistenceResult.operatorApprovalPersistenceSummary.targetIntegrity.contentItemFound)} />
+                    <DetailItem label="Fixture Match" value={String(operatorApprovalPersistenceResult.operatorApprovalPersistenceSummary.targetIntegrity.contentItemMatchesPlanItem)} />
+                    <DetailItem label="Not Published" value={String(operatorApprovalPersistenceResult.operatorApprovalPersistenceSummary.targetIntegrity.contentItemNotPublished)} />
+                    <DetailItem label="Not Scheduled" value={String(operatorApprovalPersistenceResult.operatorApprovalPersistenceSummary.targetIntegrity.contentItemNotScheduled)} />
+                    <DetailItem label="No Draft Markdown" value={String(operatorApprovalPersistenceResult.operatorApprovalPersistenceSummary.targetIntegrity.contentItemHasNoDraftMarkdown)} />
+                    <DetailItem label="No Draft HTML" value={String(operatorApprovalPersistenceResult.operatorApprovalPersistenceSummary.targetIntegrity.contentItemHasNoDraftHtml)} />
+                  </div>
+                  <ValidationList
+                    title="Operator Approval Blocking Reasons"
+                    items={operatorApprovalPersistenceResult.operatorApprovalPersistenceSummary.blockingReasons}
+                    emptyText="blocking reason이 없습니다."
+                    isError
+                  />
+                  <ValidationList
+                    title="Operator Approval Warnings"
+                    items={operatorApprovalPersistenceResult.operatorApprovalPersistenceSummary.warnings}
+                    emptyText="warning이 없습니다."
+                    isWarning
+                  />
+                  <details className="read-block">
+                    <summary>운영자 승인 저장 기술 상세</summary>
+                    <div className="detail-grid">
+                      <DetailItem label="Feature Flag Enabled" value={String(operatorApprovalPersistenceResult.operatorApprovalPersistenceSummary.featureFlagEnabled)} />
+                      <DetailItem label="Confirmation Accepted" value={String(operatorApprovalPersistenceResult.operatorApprovalPersistenceSummary.confirmationPhraseAccepted)} />
+                      <DetailItem label="Idempotency Accepted" value={String(operatorApprovalPersistenceResult.operatorApprovalPersistenceSummary.idempotencyKeyAccepted)} />
+                      <DetailItem label="Apply Attempted" value={String(operatorApprovalPersistenceResult.operatorApprovalPersistenceSummary.applyAttempted)} />
+                      <DetailItem label="Apply Blocked" value={String(operatorApprovalPersistenceResult.operatorApprovalPersistenceSummary.applyBlocked)} />
+                      <DetailItem label="Apply OK" value={String(operatorApprovalPersistenceResult.operatorApprovalPersistenceSummary.applyOk)} />
+                      <DetailItem label="Applied Approval" value={operatorApprovalPersistenceResult.operatorApprovalPersistenceSummary.appliedApprovalId ?? "-"} />
+                      <DetailItem label="Applied Event" value={operatorApprovalPersistenceResult.operatorApprovalPersistenceSummary.appliedEventId ?? "-"} />
+                    </div>
+                    <div className="detail-grid">
+                      <DetailItem label="DB Read" value={String(operatorApprovalPersistenceResult.operatorApprovalPersistenceSummary.sideEffectSummary.dbRead)} />
+                      <DetailItem label="DB Write" value={String(operatorApprovalPersistenceResult.operatorApprovalPersistenceSummary.sideEffectSummary.dbWrite)} />
+                      <DetailItem label="Approval Mutation" value={String(operatorApprovalPersistenceResult.operatorApprovalPersistenceSummary.sideEffectSummary.approvalMutation)} />
+                      <DetailItem label="Approval Event Mutation" value={String(operatorApprovalPersistenceResult.operatorApprovalPersistenceSummary.sideEffectSummary.approvalEventMutation)} />
+                      <DetailItem label="Content Generation" value={String(operatorApprovalPersistenceResult.operatorApprovalPersistenceSummary.sideEffectSummary.contentGeneration)} />
+                      <DetailItem label="LLM Call" value={String(operatorApprovalPersistenceResult.operatorApprovalPersistenceSummary.sideEffectSummary.llmCall)} />
+                      <DetailItem label="Content Mutation" value={String(operatorApprovalPersistenceResult.operatorApprovalPersistenceSummary.sideEffectSummary.contentMutation)} />
+                      <DetailItem label="Draft Markdown Mutation" value={String(operatorApprovalPersistenceResult.operatorApprovalPersistenceSummary.sideEffectSummary.draftMarkdownMutation)} />
+                      <DetailItem label="Draft HTML Mutation" value={String(operatorApprovalPersistenceResult.operatorApprovalPersistenceSummary.sideEffectSummary.draftHtmlMutation)} />
+                      <DetailItem label="Blogger Write" value={String(operatorApprovalPersistenceResult.operatorApprovalPersistenceSummary.sideEffectSummary.bloggerWrite)} />
+                      <DetailItem label="Blogger Publish" value={String(operatorApprovalPersistenceResult.operatorApprovalPersistenceSummary.sideEffectSummary.bloggerPublish)} />
+                      <DetailItem label="Token Refresh" value={String(operatorApprovalPersistenceResult.operatorApprovalPersistenceSummary.sideEffectSummary.tokenRefresh)} />
+                      <DetailItem label="OAuth Reconnect" value={String(operatorApprovalPersistenceResult.operatorApprovalPersistenceSummary.sideEffectSummary.oauthReconnect)} />
+                    </div>
+                    <div className="detail-grid">
+                      <DetailItem label="No Content Generation" value={String(operatorApprovalPersistenceResult.operatorApprovalPersistenceSummary.guardrailSummary.noContentGeneration)} />
+                      <DetailItem label="No LLM Call" value={String(operatorApprovalPersistenceResult.operatorApprovalPersistenceSummary.guardrailSummary.noLlmCall)} />
+                      <DetailItem label="No Content Mutation" value={String(operatorApprovalPersistenceResult.operatorApprovalPersistenceSummary.guardrailSummary.noContentItemMutation)} />
+                      <DetailItem label="No Draft Markdown Mutation" value={String(operatorApprovalPersistenceResult.operatorApprovalPersistenceSummary.guardrailSummary.noDraftMarkdownMutation)} />
+                      <DetailItem label="No Draft HTML Mutation" value={String(operatorApprovalPersistenceResult.operatorApprovalPersistenceSummary.guardrailSummary.noDraftHtmlMutation)} />
+                      <DetailItem label="No Blogger Write" value={String(operatorApprovalPersistenceResult.operatorApprovalPersistenceSummary.guardrailSummary.noBloggerWrite)} />
+                      <DetailItem label="No Publish Execution" value={String(operatorApprovalPersistenceResult.operatorApprovalPersistenceSummary.guardrailSummary.noPublishExecution)} />
+                    </div>
+                  </details>
+                </>
+              ) : (
+                <div className="notice">후보 큐에서 linked content item이 있는 행의 “승인 저장 preview”를 실행하세요. 이 버튼은 preview-only이며 DB write를 수행하지 않습니다.</div>
+              )}
+            </div>
+
+            <div className="read-block">
               <h3>초안 생성 준비 점검</h3>
               <div className="notice">
                 <strong>9F-2F preflight only</strong>
@@ -1401,16 +1578,8 @@ export function BloggerSettingsClient() {
                     <DetailItem label="발행 실행" value={draftGenerationExecutionGateResult.draftGenerationExecutionGatePreviewSummary.sideEffectSummary.bloggerPublish ? "있음" : "없음"} />
                   </div>
                   <ValidationList
-                    title="필수 조건"
-                    items={[
-                      "운영자 승인 테이블 미적용",
-                      "운영자 승인 미저장",
-                      "LLM 실행 flag 꺼짐",
-                      "content mutation flag 꺼짐",
-                      "draft generation write flag 꺼짐",
-                      "확인 문구 없음",
-                      "idempotency key 없음"
-                    ]}
+                    title="현재 실행 차단 조건"
+                    items={draftGenerationExecutionGateResult.draftGenerationExecutionGatePreviewSummary.canonicalBlockingReasons}
                     emptyText="missing requirement가 없습니다."
                     isWarning
                   />

@@ -197,6 +197,24 @@ The proposal keeps approval persistence separate from:
 
 Future approval writes should be gated by `BLOG_DAILY_CONTENT_OPERATOR_APPROVAL_WRITE_ENABLED=true` and exact confirmation phrase `I_UNDERSTAND_THIS_WILL_PERSIST_OPERATOR_APPROVAL_ONLY`.
 
+## Patch 9F-2K Operator Approval Persistence Route
+
+Patch 9F-2K adds a guarded preview/apply route for the existing operator approval tables:
+
+- `POST /api/daily-content-plans/operator-approvals`
+- helper `src/lib/daily-content-plans/operator-approval-persistence.ts`
+
+Current implementation state:
+
+- Preview mode reads the target daily plan, plan item, linked content fixture, and any existing operator approval/event.
+- Apply mode is implemented but blocked unless `BLOG_DAILY_CONTENT_OPERATOR_APPROVAL_WRITE_ENABLED=true`, the exact confirmation phrase, and the expected idempotency key are present.
+- The Settings UI only calls preview and keeps approval apply controls disabled.
+- The Korean approval phrase for the actual 9F-2K apply was not provided in this patch, so no approval row/event was created.
+- `operator_approvals_count = 0`
+- `operator_approval_events_count = 0`
+
+9F-2K does not modify `prisma/schema.prisma`, create migrations, generate drafts, call LLM providers, mutate `content_items`, write to Blogger, publish, schedule, reconnect OAuth, refresh tokens, mutate publish approvals, or mutate publish attempts.
+
 ## Patch 2 구현 테이블
 
 Patch 2는 PostgreSQL + Prisma 기준으로 다음 테이블을 우선 구현한다.

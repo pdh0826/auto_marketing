@@ -54,6 +54,37 @@ Current DB state after 9F-2I-APPLY:
 
 9F-2I-APPLY did not create approval rows/events, update approval status, mutate Daily Content Plan rows/items, mutate `content_items`, generate drafts, call LLM providers, write to Blogger, publish or schedule posts, reconnect OAuth, or refresh tokens.
 
+## Patch 9F-2K Guarded Route Status
+
+Patch 9F-2K implements the first guarded persistence route for this design:
+
+- helper `src/lib/daily-content-plans/operator-approval-persistence.ts`
+- route `POST /api/daily-content-plans/operator-approvals`
+- Settings UI preview section `운영자 승인 저장`
+
+The route supports:
+
+- `mode=preview`, which is read-only and reports whether one approval row and one event row would be created
+- `mode=apply`, which remains blocked unless the write feature flag, exact confirmation phrase, expected idempotency key, and target integrity checks all pass
+
+Target approval for this patch:
+
+- `approvalPurpose=draft_generation_execution`
+- `approvalStatus=approved`
+- `operatorAction=approve_for_draft_generation_execution`
+- `operatorLabel=초안 생성 실행 승인`
+- `planItemId=cmqlr1v1y0001iwj2gpv2875r`
+- `contentItemId=daily_fixture_cmqlr1v1y0001iwj2gpv2875r`
+
+Current state after the 9F-2K implementation patch:
+
+- The Korean approval phrase for approved apply was not provided.
+- No approval apply was executed.
+- `operator_approvals_count = 0`
+- `operator_approval_events_count = 0`
+
+9F-2K does not generate content, call LLM providers, create `llm_call_logs`, mutate `content_items`, create `draftMarkdown`/`draftHtml`, write to Blogger, publish, schedule, reconnect OAuth, refresh tokens, mutate publish approvals, or mutate publish attempts.
+
 ## Recommended Model
 
 Use two future tables:

@@ -325,6 +325,19 @@ Next session start DB guard should use the published/success values above. The c
 - 9F-2I-APPLY must not create `draftMarkdown` or `draftHtml`.
 - 9F-2I-APPLY must not run content generation, LLM calls, Blogger publish/write/update/draft save/schedule, OAuth reconnect, token refresh, publish approval mutation, publish attempt mutation, deploy, push, or external service writes.
 
+## Patch 9F-2K Operator Approval Persistence Route
+
+- `POST /api/daily-content-plans/operator-approvals` should support `mode=preview` for plan item `cmqlr1v1y0001iwj2gpv2875r` and linked fixture `daily_fixture_cmqlr1v1y0001iwj2gpv2875r`.
+- Preview should report `patchVersion=9F-2K`, `approvalPurpose=draft_generation_execution`, `operatorAction=approve_for_draft_generation_execution`, target integrity pass, `existingApprovalFound=false`, `approvalWouldBeCreated=true`, and `eventWouldBeCreated=true` before the approved apply.
+- Preview side effects must remain `dbRead=true`, `dbWrite=false`, `approvalMutation=false`, `approvalEventMutation=false`, `contentGeneration=false`, `llmCall=false`, `contentMutation=false`, `draftMarkdownMutation=false`, `draftHtmlMutation=false`, `bloggerWrite=false`, and `bloggerPublish=false`.
+- Apply-negative smoke without `BLOG_DAILY_CONTENT_OPERATOR_APPROVAL_WRITE_ENABLED=true` should return `mode=apply`, `featureFlagEnabled=false`, `confirmationPhraseAccepted=true`, `idempotencyKeyAccepted=true`, `applyAttempted=false`, `applyBlocked=true`, `applyOk=false`, and a feature-flag blocker.
+- Because the Korean approval phrase was not provided for this patch, approved apply must not be executed.
+- `operator_approvals_count` and `operator_approval_events_count` should remain `0 / 0`.
+- 9F-2K should update the 9F-2J execution gate preview to read persisted approval state only when the approval tables exist; before apply, `operatorApprovalSatisfied=false` and `operator_approval_missing` remains.
+- 9F-2K must not rerun 9F-2B apply, 9F-2D apply, or 9F-2I-APPLY.
+- 9F-2K must not modify `prisma/schema.prisma` or create a migration.
+- 9F-2K must not create `draftMarkdown` or `draftHtml`, call LLM providers, mutate `content_items`, write to Blogger, publish/schedule, reconnect OAuth, refresh tokens, mutate publish approvals, or mutate publish attempts.
+
 ## Patch 9E-9D Post-publish DB Reconciliation
 
 - `POST /api/content-items/[id]/post-publish-reconciliation` route가 있어야 한다.

@@ -1,15 +1,16 @@
 # 14_NEXT_SESSION_BRIEF
 
-## Current State: Patch 9F-2I-APPLY Applied
+## Current State: Patch 9F-2K Implemented, Apply Pending
 
 ```text
 repo: ~/blog-growth-agent
 branch: master
 previous HEAD before 9F-2D apply closeout: b3cf210 Link daily plan item to content fixture
-expected HEAD after 9F-2I-APPLY commit: local commit `Apply operator approval persistence migration` (verify exact hash with `git log --oneline -8`)
+expected HEAD after 9F-2K commit: local commit `Add operator approval persistence route` (verify exact hash with `git log --oneline -8`)
 current DB schema state: operator approval persistence migration applied
 operator approval tables in DB: created
 operator approval rows/events: 0 / 0
+operator approval apply state: pending exact Korean approval phrase
 milestone: 9E first end-to-end Blogger publish completed; 9F operation automation foundation started
 ```
 
@@ -125,6 +126,15 @@ Current baseline:
 - After 9F-2I-APPLY, the execution gate preview reports operator approval persistence available, no `operator_approval_tables_not_applied` blocker, and remains blocked by `operator_approval_missing`, `llm_execution_feature_flag_disabled`, `content_mutation_feature_flag_disabled`, `draft_generation_write_feature_flag_disabled`, `confirmation_phrase_missing`, and `idempotency_key_missing`.
 - The preview remains read-only and side-effect free.
 - 9F-2J did not modify `prisma/schema.prisma`, create a migration, apply a migration, persist approvals, create execution runs, mutate business rows, call LLM providers, generate content, call Blogger, reconnect OAuth, refresh tokens, mutate publish approvals, or mutate publish attempts.
+- 9F-2K added helper `src/lib/daily-content-plans/operator-approval-persistence.ts`.
+- 9F-2K added guarded route `POST /api/daily-content-plans/operator-approvals`.
+- 9F-2K added `/settings/blogger` `운영자 승인 저장` preview/readback UI.
+- 9F-2K updated the 9F-2J execution gate preview so it can read persisted approved operator approval state when the approval tables exist.
+- 9F-2K preview and apply-negative smoke are safe: preview does not write, and apply without `BLOG_DAILY_CONTENT_OPERATOR_APPROVAL_WRITE_ENABLED=true` is blocked.
+- The required Korean approval phrase was not provided, so 9F-2K apply was not executed.
+- Operator approval rows and approval event rows remain `0 / 0`.
+- 9F-2K did not rerun 9F-2B apply, 9F-2D apply, or 9F-2I-APPLY.
+- 9F-2K did not modify `prisma/schema.prisma`, create a migration, generate drafts, call LLM providers, mutate `content_items`, write to Blogger, publish, schedule, reconnect OAuth, refresh tokens, mutate publish approvals, or mutate publish attempts.
 
 9E first end-to-end publish path:
 
@@ -136,21 +146,21 @@ Current baseline:
 6. `9E-9C` read back `https://mathlearningappl.blogspot.com/2026/06/blog-post.html`.
 7. `9E-9D-APPLY` reconciled internal DB state from `planned`/`planned_only` to `published`/`success`.
 
-Recommended next after 9F-2I-APPLY:
+Recommended next after 9F-2K:
 
-**9F-2K — Operator approval persistence preview/apply route, approval row only, no generation/no LLM/no content mutation**
+**9F-2K-APPLY — Persist one operator approval row/event, no generation/no LLM/no content mutation**
 
 Goal:
 
-- Add a guarded operator approval preview/apply route that can persist one operator approval row/event only after explicit approval, without generation, LLM calls, content mutation, Blogger writes, publish execution, OAuth reconnect, or token refresh.
+- After the exact Korean approval phrase, run the existing guarded apply once with `BLOG_DAILY_CONTENT_OPERATOR_APPROVAL_WRITE_ENABLED=true` to create or idempotently confirm one operator approval row and one approval event row only.
 
 Alternative:
 
-**9F-2K-DESIGN — Operator approval apply guard implementation plan, no code/no mutation**
+**9F-2K-UI — Operator approval preview UI polish, no mutation**
 
 Goal:
 
-- Design the operator approval apply guard and state transition policy before writing the approval persistence route.
+- Polish the operator approval preview UI labels and technical disclosure without executing apply or changing DB state.
 
 ## 9F Automation Roadmap
 
@@ -174,7 +184,8 @@ Goal:
 | 9F-2J | Draft-generation execution gate preview API |
 | 9F-2I-APPLY | Apply operator approval persistence migration only |
 | 9F-2K | Operator approval persistence preview/apply route |
-| 9F-2K-DESIGN | Operator approval apply guard implementation plan |
+| 9F-2K-APPLY | Persist one operator approval row/event only |
+| 9F-2K-UI | Operator approval preview UI polish |
 | 9F-3A | Alert & Recovery Center |
 
 Core operation principles:
@@ -207,6 +218,7 @@ psql -d blog_growth_agent_dev -c "select to_regclass('public.blog_daily_content_
 psql -d blog_growth_agent_dev -c "select (select count(*) from blog_daily_content_operator_approvals) as operator_approvals_count, (select count(*) from blog_daily_content_operator_approval_events) as operator_approval_events_count;"
 curl -sS -X POST http://127.0.0.1:3000/api/daily-content-plans/draft-generation-readiness -H "Content-Type: application/json" --data '{"mode":"preflight","planItemId":"cmqlr1v1y0001iwj2gpv2875r","contentItemId":"daily_fixture_cmqlr1v1y0001iwj2gpv2875r"}'
 curl -sS -X POST http://127.0.0.1:3000/api/daily-content-plans/draft-generation-execution-gate-preview -H "Content-Type: application/json" --data '{"mode":"preview","planItemId":"cmqlr1v1y0001iwj2gpv2875r","contentItemId":"daily_fixture_cmqlr1v1y0001iwj2gpv2875r"}'
+curl -sS -X POST http://127.0.0.1:3000/api/daily-content-plans/operator-approvals -H "Content-Type: application/json" --data '{"mode":"preview","planId":"cmqlr1v1d0000iwj2smxcsajr","planItemId":"cmqlr1v1y0001iwj2gpv2875r","contentItemId":"daily_fixture_cmqlr1v1y0001iwj2gpv2875r","approvalPurpose":"draft_generation_execution","operatorAction":"approve_for_draft_generation_execution","idempotencyKey":"9F-2K:draft_generation_execution:cmqlr1v1y0001iwj2gpv2875r:daily_fixture_cmqlr1v1y0001iwj2gpv2875r"}'
 ```
 
 Expected DB baseline:
@@ -237,11 +249,15 @@ Expected DB baseline:
 - Operator approval persistence tables exist because 9F-2I-APPLY applied the migration once.
 - Operator approval rows/events remain `0 / 0`.
 - No draft-generation execution apply/generate route exists yet.
+- The 9F-2K operator approval persistence route exists, but approved apply is pending the exact Korean approval phrase.
+- 9F-2K preview should show `existingApprovalFound=false`, `approvalWouldBeCreated=true`, `eventWouldBeCreated=true`, `applyAttempted=false`, `dbWrite=false`, and all LLM/content/Blogger side effects false.
+- 9F-2K apply-negative without write flag should show `featureFlagEnabled=false`, `applyAttempted=false`, `applyBlocked=true`, `applyOk=false`, `dbWrite=false`, and no duplicate approval/event.
 - The 9F-2J draft-generation execution gate preview route exists, but it is read-only and cannot execute generation.
 - 9F-2J preview should show `executionAllowed=false`, structural readiness true, approval persistence available, approval missing, LLM/content mutation/write flags disabled, confirmation missing, idempotency missing, no `operator_approval_tables_not_applied` blocker, and all write/LLM/Blogger side effects false.
 - Do not rerun 9F-2B apply for the same date unless the user explicitly approves a new date-specific write.
 - Do not rerun 9F-2D apply for item `cmqlr1v1y0001iwj2gpv2875r`; the fixture is already linked.
 - Do not rerun 9F-2I-APPLY unless migrate status/readback shows it was not applied.
+- Do not run 9F-2K apply unless the user provides the exact Korean phrase: `승인합니다. 9F-2K로 operator approval row와 event row를 1회 생성합니다.`
 
 ## Current State: 2026-06-16 Closeout
 

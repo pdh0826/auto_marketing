@@ -1,5 +1,34 @@
 # 13_CHANGELOG
 
+## Patch 9F-2K Operator Approval Persistence Route
+
+Implemented after Patch 9F-2I-APPLY:
+
+- Added guarded helper `src/lib/daily-content-plans/operator-approval-persistence.ts`.
+- Added route `POST /api/daily-content-plans/operator-approvals`.
+- Added `/settings/blogger` `운영자 승인 저장` preview/readback UI.
+- Updated the 9F-2J execution gate preview to read persisted approval state when the approval tables exist.
+- Preview mode reports target integrity, existing approval/event state, whether approval/event would be created, guardrails, and side-effect summary.
+- Apply mode is implemented but blocked unless `BLOG_DAILY_CONTENT_OPERATOR_APPROVAL_WRITE_ENABLED=true`, exact confirmation phrase `I_UNDERSTAND_THIS_WILL_PERSIST_OPERATOR_APPROVAL_ONLY`, and expected idempotency key are present.
+
+Pending apply state:
+
+- The required Korean approval phrase was not provided in this patch.
+- Approved apply was not executed.
+- `operator_approvals_count=0`.
+- `operator_approval_events_count=0`.
+- 9F-2J execution gate preview still reports `operatorApprovalSatisfied=false` and blocker `operator_approval_missing`.
+
+Policy:
+
+- 9F-2K did not modify `prisma/schema.prisma`.
+- 9F-2K did not create a Prisma migration.
+- 9F-2K did not rerun 9F-2B apply, 9F-2D apply, or 9F-2I-APPLY.
+- 9F-2K did not run content generation, LLM calls, Blogger publish/write/update/draft save/schedule, OAuth reconnect, token refresh, publish approval mutation, publish attempt mutation, deploy, push, or external service writes.
+- 9F-2K did not mutate Daily Content Plan rows/items, `content_items`, Blogger tables, operation profiles, publish approvals, publish attempts, or LLM logs.
+- Recommended next patch: `9F-2K-APPLY — Persist one operator approval row/event, no generation/no LLM/no content mutation`.
+- Alternative next patch: `9F-2K-UI — Operator approval preview UI polish, no mutation`.
+
 ## Patch 9F-2I-APPLY Operator Approval Persistence Migration Apply
 
 Implemented after Patch 9F-2J:

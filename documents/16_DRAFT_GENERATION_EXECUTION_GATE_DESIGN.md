@@ -58,6 +58,21 @@ The 9F-2J preview should then report:
 
 Execution remains blocked because operator approval has not been persisted and LLM execution, content mutation, draft write, confirmation, and idempotency gates remain unsatisfied.
 
+## Patch 9F-2K Pending Approval Apply State
+
+Patch 9F-2K adds the guarded operator approval persistence route and updates this preview to read existing approved operator approval rows when the approval tables exist.
+
+Before the separate approved apply:
+
+- `POST /api/daily-content-plans/operator-approvals` can preview the target approval.
+- The Settings UI can display `운영자 승인 저장` preview state.
+- No approval row/event has been created because the Korean approval phrase was not provided.
+- `operatorApprovalSatisfied=false`
+- `operator_approval_missing` remains in the execution gate blockers.
+- `executionAllowed=false`
+
+After a future explicitly approved 9F-2K apply, the execution gate preview should report `operatorApprovalSatisfied=true` and remove `operator_approval_missing`, while still keeping `executionAllowed=false` because LLM execution, content mutation, draft write, confirmation, and idempotency gates remain blocked.
+
 ## Execution Gate Layers
 
 The future execution route should evaluate these layers in order and return every blocking reason in a safe summary. No layer may store prompt text, raw LLM response text, generated candidate text, Blogger tokens, secrets, or external raw bodies.
