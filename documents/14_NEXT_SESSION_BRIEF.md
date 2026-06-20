@@ -1,17 +1,17 @@
 # 14_NEXT_SESSION_BRIEF
 
-## Current State: Patch 9F-2M Completed
+## Current State: Patch 9F-2N Completed
 
 ```text
 repo: ~/blog-growth-agent
 branch: master
 previous HEAD before 9F-2D apply closeout: b3cf210 Link daily plan item to content fixture
-expected HEAD after 9F-2M commit: local commit `Add draft generation dry-run planner` (verify exact hash with `git log --oneline -8`)
+expected HEAD after 9F-2N commit: local commit `Add draft generation LLM provider readiness preview` (verify exact hash with `git log --oneline -8`)
 current DB schema state: operator approval persistence migration applied
 operator approval tables in DB: created
 operator approval rows/events: 1 / 1
 operator approval apply state: completed exactly once
-draft-generation execution gate: post-approval preview polished, dry-run planner implemented, execution still blocked
+draft-generation execution gate: post-approval preview polished, dry-run planner implemented, LLM provider readiness preview implemented, execution still blocked
 milestone: 9E first end-to-end Blogger publish completed; 9F operation automation foundation started
 ```
 
@@ -152,6 +152,14 @@ Current baseline:
 - 9F-2M blocks non-preview modes with `draft_generation_dry_run_planner_is_preview_only`.
 - 9F-2M did not rerun 9F-2B apply, 9F-2D apply, 9F-2I-APPLY, or 9F-2K approval apply.
 - 9F-2M did not modify `prisma/schema.prisma`, create a migration, generate drafts, call LLM providers, create `llm_call_logs`, mutate `content_items`, write to Blogger, publish, schedule, reconnect OAuth, refresh tokens, mutate publish approvals, or mutate publish attempts.
+- 9F-2N added read-only helper `src/lib/daily-content-plans/draft-generation-llm-provider-readiness.ts`.
+- 9F-2N added route `POST /api/daily-content-plans/draft-generation-llm-provider-readiness`.
+- 9F-2N added `/settings/blogger` `초안 생성 LLM 준비상태` readback.
+- 9F-2N reads the existing `content_draft` Task Route plus safe provider/model metadata and env presence booleans.
+- 9F-2N reports `readinessMode=read_only_llm_provider_execution_readiness`, `dryRunOnly=true`, `llmCallAttempted=false`, `providerHealthChecked=false`, `providerNetworkCallAttempted=false`, `operatorApprovalSatisfied=true`, and `executionAllowed=false`.
+- 9F-2N does not expose env values, raw secrets, encrypted values, API keys, bearer tokens, provider request bodies, or raw provider responses.
+- 9F-2N did not rerun 9F-2B apply, 9F-2D apply, 9F-2I-APPLY, or 9F-2K approval apply.
+- 9F-2N did not modify `prisma/schema.prisma`, create a migration, generate drafts, call LLM providers, create `llm_call_logs`, mutate `content_items`, write to Blogger, publish, schedule, reconnect OAuth, refresh tokens, mutate publish approvals, or mutate publish attempts.
 
 9E first end-to-end publish path:
 
@@ -163,21 +171,21 @@ Current baseline:
 6. `9E-9C` read back `https://mathlearningappl.blogspot.com/2026/06/blog-post.html`.
 7. `9E-9D-APPLY` reconciled internal DB state from `planned`/`planned_only` to `published`/`success`.
 
-Recommended next after 9F-2M:
+Recommended next after 9F-2N:
 
-**9F-2N — LLM provider execution readiness check for draft generation, no call/no mutation**
+**9F-2O — LLM provider health-check preview for draft generation, no LLM completion/no content mutation**
 
 Goal:
 
-- Check provider/model/task-route readiness for future draft generation without calling any LLM and without mutating content.
+- Add a separate guarded provider connectivity/health preview for the selected draft-generation provider without generating completions or mutating content.
 
 Alternative:
 
-**9F-2O — Draft-generation dry-run planner UI polish, no LLM/no mutation**
+**9F-2P — Draft-generation execution readiness checklist polish, no call/no mutation**
 
 Goal:
 
-- Polish planner readability after operator review while keeping all execution/write paths disabled.
+- Polish the combined operator approval, dry-run planner, LLM readiness, and execution blocker checklist before any execution path is added.
 
 ## 9F Automation Roadmap
 
@@ -206,7 +214,8 @@ Goal:
 | 9F-2L | Draft-generation execution gate post-approval preview polish |
 | 9F-2M | Draft-generation dry-run planner, no LLM/no content mutation |
 | 9F-2N | LLM provider execution readiness check for draft generation, no call/no mutation |
-| 9F-2O | Draft-generation dry-run planner UI polish |
+| 9F-2O | LLM provider health-check preview for draft generation, no completion/no content mutation |
+| 9F-2P | Draft-generation execution readiness checklist polish |
 | 9F-3A | Alert & Recovery Center |
 
 Core operation principles:

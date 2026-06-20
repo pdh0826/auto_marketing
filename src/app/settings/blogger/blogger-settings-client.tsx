@@ -18,6 +18,7 @@ import type { DailyPlanContentItemFixtureResponse } from "@/lib/daily-content-pl
 import type { DailyContentPlanResponse } from "@/lib/daily-content-plans/daily-content-plan-summary";
 import type { DailyContentDraftGenerationDryRunPlannerResponse } from "@/lib/daily-content-plans/draft-generation-dry-run-planner";
 import type { DailyContentDraftGenerationExecutionGatePreviewResponse } from "@/lib/daily-content-plans/draft-generation-execution-gate-preview";
+import type { DailyContentDraftGenerationLlmProviderReadinessResponse } from "@/lib/daily-content-plans/draft-generation-llm-provider-readiness";
 import type { DailyContentDraftGenerationReadinessResponse } from "@/lib/daily-content-plans/draft-generation-readiness";
 import type { DailyContentOperatorApprovalPersistenceResponse } from "@/lib/daily-content-plans/operator-approval-persistence";
 import type { DailyContentQueueOperatorWorkflowResponse } from "@/lib/daily-content-plans/operator-approval-workflow";
@@ -84,6 +85,7 @@ export function BloggerSettingsClient() {
   const [draftGenerationReadinessResult, setDraftGenerationReadinessResult] = useState<DailyContentDraftGenerationReadinessResponse | null>(null);
   const [draftGenerationExecutionGateResult, setDraftGenerationExecutionGateResult] = useState<DailyContentDraftGenerationExecutionGatePreviewResponse | null>(null);
   const [draftGenerationDryRunPlannerResult, setDraftGenerationDryRunPlannerResult] = useState<DailyContentDraftGenerationDryRunPlannerResponse | null>(null);
+  const [draftGenerationLlmProviderReadinessResult, setDraftGenerationLlmProviderReadinessResult] = useState<DailyContentDraftGenerationLlmProviderReadinessResponse | null>(null);
   const [oauthDryRun, setOauthDryRun] = useState<BloggerOAuthStartDryRun | null>(null);
   const [blogListResult, setBlogListResult] = useState<BloggerBlogListResult | null>(null);
   const [blogListLoadingId, setBlogListLoadingId] = useState<string | null>(null);
@@ -96,6 +98,7 @@ export function BloggerSettingsClient() {
   const [loadingDraftGenerationReadinessItemId, setLoadingDraftGenerationReadinessItemId] = useState<string | null>(null);
   const [loadingDraftGenerationExecutionGateItemId, setLoadingDraftGenerationExecutionGateItemId] = useState<string | null>(null);
   const [loadingDraftGenerationDryRunPlannerItemId, setLoadingDraftGenerationDryRunPlannerItemId] = useState<string | null>(null);
+  const [loadingDraftGenerationLlmProviderReadinessItemId, setLoadingDraftGenerationLlmProviderReadinessItemId] = useState<string | null>(null);
   const [selectingBlogId, setSelectingBlogId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -172,6 +175,7 @@ export function BloggerSettingsClient() {
       setDraftGenerationReadinessResult(null);
       setDraftGenerationExecutionGateResult(null);
       setDraftGenerationDryRunPlannerResult(null);
+      setDraftGenerationLlmProviderReadinessResult(null);
       setOauthDryRun(null);
       setBlogListResult(null);
       setNotice("Blogger connection을 저장했습니다. Blogger draft/publish는 수행하지 않았습니다.");
@@ -296,6 +300,7 @@ export function BloggerSettingsClient() {
       setDraftGenerationReadinessResult(null);
       setDraftGenerationExecutionGateResult(null);
       setDraftGenerationDryRunPlannerResult(null);
+      setDraftGenerationLlmProviderReadinessResult(null);
       setNotice("Daily Content Plan preview를 생성했습니다. Plan row 저장, content generation, LLM call, Blogger write/publish는 수행하지 않았습니다.");
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Daily Content Plan preview에 실패했습니다.");
@@ -486,6 +491,42 @@ export function BloggerSettingsClient() {
       setError(caught instanceof Error ? caught.message : "초안 생성 dry-run 계획 확인에 실패했습니다.");
     } finally {
       setLoadingDraftGenerationDryRunPlannerItemId(null);
+    }
+  }
+
+  async function previewDraftGenerationLlmProviderReadiness(
+    planId: string | null | undefined,
+    planItemId: string | null | undefined,
+    contentItemId: string | null | undefined
+  ) {
+    if (!planId || !planItemId || !contentItemId) {
+      setError("Daily plan id, item id, linked content item id가 필요합니다.");
+      return;
+    }
+
+    setError(null);
+    setNotice(null);
+    setLoadingDraftGenerationLlmProviderReadinessItemId(planItemId);
+
+    try {
+      const result = await requestJson<ApiResult<DailyContentDraftGenerationLlmProviderReadinessResponse>>(
+        "/api/daily-content-plans/draft-generation-llm-provider-readiness",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            mode: "preview",
+            planId,
+            planItemId,
+            contentItemId
+          })
+        }
+      );
+      setDraftGenerationLlmProviderReadinessResult(result.data);
+      setNotice("초안 생성 LLM 준비상태를 확인했습니다. provider health check, LLM call, llm_call_logs 생성, content_items 수정, Blogger write/publish는 수행하지 않았습니다.");
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "초안 생성 LLM 준비상태 확인에 실패했습니다.");
+    } finally {
+      setLoadingDraftGenerationLlmProviderReadinessItemId(null);
     }
   }
 
@@ -1221,6 +1262,25 @@ export function BloggerSettingsClient() {
                       >
                         {loadingDraftGenerationDryRunPlannerItemId === getDailyPlanItemId(item) ? "계획 확인 중" : "dry-run 계획"}
                       </button>
+                      <button
+                        className="button small secondary"
+                        type="button"
+                        disabled={
+                          !dailyContentPlanSummary.persistedPlanId ||
+                          !getDailyPlanItemId(item) ||
+                          !getDailyPlanItemContentItemId(item) ||
+                          loadingDraftGenerationLlmProviderReadinessItemId === getDailyPlanItemId(item)
+                        }
+                        onClick={() =>
+                          void previewDraftGenerationLlmProviderReadiness(
+                            dailyContentPlanSummary.persistedPlanId,
+                            getDailyPlanItemId(item),
+                            getDailyPlanItemContentItemId(item)
+                          )
+                        }
+                      >
+                        {loadingDraftGenerationLlmProviderReadinessItemId === getDailyPlanItemId(item) ? "LLM 준비 확인 중" : "LLM 준비상태"}
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -1848,6 +1908,111 @@ export function BloggerSettingsClient() {
               )}
             </div>
 
+            <div className="read-block">
+              <h3>초안 생성 LLM 준비상태</h3>
+              <div className="notice warning">
+                <strong>9F-2N static readiness only</strong>
+                <p>LLM provider/model route 설정을 읽어 확인하지만 provider health check, 네트워크 호출, LLM 호출, llm_call_logs 생성은 수행하지 않습니다.</p>
+              </div>
+              <div className="button-row">
+                <button className="button small secondary" type="button" disabled>
+                  Provider health check - 비활성
+                </button>
+                <button className="button small secondary" type="button" disabled>
+                  LLM 호출 - 비활성
+                </button>
+                <button className="button small secondary" type="button" disabled>
+                  초안 저장 - 비활성
+                </button>
+              </div>
+              {draftGenerationLlmProviderReadinessResult ? (
+                <>
+                  <div className="notice warning">
+                    <strong>
+                      LLM provider/model 경로 확인됨 · 실제 호출 없음
+                    </strong>
+                    <p>
+                      실행 허용: {draftGenerationLlmProviderReadinessResult.draftGenerationLlmProviderReadinessSummary.executionGateSummary.executionAllowed ? "가능" : "차단"} / 운영자 승인:{" "}
+                      {draftGenerationLlmProviderReadinessResult.draftGenerationLlmProviderReadinessSummary.persistedApprovalSummary.operatorApprovalSatisfied ? "충족" : "미충족"}
+                    </p>
+                    <p>secret/env 값은 노출하지 않고 존재 여부만 확인했습니다.</p>
+                  </div>
+                  <div className="detail-grid">
+                    <DetailItem label="Patch" value={draftGenerationLlmProviderReadinessResult.draftGenerationLlmProviderReadinessSummary.patchVersion} />
+                    <DetailItem label="Readiness Mode" value={draftGenerationLlmProviderReadinessResult.draftGenerationLlmProviderReadinessSummary.readinessMode} />
+                    <DetailItem label="Plan ID" value={draftGenerationLlmProviderReadinessResult.draftGenerationLlmProviderReadinessSummary.targetSummary.planId ?? "-"} />
+                    <DetailItem label="Plan Item" value={draftGenerationLlmProviderReadinessResult.draftGenerationLlmProviderReadinessSummary.targetSummary.planItemId || "-"} />
+                    <DetailItem label="Linked Fixture" value={draftGenerationLlmProviderReadinessResult.draftGenerationLlmProviderReadinessSummary.targetSummary.contentItemId ?? "-"} />
+                    <DetailItem label="Fixture Status" value={draftGenerationLlmProviderReadinessResult.draftGenerationLlmProviderReadinessSummary.targetSummary.fixtureStatus ?? "-"} />
+                    <DetailItem label="Approval ID" value={draftGenerationLlmProviderReadinessResult.draftGenerationLlmProviderReadinessSummary.persistedApprovalSummary.approvalId ?? "-"} />
+                    <DetailItem label="Task" value={draftGenerationLlmProviderReadinessResult.draftGenerationLlmProviderReadinessSummary.llmProviderReadinessSummary.taskName} />
+                  </div>
+                  <div className="detail-grid">
+                    <DetailItem label="Route Resolved" value={String(draftGenerationLlmProviderReadinessResult.draftGenerationLlmProviderReadinessSummary.llmProviderReadinessSummary.routeResolutionPlan.selectedRouteResolved)} />
+                    <DetailItem label="Provider Kind" value={draftGenerationLlmProviderReadinessResult.draftGenerationLlmProviderReadinessSummary.llmProviderReadinessSummary.providerConfigPlan.providerKind ?? "-"} />
+                    <DetailItem label="Provider Enabled" value={String(draftGenerationLlmProviderReadinessResult.draftGenerationLlmProviderReadinessSummary.llmProviderReadinessSummary.providerConfigPlan.providerEnabledForDraftGeneration)} />
+                    <DetailItem label="Model Resolved" value={String(draftGenerationLlmProviderReadinessResult.draftGenerationLlmProviderReadinessSummary.llmProviderReadinessSummary.modelConfigPlan.modelCandidateResolved)} />
+                    <DetailItem label="Selected Provider" value={draftGenerationLlmProviderReadinessResult.draftGenerationLlmProviderReadinessSummary.llmProviderReadinessSummary.routeResolutionPlan.selectedProviderKey ?? "-"} />
+                    <DetailItem label="Selected Model" value={draftGenerationLlmProviderReadinessResult.draftGenerationLlmProviderReadinessSummary.llmProviderReadinessSummary.routeResolutionPlan.selectedModelDisplayName ?? "-"} />
+                    <DetailItem label="Env Checked" value={String(draftGenerationLlmProviderReadinessResult.draftGenerationLlmProviderReadinessSummary.llmProviderReadinessSummary.secretAndEnvReadiness.envPresenceChecked)} />
+                    <DetailItem label="Secret Exposed" value={String(draftGenerationLlmProviderReadinessResult.draftGenerationLlmProviderReadinessSummary.llmProviderReadinessSummary.secretAndEnvReadiness.rawSecretValueExposed)} />
+                  </div>
+                  <ValidationList
+                    title="기존 실행 blocker"
+                    items={draftGenerationLlmProviderReadinessResult.draftGenerationLlmProviderReadinessSummary.executionGateSummary.remainingBlockers.map(formatDraftGenerationGateBlocker)}
+                    emptyText="남은 실행 blocker가 없습니다."
+                    isWarning
+                  />
+                  <ValidationList
+                    title="LLM readiness blockers"
+                    items={draftGenerationLlmProviderReadinessResult.draftGenerationLlmProviderReadinessSummary.llmProviderReadinessSummary.readinessBlockers.map(formatLlmReadinessBlocker)}
+                    emptyText="LLM readiness blocker가 없습니다."
+                    isWarning
+                  />
+                  <details className="read-block">
+                    <summary>초안 생성 LLM 준비상태 기술 상세</summary>
+                    <ValidationList
+                      title="Missing Env Vars"
+                      items={draftGenerationLlmProviderReadinessResult.draftGenerationLlmProviderReadinessSummary.llmProviderReadinessSummary.secretAndEnvReadiness.missingRequiredEnvVars}
+                      emptyText="missing required env var가 없습니다."
+                      isWarning
+                    />
+                    <ValidationList
+                      title="LLM Readiness Warnings"
+                      items={draftGenerationLlmProviderReadinessResult.draftGenerationLlmProviderReadinessSummary.llmProviderReadinessSummary.readinessWarnings}
+                      emptyText="warning이 없습니다."
+                      isWarning
+                    />
+                    <div className="detail-grid">
+                      <DetailItem label="LLM Call Attempted" value={String(draftGenerationLlmProviderReadinessResult.draftGenerationLlmProviderReadinessSummary.llmCallAttempted)} />
+                      <DetailItem label="Provider Health Checked" value={String(draftGenerationLlmProviderReadinessResult.draftGenerationLlmProviderReadinessSummary.providerHealthChecked)} />
+                      <DetailItem label="Provider Network Call" value={String(draftGenerationLlmProviderReadinessResult.draftGenerationLlmProviderReadinessSummary.providerNetworkCallAttempted)} />
+                      <DetailItem label="Token Budget Known" value={String(draftGenerationLlmProviderReadinessResult.draftGenerationLlmProviderReadinessSummary.llmProviderReadinessSummary.modelConfigPlan.modelTokenBudgetKnown)} />
+                      <DetailItem label="Temperature Known" value={String(draftGenerationLlmProviderReadinessResult.draftGenerationLlmProviderReadinessSummary.llmProviderReadinessSummary.modelConfigPlan.modelTemperatureKnown)} />
+                      <DetailItem label="Fallback Route" value={String(draftGenerationLlmProviderReadinessResult.draftGenerationLlmProviderReadinessSummary.llmProviderReadinessSummary.routeResolutionPlan.fallbackRouteAvailable)} />
+                    </div>
+                    <div className="detail-grid">
+                      <DetailItem label="DB Read" value={String(draftGenerationLlmProviderReadinessResult.draftGenerationLlmProviderReadinessSummary.llmProviderReadinessSummary.currentSideEffectSummary.dbRead)} />
+                      <DetailItem label="DB Write" value={String(draftGenerationLlmProviderReadinessResult.draftGenerationLlmProviderReadinessSummary.llmProviderReadinessSummary.currentSideEffectSummary.dbWrite)} />
+                      <DetailItem label="Env Read" value={String(draftGenerationLlmProviderReadinessResult.draftGenerationLlmProviderReadinessSummary.llmProviderReadinessSummary.currentSideEffectSummary.envRead)} />
+                      <DetailItem label="Secret Value Exposed" value={String(draftGenerationLlmProviderReadinessResult.draftGenerationLlmProviderReadinessSummary.llmProviderReadinessSummary.currentSideEffectSummary.secretValueExposed)} />
+                      <DetailItem label="Provider Health Check" value={String(draftGenerationLlmProviderReadinessResult.draftGenerationLlmProviderReadinessSummary.llmProviderReadinessSummary.currentSideEffectSummary.providerHealthChecked)} />
+                      <DetailItem label="Provider Network Call" value={String(draftGenerationLlmProviderReadinessResult.draftGenerationLlmProviderReadinessSummary.llmProviderReadinessSummary.currentSideEffectSummary.providerNetworkCall)} />
+                      <DetailItem label="LLM Call" value={String(draftGenerationLlmProviderReadinessResult.draftGenerationLlmProviderReadinessSummary.llmProviderReadinessSummary.currentSideEffectSummary.llmCall)} />
+                      <DetailItem label="LLM Log Mutation" value={String(draftGenerationLlmProviderReadinessResult.draftGenerationLlmProviderReadinessSummary.llmProviderReadinessSummary.currentSideEffectSummary.llmCallLogMutation)} />
+                      <DetailItem label="Content Mutation" value={String(draftGenerationLlmProviderReadinessResult.draftGenerationLlmProviderReadinessSummary.llmProviderReadinessSummary.currentSideEffectSummary.contentItemMutation)} />
+                      <DetailItem label="Draft Markdown Mutation" value={String(draftGenerationLlmProviderReadinessResult.draftGenerationLlmProviderReadinessSummary.llmProviderReadinessSummary.currentSideEffectSummary.draftMarkdownMutation)} />
+                      <DetailItem label="Draft HTML Mutation" value={String(draftGenerationLlmProviderReadinessResult.draftGenerationLlmProviderReadinessSummary.llmProviderReadinessSummary.currentSideEffectSummary.draftHtmlMutation)} />
+                      <DetailItem label="Blogger Write" value={String(draftGenerationLlmProviderReadinessResult.draftGenerationLlmProviderReadinessSummary.llmProviderReadinessSummary.currentSideEffectSummary.bloggerWrite)} />
+                      <DetailItem label="Blogger Publish" value={String(draftGenerationLlmProviderReadinessResult.draftGenerationLlmProviderReadinessSummary.llmProviderReadinessSummary.currentSideEffectSummary.bloggerPublish)} />
+                    </div>
+                  </details>
+                </>
+              ) : (
+                <div className="notice">후보 큐에서 linked content item이 있는 행의 “LLM 준비상태”를 실행하세요. 이 버튼은 provider/model route 정적 readiness만 확인합니다.</div>
+              )}
+            </div>
+
             <details className="read-block">
               <summary>기술 상세</summary>
               <div className="detail-grid">
@@ -2203,6 +2368,21 @@ function formatDraftGenerationGateBlocker(blocker: string) {
     confirmation_phrase_missing: "확인 문구 없음",
     idempotency_key_missing: "idempotency key 없음",
     draft_generation_readiness_failed: "초안 생성 구조 준비 미완료"
+  };
+  return labels[blocker] ?? blocker;
+}
+
+function formatLlmReadinessBlocker(blocker: string) {
+  const labels: Record<string, string> = {
+    llm_execution_feature_flag_disabled: "LLM 실행 feature flag 꺼짐",
+    llm_provider_health_check_skipped_by_design: "이번 단계에서 provider health check 생략",
+    llm_call_disabled_by_patch_policy: "이번 패치 정책상 LLM 호출 금지",
+    llm_provider_route_not_configured_for_draft_generation: "초안 생성용 LLM route 미구성",
+    llm_task_route_disabled_or_missing: "content_draft task route 비활성 또는 없음",
+    llm_provider_config_not_found: "LLM provider 설정 없음",
+    llm_provider_disabled_for_draft_generation: "LLM provider 비활성",
+    llm_model_candidate_not_resolved: "LLM model 후보 미확정",
+    llm_required_env_missing: "필수 env 존재 확인 실패"
   };
   return labels[blocker] ?? blocker;
 }

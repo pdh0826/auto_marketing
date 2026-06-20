@@ -79,6 +79,8 @@ Patch 9F-2K adds the guarded operator approval persistence preview/apply route a
 
 Patch 9F-2L polishes only the post-approval draft-generation execution gate preview and Settings readback. It confirms that the operator approval is persisted and satisfied, but it keeps draft-generation execution blocked because LLM execution, content mutation, draft generation write, confirmation phrase, and idempotency gates remain disabled or missing. It must not call OpenAI, local HTTP, CLI, or any LLM provider; it must not create `llm_call_logs`; it must not generate or save `draftMarkdown` or `draftHtml`; and it must not mutate `content_items`.
 
+Patch 9F-2N adds a read-only LLM provider execution readiness preview for future Daily Content Plan draft generation. It reads the existing `content_draft` Task Route and safe provider/model metadata, checks only env presence booleans, and reports route/provider/model readiness blockers before any execution patch. It must not call OpenAI, local HTTP, Ollama, CLI, or any LLM provider; it must not run provider health checks or network calls; it must not expose env values, raw secrets, encrypted values, API keys, bearer tokens, provider request bodies, or raw responses; it must not create `llm_call_logs`; and it must not generate or save `draftMarkdown` or `draftHtml`.
+
 ## Patch 3 설정 화면
 
 `/settings/llm` 화면은 Patch 2의 PostgreSQL + Prisma CRUD API를 사용해 다음 데이터를 관리한다.

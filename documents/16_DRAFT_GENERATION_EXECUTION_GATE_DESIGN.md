@@ -105,6 +105,18 @@ The planner reads the target plan item, linked fixture, persisted approval state
 
 It does not render a full prompt, store raw prompt text, call LLM providers, create `llm_call_logs`, generate draft content, mutate `content_items`, write to Blogger, publish, schedule, reconnect OAuth, or refresh tokens. Non-preview modes are blocked with `draft_generation_dry_run_planner_is_preview_only`. Execution still remains blocked by LLM execution, content mutation, draft write, confirmation phrase, and idempotency gates.
 
+## Patch 9F-2N LLM Provider Readiness Preview
+
+Patch 9F-2N implements the static LLM provider/model readiness preview after the 9F-2M dry-run planner:
+
+- `POST /api/daily-content-plans/draft-generation-llm-provider-readiness`
+- `/settings/blogger` section `초안 생성 LLM 준비상태`
+- readiness mode `read_only_llm_provider_execution_readiness`
+
+The preview reads the existing `content_draft` Task Route, safe provider/model metadata, env presence booleans, and the existing execution gate state. It reports route resolution, provider kind/enabled status, model candidate status, secret/env metadata presence, readiness blockers, and next execution prerequisites.
+
+It does not perform provider health checks, make provider network calls, call LLM providers, create `llm_call_logs`, render/store prompts, generate draft content, mutate `content_items`, write to Blogger, publish, schedule, reconnect OAuth, or refresh tokens. It also does not expose env values, raw secrets, encrypted values, API keys, bearer tokens, provider request bodies, or raw provider responses. Execution still remains blocked by LLM execution, content mutation, draft write, confirmation phrase, and idempotency gates.
+
 ## Execution Gate Layers
 
 The future execution route should evaluate these layers in order and return every blocking reason in a safe summary. No layer may store prompt text, raw LLM response text, generated candidate text, Blogger tokens, secrets, or external raw bodies.

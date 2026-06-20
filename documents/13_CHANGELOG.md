@@ -1,5 +1,30 @@
 # 13_CHANGELOG
 
+## Patch 9F-2N LLM Provider Execution Readiness Preview
+
+Implemented after Patch 9F-2M:
+
+- Added read-only helper `src/lib/daily-content-plans/draft-generation-llm-provider-readiness.ts`.
+- Added route `POST /api/daily-content-plans/draft-generation-llm-provider-readiness`.
+- Added `/settings/blogger` `초안 생성 LLM 준비상태` UI readback.
+- The readiness preview reads the existing `content_draft` Task Route plus safe provider/model metadata and env presence booleans.
+- The preview keeps `operatorApprovalSatisfied=true`, `executionAllowed=false`, and the existing five execution blockers.
+- The preview reports route resolution, provider kind/enabled state, model candidate status, missing env names, readiness blockers/warnings, and side-effect summary.
+- Non-preview modes are blocked with `draft_generation_llm_provider_readiness_is_preview_only`.
+
+Policy:
+
+- 9F-2N did not rerun 9F-2B apply, 9F-2D apply, 9F-2I-APPLY, or 9F-2K approval apply.
+- 9F-2N did not create, update, or delete business rows.
+- 9F-2N did not modify `prisma/schema.prisma` or create a migration.
+- 9F-2N did not expose env values, raw secret values, encrypted values, API keys, bearer tokens, provider request bodies, or raw provider responses.
+- 9F-2N did not run provider health checks, make provider network calls, call LLM providers, create `llm_call_logs`, generate drafts, mutate `content_items`, write to Blogger, publish, schedule, reconnect OAuth, refresh tokens, mutate publish approvals, or mutate publish attempts.
+- Daily plan rows remain `1`, daily plan item rows remain `3`, `content_items` count remains `2`, and operator approvals/events remain `1 / 1`.
+- Publish milestone counts remain `1 / 1 / 1 / 1 / 22`, and `llm_call_logs` remains `22`.
+- The linked fixture remains `planned` with empty `draftMarkdown` and `draftHtml`.
+- Recommended next patch: `9F-2O — LLM provider health-check preview for draft generation, no LLM completion/no content mutation`.
+- Alternative next patch: `9F-2P — Draft-generation execution readiness checklist polish, no call/no mutation`.
+
 ## Patch 9F-2M Draft-generation Dry-run Planner
 
 Implemented after Patch 9F-2L:
