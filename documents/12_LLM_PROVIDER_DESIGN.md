@@ -73,6 +73,8 @@ Patch 9F-2I adds only the Prisma schema scaffold and unapplied migration draft f
 
 Patch 9F-2J adds a read-only draft-generation execution gate preview API and `/settings/blogger` UI readback. It checks target integrity, structural readiness, pending approval-table migration state, disabled LLM/content mutation/write flags, confirmation, idempotency, and publish isolation. It must not call any LLM provider, create `llm_call_logs`, generate drafts, mutate `content_items`, persist approvals, apply migrations, or query pending approval tables as Prisma models.
 
+Patch 9F-2I-APPLY applies only the existing operator approval persistence migration. It creates approval tables but does not create approval rows/events and does not call LLM providers, create `llm_call_logs`, generate drafts, mutate `content_items`, or perform Blogger/OAuth/token/publish actions. After apply, 9F-2J preview can report approval persistence available while still blocking execution because operator approval is missing and LLM/content mutation/write gates remain disabled.
+
 ## Patch 3 설정 화면
 
 `/settings/llm` 화면은 Patch 2의 PostgreSQL + Prisma CRUD API를 사용해 다음 데이터를 관리한다.

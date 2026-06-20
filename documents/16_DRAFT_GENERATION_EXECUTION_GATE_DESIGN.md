@@ -43,6 +43,21 @@ Current expected blockers:
 
 Because the 9F-2I migration is pending, the preview must not query `BlogDailyContentOperatorApproval` or `BlogDailyContentOperatorApprovalEvent` as Prisma models. It uses a safe read-only table existence check and treats absent tables as a blocker.
 
+## Patch 9F-2I-APPLY Preview State
+
+After 9F-2I-APPLY, the operator approval tables exist but contain no approval rows or events.
+
+The 9F-2J preview should then report:
+
+- `operatorApprovalTablesExist=true`
+- `operatorApprovalPersistenceAvailable=true`
+- `executionAllowed=false`
+- `operatorApprovalSatisfied=false`
+- blocker `operator_approval_missing`
+- no blocker `operator_approval_tables_not_applied`
+
+Execution remains blocked because operator approval has not been persisted and LLM execution, content mutation, draft write, confirmation, and idempotency gates remain unsatisfied.
+
 ## Execution Gate Layers
 
 The future execution route should evaluate these layers in order and return every blocking reason in a safe summary. No layer may store prompt text, raw LLM response text, generated candidate text, Blogger tokens, secrets, or external raw bodies.

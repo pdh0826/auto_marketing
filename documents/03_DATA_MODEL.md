@@ -179,10 +179,10 @@ The current-state approval table holds the latest durable operator decision per 
 
 - Prisma models exist in `prisma/schema.prisma`.
 - Migration draft exists at `prisma/migrations/20260620000200_add_daily_content_operator_approval_scaffold/migration.sql`.
-- The migration was not applied.
-- The operator approval tables do not exist in the current DB yet.
+- The migration was applied once by 9F-2I-APPLY.
+- The operator approval tables exist in the current DB.
 - No approval row or approval event was created.
-- Future apply must be a separate explicitly approved patch.
+- Operator approval apply must be a separate explicitly approved patch.
 
 The proposal keeps approval persistence separate from:
 

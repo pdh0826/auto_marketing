@@ -1,14 +1,15 @@
 # 14_NEXT_SESSION_BRIEF
 
-## Current State: Patch 9F-2J Applied
+## Current State: Patch 9F-2I-APPLY Applied
 
 ```text
 repo: ~/blog-growth-agent
 branch: master
 previous HEAD before 9F-2D apply closeout: b3cf210 Link daily plan item to content fixture
-expected HEAD after 9F-2J commit: local commit `Add draft generation execution gate preview` (verify exact hash with `git log --oneline -8`)
-current DB schema state: 9F-2I migration draft exists but is not applied
-operator approval tables in DB: not created yet
+expected HEAD after 9F-2I-APPLY commit: local commit `Apply operator approval persistence migration` (verify exact hash with `git log --oneline -8`)
+current DB schema state: operator approval persistence migration applied
+operator approval tables in DB: created
+operator approval rows/events: 0 / 0
 milestone: 9E first end-to-end Blogger publish completed; 9F operation automation foundation started
 ```
 
@@ -110,16 +111,19 @@ Current baseline:
 - 9F-2I added Prisma schema scaffold models `BlogDailyContentOperatorApproval` and `BlogDailyContentOperatorApprovalEvent`.
 - 9F-2I added one unapplied migration draft: `prisma/migrations/20260620000200_add_daily_content_operator_approval_scaffold/migration.sql`.
 - The migration draft creates `blog_daily_content_operator_approvals` and `blog_daily_content_operator_approval_events`, idempotency unique indexes, supporting lookup indexes, and foreign keys.
-- 9F-2I did not apply the migration, so the operator approval tables do not exist in the DB yet.
-- 9F-2I did not create approval rows or approval events.
+- 9F-2I initially did not apply the migration.
+- 9F-2I-APPLY applied migration `20260620000200_add_daily_content_operator_approval_scaffold` exactly once after explicit operator approval.
+- Operator approval tables now exist in the local dev DB.
+- Operator approval rows and approval event rows remain `0 / 0`.
+- 9F-2I-APPLY did not create approval rows/events, create new migrations, modify `prisma/schema.prisma`, mutate Daily Content Plan rows/items, mutate `content_items`, mutate Blogger tables, call LLM providers, generate content, reconnect OAuth, refresh tokens, publish, or schedule.
 - 9F-2I did not modify Daily Content Plan rows/items, `content_items`, Blogger tables, publish approvals, publish attempts, operation profiles, or LLM logs.
-- Do not run `prisma migrate dev`, `prisma migrate deploy`, `prisma db push`, or any migration apply command unless the user explicitly approves `9F-2I-APPLY` or a later apply patch.
+- Do not rerun `prisma migrate dev`, `prisma migrate deploy`, `prisma db push`, or any migration apply command unless migrate status/readback shows a new approved migration is pending and the user explicitly approves a later apply patch.
 - 9F-2J added read-only helper `src/lib/daily-content-plans/draft-generation-execution-gate-preview.ts`.
 - 9F-2J added preview-only route `POST /api/daily-content-plans/draft-generation-execution-gate-preview`.
 - 9F-2J added `/settings/blogger` `초안 생성 실행 게이트` UI readback.
 - Current execution gate preview shows structural readiness true for linked fixture `daily_fixture_cmqlr1v1y0001iwj2gpv2875r`, but `executionAllowed=false`.
-- Current blockers include `operator_approval_tables_not_applied`, `operator_approval_missing`, `llm_execution_feature_flag_disabled`, `content_mutation_feature_flag_disabled`, `draft_generation_write_feature_flag_disabled`, `confirmation_phrase_missing`, and `idempotency_key_missing`.
-- The preview safely reports operator approval persistence unavailable because the 9F-2I migration remains pending/unapplied.
+- After 9F-2I-APPLY, the execution gate preview reports operator approval persistence available, no `operator_approval_tables_not_applied` blocker, and remains blocked by `operator_approval_missing`, `llm_execution_feature_flag_disabled`, `content_mutation_feature_flag_disabled`, `draft_generation_write_feature_flag_disabled`, `confirmation_phrase_missing`, and `idempotency_key_missing`.
+- The preview remains read-only and side-effect free.
 - 9F-2J did not modify `prisma/schema.prisma`, create a migration, apply a migration, persist approvals, create execution runs, mutate business rows, call LLM providers, generate content, call Blogger, reconnect OAuth, refresh tokens, mutate publish approvals, or mutate publish attempts.
 
 9E first end-to-end publish path:
@@ -132,21 +136,21 @@ Current baseline:
 6. `9E-9C` read back `https://mathlearningappl.blogspot.com/2026/06/blog-post.html`.
 7. `9E-9D-APPLY` reconciled internal DB state from `planned`/`planned_only` to `published`/`success`.
 
-Recommended next after 9F-2J:
+Recommended next after 9F-2I-APPLY:
 
-**9F-2I-APPLY — Apply operator approval persistence migration, approval tables only, no approval rows**
+**9F-2K — Operator approval persistence preview/apply route, approval row only, no generation/no LLM/no content mutation**
 
 Goal:
 
-- Apply the already-drafted operator approval migration only, creating approval tables but no approval rows/events and no generation/publish side effects.
+- Add a guarded operator approval preview/apply route that can persist one operator approval row/event only after explicit approval, without generation, LLM calls, content mutation, Blogger writes, publish execution, OAuth reconnect, or token refresh.
 
 Alternative:
 
-**9F-2K — Draft-generation execution gate preview UI polish, no LLM/no mutation**
+**9F-2K-DESIGN — Operator approval apply guard implementation plan, no code/no mutation**
 
 Goal:
 
-- Polish the read-only execution gate UI around operator action labels, blocked requirements, and technical disclosure without changing DB state.
+- Design the operator approval apply guard and state transition policy before writing the approval persistence route.
 
 ## 9F Automation Roadmap
 
@@ -169,7 +173,8 @@ Goal:
 | 9F-2I | Operator approval persistence scaffold migration draft |
 | 9F-2J | Draft-generation execution gate preview API |
 | 9F-2I-APPLY | Apply operator approval persistence migration only |
-| 9F-2K | Draft-generation execution gate preview UI polish |
+| 9F-2K | Operator approval persistence preview/apply route |
+| 9F-2K-DESIGN | Operator approval apply guard implementation plan |
 | 9F-3A | Alert & Recovery Center |
 
 Core operation principles:
@@ -199,6 +204,7 @@ psql -d blog_growth_agent_dev -c "select count(*) as content_items_count from co
 psql -d blog_growth_agent_dev -c "select id, \"planId\", \"itemOrder\", \"slotKey\", status, \"topicSeed\", \"contentIntent\", \"publishMode\", \"contentItemId\", \"draftGenerationAllowed\", \"llmGenerationAllowed\", \"publishExecutionAllowed\", \"scheduledPublishAllowed\", \"requiresHumanApproval\" from blog_daily_content_plan_items where id = 'cmqlr1v1y0001iwj2gpv2875r';"
 psql -d blog_growth_agent_dev -c "select id, status, mode, title, \"targetKeyword\", \"publishedAt\", \"scheduledAt\", md5(coalesce(\"draftMarkdown\", '')) as draft_markdown_md5, md5(coalesce(\"draftHtml\", '')) as draft_html_md5, length(coalesce(\"draftHtml\", '')) as draft_html_len from content_items where id = 'daily_fixture_cmqlr1v1y0001iwj2gpv2875r';"
 psql -d blog_growth_agent_dev -c "select to_regclass('public.blog_daily_content_operator_approvals') as operator_approvals_table, to_regclass('public.blog_daily_content_operator_approval_events') as operator_approval_events_table;"
+psql -d blog_growth_agent_dev -c "select (select count(*) from blog_daily_content_operator_approvals) as operator_approvals_count, (select count(*) from blog_daily_content_operator_approval_events) as operator_approval_events_count;"
 curl -sS -X POST http://127.0.0.1:3000/api/daily-content-plans/draft-generation-readiness -H "Content-Type: application/json" --data '{"mode":"preflight","planItemId":"cmqlr1v1y0001iwj2gpv2875r","contentItemId":"daily_fixture_cmqlr1v1y0001iwj2gpv2875r"}'
 curl -sS -X POST http://127.0.0.1:3000/api/daily-content-plans/draft-generation-execution-gate-preview -H "Content-Type: application/json" --data '{"mode":"preview","planItemId":"cmqlr1v1y0001iwj2gpv2875r","contentItemId":"daily_fixture_cmqlr1v1y0001iwj2gpv2875r"}'
 ```
@@ -228,13 +234,14 @@ Expected DB baseline:
 - `documents/15_OPERATOR_APPROVAL_PERSISTENCE_DESIGN.md` should exist.
 - `documents/16_DRAFT_GENERATION_EXECUTION_GATE_DESIGN.md` should exist.
 - `prisma/migrations/20260620000200_add_daily_content_operator_approval_scaffold/migration.sql` should exist.
-- No operator approval persistence table exists yet, because 9F-2I created an unapplied migration draft only.
+- Operator approval persistence tables exist because 9F-2I-APPLY applied the migration once.
+- Operator approval rows/events remain `0 / 0`.
 - No draft-generation execution apply/generate route exists yet.
 - The 9F-2J draft-generation execution gate preview route exists, but it is read-only and cannot execute generation.
-- 9F-2J preview should show `executionAllowed=false`, structural readiness true, approval persistence unavailable, approval missing, LLM/content mutation/write flags disabled, confirmation missing, idempotency missing, and all write/LLM/Blogger side effects false.
+- 9F-2J preview should show `executionAllowed=false`, structural readiness true, approval persistence available, approval missing, LLM/content mutation/write flags disabled, confirmation missing, idempotency missing, no `operator_approval_tables_not_applied` blocker, and all write/LLM/Blogger side effects false.
 - Do not rerun 9F-2B apply for the same date unless the user explicitly approves a new date-specific write.
 - Do not rerun 9F-2D apply for item `cmqlr1v1y0001iwj2gpv2875r`; the fixture is already linked.
-- Do not apply the 9F-2I migration unless the user explicitly approves `9F-2I-APPLY` or a later migration apply patch.
+- Do not rerun 9F-2I-APPLY unless migrate status/readback shows it was not applied.
 
 ## Current State: 2026-06-16 Closeout
 

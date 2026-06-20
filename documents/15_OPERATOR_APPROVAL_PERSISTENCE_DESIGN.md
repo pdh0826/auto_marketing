@@ -19,7 +19,7 @@ It does not:
 
 The goal is to define how a future patch can persist operator decisions for Daily Content Queue items while keeping approval persistence separate from generation, LLM execution, content mutation, Blogger write, and publish execution.
 
-## Patch 9F-2I Scaffold Status
+## Patch 9F-2I Scaffold And Apply Status
 
 Patch 9F-2I adds the Prisma schema scaffold and one unapplied migration draft for this design.
 
@@ -43,7 +43,16 @@ Added scaffold:
 - publish or schedule posts
 - reconnect OAuth or refresh tokens
 
-Current DB state after 9F-2I remains no-apply: `to_regclass('public.blog_daily_content_operator_approvals')` and `to_regclass('public.blog_daily_content_operator_approval_events')` should both be null until a later explicitly approved migration apply patch.
+Patch 9F-2I-APPLY applied the existing migration exactly once after explicit operator approval.
+
+Current DB state after 9F-2I-APPLY:
+
+- `to_regclass('public.blog_daily_content_operator_approvals')` exists
+- `to_regclass('public.blog_daily_content_operator_approval_events')` exists
+- `operator_approvals_count = 0`
+- `operator_approval_events_count = 0`
+
+9F-2I-APPLY did not create approval rows/events, update approval status, mutate Daily Content Plan rows/items, mutate `content_items`, generate drafts, call LLM providers, write to Blogger, publish or schedule posts, reconnect OAuth, or refresh tokens.
 
 ## Recommended Model
 
