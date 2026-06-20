@@ -1,5 +1,30 @@
 # 13_CHANGELOG
 
+## Patch 9F-2J Draft-generation Execution Gate Preview API
+
+Implemented after Patch 9F-2I:
+
+- Added read-only helper `src/lib/daily-content-plans/draft-generation-execution-gate-preview.ts`.
+- Added preview-only route `POST /api/daily-content-plans/draft-generation-execution-gate-preview`.
+- Added `/settings/blogger` `초안 생성 실행 게이트` UI readback with execution blocked status, structural readiness, approval table migration state, missing requirements, disabled execution buttons, gate layers, canonical blockers, and side-effect summary.
+- The preview safely checks pending operator approval table availability with `to_regclass` and does not query the pending approval Prisma models.
+- Current preview blocks execution because the 9F-2I migration is pending/unapplied, operator approval is missing, LLM execution flag is disabled, content mutation flag is disabled, draft generation write flag is disabled, confirmation phrase is missing, and idempotency key is missing.
+
+Policy:
+
+- 9F-2J did not modify `prisma/schema.prisma`.
+- 9F-2J did not create a Prisma migration.
+- 9F-2J did not apply the pending 9F-2I migration.
+- Operator approval tables do not exist in the DB yet.
+- 9F-2J did not create, update, or delete business rows.
+- 9F-2J did not create approval rows or events.
+- 9F-2J did not rerun 9F-2B apply or 9F-2D apply.
+- This patch did not run content generation, LLM calls, Blogger publish/write/update/draft save/schedule, OAuth reconnect, token refresh, publish approval mutation, publish attempt mutation, deploy, push, or external service writes.
+- Daily plan rows remain `1`, daily plan item rows remain `3`, and `content_items` count remains `2`.
+- The 9E published/success milestone baseline remained unchanged.
+- Recommended next patch: `9F-2I-APPLY — Apply operator approval persistence migration, approval tables only, no approval rows`.
+- Alternative next patch: `9F-2K — Draft-generation execution gate preview UI polish, no LLM/no mutation`.
+
 ## Patch 9F-2I Operator Approval Persistence Scaffold Migration Draft
 
 Implemented after Patch 9F-2H:

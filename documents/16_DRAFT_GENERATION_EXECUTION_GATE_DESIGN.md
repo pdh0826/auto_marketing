@@ -21,6 +21,28 @@ It does not:
 
 The goal is to define the future execution gate that must pass before a linked Daily Content Plan item can call an LLM and mutate one `content_items` draft.
 
+## Patch 9F-2J Preview Implementation
+
+Patch 9F-2J implements the read-only preview for this design:
+
+- helper `src/lib/daily-content-plans/draft-generation-execution-gate-preview.ts`
+- route `POST /api/daily-content-plans/draft-generation-execution-gate-preview`
+- `/settings/blogger` readback section `초안 생성 실행 게이트`
+
+The preview is not an execution route. It reports `executionAllowed=false` in the current baseline and keeps all side effects false except DB read.
+
+Current expected blockers:
+
+- `operator_approval_tables_not_applied`
+- `operator_approval_missing`
+- `llm_execution_feature_flag_disabled`
+- `content_mutation_feature_flag_disabled`
+- `draft_generation_write_feature_flag_disabled`
+- `confirmation_phrase_missing`
+- `idempotency_key_missing`
+
+Because the 9F-2I migration is pending, the preview must not query `BlogDailyContentOperatorApproval` or `BlogDailyContentOperatorApprovalEvent` as Prisma models. It uses a safe read-only table existence check and treats absent tables as a blocker.
+
 ## Execution Gate Layers
 
 The future execution route should evaluate these layers in order and return every blocking reason in a safe summary. No layer may store prompt text, raw LLM response text, generated candidate text, Blogger tokens, secrets, or external raw bodies.

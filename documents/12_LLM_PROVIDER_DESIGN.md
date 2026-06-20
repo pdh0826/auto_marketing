@@ -71,6 +71,8 @@ Patch 9F-2H is a draft-generation execution gate design only. It defines the fut
 
 Patch 9F-2I adds only the Prisma schema scaffold and unapplied migration draft for operator approval persistence. It must not call OpenAI, local HTTP, CLI, or any LLM provider; it must not create `llm_call_logs`; it must not generate or save `draftMarkdown` or `draftHtml`; and it must not apply the migration or create approval rows/events.
 
+Patch 9F-2J adds a read-only draft-generation execution gate preview API and `/settings/blogger` UI readback. It checks target integrity, structural readiness, pending approval-table migration state, disabled LLM/content mutation/write flags, confirmation, idempotency, and publish isolation. It must not call any LLM provider, create `llm_call_logs`, generate drafts, mutate `content_items`, persist approvals, apply migrations, or query pending approval tables as Prisma models.
+
 ## Patch 3 설정 화면
 
 `/settings/llm` 화면은 Patch 2의 PostgreSQL + Prisma CRUD API를 사용해 다음 데이터를 관리한다.

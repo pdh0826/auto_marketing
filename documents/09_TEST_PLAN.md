@@ -283,6 +283,28 @@ Next session start DB guard should use the published/success values above. The c
 - 9F-2I must not create `draftMarkdown` or `draftHtml`.
 - 9F-2I must not run content generation, LLM calls, Blogger publish/write/update/draft save/schedule, OAuth reconnect, token refresh, publish approval mutation, publish attempt mutation, deploy, push, or external service writes.
 
+## Patch 9F-2J Draft-generation Execution Gate Preview API
+
+- `POST /api/daily-content-plans/draft-generation-execution-gate-preview` should support `mode=preview` for plan item `cmqlr1v1y0001iwj2gpv2875r` and linked content item `daily_fixture_cmqlr1v1y0001iwj2gpv2875r`.
+- Preview mode should return `patchVersion=9F-2J`, `checked=true`, `targetIntegrity.planItemFound=true`, `targetIntegrity.linkedContentItemFound=true`, and `targetIntegrity.linkedFixtureMatchesPlanItem=true`.
+- Current preview should show `executionGateSummary.readinessStructuralReady=true` and `executionGateSummary.executionAllowed=false`.
+- Current preview should report `migrationState.operatorApprovalTablesExist=false` and `migrationState.operatorApprovalPersistenceAvailable=false`, because the 9F-2I migration remains pending/unapplied.
+- Current canonical blockers should include `operator_approval_tables_not_applied`, `operator_approval_missing`, `llm_execution_feature_flag_disabled`, `content_mutation_feature_flag_disabled`, `draft_generation_write_feature_flag_disabled`, `confirmation_phrase_missing`, and `idempotency_key_missing`.
+- `sideEffectSummary` should show `dbRead=true` and `dbWrite=false`, `contentGeneration=false`, `llmCall=false`, `llmCallLogInsert=false`, `contentMutation=false`, `draftMarkdownMutation=false`, `draftHtmlMutation=false`, `bloggerWrite=false`, `bloggerPublish=false`, `tokenRefresh=false`, `oauthReconnect=false`, `approvalMutation=false`, and `attemptMutation=false`.
+- Non-preview modes such as `mode=generate` should be blocked with `draft_generation_execution_gate_preview_only`, `applyAttempted=false`, `generationAttempted=false`, `applyBlocked=true`, `generationBlocked=true`, `applyOk=false`, and `generationOk=false`.
+- `/settings/blogger` should show `초안 생성 실행 게이트` readback with `실행 차단`, 구조 준비 상태, approval table 미적용, missing requirements, disabled execution buttons, gate layers, and no-side-effect summary.
+- 9F-2J must not query `prisma.blogDailyContentOperatorApproval` or `prisma.blogDailyContentOperatorApprovalEvent` at runtime while the migration is pending; it should use a safe `to_regclass` check instead.
+- 9F-2J must not modify `prisma/schema.prisma`.
+- 9F-2J must not create a new migration.
+- 9F-2J must not apply the pending 9F-2I migration.
+- Post-change DB checks should remain `blog_daily_content_plans_count=1`, `blog_daily_content_plan_items_count=3`, `content_items_count=2`, and publish milestone counts `1 / 1 / 1 / 1 / 22`.
+- Operator approval tables should remain absent in DB until a later explicit apply patch.
+- 9F-2J must not create approval rows or events.
+- 9F-2J must not rerun 9F-2B apply or 9F-2D apply.
+- 9F-2J must not create/update/delete daily plan rows, daily plan item rows, `content_items`, approval rows, publish attempts, Blogger rows, or operation profile rows.
+- 9F-2J must not create `draftMarkdown` or `draftHtml`.
+- 9F-2J must not run content generation, LLM calls, Blogger publish/write/update/draft save/schedule, OAuth reconnect, token refresh, publish approval mutation, publish attempt mutation, deploy, push, or external service writes.
+
 ## Patch 9E-9D Post-publish DB Reconciliation
 
 - `POST /api/content-items/[id]/post-publish-reconciliation` route가 있어야 한다.
