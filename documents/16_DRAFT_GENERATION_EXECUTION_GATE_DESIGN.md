@@ -86,6 +86,25 @@ Patch 9F-2L adds read-only post-approval clarity to the preview and Settings UI:
 
 This polish does not add an execution route, does not create execution runs, does not call LLM providers, does not mutate `content_items`, and does not write to Blogger. The persisted approval is necessary but still insufficient for draft-generation execution.
 
+## Patch 9F-2M Dry-run Planner
+
+Patch 9F-2M implements the read-only next safe step from 9F-2L:
+
+- `POST /api/daily-content-plans/draft-generation-dry-run-planner`
+- `/settings/blogger` section `초안 생성 dry-run 계획`
+- planner mode `read_only_draft_generation_dry_run`
+
+The planner reads the target plan item, linked fixture, persisted approval state, and existing execution gate state. It then shows:
+
+- future input snapshot plan
+- future prompt structure plan
+- future model candidate source plan
+- future output target plan
+- current side-effect summary
+- future side-effect requirements
+
+It does not render a full prompt, store raw prompt text, call LLM providers, create `llm_call_logs`, generate draft content, mutate `content_items`, write to Blogger, publish, schedule, reconnect OAuth, or refresh tokens. Non-preview modes are blocked with `draft_generation_dry_run_planner_is_preview_only`. Execution still remains blocked by LLM execution, content mutation, draft write, confirmation phrase, and idempotency gates.
+
 ## Execution Gate Layers
 
 The future execution route should evaluate these layers in order and return every blocking reason in a safe summary. No layer may store prompt text, raw LLM response text, generated candidate text, Blogger tokens, secrets, or external raw bodies.

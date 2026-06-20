@@ -356,6 +356,24 @@ Next session start DB guard should use the published/success values above. The c
 - Post-change DB checks should keep daily plan rows `1`, item rows `3`, `content_items` count `2`, operator approvals/events `1 / 1`, and publish milestone counts `1 / 1 / 1 / 1 / 22`.
 - 9F-2L should not modify `prisma/schema.prisma` or create a migration.
 
+## Patch 9F-2M Draft-generation Dry-run Planner
+
+- `POST /api/daily-content-plans/draft-generation-dry-run-planner` should support `mode=preview` for plan `cmqlr1v1d0000iwj2smxcsajr`, plan item `cmqlr1v1y0001iwj2gpv2875r`, and linked fixture `daily_fixture_cmqlr1v1y0001iwj2gpv2875r`.
+- Preview should report `patchVersion=9F-2M`, `plannerMode=read_only_draft_generation_dry_run`, and `dryRunOnly=true`.
+- Target summary should show item order `1`, slot `morning_education`, fixture status `planned`, fixture not published/scheduled, and draftMarkdown/draftHtml length `0 / 0`.
+- Persisted approval summary should show `operatorApprovalPersisted=true`, `operatorApprovalSatisfied=true`, approval id `cmqmcs1l10001iwu863doda1s`, `approvalPurpose=draft_generation_execution`, `approvalStatus=approved`, and `operatorAction=approve_for_draft_generation_execution`.
+- Execution gate summary should keep `executionAllowed=false`.
+- Remaining blockers should include `llm_execution_feature_flag_disabled`, `content_mutation_feature_flag_disabled`, `draft_generation_write_feature_flag_disabled`, `confirmation_phrase_missing`, and `idempotency_key_missing`.
+- Resolved blockers should include `operator_approval_missing`.
+- Dry-run planner should expose input snapshot plan, prompt structure plan, model candidate plan, output plan, current side-effect summary, and future side-effect plan without rendering a full prompt or selecting a final model.
+- Current side effects should be `dbRead=true`; `dbWrite`, `llmCall`, `llmCallLogMutation`, `contentItemMutation`, `draftMarkdownMutation`, `draftHtmlMutation`, `bloggerWrite`, `bloggerDraftSave`, `bloggerPublish`, `scheduledPublish`, `oauthReconnect`, `tokenRefresh`, `publishApprovalMutation`, `publishAttemptMutation`, and `externalSend` should be `false`.
+- Non-preview mode should be blocked with `draft_generation_dry_run_planner_is_preview_only` and no LLM/content/Blogger/write side effects.
+- `/settings/blogger` should show `초안 생성 dry-run 계획` with the persisted approval state, execution blocked state, remaining blockers, future input/prompt/model/output plan, and no-side-effect summary.
+- 9F-2M should not rerun 9F-2B apply, 9F-2D apply, 9F-2I-APPLY, or 9F-2K approval apply.
+- 9F-2M should not create `draftMarkdown` or `draftHtml`, call LLM providers, create `llm_call_logs`, mutate `content_items`, write to Blogger, publish/schedule, reconnect OAuth, refresh tokens, mutate publish approvals, or mutate publish attempts.
+- 9F-2M should not modify `prisma/schema.prisma` or create a migration.
+- Post-change DB checks should keep daily plan rows `1`, item rows `3`, `content_items` count `2`, operator approvals/events `1 / 1`, publish milestone counts `1 / 1 / 1 / 1 / 22`, and `llm_call_logs=22`.
+
 ## Patch 9E-9D Post-publish DB Reconciliation
 
 - `POST /api/content-items/[id]/post-publish-reconciliation` route가 있어야 한다.

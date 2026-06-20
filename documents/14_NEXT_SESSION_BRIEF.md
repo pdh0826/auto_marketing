@@ -1,17 +1,17 @@
 # 14_NEXT_SESSION_BRIEF
 
-## Current State: Patch 9F-2L Completed
+## Current State: Patch 9F-2M Completed
 
 ```text
 repo: ~/blog-growth-agent
 branch: master
 previous HEAD before 9F-2D apply closeout: b3cf210 Link daily plan item to content fixture
-expected HEAD after 9F-2L commit: local commit `Polish post-approval draft generation gate` (verify exact hash with `git log --oneline -8`)
+expected HEAD after 9F-2M commit: local commit `Add draft generation dry-run planner` (verify exact hash with `git log --oneline -8`)
 current DB schema state: operator approval persistence migration applied
 operator approval tables in DB: created
 operator approval rows/events: 1 / 1
 operator approval apply state: completed exactly once
-draft-generation execution gate: post-approval preview polished, execution still blocked
+draft-generation execution gate: post-approval preview polished, dry-run planner implemented, execution still blocked
 milestone: 9E first end-to-end Blogger publish completed; 9F operation automation foundation started
 ```
 
@@ -144,6 +144,14 @@ Current baseline:
 - Remaining blockers after 9F-2L are `llm_execution_feature_flag_disabled`, `content_mutation_feature_flag_disabled`, `draft_generation_write_feature_flag_disabled`, `confirmation_phrase_missing`, and `idempotency_key_missing`.
 - 9F-2L did not rerun 9F-2B apply, 9F-2D apply, 9F-2I-APPLY, or 9F-2K approval apply.
 - 9F-2L did not modify `prisma/schema.prisma`, create a migration, generate drafts, call LLM providers, create `llm_call_logs`, mutate `content_items`, write to Blogger, publish, schedule, reconnect OAuth, refresh tokens, mutate publish approvals, or mutate publish attempts.
+- 9F-2M added read-only helper `src/lib/daily-content-plans/draft-generation-dry-run-planner.ts`.
+- 9F-2M added route `POST /api/daily-content-plans/draft-generation-dry-run-planner`.
+- 9F-2M added `/settings/blogger` `초안 생성 dry-run 계획` readback.
+- 9F-2M reports `plannerMode=read_only_draft_generation_dry_run`, `dryRunOnly=true`, `operatorApprovalSatisfied=true`, and `executionAllowed=false`.
+- 9F-2M shows future input snapshot plan, prompt structure plan, model candidate plan, output plan, and future side-effect requirements without rendering a full prompt or selecting/calling a model.
+- 9F-2M blocks non-preview modes with `draft_generation_dry_run_planner_is_preview_only`.
+- 9F-2M did not rerun 9F-2B apply, 9F-2D apply, 9F-2I-APPLY, or 9F-2K approval apply.
+- 9F-2M did not modify `prisma/schema.prisma`, create a migration, generate drafts, call LLM providers, create `llm_call_logs`, mutate `content_items`, write to Blogger, publish, schedule, reconnect OAuth, refresh tokens, mutate publish approvals, or mutate publish attempts.
 
 9E first end-to-end publish path:
 
@@ -155,21 +163,21 @@ Current baseline:
 6. `9E-9C` read back `https://mathlearningappl.blogspot.com/2026/06/blog-post.html`.
 7. `9E-9D-APPLY` reconciled internal DB state from `planned`/`planned_only` to `published`/`success`.
 
-Recommended next after 9F-2L:
-
-**9F-2M — Draft-generation dry-run planner, no LLM/no content mutation**
-
-Goal:
-
-- Add a deterministic dry-run planner for the future draft-generation execution step, keeping LLM calls and `content_items` mutation disabled.
-
-Alternative:
+Recommended next after 9F-2M:
 
 **9F-2N — LLM provider execution readiness check for draft generation, no call/no mutation**
 
 Goal:
 
 - Check provider/model/task-route readiness for future draft generation without calling any LLM and without mutating content.
+
+Alternative:
+
+**9F-2O — Draft-generation dry-run planner UI polish, no LLM/no mutation**
+
+Goal:
+
+- Polish planner readability after operator review while keeping all execution/write paths disabled.
 
 ## 9F Automation Roadmap
 
@@ -198,6 +206,7 @@ Goal:
 | 9F-2L | Draft-generation execution gate post-approval preview polish |
 | 9F-2M | Draft-generation dry-run planner, no LLM/no content mutation |
 | 9F-2N | LLM provider execution readiness check for draft generation, no call/no mutation |
+| 9F-2O | Draft-generation dry-run planner UI polish |
 | 9F-3A | Alert & Recovery Center |
 
 Core operation principles:

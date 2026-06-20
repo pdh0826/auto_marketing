@@ -16,6 +16,7 @@ import type { BlogOperationProfileResponse } from "@/lib/blog-operation-profiles
 import type { BlogAdmin } from "@/lib/blogs/admin-types";
 import type { DailyPlanContentItemFixtureResponse } from "@/lib/daily-content-plans/content-item-fixture";
 import type { DailyContentPlanResponse } from "@/lib/daily-content-plans/daily-content-plan-summary";
+import type { DailyContentDraftGenerationDryRunPlannerResponse } from "@/lib/daily-content-plans/draft-generation-dry-run-planner";
 import type { DailyContentDraftGenerationExecutionGatePreviewResponse } from "@/lib/daily-content-plans/draft-generation-execution-gate-preview";
 import type { DailyContentDraftGenerationReadinessResponse } from "@/lib/daily-content-plans/draft-generation-readiness";
 import type { DailyContentOperatorApprovalPersistenceResponse } from "@/lib/daily-content-plans/operator-approval-persistence";
@@ -82,6 +83,7 @@ export function BloggerSettingsClient() {
   const [operatorApprovalPersistenceResult, setOperatorApprovalPersistenceResult] = useState<DailyContentOperatorApprovalPersistenceResponse | null>(null);
   const [draftGenerationReadinessResult, setDraftGenerationReadinessResult] = useState<DailyContentDraftGenerationReadinessResponse | null>(null);
   const [draftGenerationExecutionGateResult, setDraftGenerationExecutionGateResult] = useState<DailyContentDraftGenerationExecutionGatePreviewResponse | null>(null);
+  const [draftGenerationDryRunPlannerResult, setDraftGenerationDryRunPlannerResult] = useState<DailyContentDraftGenerationDryRunPlannerResponse | null>(null);
   const [oauthDryRun, setOauthDryRun] = useState<BloggerOAuthStartDryRun | null>(null);
   const [blogListResult, setBlogListResult] = useState<BloggerBlogListResult | null>(null);
   const [blogListLoadingId, setBlogListLoadingId] = useState<string | null>(null);
@@ -93,6 +95,7 @@ export function BloggerSettingsClient() {
   const [loadingOperatorApprovalItemId, setLoadingOperatorApprovalItemId] = useState<string | null>(null);
   const [loadingDraftGenerationReadinessItemId, setLoadingDraftGenerationReadinessItemId] = useState<string | null>(null);
   const [loadingDraftGenerationExecutionGateItemId, setLoadingDraftGenerationExecutionGateItemId] = useState<string | null>(null);
+  const [loadingDraftGenerationDryRunPlannerItemId, setLoadingDraftGenerationDryRunPlannerItemId] = useState<string | null>(null);
   const [selectingBlogId, setSelectingBlogId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -168,6 +171,7 @@ export function BloggerSettingsClient() {
       setOperatorWorkflowResult(null);
       setDraftGenerationReadinessResult(null);
       setDraftGenerationExecutionGateResult(null);
+      setDraftGenerationDryRunPlannerResult(null);
       setOauthDryRun(null);
       setBlogListResult(null);
       setNotice("Blogger connection을 저장했습니다. Blogger draft/publish는 수행하지 않았습니다.");
@@ -291,6 +295,7 @@ export function BloggerSettingsClient() {
       setOperatorWorkflowResult(null);
       setDraftGenerationReadinessResult(null);
       setDraftGenerationExecutionGateResult(null);
+      setDraftGenerationDryRunPlannerResult(null);
       setNotice("Daily Content Plan preview를 생성했습니다. Plan row 저장, content generation, LLM call, Blogger write/publish는 수행하지 않았습니다.");
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Daily Content Plan preview에 실패했습니다.");
@@ -448,6 +453,39 @@ export function BloggerSettingsClient() {
       setError(caught instanceof Error ? caught.message : "초안 생성 실행 게이트 preview에 실패했습니다.");
     } finally {
       setLoadingDraftGenerationExecutionGateItemId(null);
+    }
+  }
+
+  async function previewDraftGenerationDryRunPlanner(
+    planId: string | null | undefined,
+    planItemId: string | null | undefined,
+    contentItemId: string | null | undefined
+  ) {
+    if (!planId || !planItemId || !contentItemId) {
+      setError("Daily plan id, item id, linked content item id가 필요합니다.");
+      return;
+    }
+
+    setError(null);
+    setNotice(null);
+    setLoadingDraftGenerationDryRunPlannerItemId(planItemId);
+
+    try {
+      const result = await requestJson<ApiResult<DailyContentDraftGenerationDryRunPlannerResponse>>("/api/daily-content-plans/draft-generation-dry-run-planner", {
+        method: "POST",
+        body: JSON.stringify({
+          mode: "preview",
+          planId,
+          planItemId,
+          contentItemId
+        })
+      });
+      setDraftGenerationDryRunPlannerResult(result.data);
+      setNotice("초안 생성 dry-run 계획을 확인했습니다. 실제 draft 생성, LLM call, content_items 수정, Blogger write/publish는 수행하지 않았습니다.");
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "초안 생성 dry-run 계획 확인에 실패했습니다.");
+    } finally {
+      setLoadingDraftGenerationDryRunPlannerItemId(null);
     }
   }
 
@@ -1164,6 +1202,25 @@ export function BloggerSettingsClient() {
                       >
                         {loadingDraftGenerationExecutionGateItemId === getDailyPlanItemId(item) ? "게이트 확인 중" : "실행 게이트 preview"}
                       </button>
+                      <button
+                        className="button small secondary"
+                        type="button"
+                        disabled={
+                          !dailyContentPlanSummary.persistedPlanId ||
+                          !getDailyPlanItemId(item) ||
+                          !getDailyPlanItemContentItemId(item) ||
+                          loadingDraftGenerationDryRunPlannerItemId === getDailyPlanItemId(item)
+                        }
+                        onClick={() =>
+                          void previewDraftGenerationDryRunPlanner(
+                            dailyContentPlanSummary.persistedPlanId,
+                            getDailyPlanItemId(item),
+                            getDailyPlanItemContentItemId(item)
+                          )
+                        }
+                      >
+                        {loadingDraftGenerationDryRunPlannerItemId === getDailyPlanItemId(item) ? "계획 확인 중" : "dry-run 계획"}
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -1665,6 +1722,129 @@ export function BloggerSettingsClient() {
                 </>
               ) : (
                 <div className="notice">후보 큐에서 linked content item이 있는 행의 “실행 게이트 preview”를 실행하세요. 이 버튼은 보기 전용 gate preview만 호출합니다.</div>
+              )}
+            </div>
+
+            <div className="read-block">
+              <h3>초안 생성 dry-run 계획</h3>
+              <div className="notice warning">
+                <strong>9F-2M read-only planner</strong>
+                <p>운영자 승인은 저장됐지만 실제 초안 생성은 아직 차단되어 있습니다. 이 섹션은 미래 실행 전에 사용할 입력, 프롬프트 구조, 모델 후보, 출력 계획만 보여주며 아무 것도 생성하지 않습니다.</p>
+              </div>
+              <div className="button-row">
+                <button className="button small secondary" type="button" disabled>
+                  실제 초안 생성 - 비활성
+                </button>
+                <button className="button small secondary" type="button" disabled>
+                  LLM 호출 - 비활성
+                </button>
+                <button className="button small secondary" type="button" disabled>
+                  content_items 저장 - 비활성
+                </button>
+              </div>
+              {draftGenerationDryRunPlannerResult ? (
+                <>
+                  <div className="notice warning">
+                    <strong>
+                      {draftGenerationDryRunPlannerResult.draftGenerationDryRunPlannerSummary.persistedApprovalSummary.operatorApprovalSatisfied
+                        ? "운영자 승인 저장됨"
+                        : "운영자 승인 미저장"}{" "}
+                      · 실제 초안 생성은 아직 차단됨
+                    </strong>
+                    <p>
+                      Dry-run only: draftMarkdown/draftHtml 생성, LLM 호출, content_items 수정, Blogger 쓰기/발행/예약, OAuth reconnect, token refresh를 수행하지 않았습니다.
+                    </p>
+                  </div>
+                  <div className="detail-grid">
+                    <DetailItem label="Patch" value={draftGenerationDryRunPlannerResult.draftGenerationDryRunPlannerSummary.patchVersion} />
+                    <DetailItem label="Planner Mode" value={draftGenerationDryRunPlannerResult.draftGenerationDryRunPlannerSummary.plannerMode} />
+                    <DetailItem label="Plan ID" value={draftGenerationDryRunPlannerResult.draftGenerationDryRunPlannerSummary.targetSummary.planId ?? "-"} />
+                    <DetailItem label="Plan Item" value={draftGenerationDryRunPlannerResult.draftGenerationDryRunPlannerSummary.targetSummary.planItemId || "-"} />
+                    <DetailItem label="Linked Fixture" value={draftGenerationDryRunPlannerResult.draftGenerationDryRunPlannerSummary.targetSummary.contentItemId ?? "-"} />
+                    <DetailItem label="Slot" value={draftGenerationDryRunPlannerResult.draftGenerationDryRunPlannerSummary.targetSummary.slotKey ?? "-"} />
+                    <DetailItem label="Fixture Status" value={draftGenerationDryRunPlannerResult.draftGenerationDryRunPlannerSummary.targetSummary.fixtureStatus ?? "-"} />
+                    <DetailItem
+                      label="Draft Length"
+                      value={`${draftGenerationDryRunPlannerResult.draftGenerationDryRunPlannerSummary.targetSummary.draftMarkdownLength} / ${draftGenerationDryRunPlannerResult.draftGenerationDryRunPlannerSummary.targetSummary.draftHtmlLength}`}
+                    />
+                    <DetailItem label="Execution Allowed" value={String(draftGenerationDryRunPlannerResult.draftGenerationDryRunPlannerSummary.executionGateSummary.executionAllowed)} />
+                    <DetailItem label="Approval ID" value={draftGenerationDryRunPlannerResult.draftGenerationDryRunPlannerSummary.persistedApprovalSummary.approvalId ?? "-"} />
+                  </div>
+                  <ValidationList
+                    title="남은 실행 blocker"
+                    items={draftGenerationDryRunPlannerResult.draftGenerationDryRunPlannerSummary.executionGateSummary.remainingBlockers.map(formatDraftGenerationGateBlocker)}
+                    emptyText="남은 blocker가 없습니다."
+                    isWarning
+                  />
+                  <ValidationList
+                    title="해결된 blocker"
+                    items={draftGenerationDryRunPlannerResult.draftGenerationDryRunPlannerSummary.executionGateSummary.resolvedBlockers.map(formatDraftGenerationGateBlocker)}
+                    emptyText="해결된 blocker가 없습니다."
+                  />
+                  <div className="detail-grid">
+                    <DetailItem label="Plan Metadata" value={String(draftGenerationDryRunPlannerResult.draftGenerationDryRunPlannerSummary.dryRunPlannerSummary.inputSnapshotPlan.willUsePlanMetadata)} />
+                    <DetailItem label="Plan Item Metadata" value={String(draftGenerationDryRunPlannerResult.draftGenerationDryRunPlannerSummary.dryRunPlannerSummary.inputSnapshotPlan.willUsePlanItemMetadata)} />
+                    <DetailItem label="Linked Fixture" value={String(draftGenerationDryRunPlannerResult.draftGenerationDryRunPlannerSummary.dryRunPlannerSummary.inputSnapshotPlan.willUseLinkedContentFixture)} />
+                    <DetailItem label="Operation Profile" value={String(draftGenerationDryRunPlannerResult.draftGenerationDryRunPlannerSummary.dryRunPlannerSummary.inputSnapshotPlan.willUseBlogOperationProfile)} />
+                    <DetailItem label="Raw Secrets" value={String(draftGenerationDryRunPlannerResult.draftGenerationDryRunPlannerSummary.dryRunPlannerSummary.inputSnapshotPlan.rawSecretsIncluded)} />
+                    <DetailItem label="Raw Tokens" value={String(draftGenerationDryRunPlannerResult.draftGenerationDryRunPlannerSummary.dryRunPlannerSummary.inputSnapshotPlan.rawTokensIncluded)} />
+                  </div>
+                  <details className="read-block">
+                    <summary>초안 생성 dry-run 계획 기술 상세</summary>
+                    <ValidationList
+                      title="Prompt Structure Plan"
+                      items={draftGenerationDryRunPlannerResult.draftGenerationDryRunPlannerSummary.dryRunPlannerSummary.promptStructurePlan.sections}
+                      emptyText="prompt section 계획이 없습니다."
+                    />
+                    <ValidationList
+                      title="Model Candidate Sources"
+                      items={draftGenerationDryRunPlannerResult.draftGenerationDryRunPlannerSummary.dryRunPlannerSummary.modelCandidatePlan.candidatesMayComeFrom}
+                      emptyText="model candidate source가 없습니다."
+                    />
+                    <ValidationList
+                      title="Future Target Fields"
+                      items={draftGenerationDryRunPlannerResult.draftGenerationDryRunPlannerSummary.dryRunPlannerSummary.outputPlan.futureTargetFields}
+                      emptyText="future target field가 없습니다."
+                    />
+                    <div className="detail-grid">
+                      <DetailItem label="Full Prompt Rendered" value={String(draftGenerationDryRunPlannerResult.draftGenerationDryRunPlannerSummary.dryRunPlannerSummary.promptStructurePlan.fullPromptRendered)} />
+                      <DetailItem label="Raw Prompt Stored" value={String(draftGenerationDryRunPlannerResult.draftGenerationDryRunPlannerSummary.dryRunPlannerSummary.promptStructurePlan.rawPromptStored)} />
+                      <DetailItem label="LLM Call Attempted" value={String(draftGenerationDryRunPlannerResult.draftGenerationDryRunPlannerSummary.dryRunPlannerSummary.modelCandidatePlan.llmCallAttempted)} />
+                      <DetailItem label="Provider Health Checked" value={String(draftGenerationDryRunPlannerResult.draftGenerationDryRunPlannerSummary.dryRunPlannerSummary.modelCandidatePlan.providerHealthChecked)} />
+                      <DetailItem label="Next Readiness Patch" value={draftGenerationDryRunPlannerResult.draftGenerationDryRunPlannerSummary.dryRunPlannerSummary.modelCandidatePlan.nextReadinessPatchCandidate} />
+                      <DetailItem label="Requires Separate Execution Patch" value={String(draftGenerationDryRunPlannerResult.draftGenerationDryRunPlannerSummary.dryRunPlannerSummary.futureSideEffectPlan.requiresSeparateExecutionPatch)} />
+                    </div>
+                    <div className="detail-grid">
+                      <DetailItem label="DB Read" value={String(draftGenerationDryRunPlannerResult.draftGenerationDryRunPlannerSummary.dryRunPlannerSummary.currentSideEffectSummary.dbRead)} />
+                      <DetailItem label="DB Write" value={String(draftGenerationDryRunPlannerResult.draftGenerationDryRunPlannerSummary.dryRunPlannerSummary.currentSideEffectSummary.dbWrite)} />
+                      <DetailItem label="LLM Call" value={String(draftGenerationDryRunPlannerResult.draftGenerationDryRunPlannerSummary.dryRunPlannerSummary.currentSideEffectSummary.llmCall)} />
+                      <DetailItem label="LLM Log Mutation" value={String(draftGenerationDryRunPlannerResult.draftGenerationDryRunPlannerSummary.dryRunPlannerSummary.currentSideEffectSummary.llmCallLogMutation)} />
+                      <DetailItem label="Content Mutation" value={String(draftGenerationDryRunPlannerResult.draftGenerationDryRunPlannerSummary.dryRunPlannerSummary.currentSideEffectSummary.contentItemMutation)} />
+                      <DetailItem label="Draft Markdown Mutation" value={String(draftGenerationDryRunPlannerResult.draftGenerationDryRunPlannerSummary.dryRunPlannerSummary.currentSideEffectSummary.draftMarkdownMutation)} />
+                      <DetailItem label="Draft HTML Mutation" value={String(draftGenerationDryRunPlannerResult.draftGenerationDryRunPlannerSummary.dryRunPlannerSummary.currentSideEffectSummary.draftHtmlMutation)} />
+                      <DetailItem label="Blogger Write" value={String(draftGenerationDryRunPlannerResult.draftGenerationDryRunPlannerSummary.dryRunPlannerSummary.currentSideEffectSummary.bloggerWrite)} />
+                      <DetailItem label="Blogger Draft Save" value={String(draftGenerationDryRunPlannerResult.draftGenerationDryRunPlannerSummary.dryRunPlannerSummary.currentSideEffectSummary.bloggerDraftSave)} />
+                      <DetailItem label="Blogger Publish" value={String(draftGenerationDryRunPlannerResult.draftGenerationDryRunPlannerSummary.dryRunPlannerSummary.currentSideEffectSummary.bloggerPublish)} />
+                      <DetailItem label="Scheduled Publish" value={String(draftGenerationDryRunPlannerResult.draftGenerationDryRunPlannerSummary.dryRunPlannerSummary.currentSideEffectSummary.scheduledPublish)} />
+                      <DetailItem label="OAuth Reconnect" value={String(draftGenerationDryRunPlannerResult.draftGenerationDryRunPlannerSummary.dryRunPlannerSummary.currentSideEffectSummary.oauthReconnect)} />
+                      <DetailItem label="Token Refresh" value={String(draftGenerationDryRunPlannerResult.draftGenerationDryRunPlannerSummary.dryRunPlannerSummary.currentSideEffectSummary.tokenRefresh)} />
+                    </div>
+                    <ValidationList
+                      title="Dry-run Planner Blocking Reasons"
+                      items={draftGenerationDryRunPlannerResult.draftGenerationDryRunPlannerSummary.blockingReasons}
+                      emptyText="blocking reason이 없습니다."
+                      isWarning
+                    />
+                    <ValidationList
+                      title="Dry-run Planner Warnings"
+                      items={draftGenerationDryRunPlannerResult.draftGenerationDryRunPlannerSummary.warnings}
+                      emptyText="warning이 없습니다."
+                      isWarning
+                    />
+                  </details>
+                </>
+              ) : (
+                <div className="notice">후보 큐에서 linked content item이 있는 행의 “dry-run 계획”을 실행하세요. 이 버튼은 보기 전용 planner만 호출합니다.</div>
               )}
             </div>
 

@@ -1,5 +1,28 @@
 # 13_CHANGELOG
 
+## Patch 9F-2M Draft-generation Dry-run Planner
+
+Implemented after Patch 9F-2L:
+
+- Added read-only helper `src/lib/daily-content-plans/draft-generation-dry-run-planner.ts`.
+- Added route `POST /api/daily-content-plans/draft-generation-dry-run-planner`.
+- Added `/settings/blogger` `초안 생성 dry-run 계획` UI readback.
+- The planner reuses the post-approval execution gate state and shows persisted operator approval, linked fixture status, remaining execution blockers, input snapshot plan, prompt structure plan, model candidate plan, future output plan, and current no-side-effect summary.
+- Preview for plan item `cmqlr1v1y0001iwj2gpv2875r` shows `operatorApprovalSatisfied=true`, `executionAllowed=false`, resolved blocker `operator_approval_missing`, and remaining blockers for LLM execution, content mutation, draft generation write, confirmation phrase, and idempotency.
+- Non-preview modes are blocked with `draft_generation_dry_run_planner_is_preview_only`.
+
+Policy:
+
+- 9F-2M did not rerun 9F-2B apply, 9F-2D apply, 9F-2I-APPLY, or 9F-2K approval apply.
+- 9F-2M did not create, update, or delete business rows.
+- 9F-2M did not modify `prisma/schema.prisma` or create a migration.
+- 9F-2M did not render/store raw prompts, generate drafts, call LLM providers, create `llm_call_logs`, mutate `content_items`, write to Blogger, publish, schedule, reconnect OAuth, refresh tokens, mutate publish approvals, or mutate publish attempts.
+- Daily plan rows remain `1`, daily plan item rows remain `3`, `content_items` count remains `2`, and operator approvals/events remain `1 / 1`.
+- Publish milestone counts remain `1 / 1 / 1 / 1 / 22`, and `llm_call_logs` remains `22`.
+- The linked fixture remains `planned` with empty `draftMarkdown` and `draftHtml`.
+- Recommended next patch: `9F-2N — LLM provider execution readiness check for draft generation, no call/no mutation`.
+- Alternative next patch: `9F-2O — Draft-generation dry-run planner UI polish, no LLM/no mutation`.
+
 ## Patch 9F-2L Draft-generation Execution Gate Post-approval Preview Polish
 
 Implemented after Patch 9F-2K-APPLY:
