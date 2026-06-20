@@ -63,6 +63,8 @@ Patch 9F-2A adds Daily Auto Content Plan draft preview using deterministic/stati
 
 Patch 9F-2E adds a Daily Content Queue operator approval workflow draft using existing persisted plan/item/content fixture metadata only. It must not call LLM providers, generate article bodies, create approval rows, mutate `content_items`, or create `llm_call_logs`.
 
+Patch 9F-2F adds a draft-generation readiness preflight for the linked daily content fixture. It is structural/read-only only: it may report that a linked fixture is ready for a future generation step, but execution remains disabled. It must not call LLM providers, create `llm_call_logs`, generate `draftMarkdown`, generate `draftHtml`, or mutate `content_items`.
+
 ## Patch 3 설정 화면
 
 `/settings/llm` 화면은 Patch 2의 PostgreSQL + Prisma CRUD API를 사용해 다음 데이터를 관리한다.

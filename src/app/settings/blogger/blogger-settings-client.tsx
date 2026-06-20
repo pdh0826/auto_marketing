@@ -16,6 +16,7 @@ import type { BlogOperationProfileResponse } from "@/lib/blog-operation-profiles
 import type { BlogAdmin } from "@/lib/blogs/admin-types";
 import type { DailyPlanContentItemFixtureResponse } from "@/lib/daily-content-plans/content-item-fixture";
 import type { DailyContentPlanResponse } from "@/lib/daily-content-plans/daily-content-plan-summary";
+import type { DailyContentDraftGenerationReadinessResponse } from "@/lib/daily-content-plans/draft-generation-readiness";
 import type { DailyContentQueueOperatorWorkflowResponse } from "@/lib/daily-content-plans/operator-approval-workflow";
 import { ApiResult, formatListInput, optionalString, parseListInput, requestJson } from "@/lib/form-utils";
 
@@ -76,6 +77,7 @@ export function BloggerSettingsClient() {
   const [dailyContentPlanResult, setDailyContentPlanResult] = useState<DailyContentPlanResponse | null>(null);
   const [contentItemFixtureResult, setContentItemFixtureResult] = useState<DailyPlanContentItemFixtureResponse | null>(null);
   const [operatorWorkflowResult, setOperatorWorkflowResult] = useState<DailyContentQueueOperatorWorkflowResponse | null>(null);
+  const [draftGenerationReadinessResult, setDraftGenerationReadinessResult] = useState<DailyContentDraftGenerationReadinessResponse | null>(null);
   const [oauthDryRun, setOauthDryRun] = useState<BloggerOAuthStartDryRun | null>(null);
   const [blogListResult, setBlogListResult] = useState<BloggerBlogListResult | null>(null);
   const [blogListLoadingId, setBlogListLoadingId] = useState<string | null>(null);
@@ -84,6 +86,7 @@ export function BloggerSettingsClient() {
   const [loadingDailyContentPlanId, setLoadingDailyContentPlanId] = useState<string | null>(null);
   const [loadingContentItemFixtureId, setLoadingContentItemFixtureId] = useState<string | null>(null);
   const [loadingOperatorWorkflowPlanId, setLoadingOperatorWorkflowPlanId] = useState<string | null>(null);
+  const [loadingDraftGenerationReadinessItemId, setLoadingDraftGenerationReadinessItemId] = useState<string | null>(null);
   const [selectingBlogId, setSelectingBlogId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -157,6 +160,7 @@ export function BloggerSettingsClient() {
       setOperationProfileResult(null);
       setDailyContentPlanResult(null);
       setOperatorWorkflowResult(null);
+      setDraftGenerationReadinessResult(null);
       setOauthDryRun(null);
       setBlogListResult(null);
       setNotice("Blogger connection을 저장했습니다. Blogger draft/publish는 수행하지 않았습니다.");
@@ -278,6 +282,7 @@ export function BloggerSettingsClient() {
       });
       setDailyContentPlanResult(result.data);
       setOperatorWorkflowResult(null);
+      setDraftGenerationReadinessResult(null);
       setNotice("Daily Content Plan preview를 생성했습니다. Plan row 저장, content generation, LLM call, Blogger write/publish는 수행하지 않았습니다.");
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Daily Content Plan preview에 실패했습니다.");
@@ -338,6 +343,34 @@ export function BloggerSettingsClient() {
       setError(caught instanceof Error ? caught.message : "운영자 검토 워크플로우 preview에 실패했습니다.");
     } finally {
       setLoadingOperatorWorkflowPlanId(null);
+    }
+  }
+
+  async function previewDraftGenerationReadiness(planItemId: string | null | undefined, contentItemId: string | null | undefined) {
+    if (!planItemId || !contentItemId) {
+      setError("Daily plan item id와 linked content item id가 필요합니다.");
+      return;
+    }
+
+    setError(null);
+    setNotice(null);
+    setLoadingDraftGenerationReadinessItemId(planItemId);
+
+    try {
+      const result = await requestJson<ApiResult<DailyContentDraftGenerationReadinessResponse>>("/api/daily-content-plans/draft-generation-readiness", {
+        method: "POST",
+        body: JSON.stringify({
+          mode: "preflight",
+          planItemId,
+          contentItemId
+        })
+      });
+      setDraftGenerationReadinessResult(result.data);
+      setNotice("초안 생성 준비 preflight를 확인했습니다. draftMarkdown/draftHtml 저장, content generation, LLM call, Blogger write/publish는 수행하지 않았습니다.");
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "초안 생성 준비 preflight에 실패했습니다.");
+    } finally {
+      setLoadingDraftGenerationReadinessItemId(null);
     }
   }
 
@@ -524,6 +557,7 @@ export function BloggerSettingsClient() {
                   setDailyContentPlanResult(null);
                   setContentItemFixtureResult(null);
                   setOperatorWorkflowResult(null);
+                  setDraftGenerationReadinessResult(null);
                   setOauthDryRun(null);
                   setBlogListResult(null);
                 }}
@@ -1014,6 +1048,17 @@ export function BloggerSettingsClient() {
                       <button className="button small secondary" type="button" disabled>
                         생성/연결 비활성
                       </button>
+                      <button
+                        className="button small secondary"
+                        type="button"
+                        disabled={!getDailyPlanItemId(item) || !getDailyPlanItemContentItemId(item) || loadingDraftGenerationReadinessItemId === getDailyPlanItemId(item)}
+                        onClick={() => void previewDraftGenerationReadiness(getDailyPlanItemId(item), getDailyPlanItemContentItemId(item))}
+                      >
+                        {loadingDraftGenerationReadinessItemId === getDailyPlanItemId(item) ? "점검 중" : "초안 생성 사전 점검"}
+                      </button>
+                      <button className="button small secondary" type="button" disabled>
+                        LLM 초안 생성 비활성
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -1154,6 +1199,102 @@ export function BloggerSettingsClient() {
                 </>
               ) : (
                 <div className="notice">위의 “운영자 워크플로우 preview” 버튼으로 후보 큐의 운영자 검토 상태를 확인하세요.</div>
+              )}
+            </div>
+
+            <div className="read-block">
+              <h3>초안 생성 준비 점검</h3>
+              <div className="notice">
+                <strong>9F-2F preflight only</strong>
+                <p>linked content fixture가 미래 초안 생성에 구조적으로 준비되었는지 확인합니다. draftMarkdown/draftHtml 생성, LLM 호출, content_items 수정, Blogger 쓰기/발행은 실행하지 않습니다.</p>
+              </div>
+              <div className="button-row">
+                <button className="button small secondary" type="button" disabled>
+                  초안 생성 사전 점검 - 보기 전용
+                </button>
+                <button className="button small secondary" type="button" disabled>
+                  초안 생성 실행 - 비활성
+                </button>
+                <button className="button small secondary" type="button" disabled>
+                  LLM 초안 생성 - 비활성
+                </button>
+              </div>
+              {draftGenerationReadinessResult ? (
+                <>
+                  <div
+                    className={
+                      draftGenerationReadinessResult.draftGenerationReadinessSummary.readinessSummary.structuralReadyForFutureDraftGeneration
+                        ? "notice success"
+                        : "notice warning"
+                    }
+                  >
+                    <strong>{draftGenerationReadinessResult.draftGenerationReadinessSummary.readinessSummary.operatorLabelKo}</strong>
+                    <p>{draftGenerationReadinessResult.draftGenerationReadinessSummary.readinessSummary.nextSafeStepDraft}</p>
+                    <p>
+                      실행 준비: {draftGenerationReadinessResult.draftGenerationReadinessSummary.readinessSummary.executionReadyForDraftGeneration ? "가능" : "차단"} / 구조 준비:{" "}
+                      {draftGenerationReadinessResult.draftGenerationReadinessSummary.readinessSummary.structuralReadyForFutureDraftGeneration ? "완료" : "미완료"}
+                    </p>
+                  </div>
+                  <div className="detail-grid">
+                    <DetailItem label="Patch" value={draftGenerationReadinessResult.draftGenerationReadinessSummary.patchVersion} />
+                    <DetailItem label="Mode" value={draftGenerationReadinessResult.draftGenerationReadinessSummary.mode} />
+                    <DetailItem label="Plan Item" value={draftGenerationReadinessResult.draftGenerationReadinessSummary.targetPlanItemId || "-"} />
+                    <DetailItem label="Linked Fixture" value={draftGenerationReadinessResult.draftGenerationReadinessSummary.linkedContentItemId ?? "-"} />
+                    <DetailItem label="Fixture Found" value={String(draftGenerationReadinessResult.draftGenerationReadinessSummary.fixtureFound)} />
+                    <DetailItem label="Plan Item Found" value={String(draftGenerationReadinessResult.draftGenerationReadinessSummary.planItemFound)} />
+                    <DetailItem label="Fixture Match" value={String(draftGenerationReadinessResult.draftGenerationReadinessSummary.linkedFixtureMatchesPlanItem)} />
+                    <DetailItem label="Readiness Level" value={draftGenerationReadinessResult.draftGenerationReadinessSummary.readinessSummary.readinessLevel} />
+                  </div>
+                  <div className="detail-grid">
+                    <DetailItem label="운영자 승인" value={draftGenerationReadinessResult.draftGenerationReadinessSummary.checks.operatorApprovalPersisted ? "저장됨" : "저장 전"} />
+                    <DetailItem label="LLM 호출" value={draftGenerationReadinessResult.draftGenerationReadinessSummary.checks.llmGenerationFlagEnabled ? "켜짐" : "꺼짐"} />
+                    <DetailItem label="본문 생성" value={draftGenerationReadinessResult.draftGenerationReadinessSummary.checks.draftGenerationFlagEnabled ? "켜짐" : "꺼짐"} />
+                    <DetailItem label="content_items 수정" value={draftGenerationReadinessResult.draftGenerationReadinessSummary.checks.contentMutationAllowed ? "허용" : "없음"} />
+                    <DetailItem label="Blogger 쓰기" value={draftGenerationReadinessResult.draftGenerationReadinessSummary.checks.bloggerWriteAllowed ? "허용" : "없음"} />
+                    <DetailItem label="발행 실행" value={draftGenerationReadinessResult.draftGenerationReadinessSummary.checks.publishExecutionAllowed ? "허용" : "꺼짐"} />
+                    <DetailItem label="예약 발행" value={draftGenerationReadinessResult.draftGenerationReadinessSummary.checks.scheduledPublishAllowed ? "허용" : "꺼짐"} />
+                    <DetailItem label="Draft Content" value={draftGenerationReadinessResult.draftGenerationReadinessSummary.checks.fixtureHasNoDraftMarkdown && draftGenerationReadinessResult.draftGenerationReadinessSummary.checks.fixtureHasNoDraftHtml ? "비어 있음" : "이미 있음"} />
+                  </div>
+                  <ValidationList
+                    title="Missing Requirements"
+                    items={draftGenerationReadinessResult.draftGenerationReadinessSummary.missingRequirements}
+                    emptyText="missing requirement가 없습니다."
+                    isWarning
+                  />
+                  <details className="read-block">
+                    <summary>초안 생성 준비 기술 상세</summary>
+                    <div className="detail-grid">
+                      <DetailItem label="Fixture Not Published" value={String(draftGenerationReadinessResult.draftGenerationReadinessSummary.checks.fixtureNotPublished)} />
+                      <DetailItem label="Fixture Not Scheduled" value={String(draftGenerationReadinessResult.draftGenerationReadinessSummary.checks.fixtureNotScheduled)} />
+                      <DetailItem label="No Draft Markdown" value={String(draftGenerationReadinessResult.draftGenerationReadinessSummary.checks.fixtureHasNoDraftMarkdown)} />
+                      <DetailItem label="No Draft HTML" value={String(draftGenerationReadinessResult.draftGenerationReadinessSummary.checks.fixtureHasNoDraftHtml)} />
+                      <DetailItem label="Requires Human Approval" value={String(draftGenerationReadinessResult.draftGenerationReadinessSummary.checks.planRequiresHumanApproval)} />
+                      <DetailItem label="DB Read" value={String(draftGenerationReadinessResult.draftGenerationReadinessSummary.sideEffectSummary.dbRead)} />
+                      <DetailItem label="DB Write" value={String(draftGenerationReadinessResult.draftGenerationReadinessSummary.sideEffectSummary.dbWrite)} />
+                      <DetailItem label="Content Generation" value={String(draftGenerationReadinessResult.draftGenerationReadinessSummary.sideEffectSummary.contentGeneration)} />
+                      <DetailItem label="LLM Call" value={String(draftGenerationReadinessResult.draftGenerationReadinessSummary.sideEffectSummary.llmCall)} />
+                      <DetailItem label="Content Mutation" value={String(draftGenerationReadinessResult.draftGenerationReadinessSummary.sideEffectSummary.contentMutation)} />
+                      <DetailItem label="Blogger Write" value={String(draftGenerationReadinessResult.draftGenerationReadinessSummary.sideEffectSummary.bloggerWrite)} />
+                      <DetailItem label="Blogger Publish" value={String(draftGenerationReadinessResult.draftGenerationReadinessSummary.sideEffectSummary.bloggerPublish)} />
+                      <DetailItem label="Token Refresh" value={String(draftGenerationReadinessResult.draftGenerationReadinessSummary.sideEffectSummary.tokenRefresh)} />
+                      <DetailItem label="OAuth Reconnect" value={String(draftGenerationReadinessResult.draftGenerationReadinessSummary.sideEffectSummary.oauthReconnect)} />
+                    </div>
+                    <ValidationList
+                      title="Draft-generation Readiness Blocking Reasons"
+                      items={draftGenerationReadinessResult.draftGenerationReadinessSummary.blockingReasons}
+                      emptyText="blocking reason이 없습니다."
+                      isError
+                    />
+                    <ValidationList
+                      title="Draft-generation Readiness Warnings"
+                      items={draftGenerationReadinessResult.draftGenerationReadinessSummary.warnings}
+                      emptyText="warning이 없습니다."
+                      isWarning
+                    />
+                  </details>
+                </>
+              ) : (
+                <div className="notice">후보 큐에서 linked content item이 있는 행의 “초안 생성 사전 점검”을 실행하세요. 이 버튼은 보기 전용 preflight만 호출합니다.</div>
               )}
             </div>
 

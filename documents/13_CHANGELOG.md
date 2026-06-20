@@ -1,5 +1,28 @@
 # 13_CHANGELOG
 
+## Patch 9F-2F Draft-generation Readiness Preflight
+
+Implemented after Patch 9F-2E:
+
+- Added read-only route `POST /api/daily-content-plans/draft-generation-readiness`.
+- Added deterministic draft-generation readiness preflight logic for linked plan item `cmqlr1v1y0001iwj2gpv2875r`.
+- The preflight checks linked fixture `daily_fixture_cmqlr1v1y0001iwj2gpv2875r`, fixture existence, linked plan item match, non-published/non-scheduled state, empty `draftMarkdown`, empty `draftHtml`, and disabled generation/publish guardrails.
+- Current fixture is structurally ready for future draft generation, but execution readiness remains false.
+- Added `/settings/blogger` `초안 생성 준비 점검` UI with operator-friendly status, missing requirements, disabled generation/LLM buttons, and technical side-effect details.
+- Non-preflight modes are blocked with `draft_generation_readiness_is_preflight_only`.
+
+Policy:
+
+- 9F-2F did not rerun 9F-2B apply.
+- 9F-2F did not rerun 9F-2D apply.
+- 9F-2F did not create, update, or delete Daily Content Plan rows, Daily Content Plan item rows, `content_items`, approval rows, publish attempts, or Blogger rows.
+- 9F-2F did not create `draftMarkdown` or `draftHtml`.
+- This patch did not run content generation, LLM calls, Blogger publish/write/update/draft save/schedule, OAuth reconnect, token refresh, publish approval mutation, publish attempt mutation, deploy, push, or external service writes.
+- Daily plan rows remain `1`, daily plan item rows remain `3`, and `content_items` count remains `2`.
+- The 9E published/success milestone baseline remained unchanged.
+- Recommended next patch: `9F-2G — Operator approval persistence design, schema proposal only, no apply/no mutation`.
+- Alternative next patch: `9F-2H — Draft-generation execution gate design, no LLM/no content mutation`.
+
 ## Patch 9F-2E Daily Content Queue Operator Approval Workflow Draft
 
 Implemented after Patch 9F-2D:

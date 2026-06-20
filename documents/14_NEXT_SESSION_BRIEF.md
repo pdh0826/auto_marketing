@@ -1,12 +1,12 @@
 # 14_NEXT_SESSION_BRIEF
 
-## Current State: Patch 9F-2E Applied
+## Current State: Patch 9F-2F Applied
 
 ```text
 repo: ~/blog-growth-agent
 branch: master
 previous HEAD before 9F-2D apply closeout: b3cf210 Link daily plan item to content fixture
-expected HEAD after 9F-2E commit: local commit `Draft daily content queue approval workflow` (verify exact hash with `git log --oneline -8`)
+expected HEAD after 9F-2F commit: local commit `Add draft generation readiness preflight` (verify exact hash with `git log --oneline -8`)
 milestone: 9E first end-to-end Blogger publish completed; 9F operation automation foundation started
 ```
 
@@ -88,6 +88,12 @@ Current baseline:
 - Items 2 and 3 remain waiting for `content_items` fixtures.
 - 9F-2E did not create approval rows, approval statuses, new content items, or daily plan mutations.
 - 9F-2E did not perform content generation, LLM calls, Blogger writes, publish/scheduled publish, OAuth reconnect, token refresh, publish approval mutation, or publish attempt mutation.
+- 9F-2F added a read-only draft-generation readiness preflight for linked content item `daily_fixture_cmqlr1v1y0001iwj2gpv2875r`.
+- `POST /api/daily-content-plans/draft-generation-readiness` reports structural readiness separately from execution readiness.
+- Current linked fixture is structurally ready for future draft generation because it exists, matches plan item `cmqlr1v1y0001iwj2gpv2875r`, is not published, is not scheduled, and has no generated `draftMarkdown` or `draftHtml`.
+- Execution readiness remains false because operator approval is not persisted, draft-generation write execution is disabled, LLM execution is disabled, and content mutation is disabled.
+- `/settings/blogger` now shows `초안 생성 준비 점검` with linked fixture status, missing requirements, disabled generation/LLM actions, and technical side-effect details.
+- 9F-2F did not create `draftMarkdown` or `draftHtml`, mutate content items, create approval rows, run content generation, call LLM providers, call Blogger, reconnect OAuth, refresh tokens, mutate publish approvals, or mutate publish attempts.
 
 9E first end-to-end publish path:
 
@@ -99,22 +105,22 @@ Current baseline:
 6. `9E-9C` read back `https://mathlearningappl.blogspot.com/2026/06/blog-post.html`.
 7. `9E-9D-APPLY` reconciled internal DB state from `planned`/`planned_only` to `published`/`success`.
 
-Recommended next after 9F-2E:
-
-**9F-2F — Draft-generation readiness preflight for linked content item, no LLM/no Blogger write**
-
-Goal:
-
-- Preview whether linked content item fixture `daily_fixture_cmqlr1v1y0001iwj2gpv2875r` is ready for future draft generation.
-- Keep actual LLM generation, content mutation, Blogger write, publish execution, and scheduling disabled.
-
-Alternative:
+Recommended next after 9F-2F:
 
 **9F-2G — Operator approval persistence design, schema proposal only, no apply/no mutation**
 
 Goal:
 
-- Design approval persistence for operator decisions without applying schema or mutating approval rows.
+- Design how operator approval persistence should work before future draft-generation execution.
+- Keep schema application, approval row writes, LLM calls, content mutation, Blogger write, publish execution, and scheduling disabled.
+
+Alternative:
+
+**9F-2H — Draft-generation execution gate design, no LLM/no content mutation**
+
+Goal:
+
+- Design the future execution gate for draft generation without running LLMs or mutating content rows.
 
 ## 9F Automation Roadmap
 
@@ -132,6 +138,8 @@ Goal:
 | 9F-2D | Daily plan to content-item draft fixture, no LLM/no Blogger write |
 | 9F-2E | Daily Content Queue operator approval workflow draft |
 | 9F-2F | Draft-generation readiness preflight for linked content item |
+| 9F-2G | Operator approval persistence design |
+| 9F-2H | Draft-generation execution gate design |
 | 9F-3A | Alert & Recovery Center |
 
 Core operation principles:
@@ -160,6 +168,7 @@ psql -d blog_growth_agent_dev -c "select \"itemOrder\", \"slotKey\", status, \"t
 psql -d blog_growth_agent_dev -c "select count(*) as content_items_count from content_items;"
 psql -d blog_growth_agent_dev -c "select id, \"planId\", \"itemOrder\", \"slotKey\", status, \"topicSeed\", \"contentIntent\", \"publishMode\", \"contentItemId\", \"draftGenerationAllowed\", \"llmGenerationAllowed\", \"publishExecutionAllowed\", \"scheduledPublishAllowed\", \"requiresHumanApproval\" from blog_daily_content_plan_items where id = 'cmqlr1v1y0001iwj2gpv2875r';"
 psql -d blog_growth_agent_dev -c "select id, status, mode, title, \"targetKeyword\", \"publishedAt\", \"scheduledAt\", md5(coalesce(\"draftMarkdown\", '')) as draft_markdown_md5, md5(coalesce(\"draftHtml\", '')) as draft_html_md5, length(coalesce(\"draftHtml\", '')) as draft_html_len from content_items where id = 'daily_fixture_cmqlr1v1y0001iwj2gpv2875r';"
+curl -sS -X POST http://127.0.0.1:3000/api/daily-content-plans/draft-generation-readiness -H "Content-Type: application/json" --data '{"mode":"preflight","planItemId":"cmqlr1v1y0001iwj2gpv2875r","contentItemId":"daily_fixture_cmqlr1v1y0001iwj2gpv2875r"}'
 ```
 
 Expected DB baseline:
@@ -183,6 +192,7 @@ Expected DB baseline:
 - Target item `cmqlr1v1y0001iwj2gpv2875r.contentItemId = daily_fixture_cmqlr1v1y0001iwj2gpv2875r`.
 - Daily plan items 2 and 3 remain unlinked.
 - The linked fixture content item has `status=planned`, `mode=memo_expand`, empty draft Markdown/HTML, `publishedAt=null`, and `scheduledAt=null`.
+- 9F-2F draft-generation readiness preflight should show `structuralReadyForFutureDraftGeneration=true`, `executionReadyForDraftGeneration=false`, `readinessLevel=structural_ready_but_execution_blocked`, and all write/LLM/Blogger side-effect flags false.
 - Do not rerun 9F-2B apply for the same date unless the user explicitly approves a new date-specific write.
 - Do not rerun 9F-2D apply for item `cmqlr1v1y0001iwj2gpv2875r`; the fixture is already linked.
 
