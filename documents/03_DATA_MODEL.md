@@ -87,6 +87,46 @@ New tables:
 
 The preview API is `POST /api/daily-content-plans/default-plan`. Preview mode performs DB reads only and returns `DailyContentPlanSummary`. Apply mode is implemented behind `BLOG_DAILY_CONTENT_PLAN_WRITE_ENABLED=true` and exact confirmation phrase, but 9F-2A validation only performs feature-flag-disabled apply-negative smoke with `dbWrite=false`.
 
+## Patch 9F-2B Daily Content Plan Row Baseline
+
+Patch 9F-2B created or idempotently confirmed one daily planning fixture for the verified Blogger blog after explicit operator approval. It did not create content drafts, call LLM providers, call Blogger write/publish APIs, reconnect OAuth, refresh tokens, or mutate publish approvals/attempts.
+
+Current daily plan baseline:
+
+- `blog_daily_content_plans_count = 1`
+- `blog_daily_content_plan_items_count = 3`
+- `planId = cmqlr1v1d0000iwj2smxcsajr`
+- `targetBloggerBlogId = 3065973490356135805`
+- `targetBloggerBlogName = 급등포착`
+- `targetBloggerBlogUrl = https://mathlearningappl.blogspot.com/`
+- `operationProfileId = cmqkofe5d0000iwike1bd3c24`
+- `planDateLocal = 2026-06-20`
+- `timezone = Asia/Seoul`
+- `planName = Daily Content Plan`
+- `status = draft`
+- `planKind = daily_auto_content_plan`
+- `operationMode = approval_required`
+- `defaultPublishPolicyPreset = safe_manual_publish`
+- `contentGenerationEnabled = false`
+- `llmCallEnabled = false`
+- `publishExecutionEnabled = false`
+- `scheduledPublishEnabled = false`
+- `plannedItemCount = 3`
+
+The three item rows are deterministic candidate slots:
+
+- `morning_education`: beginner education topic seed, `contentItemId = null`
+- `midday_checklist`: checklist education topic seed, `contentItemId = null`
+- `evening_risk_review`: risk management education topic seed, `contentItemId = null`
+
+All 9F-2B item rows keep generation and publishing disabled:
+
+- `draftGenerationAllowed = false`
+- `llmGenerationAllowed = false`
+- `publishExecutionAllowed = false`
+- `scheduledPublishAllowed = false`
+- `requiresHumanApproval = true`
+
 ## Patch 2 구현 테이블
 
 Patch 2는 PostgreSQL + Prisma 기준으로 다음 테이블을 우선 구현한다.

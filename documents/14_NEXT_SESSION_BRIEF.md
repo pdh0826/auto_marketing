@@ -1,12 +1,12 @@
 # 14_NEXT_SESSION_BRIEF
 
-## Current State: Patch 9F-2A
+## Current State: Patch 9F-2B Closeout
 
 ```text
 repo: ~/blog-growth-agent
 branch: master
-previous HEAD before 9F-2A: 156864f Add operation profile scenario matrix
-expected HEAD after 9F-2A commit: local commit `Add daily content plan preview foundation` (verify exact hash with `git log --oneline -8`)
+previous HEAD before 9F-2B: 4163168 Add daily content plan preview foundation
+expected HEAD after 9F-2B closeout commit: local commit `Document 9F-2B daily content plan creation` (verify exact hash with `git log --oneline -8`)
 milestone: 9E first end-to-end Blogger publish completed; 9F operation automation foundation started
 ```
 
@@ -34,10 +34,19 @@ Current baseline:
 - Operation Profile policy simulation is not policy-enforced and does not affect blockers, `canExecutePublish`, `canPublish`, `canProceedToPublishExecution`, or scheduled publish permissions.
 - Simulation-only `operation_profile_policy_*` blockers are contained inside `operationProfilePolicySimulationSummary` or `operationProfileScenarioMatrixSummary` and must not be copied into top-level publish `blockingReasons`.
 - Daily Auto Content Plan draft foundation is implemented with `blog_daily_content_plans` and `blog_daily_content_plan_items` schema.
-- `POST /api/daily-content-plans/default-plan` returns `DailyContentPlanSummary` for planning metadata preview.
+- `POST /api/daily-content-plans/default-plan` returns `DailyContentPlanSummary` for planning metadata preview and guarded apply.
 - `/settings/blogger` includes Daily Content Plan Preview with deterministic planning slots, guardrails, disabled Apply/Create guidance, and side-effect summary.
-- 9F-2A validation did not create daily plan business rows: `blog_daily_content_plans_count=0`, `blog_daily_content_plan_items_count=0`.
-- Daily plan apply is implemented behind `BLOG_DAILY_CONTENT_PLAN_WRITE_ENABLED=true` plus exact confirmation phrase, but only feature-flag-disabled apply-negative smoke has been run.
+- 9F-2B applied the first default daily plan once after explicit operator approval.
+- Daily plan rows: `blog_daily_content_plans_count=1`.
+- Daily plan item rows: `blog_daily_content_plan_items_count=3`.
+- Daily plan `planId=cmqlr1v1d0000iwj2smxcsajr`.
+- Daily plan `planDateLocal=2026-06-20`.
+- Daily plan `status=draft`, `planKind=daily_auto_content_plan`, `operationMode=approval_required`, and `defaultPublishPolicyPreset=safe_manual_publish`.
+- The plan keeps `contentGenerationEnabled=false`, `llmCallEnabled=false`, `publishExecutionEnabled=false`, and `scheduledPublishEnabled=false`.
+- All daily plan items have `contentItemId=null`, generation/publish flags false, and `requiresHumanApproval=true`.
+- After-apply preview now reports `planWouldBeCreated=false`, `planWouldBeUpdated=true`, `applyAttempted=false`, and `dbWrite=false`.
+- Flag-disabled apply-negative smoke reports blocker `daily_content_plan_write_feature_flag_disabled`, `applyAttempted=false`, `applyBlocked=true`, `applyOk=false`, and `dbWrite=false`.
+- Do not rerun 9F-2B apply. A daily content plan already exists for 2026-06-20. Future work should treat it as existing fixture/readback data unless the user explicitly approves a new date-specific write.
 - `posts.update`, scheduled publish, bulk publish automation, and policy-enforced operation profile gate behavior are not implemented yet.
 
 9F-1A/9F-1B operation profile state:
@@ -57,6 +66,7 @@ Current baseline:
 - 9F-1E added policy enforcement dry-run simulation wiring: `simulationVersion=9F-1E`, `simulationMode=policy_enforcement_dry_run`, `advisoryOnly=true`, `policyEnforced=false`, `actualBlockerImpact=false`, `actualExecutionPermissionImpact=false`, simulated policy blockers only inside the simulation summary, and no blocker/canExecute/canPublish changes.
 - 9F-1F added policy simulation scenario matrix wiring: `matrixVersion=9F-1F`, `matrixMode=policy_simulation_scenario_matrix`, `advisoryOnly=true`, `policyEnforced=false`, actual blocker/permission impact false, scenario rows and totals, and no blocker/canExecute/canPublish changes.
 - 9F-2A added Daily Auto Content Plan draft foundation: schema-only migration, preview API, deterministic plan item metadata, feature-flagged apply implementation, Settings UI preview, no content generation, no LLM call, no content item creation, no Blogger write/publish/schedule, and no daily plan business row writes during validation.
+- 9F-2B created or idempotently confirmed the default daily content plan row and three item rows once after explicit operator approval, while keeping content generation, LLM calls, content item mutation, Blogger writes, publish execution, scheduling, OAuth reconnect, token refresh, publish approval mutation, and publish attempt mutation disabled.
 
 9E first end-to-end publish path:
 
@@ -68,24 +78,24 @@ Current baseline:
 6. `9E-9C` read back `https://mathlearningappl.blogspot.com/2026/06/blog-post.html`.
 7. `9E-9D-APPLY` reconciled internal DB state from `planned`/`planned_only` to `published`/`success`.
 
-Recommended next after 9F-2A:
-
-**9F-2B — Create/Apply Daily Content Plan row, no content generation or publish execution**
-
-Goal:
-
-- 사용자 명시 승인 후 daily content plan row와 item rows를 1회 생성한다.
-- 생성 후 readback/preview/idempotency를 확인한다.
-- content generation, LLM call, content_items creation, Blogger write는 여전히 수행하지 않는다.
-
-Alternative:
+Recommended next after 9F-2B:
 
 **9F-2C — Daily Content Plan UI polish and queue dashboard draft**
 
 Goal:
 
-- 계획 row 생성 전에 preview UI와 queue dashboard를 먼저 더 정리한다.
-- still no LLM/content generation/publish execution.
+- Show the existing daily plan row and item rows as a queue/dashboard draft.
+- Improve the API/UI summary so apply responses surface the applied plan and item count instead of relying only on DB readback.
+- Keep content generation, LLM call, content item creation, Blogger write, publish execution, and scheduling disabled.
+
+Alternative:
+
+**9F-2D — Daily plan to content-item draft fixture, no LLM/no Blogger write**
+
+Goal:
+
+- Convert one daily plan item into a controlled local content-item draft fixture only after explicit approval.
+- Keep LLM, Blogger write, publish, and scheduling disabled.
 
 ## 9F Automation Roadmap
 
@@ -100,6 +110,7 @@ Goal:
 | 9F-2A | Daily Auto Content Plan draft foundation |
 | 9F-2B | Create/apply Daily Content Plan row |
 | 9F-2C | Daily Content Plan UI polish and queue dashboard draft |
+| 9F-2D | Daily plan to content-item draft fixture, no LLM/no Blogger write |
 | 9F-3A | Alert & Recovery Center |
 
 Core operation principles:
@@ -121,6 +132,10 @@ psql -d blog_growth_agent_dev -c "select id, status, \"bloggerPostId\", \"errorT
 psql -d blog_growth_agent_dev -c "select (select count(*) from blogger_draft_saves) as blogger_draft_saves_count, (select count(*) from blogger_draft_approvals) as blogger_draft_approvals_count, (select count(*) from blogger_publish_approvals) as blogger_publish_approvals_count, (select count(*) from blogger_publish_execution_attempts) as blogger_publish_execution_attempts_count, (select count(*) from llm_call_logs) as llm_call_log_count;"
 psql -d blog_growth_agent_dev -c "select count(*) as blog_operation_profiles_count from blog_operation_profiles;"
 psql -d blog_growth_agent_dev -c "select id, \"targetBloggerBlogId\", \"targetBloggerBlogName\", \"targetBloggerBlogUrl\", \"profileName\", status, \"operationMode\", \"defaultPublishPolicyPreset\", timezone, \"allowAutoPublish\", \"allowScheduledPublish\", \"requireOAuthGate\", \"requireFinalHumanApproval\", \"requireExternalWriteRiskAck\", \"requireRollbackPlanAck\", \"requireReadbackAfterPublish\", \"requirePostPublishReconciliation\" from blog_operation_profiles where \"targetBloggerBlogId\" = '3065973490356135805';"
+psql -d blog_growth_agent_dev -c "select count(*) as blog_daily_content_plans_count from blog_daily_content_plans;"
+psql -d blog_growth_agent_dev -c "select count(*) as blog_daily_content_plan_items_count from blog_daily_content_plan_items;"
+psql -d blog_growth_agent_dev -c "select id, \"targetBloggerBlogId\", \"targetBloggerBlogName\", \"targetBloggerBlogUrl\", \"operationProfileId\", \"planDateLocal\", timezone, \"planName\", status, \"planKind\", \"operationMode\", \"defaultPublishPolicyPreset\", \"contentGenerationEnabled\", \"llmCallEnabled\", \"publishExecutionEnabled\", \"scheduledPublishEnabled\", \"plannedItemCount\" from blog_daily_content_plans where id = 'cmqlr1v1d0000iwj2smxcsajr';"
+psql -d blog_growth_agent_dev -c "select \"itemOrder\", \"slotKey\", status, \"topicSeed\", \"contentIntent\", \"publishMode\", \"contentItemId\", \"draftGenerationAllowed\", \"llmGenerationAllowed\", \"publishExecutionAllowed\", \"scheduledPublishAllowed\", \"requiresHumanApproval\" from blog_daily_content_plan_items where \"planId\" = 'cmqlr1v1d0000iwj2smxcsajr' order by \"itemOrder\";"
 ```
 
 Expected DB baseline:
@@ -136,6 +151,12 @@ Expected DB baseline:
 - counts: `1 / 1 / 1 / 1 / 22`
 - `blog_operation_profiles_count = 1`
 - Blog Operation Profile row exists for `targetBloggerBlogId=3065973490356135805`, preset `safe_manual_publish`, `operationMode=approval_required`, auto/scheduled publish false, and OAuth/human approval/readback/reconciliation requirements true.
+- `blog_daily_content_plans_count = 1`
+- `blog_daily_content_plan_items_count = 3`
+- Daily plan `cmqlr1v1d0000iwj2smxcsajr` exists for `planDateLocal=2026-06-20`, `targetBloggerBlogId=3065973490356135805`, status `draft`, kind `daily_auto_content_plan`, operation mode `approval_required`, and preset `safe_manual_publish`.
+- Daily plan generation/publish flags remain false: `contentGenerationEnabled=false`, `llmCallEnabled=false`, `publishExecutionEnabled=false`, and `scheduledPublishEnabled=false`.
+- All daily plan items have `contentItemId=null`, generation/publish flags false, and `requiresHumanApproval=true`.
+- Do not rerun 9F-2B apply for the same date unless the user explicitly approves a new date-specific write.
 
 ## Current State: 2026-06-16 Closeout
 

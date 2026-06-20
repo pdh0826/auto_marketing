@@ -1,5 +1,30 @@
 # 13_CHANGELOG
 
+## Patch 9F-2B Create/Apply Daily Content Plan Row
+
+Applied after Patch 9F-2A:
+
+- Created or idempotently confirmed the default Daily Content Plan row for the verified Blogger blog `급등포착`.
+- Target Blogger blog: `3065973490356135805` / `https://mathlearningappl.blogspot.com/`.
+- Created or idempotently confirmed three deterministic candidate item rows: `morning_education`, `midday_checklist`, and `evening_risk_review`.
+- The guarded apply was executed once by the operator with `BLOG_DAILY_CONTENT_PLAN_WRITE_ENABLED=true` and confirmation phrase `I_UNDERSTAND_THIS_WILL_CREATE_OR_UPDATE_DAILY_CONTENT_PLAN`.
+- DB readback confirmed `blog_daily_content_plans_count=1` and `blog_daily_content_plan_items_count=3`.
+- Created plan baseline: `planId=cmqlr1v1d0000iwj2smxcsajr`, `planDateLocal=2026-06-20`, `status=draft`, `planKind=daily_auto_content_plan`, `operationMode=approval_required`, and `defaultPublishPolicyPreset=safe_manual_publish`.
+- The plan keeps `contentGenerationEnabled=false`, `llmCallEnabled=false`, `publishExecutionEnabled=false`, and `scheduledPublishEnabled=false`.
+- All item rows keep `contentItemId=null`, generation/publish flags false, and `requiresHumanApproval=true`.
+- After-apply preview confirmed `planWouldBeCreated=false`, `planWouldBeUpdated=true`, `applyAttempted=false`, and `dbWrite=false`.
+- Flag-disabled apply-negative smoke confirmed blocker `daily_content_plan_write_feature_flag_disabled`, `applyAttempted=false`, `applyBlocked=true`, `applyOk=false`, and `dbWrite=false`.
+- Minor follow-up candidate: the apply API summary returned `appliedPlan=null` and `appliedItemCount=null`, while DB readback confirmed the rows.
+
+Policy:
+
+- This patch performed exactly one allowed business DB mutation in the daily content plan tables before this closeout documentation pass.
+- This closeout did not rerun the apply.
+- Generation, LLM, publishing, scheduling, Blogger write, OAuth, token, content item, publish approval, and publish attempt mutations remained disabled.
+- The 9E published/success milestone baseline remained unchanged.
+- The next recommended patch is `9F-2C — Daily Content Plan UI polish and queue dashboard draft`.
+- Alternative next patch: `9F-2D — Daily plan to content-item draft fixture, no LLM/no Blogger write`.
+
 ## Patch 9F-2A Daily Auto Content Plan Draft Foundation
 
 Implemented after Patch 9F-1F:

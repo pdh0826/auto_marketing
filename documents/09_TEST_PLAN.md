@@ -156,6 +156,23 @@ Next session start DB guard should use the published/success values above. The c
 - 9F-2A must not run content generation, LLM calls, `content_items` mutation, Blogger publish/write/update/draft save/schedule, OAuth reconnect, token refresh, publish approval mutation, publish attempt mutation, deploy, or push.
 - DB baseline must remain unchanged: 9E published/success values unchanged, counts `1 / 1 / 1 / 1 / 22`, `blog_operation_profiles_count=1`, `blog_daily_content_plans_count=0`, and `blog_daily_content_plan_items_count=0`.
 
+## Patch 9F-2B Create/Apply Daily Content Plan Row
+
+- Preflight passed from the 9F-2A foundation state: clean working tree, target Blogger blog selected, one healthy `safe_manual_publish` Blog Operation Profile, and no existing daily plan rows before the controlled apply.
+- The daily plan apply was executed exactly once by the operator with `BLOG_DAILY_CONTENT_PLAN_WRITE_ENABLED=true` and the confirmation phrase `I_UNDERSTAND_THIS_WILL_CREATE_OR_UPDATE_DAILY_CONTENT_PLAN`.
+- The successful apply returned `mode=apply`, `planVersion=9F-2A`, `profileFound=true`, `profileHealthy=true`, `featureFlagEnabled=true`, `confirmationPhraseAccepted=true`, `applyAttempted=true`, `applyBlocked=false`, `applyOk=true`, `blockingReasons=[]`, and `sideEffectSummary.dbWrite=true`.
+- All non-plan side-effect flags stayed false: Blogger read/write/publish/update/draft save false, token refresh false, OAuth reconnect false, content generation false, content mutation false, approval mutation false, attempt mutation false, LLM call false, external send false, and schema migration false.
+- DB readback confirmed `blog_daily_content_plans_count=1` and `blog_daily_content_plan_items_count=3`.
+- The created plan row is `cmqlr1v1d0000iwj2smxcsajr` for `targetBloggerBlogId=3065973490356135805`, `planDateLocal=2026-06-20`, `status=draft`, `planKind=daily_auto_content_plan`, `operationMode=approval_required`, and `defaultPublishPolicyPreset=safe_manual_publish`.
+- The plan keeps `contentGenerationEnabled=false`, `llmCallEnabled=false`, `publishExecutionEnabled=false`, and `scheduledPublishEnabled=false`.
+- The three item rows are `morning_education`, `midday_checklist`, and `evening_risk_review`; all have `contentItemId=null`, generation/publish flags false, and `requiresHumanApproval=true`.
+- After-apply preview returned `mode=preview`, `planWouldBeCreated=false`, `planWouldBeUpdated=true`, `applyAttempted=false`, `applyOk=false`, `blockingReasons=[]`, and `sideEffectSummary.dbWrite=false`.
+- After turning off the write flag, apply-negative smoke returned blocker `daily_content_plan_write_feature_flag_disabled`, `applyAttempted=false`, `applyBlocked=true`, `applyOk=false`, and `sideEffectSummary.dbWrite=false`.
+- The API summary returned `appliedPlan=null` and `appliedItemCount=null` even though DB readback confirmed the created rows. Treat this as a minor 9F-2C UI/API polish candidate, not a 9F-2B blocker.
+- The 9E published/success milestone baseline remained unchanged: content status `published`, published timestamp `2026-06-19 00:44:03`, draft hashes unchanged, publish attempt status `success`, and counts `blogger_draft_saves / blogger_draft_approvals / blogger_publish_approvals / blogger_publish_execution_attempts / llm_call_logs = 1 / 1 / 1 / 1 / 22`.
+- 9F-2B did not run content generation, LLM calls, `content_items` mutation, Blogger publish/write/update/draft save/schedule, OAuth reconnect, token refresh, publish approval mutation, publish attempt mutation, deploy, push, or external service writes.
+- Do not rerun the 9F-2B apply for `planDateLocal=2026-06-20` unless the user explicitly approves a new date-specific write or a deliberate idempotent reapply test.
+
 ## Patch 9E-9D Post-publish DB Reconciliation
 
 - `POST /api/content-items/[id]/post-publish-reconciliation` route가 있어야 한다.
