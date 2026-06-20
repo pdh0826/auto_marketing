@@ -162,6 +162,32 @@ Post-apply baseline:
 
 The guarded apply updated only the target daily plan item `contentItemId` and inserted exactly one deterministic fixture row. It did not modify the daily plan row, other daily plan items, the published 9E content item, Blogger tables, publish approvals, publish attempts, operation profiles, or LLM call logs.
 
+## Patch 9F-2G Operator Approval Persistence Design
+
+Patch 9F-2G does not add a table, migration, Prisma model, or business row.
+
+The proposed future design is documented in `documents/15_OPERATOR_APPROVAL_PERSISTENCE_DESIGN.md`.
+
+Recommended future tables:
+
+- `blog_daily_content_operator_approvals`
+- `blog_daily_content_operator_approval_events`
+
+The current-state approval table would hold the latest durable operator decision per plan item, linked content item, and approval purpose. The event table would hold an append-only audit trail of approval state transitions.
+
+The proposal keeps approval persistence separate from:
+
+- draft generation
+- LLM calls
+- `content_items.draftMarkdown` / `content_items.draftHtml` mutation
+- Blogger draft save
+- Blogger publish
+- scheduled publish
+- OAuth reconnect
+- token refresh
+
+Future approval writes should be gated by `BLOG_DAILY_CONTENT_OPERATOR_APPROVAL_WRITE_ENABLED=true` and exact confirmation phrase `I_UNDERSTAND_THIS_WILL_PERSIST_OPERATOR_APPROVAL_ONLY`.
+
 ## Patch 2 구현 테이블
 
 Patch 2는 PostgreSQL + Prisma 기준으로 다음 테이블을 우선 구현한다.

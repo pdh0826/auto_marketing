@@ -1,5 +1,27 @@
 # 13_CHANGELOG
 
+## Patch 9F-2G Operator Approval Persistence Design
+
+Implemented after Patch 9F-2F:
+
+- Added design document `documents/15_OPERATOR_APPROVAL_PERSISTENCE_DESIGN.md`.
+- Proposed future tables `blog_daily_content_operator_approvals` and `blog_daily_content_operator_approval_events`.
+- Documented approval purposes, statuses, operator actions, proposed columns, foreign keys, indexes, duplicate prevention strategy, state transitions, future API routes, feature flag, confirmation phrase, smoke plan, rollback plan, and open questions.
+- Updated Data Model, Test Plan, LLM Provider Design, Changelog, and Next Session Brief to point at the proposal.
+
+Policy:
+
+- 9F-2G did not modify `prisma/schema.prisma`.
+- 9F-2G did not create a Prisma migration.
+- 9F-2G did not create, update, or delete business rows.
+- 9F-2G did not create approval rows or events.
+- 9F-2G did not rerun 9F-2B apply or 9F-2D apply.
+- This patch did not run content generation, LLM calls, Blogger publish/write/update/draft save/schedule, OAuth reconnect, token refresh, publish approval mutation, publish attempt mutation, deploy, push, or external service writes.
+- Daily plan rows remain `1`, daily plan item rows remain `3`, and `content_items` count remains `2`.
+- The 9E published/success milestone baseline remained unchanged.
+- Recommended next patch: `9F-2H — Draft-generation execution gate design, no LLM/no content mutation`.
+- Alternative next patch: `9F-2I — Operator approval persistence scaffold migration draft, no apply`.
+
 ## Patch 9F-2F Draft-generation Readiness Preflight
 
 Implemented after Patch 9F-2E:

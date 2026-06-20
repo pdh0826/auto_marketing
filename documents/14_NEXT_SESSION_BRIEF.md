@@ -1,12 +1,12 @@
 # 14_NEXT_SESSION_BRIEF
 
-## Current State: Patch 9F-2F Applied
+## Current State: Patch 9F-2G Applied
 
 ```text
 repo: ~/blog-growth-agent
 branch: master
 previous HEAD before 9F-2D apply closeout: b3cf210 Link daily plan item to content fixture
-expected HEAD after 9F-2F commit: local commit `Add draft generation readiness preflight` (verify exact hash with `git log --oneline -8`)
+expected HEAD after 9F-2G commit: local commit `Design operator approval persistence` (verify exact hash with `git log --oneline -8`)
 milestone: 9E first end-to-end Blogger publish completed; 9F operation automation foundation started
 ```
 
@@ -94,6 +94,10 @@ Current baseline:
 - Execution readiness remains false because operator approval is not persisted, draft-generation write execution is disabled, LLM execution is disabled, and content mutation is disabled.
 - `/settings/blogger` now shows `초안 생성 준비 점검` with linked fixture status, missing requirements, disabled generation/LLM actions, and technical side-effect details.
 - 9F-2F did not create `draftMarkdown` or `draftHtml`, mutate content items, create approval rows, run content generation, call LLM providers, call Blogger, reconnect OAuth, refresh tokens, mutate publish approvals, or mutate publish attempts.
+- 9F-2G added `documents/15_OPERATOR_APPROVAL_PERSISTENCE_DESIGN.md`.
+- 9F-2G proposed future operator approval persistence tables: `blog_daily_content_operator_approvals` and `blog_daily_content_operator_approval_events`.
+- The design covers approval purposes, statuses, actions, columns, foreign keys, indexes, duplicate prevention, state transitions, future API routes, feature flag, confirmation phrase, smoke tests, rollback/manual recovery, and open questions.
+- 9F-2G did not modify `prisma/schema.prisma`, create a migration, persist operator approvals, create approval events, mutate business rows, call LLM providers, generate content, call Blogger, reconnect OAuth, refresh tokens, mutate publish approvals, or mutate publish attempts.
 
 9E first end-to-end publish path:
 
@@ -105,22 +109,22 @@ Current baseline:
 6. `9E-9C` read back `https://mathlearningappl.blogspot.com/2026/06/blog-post.html`.
 7. `9E-9D-APPLY` reconciled internal DB state from `planned`/`planned_only` to `published`/`success`.
 
-Recommended next after 9F-2F:
-
-**9F-2G — Operator approval persistence design, schema proposal only, no apply/no mutation**
-
-Goal:
-
-- Design how operator approval persistence should work before future draft-generation execution.
-- Keep schema application, approval row writes, LLM calls, content mutation, Blogger write, publish execution, and scheduling disabled.
-
-Alternative:
+Recommended next after 9F-2G:
 
 **9F-2H — Draft-generation execution gate design, no LLM/no content mutation**
 
 Goal:
 
-- Design the future execution gate for draft generation without running LLMs or mutating content rows.
+- Design the future execution gate that would consume an operator approval and 9F-2F readiness result before draft generation.
+- Keep actual LLM calls, content mutation, Blogger write, publish execution, and scheduling disabled.
+
+Alternative:
+
+**9F-2I — Operator approval persistence scaffold migration draft, no apply**
+
+Goal:
+
+- Draft the schema/migration scaffold for operator approvals without applying production approvals or running generation.
 
 ## 9F Automation Roadmap
 
@@ -140,6 +144,7 @@ Goal:
 | 9F-2F | Draft-generation readiness preflight for linked content item |
 | 9F-2G | Operator approval persistence design |
 | 9F-2H | Draft-generation execution gate design |
+| 9F-2I | Operator approval persistence scaffold migration draft |
 | 9F-3A | Alert & Recovery Center |
 
 Core operation principles:
@@ -193,6 +198,8 @@ Expected DB baseline:
 - Daily plan items 2 and 3 remain unlinked.
 - The linked fixture content item has `status=planned`, `mode=memo_expand`, empty draft Markdown/HTML, `publishedAt=null`, and `scheduledAt=null`.
 - 9F-2F draft-generation readiness preflight should show `structuralReadyForFutureDraftGeneration=true`, `executionReadyForDraftGeneration=false`, `readinessLevel=structural_ready_but_execution_blocked`, and all write/LLM/Blogger side-effect flags false.
+- `documents/15_OPERATOR_APPROVAL_PERSISTENCE_DESIGN.md` should exist.
+- No operator approval persistence table exists yet, because 9F-2G was design-only.
 - Do not rerun 9F-2B apply for the same date unless the user explicitly approves a new date-specific write.
 - Do not rerun 9F-2D apply for item `cmqlr1v1y0001iwj2gpv2875r`; the fixture is already linked.
 

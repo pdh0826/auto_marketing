@@ -235,6 +235,22 @@ Next session start DB guard should use the published/success values above. The c
 - 9F-2F must not create `draftMarkdown` or `draftHtml`.
 - 9F-2F must not run content generation, LLM calls, Blogger publish/write/update/draft save/schedule, OAuth reconnect, token refresh, publish approval mutation, publish attempt mutation, deploy, push, or external service writes.
 
+## Patch 9F-2G Operator Approval Persistence Design
+
+- `documents/15_OPERATOR_APPROVAL_PERSISTENCE_DESIGN.md` should exist and describe the future operator approval persistence model.
+- 9F-2G should be documentation-only.
+- 9F-2G must not modify `prisma/schema.prisma`.
+- 9F-2G must not create a new `prisma/migrations/*` directory.
+- The design should propose `blog_daily_content_operator_approvals` and `blog_daily_content_operator_approval_events` as future tables, but no schema should be applied in this patch.
+- The design should cover approval purposes, statuses, actions, columns, foreign keys, indexes, duplicate prevention, state transitions, future API routes, feature flag, confirmation phrase, smoke tests, rollback/manual recovery, and open questions.
+- Future write guard should be documented as `BLOG_DAILY_CONTENT_OPERATOR_APPROVAL_WRITE_ENABLED=true` plus `I_UNDERSTAND_THIS_WILL_PERSIST_OPERATOR_APPROVAL_ONLY`.
+- Post-change DB checks should remain `blog_daily_content_plans_count=1`, `blog_daily_content_plan_items_count=3`, `content_items_count=2`, and publish milestone counts `1 / 1 / 1 / 1 / 22`.
+- 9F-2G must not create approval rows or events.
+- 9F-2G must not rerun 9F-2B apply or 9F-2D apply.
+- 9F-2G must not create/update/delete daily plan rows, daily plan item rows, `content_items`, approval rows, publish attempts, or Blogger rows.
+- 9F-2G must not create `draftMarkdown` or `draftHtml`.
+- 9F-2G must not run content generation, LLM calls, Blogger publish/write/update/draft save/schedule, OAuth reconnect, token refresh, publish approval mutation, publish attempt mutation, deploy, push, or external service writes.
+
 ## Patch 9E-9D Post-publish DB Reconciliation
 
 - `POST /api/content-items/[id]/post-publish-reconciliation` route가 있어야 한다.

@@ -65,6 +65,8 @@ Patch 9F-2E adds a Daily Content Queue operator approval workflow draft using ex
 
 Patch 9F-2F adds a draft-generation readiness preflight for the linked daily content fixture. It is structural/read-only only: it may report that a linked fixture is ready for a future generation step, but execution remains disabled. It must not call LLM providers, create `llm_call_logs`, generate `draftMarkdown`, generate `draftHtml`, or mutate `content_items`.
 
+Patch 9F-2G is an operator approval persistence design only. It proposes future approval tables and gates, but does not create schema, persist approvals, call LLM providers, create `llm_call_logs`, generate draft content, or mutate `content_items`.
+
 ## Patch 3 설정 화면
 
 `/settings/llm` 화면은 Patch 2의 PostgreSQL + Prisma CRUD API를 사용해 다음 데이터를 관리한다.
