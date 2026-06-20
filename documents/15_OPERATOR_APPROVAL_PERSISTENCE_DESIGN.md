@@ -286,6 +286,12 @@ The UI should continue to separate:
 - content item mutation
 - Blogger write/publish/schedule
 
+## Relationship To Draft-generation Execution Gate
+
+Patch 9F-2H adds the companion execution gate design in `documents/16_DRAFT_GENERATION_EXECUTION_GATE_DESIGN.md`.
+
+The approval tables proposed here are intended to be read by that future execution gate. Approval persistence should not call LLM providers or mutate `content_items`; draft-generation execution should not create or silently repair approval state. If an approval is missing, mismatched, revoked, superseded, or stale, the execution gate should block before any LLM call or draft mutation.
+
 ## Future Smoke Plan
 
 Required smokes for the implementation patch:

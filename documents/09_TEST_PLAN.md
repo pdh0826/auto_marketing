@@ -251,6 +251,22 @@ Next session start DB guard should use the published/success values above. The c
 - 9F-2G must not create `draftMarkdown` or `draftHtml`.
 - 9F-2G must not run content generation, LLM calls, Blogger publish/write/update/draft save/schedule, OAuth reconnect, token refresh, publish approval mutation, publish attempt mutation, deploy, push, or external service writes.
 
+## Patch 9F-2H Draft-generation Execution Gate Design
+
+- `documents/16_DRAFT_GENERATION_EXECUTION_GATE_DESIGN.md` should exist and describe the future execution gate before any LLM draft generation or `content_items` draft mutation.
+- 9F-2H should be documentation-only.
+- 9F-2H must not modify `prisma/schema.prisma`.
+- 9F-2H must not create a new `prisma/migrations/*` directory.
+- The design should define Layer 0 through Layer 8 gates: target integrity, daily plan item link, draft-generation readiness preflight, operator approval persistence, LLM provider/model, content mutation write flags, confirmation/idempotency, post-write readback, and publish isolation.
+- The design should document stable block reason keys, future feature flags, confirmation phrases, API candidates, run/audit tables, idempotency/replay policy, UI proposal, smoke plan, rollback/manual recovery, and open questions.
+- Future execution must require a linked fixture, structural readiness, non-published/non-scheduled status, absent drafts unless regeneration is approved, an approved non-revoked/non-superseded operator approval, healthy allowed LLM provider/model, all execution flags, exact confirmation phrase, idempotency key, and Blogger/publish/schedule isolation.
+- Post-change DB checks should remain `blog_daily_content_plans_count=1`, `blog_daily_content_plan_items_count=3`, `content_items_count=2`, and publish milestone counts `1 / 1 / 1 / 1 / 22`.
+- 9F-2H must not persist operator approvals, execution runs, or draft generation attempts.
+- 9F-2H must not rerun 9F-2B apply or 9F-2D apply.
+- 9F-2H must not create/update/delete daily plan rows, daily plan item rows, `content_items`, approval rows, publish attempts, or Blogger rows.
+- 9F-2H must not create `draftMarkdown` or `draftHtml`.
+- 9F-2H must not run content generation, LLM calls, Blogger publish/write/update/draft save/schedule, OAuth reconnect, token refresh, publish approval mutation, publish attempt mutation, deploy, push, or external service writes.
+
 ## Patch 9E-9D Post-publish DB Reconciliation
 
 - `POST /api/content-items/[id]/post-publish-reconciliation` route가 있어야 한다.

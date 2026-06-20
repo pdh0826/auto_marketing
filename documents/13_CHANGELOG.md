@@ -1,5 +1,27 @@
 # 13_CHANGELOG
 
+## Patch 9F-2H Draft-generation Execution Gate Design
+
+Implemented after Patch 9F-2G:
+
+- Added design document `documents/16_DRAFT_GENERATION_EXECUTION_GATE_DESIGN.md`.
+- Defined future draft-generation execution gate layers 0 through 8: target integrity, daily plan item link, draft-generation readiness preflight, operator approval persistence, LLM provider/model, content mutation write flags, confirmation/idempotency, post-write readback/reconciliation, and publish isolation.
+- Documented future pass conditions, canonical block reasons, feature flags, confirmation phrases, API candidates, run/audit model, idempotency/replay policy, UI proposal, smoke plan, rollback/manual recovery, relationship to operator approval persistence, and open questions.
+- Updated Test Plan, LLM Provider Design, Changelog, Next Session Brief, and Operator Approval Persistence Design to point at the proposal.
+
+Policy:
+
+- 9F-2H did not modify `prisma/schema.prisma`.
+- 9F-2H did not create a Prisma migration.
+- 9F-2H did not create, update, or delete business rows.
+- 9F-2H did not persist operator approvals, execution runs, or generation attempts.
+- 9F-2H did not rerun 9F-2B apply or 9F-2D apply.
+- This patch did not run content generation, LLM calls, Blogger publish/write/update/draft save/schedule, OAuth reconnect, token refresh, publish approval mutation, publish attempt mutation, deploy, push, or external service writes.
+- Daily plan rows remain `1`, daily plan item rows remain `3`, and `content_items` count remains `2`.
+- The 9E published/success milestone baseline remained unchanged.
+- Recommended next patch: `9F-2I — Operator approval persistence scaffold migration draft, no apply`.
+- Alternative next patch: `9F-2J — Draft-generation execution gate preview API, no LLM/no mutation`.
+
 ## Patch 9F-2G Operator Approval Persistence Design
 
 Implemented after Patch 9F-2F:

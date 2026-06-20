@@ -1,12 +1,12 @@
 # 14_NEXT_SESSION_BRIEF
 
-## Current State: Patch 9F-2G Applied
+## Current State: Patch 9F-2H Applied
 
 ```text
 repo: ~/blog-growth-agent
 branch: master
 previous HEAD before 9F-2D apply closeout: b3cf210 Link daily plan item to content fixture
-expected HEAD after 9F-2G commit: local commit `Design operator approval persistence` (verify exact hash with `git log --oneline -8`)
+expected HEAD after 9F-2H commit: local commit `Design draft generation execution gate` (verify exact hash with `git log --oneline -8`)
 milestone: 9E first end-to-end Blogger publish completed; 9F operation automation foundation started
 ```
 
@@ -98,6 +98,13 @@ Current baseline:
 - 9F-2G proposed future operator approval persistence tables: `blog_daily_content_operator_approvals` and `blog_daily_content_operator_approval_events`.
 - The design covers approval purposes, statuses, actions, columns, foreign keys, indexes, duplicate prevention, state transitions, future API routes, feature flag, confirmation phrase, smoke tests, rollback/manual recovery, and open questions.
 - 9F-2G did not modify `prisma/schema.prisma`, create a migration, persist operator approvals, create approval events, mutate business rows, call LLM providers, generate content, call Blogger, reconnect OAuth, refresh tokens, mutate publish approvals, or mutate publish attempts.
+- 9F-2H added `documents/16_DRAFT_GENERATION_EXECUTION_GATE_DESIGN.md`.
+- 9F-2H defines the future draft-generation execution gate that must pass before a linked Daily Content Plan item can call an LLM and mutate one target `content_items` draft.
+- The design layers are target integrity, daily plan item link, draft-generation readiness preflight, operator approval persistence, LLM provider/model, content mutation write flags, confirmation/idempotency, post-write readback/reconciliation, and publish isolation.
+- The future gate requires linked fixture integrity, non-published/non-scheduled state, absent drafts unless regeneration is approved, 9F-2F structural readiness, a valid non-revoked/non-superseded operator approval, healthy allowed LLM provider/model, all execution flags, exact confirmation phrase, idempotency key, and Blogger/publish/schedule isolation.
+- 9F-2H documents future flags `BLOG_DAILY_CONTENT_DRAFT_GENERATION_PREVIEW_ENABLED`, `BLOG_DAILY_CONTENT_DRAFT_GENERATION_WRITE_ENABLED`, `BLOG_DAILY_CONTENT_DRAFT_GENERATION_LLM_ENABLED`, and `BLOG_DAILY_CONTENT_CONTENT_MUTATION_ENABLED`.
+- 9F-2H documents confirmation phrase `I_UNDERSTAND_THIS_WILL_CALL_LLM_AND_MUTATE_ONE_CONTENT_ITEM_DRAFT` and the Korean UI phrase for operator acknowledgement.
+- 9F-2H did not modify `prisma/schema.prisma`, create a migration, persist operator approvals, create execution runs, mutate business rows, call LLM providers, generate content, call Blogger, reconnect OAuth, refresh tokens, mutate publish approvals, or mutate publish attempts.
 
 9E first end-to-end publish path:
 
@@ -109,22 +116,21 @@ Current baseline:
 6. `9E-9C` read back `https://mathlearningappl.blogspot.com/2026/06/blog-post.html`.
 7. `9E-9D-APPLY` reconciled internal DB state from `planned`/`planned_only` to `published`/`success`.
 
-Recommended next after 9F-2G:
-
-**9F-2H — Draft-generation execution gate design, no LLM/no content mutation**
-
-Goal:
-
-- Design the future execution gate that would consume an operator approval and 9F-2F readiness result before draft generation.
-- Keep actual LLM calls, content mutation, Blogger write, publish execution, and scheduling disabled.
-
-Alternative:
+Recommended next after 9F-2H:
 
 **9F-2I — Operator approval persistence scaffold migration draft, no apply**
 
 Goal:
 
 - Draft the schema/migration scaffold for operator approvals without applying production approvals or running generation.
+
+Alternative:
+
+**9F-2J — Draft-generation execution gate preview API, no LLM/no mutation**
+
+Goal:
+
+- Implement a read-only preview route for the execution gate layers before any LLM execution or content mutation.
 
 ## 9F Automation Roadmap
 
@@ -145,6 +151,7 @@ Goal:
 | 9F-2G | Operator approval persistence design |
 | 9F-2H | Draft-generation execution gate design |
 | 9F-2I | Operator approval persistence scaffold migration draft |
+| 9F-2J | Draft-generation execution gate preview API |
 | 9F-3A | Alert & Recovery Center |
 
 Core operation principles:
@@ -199,7 +206,9 @@ Expected DB baseline:
 - The linked fixture content item has `status=planned`, `mode=memo_expand`, empty draft Markdown/HTML, `publishedAt=null`, and `scheduledAt=null`.
 - 9F-2F draft-generation readiness preflight should show `structuralReadyForFutureDraftGeneration=true`, `executionReadyForDraftGeneration=false`, `readinessLevel=structural_ready_but_execution_blocked`, and all write/LLM/Blogger side-effect flags false.
 - `documents/15_OPERATOR_APPROVAL_PERSISTENCE_DESIGN.md` should exist.
+- `documents/16_DRAFT_GENERATION_EXECUTION_GATE_DESIGN.md` should exist.
 - No operator approval persistence table exists yet, because 9F-2G was design-only.
+- No draft-generation execution route exists yet, because 9F-2H was design-only.
 - Do not rerun 9F-2B apply for the same date unless the user explicitly approves a new date-specific write.
 - Do not rerun 9F-2D apply for item `cmqlr1v1y0001iwj2gpv2875r`; the fixture is already linked.
 
