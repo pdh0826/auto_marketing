@@ -58,6 +58,35 @@ The matrix reports `matrixVersion=9F-1F`, `matrixMode=policy_simulation_scenario
 
 Each scenario may contain simulation-only `operation_profile_policy_*` blockers, warnings, decisions, and an operator takeaway. These codes remain inside `operationProfileScenarioMatrixSummary` only and are not copied into top-level publish `blockingReasons`, final preflight blockers, guarded execution blockers, `canExecutePublish`, `canPublish`, or scheduled publish permissions.
 
+## Patch 9F-2A Daily Auto Content Plan Draft Foundation
+
+Patch 9F-2A adds schema only for daily content planning. It does not create business rows during validation.
+
+New tables:
+
+- `blog_daily_content_plans`
+- `blog_daily_content_plan_items`
+
+`blog_daily_content_plans` stores one draft planning record per Blogger blog and local date. Key policy fields default to the safe manual mode:
+
+- `planKind = daily_auto_content_plan`
+- `operationMode = approval_required`
+- `defaultPublishPolicyPreset = safe_manual_publish`
+- `contentGenerationEnabled = false`
+- `llmCallEnabled = false`
+- `publishExecutionEnabled = false`
+- `scheduledPublishEnabled = false`
+
+`blog_daily_content_plan_items` stores deterministic planning metadata slots. Items are not content drafts and do not create `content_items` rows in Patch 9F-2A. Item guards default to:
+
+- `draftGenerationAllowed = false`
+- `llmGenerationAllowed = false`
+- `publishExecutionAllowed = false`
+- `scheduledPublishAllowed = false`
+- `requiresHumanApproval = true`
+
+The preview API is `POST /api/daily-content-plans/default-plan`. Preview mode performs DB reads only and returns `DailyContentPlanSummary`. Apply mode is implemented behind `BLOG_DAILY_CONTENT_PLAN_WRITE_ENABLED=true` and exact confirmation phrase, but 9F-2A validation only performs feature-flag-disabled apply-negative smoke with `dbWrite=false`.
+
 ## Patch 2 구현 테이블
 
 Patch 2는 PostgreSQL + Prisma 기준으로 다음 테이블을 우선 구현한다.

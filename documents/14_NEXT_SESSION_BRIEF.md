@@ -1,12 +1,12 @@
 # 14_NEXT_SESSION_BRIEF
 
-## Current State: Patch 9F-1F
+## Current State: Patch 9F-2A
 
 ```text
 repo: ~/blog-growth-agent
 branch: master
-previous HEAD before 9F-1F: ad089f5 Add operation profile policy simulation
-expected HEAD after 9F-1F commit: local commit `Add operation profile scenario matrix` (verify exact hash with `git log --oneline -8`)
+previous HEAD before 9F-2A: 156864f Add operation profile scenario matrix
+expected HEAD after 9F-2A commit: local commit `Add daily content plan preview foundation` (verify exact hash with `git log --oneline -8`)
 milestone: 9E first end-to-end Blogger publish completed; 9F operation automation foundation started
 ```
 
@@ -33,6 +33,11 @@ Current baseline:
 - Operation Profile advisory is not policy-enforced and does not affect blockers, `canExecutePublish`, or `canPublish`.
 - Operation Profile policy simulation is not policy-enforced and does not affect blockers, `canExecutePublish`, `canPublish`, `canProceedToPublishExecution`, or scheduled publish permissions.
 - Simulation-only `operation_profile_policy_*` blockers are contained inside `operationProfilePolicySimulationSummary` or `operationProfileScenarioMatrixSummary` and must not be copied into top-level publish `blockingReasons`.
+- Daily Auto Content Plan draft foundation is implemented with `blog_daily_content_plans` and `blog_daily_content_plan_items` schema.
+- `POST /api/daily-content-plans/default-plan` returns `DailyContentPlanSummary` for planning metadata preview.
+- `/settings/blogger` includes Daily Content Plan Preview with deterministic planning slots, guardrails, disabled Apply/Create guidance, and side-effect summary.
+- 9F-2A validation did not create daily plan business rows: `blog_daily_content_plans_count=0`, `blog_daily_content_plan_items_count=0`.
+- Daily plan apply is implemented behind `BLOG_DAILY_CONTENT_PLAN_WRITE_ENABLED=true` plus exact confirmation phrase, but only feature-flag-disabled apply-negative smoke has been run.
 - `posts.update`, scheduled publish, bulk publish automation, and policy-enforced operation profile gate behavior are not implemented yet.
 
 9F-1A/9F-1B operation profile state:
@@ -51,6 +56,7 @@ Current baseline:
 - 9F-1D added exception-only dashboard draft wiring: `dashboardMode=exception_only_draft`, `profileHealthy=true` for the current baseline, focus items first, normal details collapsed, and no blocker/canExecute changes.
 - 9F-1E added policy enforcement dry-run simulation wiring: `simulationVersion=9F-1E`, `simulationMode=policy_enforcement_dry_run`, `advisoryOnly=true`, `policyEnforced=false`, `actualBlockerImpact=false`, `actualExecutionPermissionImpact=false`, simulated policy blockers only inside the simulation summary, and no blocker/canExecute/canPublish changes.
 - 9F-1F added policy simulation scenario matrix wiring: `matrixVersion=9F-1F`, `matrixMode=policy_simulation_scenario_matrix`, `advisoryOnly=true`, `policyEnforced=false`, actual blocker/permission impact false, scenario rows and totals, and no blocker/canExecute/canPublish changes.
+- 9F-2A added Daily Auto Content Plan draft foundation: schema-only migration, preview API, deterministic plan item metadata, feature-flagged apply implementation, Settings UI preview, no content generation, no LLM call, no content item creation, no Blogger write/publish/schedule, and no daily plan business row writes during validation.
 
 9E first end-to-end publish path:
 
@@ -62,25 +68,24 @@ Current baseline:
 6. `9E-9C` read back `https://mathlearningappl.blogspot.com/2026/06/blog-post.html`.
 7. `9E-9D-APPLY` reconciled internal DB state from `planned`/`planned_only` to `published`/`success`.
 
-Recommended next after 9F-1F:
+Recommended next after 9F-2A:
 
-**9F-2A — Daily Auto Content Plan draft, no publish execution**
+**9F-2B — Create/Apply Daily Content Plan row, no content generation or publish execution**
 
 Goal:
 
-- 발행 실행이 아니라 일일 콘텐츠 계획/큐 생성 초안만 만든다.
-- Operation Profile의 `safe_manual_publish` 정책을 참고해 daily plan/advisory를 만든다.
-- Blogger write/publish/schedule은 수행하지 않는다.
-- content generation/LLM call도 아직 실행하지 않고 planning schema/API/UI preview부터 만든다.
+- 사용자 명시 승인 후 daily content plan row와 item rows를 1회 생성한다.
+- 생성 후 readback/preview/idempotency를 확인한다.
+- content generation, LLM call, content_items creation, Blogger write는 여전히 수행하지 않는다.
 
 Alternative:
 
-**9F-1G — Policy simulation scenario matrix polish and planned-item fixture**
+**9F-2C — Daily Content Plan UI polish and queue dashboard draft**
 
 Goal:
 
-- 실제 planned item fixture를 하나 준비하기 전까지 synthetic scenario를 더 명확히 보여준다.
-- 여전히 actual gate blocker/canExecute 변경 없음.
+- 계획 row 생성 전에 preview UI와 queue dashboard를 먼저 더 정리한다.
+- still no LLM/content generation/publish execution.
 
 ## 9F Automation Roadmap
 
@@ -92,9 +97,9 @@ Goal:
 | 9F-1D | Operation Profile settings UX / exception-only dashboard draft |
 | 9F-1E | Policy-enforced publish gate simulation, dry-run only |
 | 9F-1F | Policy simulation UX refinement and scenario matrix |
-| 9F-2A | Daily Auto Content Plan |
-| 9F-2B | Auto Quality Gate |
-| 9F-2C | Auto Publish Scheduler |
+| 9F-2A | Daily Auto Content Plan draft foundation |
+| 9F-2B | Create/apply Daily Content Plan row |
+| 9F-2C | Daily Content Plan UI polish and queue dashboard draft |
 | 9F-3A | Alert & Recovery Center |
 
 Core operation principles:

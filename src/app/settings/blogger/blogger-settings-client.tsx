@@ -14,6 +14,7 @@ import type {
 } from "@/lib/blogger/admin-types";
 import type { BlogOperationProfileResponse } from "@/lib/blog-operation-profiles/operation-profile-summary";
 import type { BlogAdmin } from "@/lib/blogs/admin-types";
+import type { DailyContentPlanResponse } from "@/lib/daily-content-plans/daily-content-plan-summary";
 import { ApiResult, formatListInput, optionalString, parseListInput, requestJson } from "@/lib/form-utils";
 
 interface BloggerConnectionForm {
@@ -66,11 +67,13 @@ export function BloggerSettingsClient() {
   const [secretSelfTest, setSecretSelfTest] = useState<BloggerSecretSelfTestResult | null>(null);
   const [tokenRefreshResult, setTokenRefreshResult] = useState<BloggerTokenRefreshResponse | null>(null);
   const [operationProfileResult, setOperationProfileResult] = useState<BlogOperationProfileResponse | null>(null);
+  const [dailyContentPlanResult, setDailyContentPlanResult] = useState<DailyContentPlanResponse | null>(null);
   const [oauthDryRun, setOauthDryRun] = useState<BloggerOAuthStartDryRun | null>(null);
   const [blogListResult, setBlogListResult] = useState<BloggerBlogListResult | null>(null);
   const [blogListLoadingId, setBlogListLoadingId] = useState<string | null>(null);
   const [refreshingTokenId, setRefreshingTokenId] = useState<string | null>(null);
   const [loadingOperationProfileId, setLoadingOperationProfileId] = useState<string | null>(null);
+  const [loadingDailyContentPlanId, setLoadingDailyContentPlanId] = useState<string | null>(null);
   const [selectingBlogId, setSelectingBlogId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -142,6 +145,7 @@ export function BloggerSettingsClient() {
       setSecretSelfTest(null);
       setTokenRefreshResult(null);
       setOperationProfileResult(null);
+      setDailyContentPlanResult(null);
       setOauthDryRun(null);
       setBlogListResult(null);
       setNotice("Blogger connection을 저장했습니다. Blogger draft/publish는 수행하지 않았습니다.");
@@ -240,6 +244,33 @@ export function BloggerSettingsClient() {
       setError(caught instanceof Error ? caught.message : "Blog Operation Profile preview에 실패했습니다.");
     } finally {
       setLoadingOperationProfileId(null);
+    }
+  }
+
+  async function previewDailyContentPlan(connection: BloggerConnectionAdmin) {
+    setError(null);
+    setNotice(null);
+    setLoadingDailyContentPlanId(connection.id);
+
+    try {
+      const result = await requestJson<ApiResult<DailyContentPlanResponse>>("/api/daily-content-plans/default-plan", {
+        method: "POST",
+        body: JSON.stringify({
+          mode: "preview",
+          targetBloggerBlogId: connection.bloggerBlogId,
+          targetBloggerBlogName: connection.bloggerBlogName,
+          targetBloggerBlogUrl: connection.bloggerBlogUrl,
+          planDateLocal: getTodayInSeoul(),
+          timezone: "Asia/Seoul",
+          defaultPublishPolicyPreset: "safe_manual_publish"
+        })
+      });
+      setDailyContentPlanResult(result.data);
+      setNotice("Daily Content Plan preview를 생성했습니다. Plan row 저장, content generation, LLM call, Blogger write/publish는 수행하지 않았습니다.");
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Daily Content Plan preview에 실패했습니다.");
+    } finally {
+      setLoadingDailyContentPlanId(null);
     }
   }
 
@@ -515,6 +546,14 @@ export function BloggerSettingsClient() {
                         onClick={() => void previewOperationProfile(connection)}
                       >
                         {loadingOperationProfileId === connection.id ? "Profile Preview 중" : "Operation Profile Preview"}
+                      </button>
+                      <button
+                        className="button secondary"
+                        type="button"
+                        disabled={!connection.bloggerBlogId || loadingDailyContentPlanId === connection.id}
+                        onClick={() => void previewDailyContentPlan(connection)}
+                      >
+                        {loadingDailyContentPlanId === connection.id ? "Daily Plan Preview 중" : "Daily Plan Preview"}
                       </button>
                     </div>
                   </td>
@@ -798,6 +837,127 @@ export function BloggerSettingsClient() {
         )}
       </section>
 
+      <section className="admin-section">
+        <div className="section-heading">
+          <div>
+            <h2>Daily Content Plan Preview</h2>
+            <p className="muted">9F-2A planning-only draft입니다. content generation, LLM call, content item 생성, Blogger write/publish/schedule은 실행하지 않습니다.</p>
+          </div>
+        </div>
+        <div className="notice warning">
+          <strong>Daily plan apply is disabled in this UI</strong>
+          <p>Connection List의 Daily Plan Preview 버튼은 deterministic planning metadata만 생성합니다. Daily plan row 저장은 feature flag와 명시 승인 전까지 실행하지 않습니다.</p>
+        </div>
+        <div className="form-actions">
+          <button className="button secondary" type="button" disabled>
+            Daily Plan Apply/Create disabled
+          </button>
+        </div>
+        {dailyContentPlanResult ? (
+          <div className="read-block">
+            <h3>Daily Content Plan Draft</h3>
+            <div className="notice">
+              <strong>Preview only</strong>
+              <p>
+                이 결과는 daily content queue 초안입니다. Plan row 저장, 본문 생성, LLM 호출, content_items 생성, Blogger draft/publish/schedule은 수행하지 않았습니다.
+              </p>
+            </div>
+            <div className="detail-grid">
+              <DetailItem label="Checked At" value={new Date(dailyContentPlanResult.checkedAt).toLocaleString()} />
+              <DetailItem label="Mode" value={dailyContentPlanResult.dailyContentPlanSummary.mode} />
+              <DetailItem label="Plan Version" value={dailyContentPlanResult.dailyContentPlanSummary.planVersion} />
+              <DetailItem label="Plan Mode" value={dailyContentPlanResult.dailyContentPlanSummary.planMode} />
+              <DetailItem label="Target Blogger Blog" value={dailyContentPlanResult.dailyContentPlanSummary.targetBloggerBlogName ?? "-"} />
+              <DetailItem label="Target Blogger Blog ID" value={dailyContentPlanResult.dailyContentPlanSummary.targetBloggerBlogId || "-"} />
+              <DetailItem label="Plan Date" value={dailyContentPlanResult.dailyContentPlanSummary.planDateLocal || "-"} />
+              <DetailItem label="Timezone" value={dailyContentPlanResult.dailyContentPlanSummary.timezone} />
+              <DetailItem label="Profile Found" value={String(dailyContentPlanResult.dailyContentPlanSummary.profileFound)} />
+              <DetailItem label="Profile Healthy" value={String(dailyContentPlanResult.dailyContentPlanSummary.profileHealthy)} />
+              <DetailItem label="Profile Preset" value={dailyContentPlanResult.dailyContentPlanSummary.defaultPublishPolicyPreset} />
+              <DetailItem label="Operation Mode" value={dailyContentPlanResult.dailyContentPlanSummary.operationMode} />
+              <DetailItem label="Would Create" value={String(dailyContentPlanResult.dailyContentPlanSummary.planWouldBeCreated)} />
+              <DetailItem label="Would Update" value={String(dailyContentPlanResult.dailyContentPlanSummary.planWouldBeUpdated)} />
+            </div>
+            <div className="detail-grid">
+              <DetailItem label="Content Generation Enabled" value={String(dailyContentPlanResult.dailyContentPlanSummary.contentGenerationEnabled)} />
+              <DetailItem label="LLM Call Enabled" value={String(dailyContentPlanResult.dailyContentPlanSummary.llmCallEnabled)} />
+              <DetailItem label="Publish Execution Enabled" value={String(dailyContentPlanResult.dailyContentPlanSummary.publishExecutionEnabled)} />
+              <DetailItem label="Scheduled Publish Enabled" value={String(dailyContentPlanResult.dailyContentPlanSummary.scheduledPublishEnabled)} />
+              <DetailItem label="Planned Items" value={String(dailyContentPlanResult.dailyContentPlanSummary.planTotals.plannedItemCount)} />
+              <DetailItem label="Approval Required Items" value={String(dailyContentPlanResult.dailyContentPlanSummary.planTotals.approvalRequiredCount)} />
+              <DetailItem label="LLM Allowed Items" value={String(dailyContentPlanResult.dailyContentPlanSummary.planTotals.llmGenerationAllowedCount)} />
+              <DetailItem label="Publish Allowed Items" value={String(dailyContentPlanResult.dailyContentPlanSummary.planTotals.publishExecutionAllowedCount)} />
+            </div>
+            <table className="admin-table">
+              <thead>
+                <tr>
+                  <th>Slot</th>
+                  <th>Topic Seed</th>
+                  <th>Intent</th>
+                  <th>Approval</th>
+                  <th>Publish</th>
+                  <th>Risk Note</th>
+                </tr>
+              </thead>
+              <tbody>
+                {dailyContentPlanResult.dailyContentPlanSummary.planItems.map((item) => (
+                  <tr key={item.syntheticPlanItemId}>
+                    <td>
+                      {item.slotKey}
+                      <div className="muted">#{item.itemOrder}</div>
+                    </td>
+                    <td>{item.topicSeed}</td>
+                    <td>
+                      {item.contentIntent}
+                      <div className="muted">{item.audienceHint}</div>
+                    </td>
+                    <td>{item.requiresHumanApproval ? "required" : "not required"}</td>
+                    <td>{item.publishExecutionAllowed ? "allowed" : "disabled"}</td>
+                    <td>{item.riskNote}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <div className="detail-grid">
+              <DetailItem label="No Content Generation" value={String(dailyContentPlanResult.dailyContentPlanSummary.guardrailSummary.noContentGeneration)} />
+              <DetailItem label="No LLM Call" value={String(dailyContentPlanResult.dailyContentPlanSummary.guardrailSummary.noLlmCall)} />
+              <DetailItem label="No Content Mutation" value={String(dailyContentPlanResult.dailyContentPlanSummary.guardrailSummary.noContentItemMutation)} />
+              <DetailItem label="No Blogger Write" value={String(dailyContentPlanResult.dailyContentPlanSummary.guardrailSummary.noBloggerWrite)} />
+              <DetailItem label="No Publish Execution" value={String(dailyContentPlanResult.dailyContentPlanSummary.guardrailSummary.noPublishExecution)} />
+              <DetailItem label="No Scheduled Publish" value={String(dailyContentPlanResult.dailyContentPlanSummary.guardrailSummary.noScheduledPublish)} />
+              <DetailItem label="Profile Policy Used" value={String(dailyContentPlanResult.dailyContentPlanSummary.guardrailSummary.profilePolicyUsed)} />
+            </div>
+            <ValidationList
+              title="Daily Content Plan Blocking Reasons"
+              items={dailyContentPlanResult.dailyContentPlanSummary.blockingReasons}
+              emptyText="blocking reason이 없습니다."
+              isError
+            />
+            <ValidationList
+              title="Daily Content Plan Warnings"
+              items={dailyContentPlanResult.dailyContentPlanSummary.warnings}
+              emptyText="warning이 없습니다."
+              isWarning
+            />
+            <div className="detail-grid">
+              <DetailItem label="DB Read" value={String(dailyContentPlanResult.dailyContentPlanSummary.sideEffectSummary.dbRead)} />
+              <DetailItem label="DB Write" value={String(dailyContentPlanResult.dailyContentPlanSummary.sideEffectSummary.dbWrite)} />
+              <DetailItem label="Schema Migration" value={String(dailyContentPlanResult.dailyContentPlanSummary.sideEffectSummary.schemaMigration)} />
+              <DetailItem label="Blogger Write" value={String(dailyContentPlanResult.dailyContentPlanSummary.sideEffectSummary.bloggerWrite)} />
+              <DetailItem label="Blogger Publish" value={String(dailyContentPlanResult.dailyContentPlanSummary.sideEffectSummary.bloggerPublish)} />
+              <DetailItem label="Blogger Draft Save" value={String(dailyContentPlanResult.dailyContentPlanSummary.sideEffectSummary.bloggerDraftSave)} />
+              <DetailItem label="Token Refresh" value={String(dailyContentPlanResult.dailyContentPlanSummary.sideEffectSummary.tokenRefresh)} />
+              <DetailItem label="OAuth Reconnect" value={String(dailyContentPlanResult.dailyContentPlanSummary.sideEffectSummary.oauthReconnect)} />
+              <DetailItem label="Content Generation" value={String(dailyContentPlanResult.dailyContentPlanSummary.sideEffectSummary.contentGeneration)} />
+              <DetailItem label="Content Mutation" value={String(dailyContentPlanResult.dailyContentPlanSummary.sideEffectSummary.contentMutation)} />
+              <DetailItem label="LLM Call" value={String(dailyContentPlanResult.dailyContentPlanSummary.sideEffectSummary.llmCall)} />
+            </div>
+          </div>
+        ) : (
+          <div className="notice">Connection List에서 verified Blogger Blog가 있는 connection의 Daily Plan Preview를 실행하세요.</div>
+        )}
+      </section>
+
       {statusPreview ? (
         <section className="admin-section">
           <div className="section-heading">
@@ -1044,6 +1204,15 @@ function formatNullableBoolean(value: boolean | null | undefined) {
     return "-";
   }
   return value ? "true" : "false";
+}
+
+function getTodayInSeoul() {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Seoul",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).format(new Date());
 }
 
 function ValidationList({ title, items, emptyText, isError, isWarning }: { title: string; items: string[]; emptyText: string; isError?: boolean; isWarning?: boolean }) {

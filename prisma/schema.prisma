@@ -689,6 +689,70 @@ model BlogOperationProfile {
   @@map("blog_operation_profiles")
 }
 
+model BlogDailyContentPlan {
+  id                         String   @id @default(cuid())
+  createdAt                  DateTime @default(now())
+  updatedAt                  DateTime @updatedAt
+  targetBloggerBlogId        String
+  targetBloggerBlogName      String?
+  targetBloggerBlogUrl       String?
+  operationProfileId         String?
+  planDateLocal              String
+  timezone                   String   @default("Asia/Seoul")
+  planName                   String   @default("Daily Content Plan")
+  status                     String   @default("draft")
+  planKind                   String   @default("daily_auto_content_plan")
+  operationMode              String   @default("approval_required")
+  defaultPublishPolicyPreset String   @default("safe_manual_publish")
+  contentGenerationEnabled   Boolean  @default(false)
+  llmCallEnabled             Boolean  @default(false)
+  publishExecutionEnabled    Boolean  @default(false)
+  scheduledPublishEnabled    Boolean  @default(false)
+  plannedItemCount           Int      @default(0)
+  policySnapshotJson         Json?
+  planSummaryJson            Json?
+  guardrailJson              Json?
+
+  items BlogDailyContentPlanItem[]
+
+  @@unique([targetBloggerBlogId, planDateLocal])
+  @@index([targetBloggerBlogId])
+  @@index([planDateLocal])
+  @@index([status])
+  @@index([defaultPublishPolicyPreset])
+  @@map("blog_daily_content_plans")
+}
+
+model BlogDailyContentPlanItem {
+  id                        String   @id @default(cuid())
+  createdAt                 DateTime @default(now())
+  updatedAt                 DateTime @updatedAt
+  planId                    String
+  itemOrder                 Int
+  slotKey                   String
+  status                    String   @default("candidate")
+  topicSeed                 String
+  contentIntent             String
+  audienceHint              String?
+  riskNote                  String?
+  publishMode               String   @default("approval_required")
+  contentItemId             String?
+  draftGenerationAllowed    Boolean  @default(false)
+  llmGenerationAllowed      Boolean  @default(false)
+  publishExecutionAllowed   Boolean  @default(false)
+  scheduledPublishAllowed   Boolean  @default(false)
+  requiresHumanApproval     Boolean  @default(true)
+  policySnapshotJson        Json?
+  itemPlanJson              Json?
+
+  plan BlogDailyContentPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@index([planId])
+  @@index([status])
+  @@index([contentItemId])
+  @@map("blog_daily_content_plan_items")
+}
+
 model BloggerConnectionSecret {
   id             String            @id @default(cuid())
   connectionId   String

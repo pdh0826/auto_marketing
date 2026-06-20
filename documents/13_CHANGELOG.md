@@ -1,5 +1,28 @@
 # 13_CHANGELOG
 
+## Patch 9F-2A Daily Auto Content Plan Draft Foundation
+
+Implemented after Patch 9F-1F:
+
+- Added `BlogDailyContentPlan` / `blog_daily_content_plans` schema.
+- Added `BlogDailyContentPlanItem` / `blog_daily_content_plan_items` schema.
+- Added schema-only migration `20260620000100_add_blog_daily_content_plans`.
+- Added `POST /api/daily-content-plans/default-plan`.
+- Added `DailyContentPlanSummary` with `planVersion=9F-2A` and `planMode=daily_auto_content_plan_draft`.
+- Added deterministic/static daily planning metadata preview with three candidate slots: `morning_education`, `midday_checklist`, and `evening_risk_review`.
+- Added guarded apply implementation behind `BLOG_DAILY_CONTENT_PLAN_WRITE_ENABLED=true` plus exact confirmation phrase, but validation only performs feature-flag-disabled apply-negative smoke.
+- Added `/settings/blogger` Daily Content Plan Preview UI with plan items, guardrails, side-effect summary, and disabled Apply/Create guidance.
+
+Policy:
+
+- This patch added schema/migration only for daily planning and did not execute daily plan business row writes during validation.
+- This patch did not create `content_items`, generate article content, call LLM providers, create `llm_call_logs`, run Blogger publish/write/update/draft save/schedule, run OAuth reconnect, run token refresh, mutate publish approvals, mutate publish attempts, deploy, push, or perform external service writes.
+- The 9E published/success milestone baseline remained unchanged.
+- `blog_operation_profiles_count` remains `1`.
+- `blog_daily_content_plans_count = 0` and `blog_daily_content_plan_items_count = 0` after validation.
+- The next recommended patch is `9F-2B — Create/Apply Daily Content Plan row, no content generation or publish execution`.
+- Alternative next patch: `9F-2C — Daily Content Plan UI polish and queue dashboard draft`.
+
 ## Patch 9F-1F Policy Simulation Scenario Matrix
 
 Implemented after Patch 9F-1E:

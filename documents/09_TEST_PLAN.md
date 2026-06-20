@@ -138,6 +138,24 @@ Next session start DB guard should use the published/success values above. The c
 - 9F-1F must not run Blogger publish/write, `posts.update`, draft save, OAuth reconnect, token refresh, content generation, LLM calls, business DB mutation, content mutation, publish approval mutation, publish attempt mutation, migration, deploy, or push.
 - DB baseline must remain unchanged: 9E published/success values unchanged, counts `1 / 1 / 1 / 1 / 22`, and `blog_operation_profiles_count=1`.
 
+## Patch 9F-2A Daily Auto Content Plan Draft Foundation
+
+- Prisma models/tables `BlogDailyContentPlan` / `blog_daily_content_plans` and `BlogDailyContentPlanItem` / `blog_daily_content_plan_items` should exist.
+- `POST /api/daily-content-plans/default-plan` should support `mode=preview`.
+- Preview should return `dailyContentPlanSummary.checked=true`, `planVersion=9F-2A`, and `planMode=daily_auto_content_plan_draft`.
+- Preview should read the target Blog Operation Profile and return `profileFound=true`, `profileHealthy=true`, `operationMode=approval_required`, and `defaultPublishPolicyPreset=safe_manual_publish` for the current target blog.
+- Preview should return deterministic/static planning metadata only, with at least three plan items: `morning_education`, `midday_checklist`, and `evening_risk_review`.
+- Preview must report `contentGenerationEnabled=false`, `llmCallEnabled=false`, `publishExecutionEnabled=false`, and `scheduledPublishEnabled=false`.
+- Plan totals should report `llmGenerationAllowedCount=0`, `publishExecutionAllowedCount=0`, and `scheduledPublishAllowedCount=0`.
+- Guardrail summary should report no content generation, no LLM call, no content item mutation, no Blogger write, no publish execution, and no scheduled publish.
+- Preview `sideEffectSummary.dbWrite` must be false.
+- Apply mode is implemented but must be blocked unless `BLOG_DAILY_CONTENT_PLAN_WRITE_ENABLED=true` and the exact confirmation phrase are present.
+- Feature-flag-disabled apply-negative smoke should return `mode=apply`, `featureFlagEnabled=false`, `confirmationPhraseAccepted=true`, `applyAttempted=false`, `applyBlocked=true`, `applyOk=false`, blocker `daily_content_plan_write_feature_flag_disabled`, and `sideEffectSummary.dbWrite=false`.
+- `/settings/blogger` should show Daily Content Plan Preview with plan items, guardrails, side-effect summary, and disabled Apply/Create guidance.
+- 9F-2A validation must not create `blog_daily_content_plans` or `blog_daily_content_plan_items` business rows.
+- 9F-2A must not run content generation, LLM calls, `content_items` mutation, Blogger publish/write/update/draft save/schedule, OAuth reconnect, token refresh, publish approval mutation, publish attempt mutation, deploy, or push.
+- DB baseline must remain unchanged: 9E published/success values unchanged, counts `1 / 1 / 1 / 1 / 22`, `blog_operation_profiles_count=1`, `blog_daily_content_plans_count=0`, and `blog_daily_content_plan_items_count=0`.
+
 ## Patch 9E-9D Post-publish DB Reconciliation
 
 - `POST /api/content-items/[id]/post-publish-reconciliation` route가 있어야 한다.
