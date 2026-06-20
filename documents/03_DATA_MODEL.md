@@ -127,9 +127,9 @@ All 9F-2B item rows keep generation and publishing disabled:
 - `scheduledPublishAllowed = false`
 - `requiresHumanApproval = true`
 
-## Patch 9F-2D Daily Plan To Content Item Fixture Guard
+## Patch 9F-2D Daily Plan To Content Item Fixture Apply
 
-Patch 9F-2D adds a guarded bridge from one daily plan item to one deterministic `content_items` fixture. The code path is prepared, but the fixture write requires explicit operator approval before execution.
+Patch 9F-2D added a guarded bridge from one daily plan item to one deterministic `content_items` fixture. The approved apply was executed exactly once after the operator provided the required Korean approval phrase.
 
 Target item:
 
@@ -139,9 +139,9 @@ Target item:
 - `slotKey = morning_education`
 - `contentIntent = beginner_education`
 
-The proposed fixture is deterministic and non-publishable:
+The applied fixture is deterministic and non-publishable:
 
-- deterministic content item id: `daily_fixture_cmqlr1v1y0001iwj2gpv2875r`
+- content item id: `daily_fixture_cmqlr1v1y0001iwj2gpv2875r`
 - `mode = memo_expand`
 - `status = planned`
 - `title` and `targetKeyword` come from the plan item `topicSeed`
@@ -152,7 +152,15 @@ The proposed fixture is deterministic and non-publishable:
 - `publishedAt = null`
 - `scheduledAt = null`
 
-The guarded apply route may update only the target daily plan item `contentItemId` and may insert or idempotently confirm only the deterministic fixture row. It must not modify the daily plan row, other daily plan items, the published 9E content item, Blogger tables, publish approvals, publish attempts, operation profiles, or LLM call logs.
+Post-apply baseline:
+
+- `content_items_count = 2`
+- `blog_daily_content_plans_count = 1`
+- `blog_daily_content_plan_items_count = 3`
+- target item `contentItemId = daily_fixture_cmqlr1v1y0001iwj2gpv2875r`
+- other daily plan items remain unlinked
+
+The guarded apply updated only the target daily plan item `contentItemId` and inserted exactly one deterministic fixture row. It did not modify the daily plan row, other daily plan items, the published 9E content item, Blogger tables, publish approvals, publish attempts, operation profiles, or LLM call logs.
 
 ## Patch 2 구현 테이블
 

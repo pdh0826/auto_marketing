@@ -1,6 +1,6 @@
 # 13_CHANGELOG
 
-## Patch 9F-2D Daily Plan To Content Item Fixture Guard
+## Patch 9F-2D Daily Plan To Content Item Fixture Apply
 
 Implemented after Patch 9F-2C:
 
@@ -10,15 +10,22 @@ Implemented after Patch 9F-2C:
 - Added deterministic proposed fixture id `daily_fixture_cmqlr1v1y0001iwj2gpv2875r`, with `mode=memo_expand`, `status=planned`, no generated draft Markdown, no generated HTML, no publish timestamp, and no schedule timestamp.
 - Added feature flag and confirmation phrase guards: `BLOG_DAILY_PLAN_CONTENT_ITEM_FIXTURE_WRITE_ENABLED=true` plus `I_UNDERSTAND_THIS_WILL_CREATE_OR_LINK_ONE_CONTENT_ITEM_FIXTURE`.
 - Added `/settings/blogger` preview-only fixture status/action affordance for Daily Content Queue rows.
+- Executed the approved apply exactly once after the operator provided the Korean approval phrase.
+- Created one deterministic content item fixture: `daily_fixture_cmqlr1v1y0001iwj2gpv2875r`.
+- Linked only target plan item `cmqlr1v1y0001iwj2gpv2875r` to that fixture.
+- Post-apply readback confirmed daily plan rows remained `1`, daily plan item rows remained `3`, and `content_items` count changed from `1` to `2`.
+- Other daily plan items remain unlinked.
+- After-apply preview confirmed `fixtureAlreadyLinked=true`, `fixtureWouldBeCreated=false`, and `dbWrite=false`.
+- Feature-flag-disabled apply-negative remained blocked with `dbWrite=false`.
 
 Policy:
 
-- The 9F-2D fixture apply was not executed during this implementation pass because the required operator approval phrase was not provided.
-- No `content_items` row was inserted and no Daily Content Plan item was linked during this pass.
-- Preview and feature-flag-disabled apply-negative flows remain DB-write-safe.
+- The only approved business mutation was one deterministic `content_items` fixture insert plus one target daily plan item `contentItemId` update.
+- Preview and feature-flag-disabled apply-negative flows remain DB-write-safe after apply.
 - This patch did not rerun 9F-2B apply, create/update/delete daily plan rows, mutate other daily plan items, mutate the published 9E content item, run content generation, call LLM providers, run Blogger publish/write/update/draft save/schedule, reconnect OAuth, refresh tokens, mutate publish approvals, mutate publish attempts, deploy, push, or external service writes.
-- Next operational step: operator may approve the one-time 9F-2D fixture apply with the exact phrase from the runbook.
-- Recommended next patch after approved apply: `9F-2E — Daily Content Queue operator approval workflow draft, no generation/no publish execution`.
+- Do not rerun 9F-2D apply for item `cmqlr1v1y0001iwj2gpv2875r`; the fixture is already linked.
+- Recommended next patch: `9F-2E — Daily Content Queue operator approval workflow draft, no generation/no publish execution`.
+- Alternative next patch: `9F-2F — Draft-generation readiness preflight for linked content item, no LLM/no Blogger write`.
 
 ## Patch 9F-2C Daily Content Plan UI Polish And Queue Dashboard Draft
 

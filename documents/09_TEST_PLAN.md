@@ -187,18 +187,21 @@ Next session start DB guard should use the published/success values above. The c
 - Post-change read-only DB checks should remain `blog_daily_content_plans_count=1`, `blog_daily_content_plan_items_count=3`, and publish milestone counts `1 / 1 / 1 / 1 / 22`.
 - 9F-2C must not rerun 9F-2B apply, create/update/delete daily plan rows or item rows, run content generation, call LLM providers, mutate `content_items`, run Blogger publish/write/update/draft save/schedule, reconnect OAuth, refresh tokens, mutate publish approvals, mutate publish attempts, deploy, or push.
 
-## Patch 9F-2D Daily Plan To Content Item Fixture Guard
+## Patch 9F-2D Daily Plan To Content Item Fixture Apply
 
 - `POST /api/daily-content-plans/content-item-fixture` should support `mode=preview` and `mode=apply`.
 - Target item for 9F-2D is `cmqlr1v1y0001iwj2gpv2875r`, `itemOrder=1`, `slotKey=morning_education`.
 - Preview mode should read the plan item, verify it belongs to plan `cmqlr1v1d0000iwj2smxcsajr`, return deterministic proposed fixture summary, and keep `sideEffectSummary.dbWrite=false`.
-- Preview should report `patchVersion=9F-2D`, `fixtureWouldBeCreated=true` when no linked fixture exists, `fixtureAlreadyLinked=false`, `applyAttempted=false`, `applyOk=false`, `blockingReasons=[]`, and all Blogger/LLM/generation side-effect flags false.
+- Pre-apply preview should report `patchVersion=9F-2D`, `fixtureWouldBeCreated=true` when no linked fixture exists, `fixtureAlreadyLinked=false`, `applyAttempted=false`, `applyOk=false`, `blockingReasons=[]`, and all Blogger/LLM/generation side-effect flags false.
 - Apply mode must be blocked unless `BLOG_DAILY_PLAN_CONTENT_ITEM_FIXTURE_WRITE_ENABLED=true` and confirmation phrase `I_UNDERSTAND_THIS_WILL_CREATE_OR_LINK_ONE_CONTENT_ITEM_FIXTURE` are both present.
 - Feature-flag-disabled apply-negative smoke should return `mode=apply`, `featureFlagEnabled=false`, `confirmationPhraseAccepted=true`, `applyAttempted=false`, `applyBlocked=true`, `applyOk=false`, blocker `daily_plan_content_item_fixture_write_feature_flag_disabled`, and `sideEffectSummary.dbWrite=false`.
-- The proposed fixture should be deterministic: id `daily_fixture_cmqlr1v1y0001iwj2gpv2875r`, `mode=memo_expand`, `status=planned`, title/target keyword from the target item topic seed, no generated draft Markdown, no generated HTML, no publish/schedule timestamps.
+- The applied fixture is deterministic: id `daily_fixture_cmqlr1v1y0001iwj2gpv2875r`, `mode=memo_expand`, `status=planned`, title/target keyword from the target item topic seed, no generated draft Markdown, no generated HTML, no publish/schedule timestamps.
 - `/settings/blogger` should expose a preview-only content item fixture action from the Daily Content Queue. It must not wire an automatic apply/write button.
-- Before explicit operator approval, validation must not insert `content_items` rows and must not update `blog_daily_content_plan_items.contentItemId`.
-- If explicit approval is later provided, apply may insert or idempotently confirm exactly one fixture and update only the target item `contentItemId`.
+- 9F-2D approved apply was executed exactly once after the Korean approval phrase was provided.
+- The approved apply returned `featureFlagEnabled=true`, `confirmationPhraseAccepted=true`, `applyAttempted=true`, `applyBlocked=false`, `applyOk=true`, `appliedContentItemId=daily_fixture_cmqlr1v1y0001iwj2gpv2875r`, `linkedPlanItemId=cmqlr1v1y0001iwj2gpv2875r`, `createdContentItem=true`, `updatedPlanItem=true`, and `sideEffectSummary.dbWrite=true`.
+- Post-apply readback should show `content_items_count_after=2`, daily plan rows `1`, daily plan item rows `3`, target item linked to `daily_fixture_cmqlr1v1y0001iwj2gpv2875r`, and only the target item linked.
+- After-apply preview should return `fixtureAlreadyLinked=true`, `fixtureWouldBeCreated=false`, `applyAttempted=false`, `applyOk=false`, `blockingReasons=[]`, and `sideEffectSummary.dbWrite=false`.
+- After-apply feature-flag-disabled apply-negative should still return blocker `daily_plan_content_item_fixture_write_feature_flag_disabled` with `dbWrite=false`.
 - 9F-2D must not rerun 9F-2B apply, mutate daily plan rows, mutate other daily plan items, mutate the 9E published content item, run content generation, call LLM providers, run Blogger publish/write/update/draft save/schedule, reconnect OAuth, refresh tokens, mutate publish approvals, mutate publish attempts, deploy, or push.
 
 ## Patch 9E-9D Post-publish DB Reconciliation
