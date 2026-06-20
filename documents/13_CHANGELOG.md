@@ -1,5 +1,28 @@
 # 13_CHANGELOG
 
+## Patch 9F-1F Policy Simulation Scenario Matrix
+
+Implemented after Patch 9F-1E:
+
+- Added `operationProfileScenarioMatrixSummary` as an advisory/read-only scenario matrix for Operation Profile policy simulation.
+- Added reusable scenario matrix logic for `safe_manual_publish`.
+- Added the matrix summary to `POST /api/content-items/[id]/publish-oauth-gate`.
+- Added the matrix summary to `POST /api/blog-operation-profiles/default-policy` preview responses.
+- Added Content Detail UI for the Publish OAuth Gate scenario matrix, including matrix mode, totals, scenario rows, simulated decisions, blocker counts, and operator takeaways.
+- Added `/settings/blogger` Operation Profile scenario matrix preview for synthetic future/planning scenarios.
+- Matrix scenarios include `current_published_item`, `future_planned_ready_item`, `future_planned_token_expired`, `profile_missing`, `profile_mismatch`, and `scheduled_publish_requested` when actual gate context is available.
+- Direct Operation Profile preview includes the synthetic future/profile/scheduled scenarios and omits the actual current item scenario.
+- `operation_profile_policy_*` blockers are simulation-only and remain inside scenario `simulatedAdditionalBlockers`.
+- Existing publish blockers, final preflight blockers, guarded publish execution blockers, `canExecutePublish`, `canPublish`, and scheduled publish permissions are unchanged.
+
+Policy:
+
+- Operation Profile remains advisory-only and simulation-only in this patch.
+- This patch does not enable auto publish, scheduled publish, retry, recovery, or actual policy-enforced gate behavior.
+- This patch did not run Blogger publish/write, Blogger `posts.update`, Blogger draft save, OAuth reconnect, token refresh, content generation, LLM calls, business DB mutation, content item mutation, publish approval mutation, publish attempt mutation, deploy, push, or external service writes.
+- The next recommended patch is `9F-2A — Daily Auto Content Plan draft, no publish execution`.
+- Alternative next patch: `9F-1G — Policy simulation scenario matrix polish and planned-item fixture`.
+
 ## Patch 9F-1E Policy-enforced Publish Gate Simulation
 
 Implemented after Patch 9F-1D:

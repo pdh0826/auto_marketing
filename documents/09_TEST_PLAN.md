@@ -120,6 +120,24 @@ Next session start DB guard should use the published/success values above. The c
 - 9F-1E must not run Blogger publish/write, `posts.update`, draft save, OAuth reconnect, token refresh, content generation, LLM calls, business DB mutation, content mutation, publish approval mutation, publish attempt mutation, migration, deploy, or push.
 - DB baseline must remain unchanged: 9E published/success values unchanged, counts `1 / 1 / 1 / 1 / 22`, and `blog_operation_profiles_count=1`.
 
+## Patch 9F-1F Policy Simulation Scenario Matrix
+
+- `POST /api/content-items/[id]/publish-oauth-gate` should include `operationProfileScenarioMatrixSummary`.
+- `POST /api/blog-operation-profiles/default-policy` preview should also include `operationProfileScenarioMatrixSummary`.
+- The matrix should report `checked=true`, `matrixVersion=9F-1F`, `matrixMode=policy_simulation_scenario_matrix`, `advisoryOnly=true`, `policyEnforced=false`, `actualBlockerImpact=false`, and `actualExecutionPermissionImpact=false`.
+- Current baseline should return `profileFound=true`, `profileHealthy=true`, `defaultPublishPolicyPreset=safe_manual_publish`, and `operationMode=approval_required`.
+- Publish OAuth Gate matrix should include six scenarios: `current_published_item`, `future_planned_ready_item`, `future_planned_token_expired`, `profile_missing`, `profile_mismatch`, and `scheduled_publish_requested`.
+- Direct profile preview may omit the actual current scenario, but should include `future_planned_ready_item`, `future_planned_token_expired`, `profile_missing`, `profile_mismatch`, and `scheduled_publish_requested`.
+- Scenario rows should expose input kind, synthetic-only flag, simulated decision, simulated additional/removed blockers, and operator takeaway.
+- Matrix totals should report allowed, blocked, manual approval, exception review, and synthetic scenario counts.
+- `operation_profile_policy_*` blocker codes may appear inside scenario `simulatedAdditionalBlockers` only.
+- Top-level publish `blockingReasons`, final preflight blockers, guarded publish execution blockers, `canExecutePublish`, `canPublish`, and scheduled publish permissions must not include scenario matrix blocker codes or change because of the matrix.
+- Matrix `blockingReasons` must remain an empty array and side-effect summary must report DB write false, Blogger write/publish/update/draft save false, token refresh false, OAuth reconnect false, content/approval/attempt mutation false, LLM false, and external send false.
+- `/settings/blogger` should show a compact scenario matrix preview under Operation Profile simulation.
+- Content Detail Publish OAuth Gate should show the scenario matrix with scenario rows and dry-run-only copy.
+- 9F-1F must not run Blogger publish/write, `posts.update`, draft save, OAuth reconnect, token refresh, content generation, LLM calls, business DB mutation, content mutation, publish approval mutation, publish attempt mutation, migration, deploy, or push.
+- DB baseline must remain unchanged: 9E published/success values unchanged, counts `1 / 1 / 1 / 1 / 22`, and `blog_operation_profiles_count=1`.
+
 ## Patch 9E-9D Post-publish DB Reconciliation
 
 - `POST /api/content-items/[id]/post-publish-reconciliation` route가 있어야 한다.

@@ -57,6 +57,8 @@ The Operation Profile policy simulation is a deterministic, read-only summary bu
 
 The simulation is advisory-only and reports `policyEnforced=false`, `actualBlockerImpact=false`, and `actualExecutionPermissionImpact=false`.
 
+Patch 9F-1F extends this same deterministic/read-only policy work with `operationProfileScenarioMatrixSummary`. The matrix is still simulation-only and must not call LLM providers or create `llm_call_logs`.
+
 ## Patch 3 설정 화면
 
 `/settings/llm` 화면은 Patch 2의 PostgreSQL + Prisma CRUD API를 사용해 다음 데이터를 관리한다.

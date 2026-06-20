@@ -1,7 +1,8 @@
 import type {
   OperationProfileAdvisorySummary,
   OperationProfileExceptionDashboardSummary,
-  OperationProfilePolicySimulationSummary
+  OperationProfilePolicySimulationSummary,
+  OperationProfileScenarioMatrixSummary
 } from "@/lib/blog-operation-profiles/operation-profile-summary";
 
 export type BloggerConnectionStatus = "not_configured" | "configured" | "oauth_required" | "connected" | "expired" | "error";
@@ -1130,6 +1131,7 @@ export interface PublishOAuthGateResponse {
   operationProfileAdvisorySummary: OperationProfileAdvisorySummary;
   operationProfileExceptionDashboardSummary: OperationProfileExceptionDashboardSummary;
   operationProfilePolicySimulationSummary: OperationProfilePolicySimulationSummary;
+  operationProfileScenarioMatrixSummary: OperationProfileScenarioMatrixSummary;
   oauthGateSummary: {
     connectionFound: boolean;
     selectedBloggerBlogFound: boolean;

@@ -661,6 +661,76 @@ export function BloggerSettingsClient() {
                 emptyText="simulation note가 없습니다."
               />
             </div>
+            <div className="read-block">
+              <h3>Operation Profile Scenario Matrix</h3>
+              <div className="notice">
+                <strong>Scenario matrix preview</strong>
+                <p>This matrix is simulation-only. It does not change current publish blockers or execution permissions.</p>
+                <p>
+                  Future planned ready item, token expired item, profile missing, profile mismatch, and scheduled publish requested scenarios are previewed without
+                  creating rows or calling Blogger.
+                </p>
+              </div>
+              <div className="detail-grid">
+                <DetailItem label="Matrix Version" value={operationProfileResult.operationProfileScenarioMatrixSummary.matrixVersion} />
+                <DetailItem label="Matrix Mode" value={operationProfileResult.operationProfileScenarioMatrixSummary.matrixMode} />
+                <DetailItem label="Advisory Only" value={String(operationProfileResult.operationProfileScenarioMatrixSummary.advisoryOnly)} />
+                <DetailItem label="Policy Enforced" value={String(operationProfileResult.operationProfileScenarioMatrixSummary.policyEnforced)} />
+                <DetailItem label="Actual Blocker Impact" value={String(operationProfileResult.operationProfileScenarioMatrixSummary.actualBlockerImpact)} />
+                <DetailItem
+                  label="Actual Permission Impact"
+                  value={String(operationProfileResult.operationProfileScenarioMatrixSummary.actualExecutionPermissionImpact)}
+                />
+                <DetailItem label="Scenario Count" value={String(operationProfileResult.operationProfileScenarioMatrixSummary.scenarioCount)} />
+                <DetailItem label="Blocked Scenarios" value={String(operationProfileResult.operationProfileScenarioMatrixSummary.matrixTotals.blockedScenarioCount)} />
+                <DetailItem
+                  label="Manual Approval Scenarios"
+                  value={String(operationProfileResult.operationProfileScenarioMatrixSummary.matrixTotals.manualApprovalScenarioCount)}
+                />
+                <DetailItem
+                  label="Exception Review Scenarios"
+                  value={String(operationProfileResult.operationProfileScenarioMatrixSummary.matrixTotals.exceptionReviewScenarioCount)}
+                />
+              </div>
+              <table className="admin-table">
+                <thead>
+                  <tr>
+                    <th>Scenario</th>
+                    <th>Input</th>
+                    <th>Synthetic</th>
+                    <th>Decision</th>
+                    <th>Blockers</th>
+                    <th>Operator Takeaway</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {operationProfileResult.operationProfileScenarioMatrixSummary.scenarios.map((scenario) => (
+                    <tr key={scenario.scenarioId}>
+                      <td>
+                        <strong>{scenario.label}</strong>
+                        <div className="muted">{scenario.scenarioId}</div>
+                      </td>
+                      <td>{scenario.inputKind}</td>
+                      <td>{String(scenario.syntheticOnly)}</td>
+                      <td>
+                        execute: {String(scenario.simulatedDecision.wouldAllowPublishExecution)}
+                        <br />
+                        scheduled: {String(scenario.simulatedDecision.wouldAllowScheduledPublishExecution)}
+                        <br />
+                        manual: {String(scenario.simulatedDecision.wouldRequireManualApproval)}
+                      </td>
+                      <td>{scenario.simulatedAdditionalBlockers.length}</td>
+                      <td>{scenario.operatorTakeaway}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <ValidationList
+                title="Scenario Matrix Notes"
+                items={operationProfileResult.operationProfileScenarioMatrixSummary.notes}
+                emptyText="matrix note가 없습니다."
+              />
+            </div>
             <details className="read-block">
               <summary>Detailed policy snapshot</summary>
             <div className="detail-grid">

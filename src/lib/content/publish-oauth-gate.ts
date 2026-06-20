@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { buildOperationProfileExceptionDashboardSummary } from "@/lib/blog-operation-profiles/operation-profile-exception-dashboard";
 import { buildOperationProfilePolicySimulationSummary } from "@/lib/blog-operation-profiles/operation-profile-policy-simulation";
+import { buildOperationProfileScenarioMatrixSummary } from "@/lib/blog-operation-profiles/operation-profile-scenario-matrix";
 import type { OperationProfileAdvisorySummary } from "@/lib/blog-operation-profiles/operation-profile-summary";
 import type { BloggerPublishApprovalAdmin, BloggerPublishExecutionAttemptAdmin, PublishOAuthAccessTokenState, PublishOAuthGateResponse } from "@/lib/blogger/admin-types";
 
@@ -138,6 +139,18 @@ export function buildPublishOAuthGate(input: BuildPublishOAuthGateInput): Publis
       warnings: topLevelWarnings
     }
   });
+  const operationProfileScenarioMatrixSummary = buildOperationProfileScenarioMatrixSummary({
+    advisorySummary: input.operationProfileAdvisorySummary,
+    includeCurrentPublishedItemScenario: true,
+    actualGateState: {
+      canExecutePublish: false,
+      canExecuteScheduledPublish: false,
+      canPublish: false,
+      canSchedulePublish: false,
+      blockingReasons: topLevelBlockingReasons,
+      warnings: topLevelWarnings
+    }
+  });
 
   return {
     contentItemId: input.contentItemId,
@@ -153,6 +166,7 @@ export function buildPublishOAuthGate(input: BuildPublishOAuthGateInput): Publis
     operationProfileAdvisorySummary: input.operationProfileAdvisorySummary,
     operationProfileExceptionDashboardSummary,
     operationProfilePolicySimulationSummary,
+    operationProfileScenarioMatrixSummary,
     oauthGateSummary: {
       connectionFound: Boolean(input.connection),
       selectedBloggerBlogFound: Boolean(input.connection?.bloggerBlogId),

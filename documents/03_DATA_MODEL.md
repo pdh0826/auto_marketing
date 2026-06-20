@@ -36,6 +36,28 @@ The simulation compares the current gate state with the stored `safe_manual_publ
 
 These simulation blockers are not copied into top-level publish `blockingReasons` and do not change `canExecutePublish`, `canPublish`, or scheduled publish permissions.
 
+## Patch 9F-1F Operation Profile Scenario Matrix
+
+Patch 9F-1F does not add a table or migration.
+
+The existing `blog_operation_profiles` row is read to build an advisory-only `operationProfileScenarioMatrixSummary` for:
+
+- `POST /api/blog-operation-profiles/default-policy`
+- `POST /api/content-items/[id]/publish-oauth-gate`
+
+The matrix expands the 9F-1E policy simulation into operator-facing scenarios:
+
+- `current_published_item` for the actual current publish gate context when available
+- `future_planned_ready_item`
+- `future_planned_token_expired`
+- `profile_missing`
+- `profile_mismatch`
+- `scheduled_publish_requested`
+
+The matrix reports `matrixVersion=9F-1F`, `matrixMode=policy_simulation_scenario_matrix`, `advisoryOnly=true`, `policyEnforced=false`, `actualBlockerImpact=false`, and `actualExecutionPermissionImpact=false`.
+
+Each scenario may contain simulation-only `operation_profile_policy_*` blockers, warnings, decisions, and an operator takeaway. These codes remain inside `operationProfileScenarioMatrixSummary` only and are not copied into top-level publish `blockingReasons`, final preflight blockers, guarded execution blockers, `canExecutePublish`, `canPublish`, or scheduled publish permissions.
+
 ## Patch 2 구현 테이블
 
 Patch 2는 PostgreSQL + Prisma 기준으로 다음 테이블을 우선 구현한다.

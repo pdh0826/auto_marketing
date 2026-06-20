@@ -2645,6 +2645,94 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
                       emptyText="simulation note가 없습니다."
                     />
                   </div>
+                  <div className="read-block">
+                    <h3>Operation Profile Scenario Matrix</h3>
+                    <div className="notice">
+                      <strong>Scenario matrix only</strong>
+                      <p>This matrix is simulation-only. It does not change current publish blockers or execution permissions.</p>
+                      <p>
+                        Scenario blockers are contained inside this matrix only. They are not added to top-level Publish OAuth Gate blockers or publish execution permissions.
+                      </p>
+                    </div>
+                    <div className="detail-grid">
+                      <DetailItem label="Matrix Version" value={publishOAuthGateResult.operationProfileScenarioMatrixSummary.matrixVersion} />
+                      <DetailItem label="Matrix Mode" value={publishOAuthGateResult.operationProfileScenarioMatrixSummary.matrixMode} />
+                      <DetailItem label="Advisory Only" value={String(publishOAuthGateResult.operationProfileScenarioMatrixSummary.advisoryOnly)} />
+                      <DetailItem label="Policy Enforced" value={String(publishOAuthGateResult.operationProfileScenarioMatrixSummary.policyEnforced)} />
+                      <DetailItem label="Actual Blocker Impact" value={String(publishOAuthGateResult.operationProfileScenarioMatrixSummary.actualBlockerImpact)} />
+                      <DetailItem
+                        label="Actual Permission Impact"
+                        value={String(publishOAuthGateResult.operationProfileScenarioMatrixSummary.actualExecutionPermissionImpact)}
+                      />
+                      <DetailItem label="Scenario Count" value={String(publishOAuthGateResult.operationProfileScenarioMatrixSummary.scenarioCount)} />
+                      <DetailItem
+                        label="Allowed Scenarios"
+                        value={String(publishOAuthGateResult.operationProfileScenarioMatrixSummary.matrixTotals.allowedScenarioCount)}
+                      />
+                      <DetailItem
+                        label="Blocked Scenarios"
+                        value={String(publishOAuthGateResult.operationProfileScenarioMatrixSummary.matrixTotals.blockedScenarioCount)}
+                      />
+                      <DetailItem
+                        label="Manual Approval Scenarios"
+                        value={String(publishOAuthGateResult.operationProfileScenarioMatrixSummary.matrixTotals.manualApprovalScenarioCount)}
+                      />
+                      <DetailItem
+                        label="Exception Review Scenarios"
+                        value={String(publishOAuthGateResult.operationProfileScenarioMatrixSummary.matrixTotals.exceptionReviewScenarioCount)}
+                      />
+                      <DetailItem
+                        label="Synthetic Scenarios"
+                        value={String(publishOAuthGateResult.operationProfileScenarioMatrixSummary.matrixTotals.syntheticScenarioCount)}
+                      />
+                    </div>
+                    <table className="admin-table">
+                      <thead>
+                        <tr>
+                          <th>Scenario</th>
+                          <th>Input</th>
+                          <th>Synthetic</th>
+                          <th>Decision</th>
+                          <th>Blockers</th>
+                          <th>Operator Takeaway</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {publishOAuthGateResult.operationProfileScenarioMatrixSummary.scenarios.map((scenario) => (
+                          <tr key={scenario.scenarioId}>
+                            <td>
+                              <strong>{scenario.label}</strong>
+                              <div className="muted">{scenario.scenarioId}</div>
+                            </td>
+                            <td>{scenario.inputKind}</td>
+                            <td>{String(scenario.syntheticOnly)}</td>
+                            <td>
+                              execute: {String(scenario.simulatedDecision.wouldAllowPublishExecution)}
+                              <br />
+                              scheduled: {String(scenario.simulatedDecision.wouldAllowScheduledPublishExecution)}
+                              <br />
+                              manual: {String(scenario.simulatedDecision.wouldRequireManualApproval)}
+                              <br />
+                              exception: {String(scenario.simulatedDecision.wouldRequireExceptionReview)}
+                            </td>
+                            <td>{scenario.simulatedAdditionalBlockers.length}</td>
+                            <td>{scenario.operatorTakeaway}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    <ValidationList
+                      title="Scenario Matrix Notes"
+                      items={publishOAuthGateResult.operationProfileScenarioMatrixSummary.notes}
+                      emptyText="matrix note가 없습니다."
+                    />
+                    <ValidationList
+                      title="Scenario Matrix Blocking Reasons"
+                      items={publishOAuthGateResult.operationProfileScenarioMatrixSummary.blockingReasons}
+                      emptyText="matrix 자체 blocking reason은 없습니다."
+                      isError
+                    />
+                  </div>
                   <details className="read-block">
                     <summary>Detailed Operation Profile advisory snapshot</summary>
                   <div className="detail-grid">

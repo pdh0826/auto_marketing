@@ -54,6 +54,7 @@ export interface BlogOperationProfileResponse {
   blogOperationProfileSummary: BlogOperationProfileSummary;
   operationProfileExceptionDashboardSummary: OperationProfileExceptionDashboardSummary;
   operationProfilePolicySimulationSummary: OperationProfilePolicySimulationSummary;
+  operationProfileScenarioMatrixSummary: OperationProfileScenarioMatrixSummary;
 }
 
 export interface OperationProfileAdvisorySummary {
@@ -231,6 +232,96 @@ export interface OperationProfilePolicySimulationSummary {
     simulatedAdditionalBlockerCount: number;
     simulatedRemovedBlockerCount: number;
     actualDecisionChangedBySimulation: false;
+  };
+  notes: string[];
+  blockingReasons: [];
+  sideEffectSummary: {
+    dbRead: boolean;
+    dbWrite: false;
+    schemaMigration: false;
+    bloggerRead: false;
+    bloggerWrite: false;
+    bloggerPublish: false;
+    bloggerUpdate: false;
+    bloggerDraftSave: false;
+    tokenRefresh: false;
+    oauthReconnect: false;
+    contentMutation: false;
+    approvalMutation: false;
+    attemptMutation: false;
+    llmCall: false;
+    externalSend: false;
+  };
+}
+
+export interface OperationProfileScenarioMatrixSummary {
+  checked: true;
+  matrixVersion: "9F-1F";
+  matrixMode: "policy_simulation_scenario_matrix";
+  advisoryOnly: true;
+  policyEnforced: false;
+  actualBlockerImpact: false;
+  actualExecutionPermissionImpact: false;
+  profileFound: boolean;
+  profileHealthy: boolean;
+  defaultPublishPolicyPreset: string | null;
+  operationMode: string | null;
+  scenarioCount: number;
+  scenarios: Array<{
+    scenarioId:
+      | "current_published_item"
+      | "future_planned_ready_item"
+      | "future_planned_token_expired"
+      | "profile_missing"
+      | "profile_mismatch"
+      | "scheduled_publish_requested";
+    label: string;
+    description: string;
+    inputKind: "actual_gate_state" | "synthetic_gate_state";
+    usesCurrentContentItem: boolean;
+    syntheticOnly: boolean;
+    sourceProfileState: {
+      profileFound: boolean;
+      profileHealthy: boolean;
+      targetBloggerBlogId: string | null;
+      defaultPublishPolicyPreset: string | null;
+      operationMode: string | null;
+      allowAutoPublish: boolean | null;
+      allowScheduledPublish: boolean | null;
+      requireFinalHumanApproval: boolean | null;
+      requireOAuthGate: boolean | null;
+      requireReadbackAfterPublish: boolean | null;
+      requirePostPublishReconciliation: boolean | null;
+    };
+    simulatedPolicyState: {
+      wouldRequireOAuthGate: boolean;
+      wouldRequireFinalHumanApproval: boolean;
+      wouldRequireExternalWriteRiskAck: boolean;
+      wouldRequireRollbackPlanAck: boolean;
+      wouldRequireReadbackAfterPublish: boolean;
+      wouldRequirePostPublishReconciliation: boolean;
+      wouldAllowAutoPublish: boolean;
+      wouldAllowScheduledPublish: boolean;
+      wouldAllowPublishWithoutHumanApproval: boolean;
+    };
+    simulatedAdditionalBlockers: string[];
+    simulatedRemovedBlockers: string[];
+    simulatedWarnings: string[];
+    simulatedDecision: {
+      wouldAllowPublishExecution: boolean;
+      wouldAllowScheduledPublishExecution: boolean;
+      wouldRequireManualApproval: boolean;
+      wouldRequireExceptionReview: boolean;
+      wouldKeepCurrentGateDecision: boolean;
+    };
+    operatorTakeaway: string;
+  }>;
+  matrixTotals: {
+    allowedScenarioCount: number;
+    blockedScenarioCount: number;
+    manualApprovalScenarioCount: number;
+    exceptionReviewScenarioCount: number;
+    syntheticScenarioCount: number;
   };
   notes: string[];
   blockingReasons: [];
