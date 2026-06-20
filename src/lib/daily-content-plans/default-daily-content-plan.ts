@@ -51,7 +51,8 @@ export async function buildDailyContentPlanDefaultResponse(rawRequest: DailyCont
               targetBloggerBlogId: request.targetBloggerBlogId,
               planDateLocal: request.planDateLocal
             }
-          }
+          },
+          include: { items: { orderBy: { itemOrder: "asc" } } }
         })
       : Promise.resolve(null)
   ]);
@@ -92,9 +93,11 @@ export async function buildDailyContentPlanDefaultResponse(rawRequest: DailyCont
   const canApply = request.mode === "apply" && blockingReasons.size === 0 && Boolean(request.targetBloggerBlogId && request.planDateLocal);
   let applyOk = false;
   let dbWrite = false;
+  let appliedPlan: DailyContentPlanSummary["appliedPlan"] = null;
+  let appliedItemCount: number | null = null;
 
   if (canApply) {
-    await prisma.$transaction(async (tx) => {
+    const transactionResult = await prisma.$transaction(async (tx) => {
       const plan = await tx.blogDailyContentPlan.upsert({
         where: {
           targetBloggerBlogId_planDateLocal: {
@@ -110,10 +113,29 @@ export async function buildDailyContentPlanDefaultResponse(rawRequest: DailyCont
       await tx.blogDailyContentPlanItem.createMany({
         data: planItems.map((item) => buildPlanItemWriteData(plan.id, item, policySnapshot))
       });
+      return {
+        appliedPlan: buildExistingPlanSummary(plan, planItems.length),
+        appliedItemCount: planItems.length
+      };
     });
+    appliedPlan = transactionResult.appliedPlan;
+    appliedItemCount = transactionResult.appliedItemCount;
     applyOk = true;
     dbWrite = true;
   }
+
+  const existingPlanSummary = existingPlan ? buildExistingPlanSummary(existingPlan, existingPlan.items.length) : appliedPlan;
+  const existingPlanItems = existingPlan ? existingPlan.items.map(buildExistingPlanItemSummary) : [];
+  const persistedItemCount = existingPlan?.items.length ?? appliedItemCount ?? 0;
+  const persistedApprovalRequiredCount = existingPlan
+    ? existingPlan.items.filter((item) => item.requiresHumanApproval).length
+    : appliedItemCount ?? 0;
+  const persistedContentItemLinkedCount = existingPlan ? existingPlan.items.filter((item) => Boolean(item.contentItemId)).length : 0;
+  const persistedGenerationAllowedCount = existingPlan
+    ? existingPlan.items.filter((item) => item.draftGenerationAllowed || item.llmGenerationAllowed).length
+    : 0;
+  const persistedPublishExecutionAllowedCount = existingPlan ? existingPlan.items.filter((item) => item.publishExecutionAllowed).length : 0;
+  const persistedScheduledPublishAllowedCount = existingPlan ? existingPlan.items.filter((item) => item.scheduledPublishAllowed).length : 0;
 
   const summary: DailyContentPlanSummary = {
     checked: true,
@@ -124,6 +146,20 @@ export async function buildDailyContentPlanDefaultResponse(rawRequest: DailyCont
     profileHealthy,
     planWouldBeCreated: Boolean(!existingPlan && request.targetBloggerBlogId && request.planDateLocal),
     planWouldBeUpdated: Boolean(existingPlan),
+    existingPlanFound: Boolean(existingPlan ?? appliedPlan),
+    existingPlanId: existingPlan?.id ?? appliedPlan?.id ?? null,
+    persistedPlanId: existingPlan?.id ?? appliedPlan?.id ?? null,
+    persistedPlanStatus: existingPlan?.status ?? appliedPlan?.status ?? null,
+    persistedItemCount,
+    persistedApprovalRequiredCount,
+    persistedContentItemLinkedCount,
+    persistedGenerationAllowedCount,
+    persistedPublishExecutionAllowedCount,
+    persistedScheduledPublishAllowedCount,
+    existingPlanSummary,
+    existingPlanItems,
+    appliedPlan,
+    appliedItemCount,
     applyAttempted: canApply,
     applyBlocked: request.mode === "apply" && !applyOk,
     applyOk,
@@ -329,6 +365,74 @@ function buildPlanItemWriteData(planId: string, item: DailyContentPlanSummary["p
       operatorTakeaway: item.operatorTakeaway,
       previewOnlyInPatch: "9F-2A"
     }
+  };
+}
+
+function buildExistingPlanSummary(
+  plan: {
+    id: string;
+    planDateLocal: string;
+    status: string;
+    planKind: string;
+    operationMode: string;
+    defaultPublishPolicyPreset: string;
+    contentGenerationEnabled: boolean;
+    llmCallEnabled: boolean;
+    publishExecutionEnabled: boolean;
+    scheduledPublishEnabled: boolean;
+    plannedItemCount: number;
+  },
+  persistedItemCount: number
+): NonNullable<DailyContentPlanSummary["existingPlanSummary"]> {
+  return {
+    id: plan.id,
+    planDateLocal: plan.planDateLocal,
+    status: plan.status,
+    planKind: plan.planKind,
+    operationMode: plan.operationMode,
+    defaultPublishPolicyPreset: plan.defaultPublishPolicyPreset,
+    contentGenerationEnabled: plan.contentGenerationEnabled,
+    llmCallEnabled: plan.llmCallEnabled,
+    publishExecutionEnabled: plan.publishExecutionEnabled,
+    scheduledPublishEnabled: plan.scheduledPublishEnabled,
+    plannedItemCount: plan.plannedItemCount,
+    persistedItemCount
+  };
+}
+
+function buildExistingPlanItemSummary(item: {
+  id: string;
+  itemOrder: number;
+  slotKey: string;
+  status: string;
+  topicSeed: string;
+  contentIntent: string;
+  audienceHint: string | null;
+  riskNote: string | null;
+  publishMode: string;
+  contentItemId: string | null;
+  draftGenerationAllowed: boolean;
+  llmGenerationAllowed: boolean;
+  publishExecutionAllowed: boolean;
+  scheduledPublishAllowed: boolean;
+  requiresHumanApproval: boolean;
+}): DailyContentPlanSummary["existingPlanItems"][number] {
+  return {
+    id: item.id,
+    itemOrder: item.itemOrder,
+    slotKey: item.slotKey,
+    status: item.status,
+    topicSeed: item.topicSeed,
+    contentIntent: item.contentIntent,
+    audienceHint: item.audienceHint,
+    riskNote: item.riskNote,
+    publishMode: item.publishMode,
+    contentItemId: item.contentItemId,
+    draftGenerationAllowed: item.draftGenerationAllowed,
+    llmGenerationAllowed: item.llmGenerationAllowed,
+    publishExecutionAllowed: item.publishExecutionAllowed,
+    scheduledPublishAllowed: item.scheduledPublishAllowed,
+    requiresHumanApproval: item.requiresHumanApproval
   };
 }
 

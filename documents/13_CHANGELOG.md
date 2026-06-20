@@ -1,5 +1,26 @@
 # 13_CHANGELOG
 
+## Patch 9F-2C Daily Content Plan UI Polish And Queue Dashboard Draft
+
+Implemented after Patch 9F-2B:
+
+- Polished the Daily Content Plan response with additive persisted readback fields for existing plan status, persisted plan id/status, persisted item counts, existing plan summary, and persisted queue item rows.
+- Kept the existing API response contract intact while making it easier for `/settings/blogger` to display the already-created 9F-2B fixture.
+- Improved future guarded apply summaries so `appliedPlan` and `appliedItemCount` can be populated from transaction results, without rerunning apply in this patch.
+- Reworked `/settings/blogger` Daily Content Plan UI into an operator-friendly `오늘 콘텐츠 계획` readback section with Korean status, guardrails, and a draft `후보 큐`.
+- The queue shows persisted candidate rows, topic seeds, content intent, slot/status, content item linkage state, approval requirement, and disabled generation/publish/schedule flags.
+- Technical details such as blockers, warnings, side-effect summary, guardrail summary, and readback ids are kept behind progressive disclosure.
+
+Policy:
+
+- 9F-2C did not rerun 9F-2B apply.
+- 9F-2C did not create, update, or delete Daily Content Plan rows or item rows.
+- Counts remained one daily plan row and three daily plan item rows.
+- This patch did not run content generation, LLM calls, `content_items` mutation, Blogger publish/write/update/draft save/schedule, OAuth reconnect, token refresh, publish approval mutation, publish attempt mutation, deploy, push, or external service writes.
+- The 9E published/success milestone baseline remained unchanged.
+- The next recommended patch is `9F-2D — Daily plan to content-item draft fixture, no LLM/no Blogger write`.
+- Alternative next patch: `9F-2E — Daily Content Queue operator approval workflow draft, no generation/no publish execution`.
+
 ## Patch 9F-2B Create/Apply Daily Content Plan Row
 
 Applied after Patch 9F-2A:

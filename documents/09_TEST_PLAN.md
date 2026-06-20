@@ -173,6 +173,20 @@ Next session start DB guard should use the published/success values above. The c
 - 9F-2B did not run content generation, LLM calls, `content_items` mutation, Blogger publish/write/update/draft save/schedule, OAuth reconnect, token refresh, publish approval mutation, publish attempt mutation, deploy, push, or external service writes.
 - Do not rerun the 9F-2B apply for `planDateLocal=2026-06-20` unless the user explicitly approves a new date-specific write or a deliberate idempotent reapply test.
 
+## Patch 9F-2C Daily Content Plan UI Polish And Queue Dashboard Draft
+
+- `POST /api/daily-content-plans/default-plan` should keep the existing preview/apply response contract and add persisted readback fields: `existingPlanFound`, `existingPlanId`, `persistedPlanId`, `persistedPlanStatus`, persisted item counts, `existingPlanSummary`, and `existingPlanItems`.
+- Preview smoke for `targetBloggerBlogId=3065973490356135805` and `planDateLocal=2026-06-20` should return `mode=preview`, `profileFound=true`, `profileHealthy=true`, `planWouldBeCreated=false`, `planWouldBeUpdated=true`, `existingPlanFound=true`, `persistedPlanId=cmqlr1v1d0000iwj2smxcsajr`, `persistedItemCount=3`, `applyAttempted=false`, `applyOk=false`, `blockingReasons=[]`, and `sideEffectSummary.dbWrite=false`.
+- The persisted queue items should expose their row ids, order, slot key, status, topic seed, content intent, publish mode, `contentItemId`, generation/publish flags, and human approval flag without requiring direct DB access from the UI.
+- Future apply summaries should populate `appliedPlan` and `appliedItemCount` from transaction results, but 9F-2C validation must not run a successful apply.
+- `/settings/blogger` should show an operator-friendly `오늘 콘텐츠 계획` section and `후보 큐` list with Korean guardrail labels before technical details.
+- The UI should show that the plan already exists, the plan id/date/status/kind/policy, item count, approval-required count, disabled content generation, disabled LLM calls, disabled publish execution, disabled scheduled publish, and Blogger write 없음.
+- Candidate rows should show `topicSeed`, `contentIntent`, `slotKey`, `status`, `contentItemId=null` / not linked state, disabled generation/publish flags, and disabled coming-soon action affordances only.
+- Technical details such as side-effect summary, guardrail summary, warnings, blockers, and readback ids should stay behind progressive disclosure.
+- Apply-negative smoke with the normal dev server and write flag disabled may call `mode=apply` and must return blocker `daily_content_plan_write_feature_flag_disabled`, `applyAttempted=false`, `applyBlocked=true`, `applyOk=false`, and `sideEffectSummary.dbWrite=false`.
+- Post-change read-only DB checks should remain `blog_daily_content_plans_count=1`, `blog_daily_content_plan_items_count=3`, and publish milestone counts `1 / 1 / 1 / 1 / 22`.
+- 9F-2C must not rerun 9F-2B apply, create/update/delete daily plan rows or item rows, run content generation, call LLM providers, mutate `content_items`, run Blogger publish/write/update/draft save/schedule, reconnect OAuth, refresh tokens, mutate publish approvals, mutate publish attempts, deploy, or push.
+
 ## Patch 9E-9D Post-publish DB Reconciliation
 
 - `POST /api/content-items/[id]/post-publish-reconciliation` route가 있어야 한다.

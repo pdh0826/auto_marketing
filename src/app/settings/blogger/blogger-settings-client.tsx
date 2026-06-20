@@ -37,6 +37,10 @@ interface BloggerConnectionForm {
   lastError: string;
 }
 
+type DailyContentPlanQueueItem =
+  | DailyContentPlanResponse["dailyContentPlanSummary"]["existingPlanItems"][number]
+  | DailyContentPlanResponse["dailyContentPlanSummary"]["planItems"][number];
+
 const statuses: BloggerConnectionStatus[] = ["not_configured", "configured", "oauth_required", "connected", "expired", "error"];
 
 const emptyConnectionForm: BloggerConnectionForm = {
@@ -328,6 +332,7 @@ export function BloggerSettingsClient() {
   }
 
   const activeBlogListConnection = blogListResult ? connections.find((connection) => connection.id === blogListResult.connectionId) ?? null : null;
+  const dailyContentPlanSummary = dailyContentPlanResult?.dailyContentPlanSummary ?? null;
 
   return (
     <>
@@ -840,118 +845,146 @@ export function BloggerSettingsClient() {
       <section className="admin-section">
         <div className="section-heading">
           <div>
-            <h2>Daily Content Plan Preview</h2>
-            <p className="muted">9F-2A planning-only draft입니다. content generation, LLM call, content item 생성, Blogger write/publish/schedule은 실행하지 않습니다.</p>
+            <h2>오늘 콘텐츠 계획</h2>
+            <p className="muted">9F-2C readback/queue preview입니다. 기존 daily plan fixture를 읽어서 보여주며 저장, 생성, 발행은 실행하지 않습니다.</p>
           </div>
         </div>
         <div className="notice warning">
-          <strong>Daily plan apply is disabled in this UI</strong>
-          <p>Connection List의 Daily Plan Preview 버튼은 deterministic planning metadata만 생성합니다. Daily plan row 저장은 feature flag와 명시 승인 전까지 실행하지 않습니다.</p>
+          <strong>Blogger 쓰기 없음</strong>
+          <p>이 화면의 Daily Plan Preview는 readback 중심입니다. 9F-2B apply를 다시 실행하지 않으며 content generation, LLM 호출, content_items 생성, Blogger write/publish/schedule을 수행하지 않습니다.</p>
         </div>
         <div className="form-actions">
           <button className="button secondary" type="button" disabled>
             Daily Plan Apply/Create disabled
           </button>
         </div>
-        {dailyContentPlanResult ? (
+        {dailyContentPlanSummary ? (
           <div className="read-block">
-            <h3>Daily Content Plan Draft</h3>
-            <div className="notice">
-              <strong>Preview only</strong>
-              <p>
-                이 결과는 daily content queue 초안입니다. Plan row 저장, 본문 생성, LLM 호출, content_items 생성, Blogger draft/publish/schedule은 수행하지 않았습니다.
-              </p>
+            <h3>{dailyContentPlanSummary.existingPlanFound ? "계획 생성됨" : "계획 미생성"}</h3>
+            <div className={dailyContentPlanSummary.existingPlanFound ? "notice success" : "notice warning"}>
+              <strong>{dailyContentPlanSummary.existingPlanFound ? "검토 대기" : "Preview only"}</strong>
+              <p>{dailyContentPlanSummary.existingPlanFound ? "오늘 계획 row와 후보 큐를 읽었습니다. 모든 후보는 아직 content_items와 연결되지 않았고 승인 필요 상태입니다." : "아직 persisted daily plan row가 없습니다. 이 UI에서는 생성 버튼을 활성화하지 않습니다."}</p>
             </div>
             <div className="detail-grid">
-              <DetailItem label="Checked At" value={new Date(dailyContentPlanResult.checkedAt).toLocaleString()} />
-              <DetailItem label="Mode" value={dailyContentPlanResult.dailyContentPlanSummary.mode} />
-              <DetailItem label="Plan Version" value={dailyContentPlanResult.dailyContentPlanSummary.planVersion} />
-              <DetailItem label="Plan Mode" value={dailyContentPlanResult.dailyContentPlanSummary.planMode} />
-              <DetailItem label="Target Blogger Blog" value={dailyContentPlanResult.dailyContentPlanSummary.targetBloggerBlogName ?? "-"} />
-              <DetailItem label="Target Blogger Blog ID" value={dailyContentPlanResult.dailyContentPlanSummary.targetBloggerBlogId || "-"} />
-              <DetailItem label="Plan Date" value={dailyContentPlanResult.dailyContentPlanSummary.planDateLocal || "-"} />
-              <DetailItem label="Timezone" value={dailyContentPlanResult.dailyContentPlanSummary.timezone} />
-              <DetailItem label="Profile Found" value={String(dailyContentPlanResult.dailyContentPlanSummary.profileFound)} />
-              <DetailItem label="Profile Healthy" value={String(dailyContentPlanResult.dailyContentPlanSummary.profileHealthy)} />
-              <DetailItem label="Profile Preset" value={dailyContentPlanResult.dailyContentPlanSummary.defaultPublishPolicyPreset} />
-              <DetailItem label="Operation Mode" value={dailyContentPlanResult.dailyContentPlanSummary.operationMode} />
-              <DetailItem label="Would Create" value={String(dailyContentPlanResult.dailyContentPlanSummary.planWouldBeCreated)} />
-              <DetailItem label="Would Update" value={String(dailyContentPlanResult.dailyContentPlanSummary.planWouldBeUpdated)} />
+              <DetailItem label="Checked At" value={dailyContentPlanResult?.checkedAt ? new Date(dailyContentPlanResult.checkedAt).toLocaleString() : "-"} />
+              <DetailItem label="Plan ID" value={dailyContentPlanSummary.persistedPlanId ?? "-"} />
+              <DetailItem label="Plan Date" value={(dailyContentPlanSummary.existingPlanSummary?.planDateLocal ?? dailyContentPlanSummary.planDateLocal) || "-"} />
+              <DetailItem label="Status" value={dailyContentPlanSummary.persistedPlanStatus ?? "-"} />
+              <DetailItem label="Kind" value={dailyContentPlanSummary.existingPlanSummary?.planKind ?? dailyContentPlanSummary.planMode} />
+              <DetailItem label="Policy" value={dailyContentPlanSummary.existingPlanSummary?.defaultPublishPolicyPreset ?? dailyContentPlanSummary.defaultPublishPolicyPreset} />
+              <DetailItem label="Items" value={`${dailyContentPlanSummary.persistedItemCount || dailyContentPlanSummary.planTotals.plannedItemCount}개 후보 / 승인 필요 ${dailyContentPlanSummary.persistedApprovalRequiredCount || dailyContentPlanSummary.planTotals.approvalRequiredCount}개`} />
             </div>
             <div className="detail-grid">
-              <DetailItem label="Content Generation Enabled" value={String(dailyContentPlanResult.dailyContentPlanSummary.contentGenerationEnabled)} />
-              <DetailItem label="LLM Call Enabled" value={String(dailyContentPlanResult.dailyContentPlanSummary.llmCallEnabled)} />
-              <DetailItem label="Publish Execution Enabled" value={String(dailyContentPlanResult.dailyContentPlanSummary.publishExecutionEnabled)} />
-              <DetailItem label="Scheduled Publish Enabled" value={String(dailyContentPlanResult.dailyContentPlanSummary.scheduledPublishEnabled)} />
-              <DetailItem label="Planned Items" value={String(dailyContentPlanResult.dailyContentPlanSummary.planTotals.plannedItemCount)} />
-              <DetailItem label="Approval Required Items" value={String(dailyContentPlanResult.dailyContentPlanSummary.planTotals.approvalRequiredCount)} />
-              <DetailItem label="LLM Allowed Items" value={String(dailyContentPlanResult.dailyContentPlanSummary.planTotals.llmGenerationAllowedCount)} />
-              <DetailItem label="Publish Allowed Items" value={String(dailyContentPlanResult.dailyContentPlanSummary.planTotals.publishExecutionAllowedCount)} />
+              <DetailItem label="본문 생성" value={dailyContentPlanSummary.contentGenerationEnabled ? "켜짐" : "꺼짐"} />
+              <DetailItem label="LLM 호출" value={dailyContentPlanSummary.llmCallEnabled ? "켜짐" : "꺼짐"} />
+              <DetailItem label="발행 실행" value={dailyContentPlanSummary.publishExecutionEnabled ? "켜짐" : "꺼짐"} />
+              <DetailItem label="예약 발행" value={dailyContentPlanSummary.scheduledPublishEnabled ? "켜짐" : "꺼짐"} />
+              <DetailItem label="Blogger 쓰기" value={dailyContentPlanSummary.guardrailSummary.noBloggerWrite ? "없음" : "주의 필요"} />
+              <DetailItem label="content_items 연결" value={`${dailyContentPlanSummary.persistedContentItemLinkedCount}개 연결됨`} />
             </div>
+            <div className="button-row">
+              <button className="button secondary" type="button" disabled>
+                본문 생성 준비 - 비활성
+              </button>
+              <button className="button secondary" type="button" disabled>
+                발행 검토 - 비활성
+              </button>
+              <button className="button secondary" type="button" disabled>
+                예약 발행 - 비활성
+              </button>
+            </div>
+
+            <h3>후보 큐</h3>
             <table className="admin-table">
               <thead>
                 <tr>
-                  <th>Slot</th>
+                  <th>순서</th>
+                  <th>슬롯</th>
                   <th>Topic Seed</th>
-                  <th>Intent</th>
-                  <th>Approval</th>
-                  <th>Publish</th>
-                  <th>Risk Note</th>
+                  <th>Intent / 상태</th>
+                  <th>안전 가드</th>
+                  <th>액션</th>
                 </tr>
               </thead>
               <tbody>
-                {dailyContentPlanResult.dailyContentPlanSummary.planItems.map((item) => (
-                  <tr key={item.syntheticPlanItemId}>
+                {(dailyContentPlanSummary.existingPlanItems.length > 0 ? dailyContentPlanSummary.existingPlanItems : dailyContentPlanSummary.planItems).map((item) => (
+                  <tr key={"id" in item ? item.id : item.syntheticPlanItemId}>
                     <td>
-                      {item.slotKey}
-                      <div className="muted">#{item.itemOrder}</div>
+                      #{item.itemOrder}
+                    </td>
+                    <td>
+                      {getDailyPlanSlotLabel(item.slotKey)}
+                      <div className="muted">{item.slotKey}</div>
                     </td>
                     <td>{item.topicSeed}</td>
                     <td>
                       {item.contentIntent}
-                      <div className="muted">{item.audienceHint}</div>
+                      <div className="muted">{getDailyPlanItemStatus(item)}</div>
                     </td>
-                    <td>{item.requiresHumanApproval ? "required" : "not required"}</td>
-                    <td>{item.publishExecutionAllowed ? "allowed" : "disabled"}</td>
-                    <td>{item.riskNote}</td>
+                    <td>
+                      <div>{item.requiresHumanApproval ? "승인 필요" : "승인 불필요"}</div>
+                      <div className="muted">{getDailyPlanItemContentItemId(item) ? `content item 연결됨: ${getDailyPlanItemContentItemId(item)}` : "아직 content_items 미연결"}</div>
+                      <div className="muted">
+                        draft {formatDisabledFlag(item.draftGenerationAllowed)} / LLM {formatDisabledFlag(item.llmGenerationAllowed)} / publish {formatDisabledFlag(item.publishExecutionAllowed)} / schedule {formatDisabledFlag(item.scheduledPublishAllowed)}
+                      </div>
+                    </td>
+                    <td>
+                      <button className="button small secondary" type="button" disabled>
+                        Coming soon
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
-            <div className="detail-grid">
-              <DetailItem label="No Content Generation" value={String(dailyContentPlanResult.dailyContentPlanSummary.guardrailSummary.noContentGeneration)} />
-              <DetailItem label="No LLM Call" value={String(dailyContentPlanResult.dailyContentPlanSummary.guardrailSummary.noLlmCall)} />
-              <DetailItem label="No Content Mutation" value={String(dailyContentPlanResult.dailyContentPlanSummary.guardrailSummary.noContentItemMutation)} />
-              <DetailItem label="No Blogger Write" value={String(dailyContentPlanResult.dailyContentPlanSummary.guardrailSummary.noBloggerWrite)} />
-              <DetailItem label="No Publish Execution" value={String(dailyContentPlanResult.dailyContentPlanSummary.guardrailSummary.noPublishExecution)} />
-              <DetailItem label="No Scheduled Publish" value={String(dailyContentPlanResult.dailyContentPlanSummary.guardrailSummary.noScheduledPublish)} />
-              <DetailItem label="Profile Policy Used" value={String(dailyContentPlanResult.dailyContentPlanSummary.guardrailSummary.profilePolicyUsed)} />
-            </div>
-            <ValidationList
-              title="Daily Content Plan Blocking Reasons"
-              items={dailyContentPlanResult.dailyContentPlanSummary.blockingReasons}
-              emptyText="blocking reason이 없습니다."
-              isError
-            />
-            <ValidationList
-              title="Daily Content Plan Warnings"
-              items={dailyContentPlanResult.dailyContentPlanSummary.warnings}
-              emptyText="warning이 없습니다."
-              isWarning
-            />
-            <div className="detail-grid">
-              <DetailItem label="DB Read" value={String(dailyContentPlanResult.dailyContentPlanSummary.sideEffectSummary.dbRead)} />
-              <DetailItem label="DB Write" value={String(dailyContentPlanResult.dailyContentPlanSummary.sideEffectSummary.dbWrite)} />
-              <DetailItem label="Schema Migration" value={String(dailyContentPlanResult.dailyContentPlanSummary.sideEffectSummary.schemaMigration)} />
-              <DetailItem label="Blogger Write" value={String(dailyContentPlanResult.dailyContentPlanSummary.sideEffectSummary.bloggerWrite)} />
-              <DetailItem label="Blogger Publish" value={String(dailyContentPlanResult.dailyContentPlanSummary.sideEffectSummary.bloggerPublish)} />
-              <DetailItem label="Blogger Draft Save" value={String(dailyContentPlanResult.dailyContentPlanSummary.sideEffectSummary.bloggerDraftSave)} />
-              <DetailItem label="Token Refresh" value={String(dailyContentPlanResult.dailyContentPlanSummary.sideEffectSummary.tokenRefresh)} />
-              <DetailItem label="OAuth Reconnect" value={String(dailyContentPlanResult.dailyContentPlanSummary.sideEffectSummary.oauthReconnect)} />
-              <DetailItem label="Content Generation" value={String(dailyContentPlanResult.dailyContentPlanSummary.sideEffectSummary.contentGeneration)} />
-              <DetailItem label="Content Mutation" value={String(dailyContentPlanResult.dailyContentPlanSummary.sideEffectSummary.contentMutation)} />
-              <DetailItem label="LLM Call" value={String(dailyContentPlanResult.dailyContentPlanSummary.sideEffectSummary.llmCall)} />
-            </div>
+
+            <details className="read-block">
+              <summary>기술 상세</summary>
+              <div className="detail-grid">
+                <DetailItem label="Mode" value={dailyContentPlanSummary.mode} />
+                <DetailItem label="Plan Version" value={dailyContentPlanSummary.planVersion} />
+                <DetailItem label="Plan Mode" value={dailyContentPlanSummary.planMode} />
+                <DetailItem label="Target Blogger Blog" value={dailyContentPlanSummary.targetBloggerBlogName ?? "-"} />
+                <DetailItem label="Target Blogger Blog ID" value={dailyContentPlanSummary.targetBloggerBlogId || "-"} />
+                <DetailItem label="Target Blogger Blog URL" value={dailyContentPlanSummary.targetBloggerBlogUrl ?? "-"} />
+                <DetailItem label="Profile Found" value={String(dailyContentPlanSummary.profileFound)} />
+                <DetailItem label="Profile Healthy" value={String(dailyContentPlanSummary.profileHealthy)} />
+                <DetailItem label="Would Create" value={String(dailyContentPlanSummary.planWouldBeCreated)} />
+                <DetailItem label="Would Update" value={String(dailyContentPlanSummary.planWouldBeUpdated)} />
+                <DetailItem label="Existing Plan Found" value={String(dailyContentPlanSummary.existingPlanFound)} />
+                <DetailItem label="Persisted Item Count" value={String(dailyContentPlanSummary.persistedItemCount)} />
+                <DetailItem label="Persisted Approval Required" value={String(dailyContentPlanSummary.persistedApprovalRequiredCount)} />
+                <DetailItem label="Persisted Generation Allowed" value={String(dailyContentPlanSummary.persistedGenerationAllowedCount)} />
+                <DetailItem label="Persisted Publish Allowed" value={String(dailyContentPlanSummary.persistedPublishExecutionAllowedCount)} />
+                <DetailItem label="Persisted Schedule Allowed" value={String(dailyContentPlanSummary.persistedScheduledPublishAllowedCount)} />
+              </div>
+              <ValidationList title="Daily Content Plan Blocking Reasons" items={dailyContentPlanSummary.blockingReasons} emptyText="blocking reason이 없습니다." isError />
+              <ValidationList title="Daily Content Plan Warnings" items={dailyContentPlanSummary.warnings} emptyText="warning이 없습니다." isWarning />
+              <div className="detail-grid">
+                <DetailItem label="DB Read" value={String(dailyContentPlanSummary.sideEffectSummary.dbRead)} />
+                <DetailItem label="DB Write" value={String(dailyContentPlanSummary.sideEffectSummary.dbWrite)} />
+                <DetailItem label="Schema Migration" value={String(dailyContentPlanSummary.sideEffectSummary.schemaMigration)} />
+                <DetailItem label="Blogger Write" value={String(dailyContentPlanSummary.sideEffectSummary.bloggerWrite)} />
+                <DetailItem label="Blogger Publish" value={String(dailyContentPlanSummary.sideEffectSummary.bloggerPublish)} />
+                <DetailItem label="Blogger Draft Save" value={String(dailyContentPlanSummary.sideEffectSummary.bloggerDraftSave)} />
+                <DetailItem label="Token Refresh" value={String(dailyContentPlanSummary.sideEffectSummary.tokenRefresh)} />
+                <DetailItem label="OAuth Reconnect" value={String(dailyContentPlanSummary.sideEffectSummary.oauthReconnect)} />
+                <DetailItem label="Content Generation" value={String(dailyContentPlanSummary.sideEffectSummary.contentGeneration)} />
+                <DetailItem label="Content Mutation" value={String(dailyContentPlanSummary.sideEffectSummary.contentMutation)} />
+                <DetailItem label="Approval Mutation" value={String(dailyContentPlanSummary.sideEffectSummary.approvalMutation)} />
+                <DetailItem label="Attempt Mutation" value={String(dailyContentPlanSummary.sideEffectSummary.attemptMutation)} />
+                <DetailItem label="LLM Call" value={String(dailyContentPlanSummary.sideEffectSummary.llmCall)} />
+              </div>
+              <div className="detail-grid">
+                <DetailItem label="No Content Generation" value={String(dailyContentPlanSummary.guardrailSummary.noContentGeneration)} />
+                <DetailItem label="No LLM Call" value={String(dailyContentPlanSummary.guardrailSummary.noLlmCall)} />
+                <DetailItem label="No Content Mutation" value={String(dailyContentPlanSummary.guardrailSummary.noContentItemMutation)} />
+                <DetailItem label="No Blogger Write" value={String(dailyContentPlanSummary.guardrailSummary.noBloggerWrite)} />
+                <DetailItem label="No Publish Execution" value={String(dailyContentPlanSummary.guardrailSummary.noPublishExecution)} />
+                <DetailItem label="No Scheduled Publish" value={String(dailyContentPlanSummary.guardrailSummary.noScheduledPublish)} />
+                <DetailItem label="Profile Policy Used" value={String(dailyContentPlanSummary.guardrailSummary.profilePolicyUsed)} />
+              </div>
+            </details>
           </div>
         ) : (
           <div className="notice">Connection List에서 verified Blogger Blog가 있는 connection의 Daily Plan Preview를 실행하세요.</div>
@@ -1213,6 +1246,27 @@ function getTodayInSeoul() {
     month: "2-digit",
     day: "2-digit"
   }).format(new Date());
+}
+
+function getDailyPlanSlotLabel(slotKey: string) {
+  const labels: Record<string, string> = {
+    morning_education: "오전 교육형",
+    midday_checklist: "점심 체크리스트",
+    evening_risk_review: "저녁 리스크 복기"
+  };
+  return labels[slotKey] ?? slotKey;
+}
+
+function getDailyPlanItemStatus(item: DailyContentPlanQueueItem) {
+  return "status" in item ? item.status : "preview";
+}
+
+function getDailyPlanItemContentItemId(item: DailyContentPlanQueueItem) {
+  return "contentItemId" in item ? item.contentItemId : null;
+}
+
+function formatDisabledFlag(value: boolean) {
+  return value ? "켜짐" : "꺼짐";
 }
 
 function ValidationList({ title, items, emptyText, isError, isWarning }: { title: string; items: string[]; emptyText: string; isError?: boolean; isWarning?: boolean }) {

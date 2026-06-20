@@ -1,12 +1,12 @@
 # 14_NEXT_SESSION_BRIEF
 
-## Current State: Patch 9F-2B Closeout
+## Current State: Patch 9F-2C
 
 ```text
 repo: ~/blog-growth-agent
 branch: master
-previous HEAD before 9F-2B: 4163168 Add daily content plan preview foundation
-expected HEAD after 9F-2B closeout commit: local commit `Document 9F-2B daily content plan creation` (verify exact hash with `git log --oneline -8`)
+previous HEAD before 9F-2C: b180c69 Document 9F-2B daily content plan creation
+expected HEAD after 9F-2C commit: local commit `Polish daily content plan queue preview` (verify exact hash with `git log --oneline -8`)
 milestone: 9E first end-to-end Blogger publish completed; 9F operation automation foundation started
 ```
 
@@ -47,6 +47,11 @@ Current baseline:
 - After-apply preview now reports `planWouldBeCreated=false`, `planWouldBeUpdated=true`, `applyAttempted=false`, and `dbWrite=false`.
 - Flag-disabled apply-negative smoke reports blocker `daily_content_plan_write_feature_flag_disabled`, `applyAttempted=false`, `applyBlocked=true`, `applyOk=false`, and `dbWrite=false`.
 - Do not rerun 9F-2B apply. A daily content plan already exists for 2026-06-20. Future work should treat it as existing fixture/readback data unless the user explicitly approves a new date-specific write.
+- 9F-2C polished the Daily Content Plan API/UI readback around the existing fixture without business DB writes.
+- `POST /api/daily-content-plans/default-plan` now exposes additive persisted readback fields such as `existingPlanFound`, `persistedPlanId`, `persistedItemCount`, `existingPlanSummary`, and `existingPlanItems`.
+- Future apply summaries can populate `appliedPlan` and `appliedItemCount`, addressing the 9F-2B follow-up without rerunning apply.
+- `/settings/blogger` now shows `오늘 콘텐츠 계획`, safety guardrails, and a draft `후보 큐` for the three persisted candidate items.
+- The UI keeps content generation, LLM calls, content item creation, Blogger write, publish execution, and scheduled publish as disabled/coming-soon only.
 - `posts.update`, scheduled publish, bulk publish automation, and policy-enforced operation profile gate behavior are not implemented yet.
 
 9F-1A/9F-1B operation profile state:
@@ -67,6 +72,7 @@ Current baseline:
 - 9F-1F added policy simulation scenario matrix wiring: `matrixVersion=9F-1F`, `matrixMode=policy_simulation_scenario_matrix`, `advisoryOnly=true`, `policyEnforced=false`, actual blocker/permission impact false, scenario rows and totals, and no blocker/canExecute/canPublish changes.
 - 9F-2A added Daily Auto Content Plan draft foundation: schema-only migration, preview API, deterministic plan item metadata, feature-flagged apply implementation, Settings UI preview, no content generation, no LLM call, no content item creation, no Blogger write/publish/schedule, and no daily plan business row writes during validation.
 - 9F-2B created or idempotently confirmed the default daily content plan row and three item rows once after explicit operator approval, while keeping content generation, LLM calls, content item mutation, Blogger writes, publish execution, scheduling, OAuth reconnect, token refresh, publish approval mutation, and publish attempt mutation disabled.
+- 9F-2C added persisted daily plan readback fields and an operator-friendly queue dashboard draft in `/settings/blogger`, without rerunning apply or mutating business rows.
 
 9E first end-to-end publish path:
 
@@ -78,24 +84,24 @@ Current baseline:
 6. `9E-9C` read back `https://mathlearningappl.blogspot.com/2026/06/blog-post.html`.
 7. `9E-9D-APPLY` reconciled internal DB state from `planned`/`planned_only` to `published`/`success`.
 
-Recommended next after 9F-2B:
-
-**9F-2C — Daily Content Plan UI polish and queue dashboard draft**
-
-Goal:
-
-- Show the existing daily plan row and item rows as a queue/dashboard draft.
-- Improve the API/UI summary so apply responses surface the applied plan and item count instead of relying only on DB readback.
-- Keep content generation, LLM call, content item creation, Blogger write, publish execution, and scheduling disabled.
-
-Alternative:
+Recommended next after 9F-2C:
 
 **9F-2D — Daily plan to content-item draft fixture, no LLM/no Blogger write**
 
 Goal:
 
-- Convert one daily plan item into a controlled local content-item draft fixture only after explicit approval.
-- Keep LLM, Blogger write, publish, and scheduling disabled.
+- Convert one selected daily plan item into a controlled local content-item draft fixture only after explicit approval.
+- Keep LLM, Blogger write, publish execution, and scheduled publish disabled.
+- Preserve daily plan item safety flags unless a dedicated approval workflow changes them in a later patch.
+
+Alternative:
+
+**9F-2E — Daily Content Queue operator approval workflow draft, no generation/no publish execution**
+
+Goal:
+
+- Design the operator approval workflow for queue items before creating content item fixtures.
+- Keep generation, Blogger write, publish execution, and scheduling disabled.
 
 ## 9F Automation Roadmap
 
@@ -111,6 +117,7 @@ Goal:
 | 9F-2B | Create/apply Daily Content Plan row |
 | 9F-2C | Daily Content Plan UI polish and queue dashboard draft |
 | 9F-2D | Daily plan to content-item draft fixture, no LLM/no Blogger write |
+| 9F-2E | Daily Content Queue operator approval workflow draft |
 | 9F-3A | Alert & Recovery Center |
 
 Core operation principles:
