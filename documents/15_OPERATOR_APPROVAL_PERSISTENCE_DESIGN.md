@@ -45,7 +45,7 @@ Added scaffold:
 
 Patch 9F-2I-APPLY applied the existing migration exactly once after explicit operator approval.
 
-Current DB state after 9F-2I-APPLY:
+DB state immediately after 9F-2I-APPLY and before 9F-2K-APPLY:
 
 - `to_regclass('public.blog_daily_content_operator_approvals')` exists
 - `to_regclass('public.blog_daily_content_operator_approval_events')` exists
@@ -54,7 +54,7 @@ Current DB state after 9F-2I-APPLY:
 
 9F-2I-APPLY did not create approval rows/events, update approval status, mutate Daily Content Plan rows/items, mutate `content_items`, generate drafts, call LLM providers, write to Blogger, publish or schedule posts, reconnect OAuth, or refresh tokens.
 
-## Patch 9F-2K Guarded Route Status
+## Patch 9F-2K Guarded Route And Apply Status
 
 Patch 9F-2K implements the first guarded persistence route for this design:
 
@@ -76,12 +76,19 @@ Target approval for this patch:
 - `planItemId=cmqlr1v1y0001iwj2gpv2875r`
 - `contentItemId=daily_fixture_cmqlr1v1y0001iwj2gpv2875r`
 
-Current state after the 9F-2K implementation patch:
+Current state after the 9F-2K approved apply:
 
-- The Korean approval phrase for approved apply was not provided.
-- No approval apply was executed.
-- `operator_approvals_count = 0`
-- `operator_approval_events_count = 0`
+- The Korean approval phrase for approved apply was provided.
+- Approved apply was executed exactly once through the guarded route.
+- `operator_approvals_count = 1`
+- `operator_approval_events_count = 1`
+- approval id `cmqmcs1l10001iwu863doda1s`
+- approval event id `cmqmcs1lg0003iwu8ff4780ll`
+- `riskAcknowledged=true`
+- `llmExecutionAcknowledged=true`
+- `contentMutationAcknowledged=true`
+- `externalWriteRiskAcknowledged=false`
+- `bloggerWriteAcknowledged=false`
 
 9F-2K does not generate content, call LLM providers, create `llm_call_logs`, mutate `content_items`, create `draftMarkdown`/`draftHtml`, write to Blogger, publish, schedule, reconnect OAuth, refresh tokens, mutate publish approvals, or mutate publish attempts.
 

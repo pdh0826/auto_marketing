@@ -204,14 +204,18 @@ Patch 9F-2K adds a guarded preview/apply route for the existing operator approva
 - `POST /api/daily-content-plans/operator-approvals`
 - helper `src/lib/daily-content-plans/operator-approval-persistence.ts`
 
-Current implementation state:
+Current implementation state after approved 9F-2K apply:
 
 - Preview mode reads the target daily plan, plan item, linked content fixture, and any existing operator approval/event.
 - Apply mode is implemented but blocked unless `BLOG_DAILY_CONTENT_OPERATOR_APPROVAL_WRITE_ENABLED=true`, the exact confirmation phrase, and the expected idempotency key are present.
-- The Settings UI only calls preview and keeps approval apply controls disabled.
-- The Korean approval phrase for the actual 9F-2K apply was not provided in this patch, so no approval row/event was created.
-- `operator_approvals_count = 0`
-- `operator_approval_events_count = 0`
+- The Settings UI can read back approval state and keeps direct approval apply controls disabled.
+- The Korean approval phrase was provided after the pending implementation patch.
+- 9F-2K approved apply was executed exactly once through the guarded route.
+- `operator_approvals_count = 1`
+- `operator_approval_events_count = 1`
+- persisted approval id `cmqmcs1l10001iwu863doda1s`
+- persisted event id `cmqmcs1lg0003iwu8ff4780ll`
+- target approval has `approvalPurpose=draft_generation_execution`, `approvalStatus=approved`, `operatorAction=approve_for_draft_generation_execution`, and `operatorLabel=초안 생성 실행 승인`
 
 9F-2K does not modify `prisma/schema.prisma`, create migrations, generate drafts, call LLM providers, mutate `content_items`, write to Blogger, publish, schedule, reconnect OAuth, refresh tokens, mutate publish approvals, or mutate publish attempts.
 

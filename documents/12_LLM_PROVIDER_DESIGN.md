@@ -75,7 +75,7 @@ Patch 9F-2J adds a read-only draft-generation execution gate preview API and `/s
 
 Patch 9F-2I-APPLY applies only the existing operator approval persistence migration. It creates approval tables but does not create approval rows/events and does not call LLM providers, create `llm_call_logs`, generate drafts, mutate `content_items`, or perform Blogger/OAuth/token/publish actions. After apply, 9F-2J preview can report approval persistence available while still blocking execution because operator approval is missing and LLM/content mutation/write gates remain disabled.
 
-Patch 9F-2K adds the guarded operator approval persistence preview/apply route and Settings readback. It still does not call OpenAI, local HTTP, CLI, or any LLM provider; it does not create `llm_call_logs`; and it does not generate or save `draftMarkdown` or `draftHtml`. Without the exact Korean approval phrase, the implementation remains pending apply and leaves operator approval rows/events at `0 / 0`. Even after a future approved apply, the only allowed write is one operator approval row and one approval event row; LLM execution remains blocked until a later explicit draft-generation patch.
+Patch 9F-2K adds the guarded operator approval persistence preview/apply route and Settings readback. It still does not call OpenAI, local HTTP, CLI, or any LLM provider; it does not create `llm_call_logs`; and it does not generate or save `draftMarkdown` or `draftHtml`. After the exact Korean approval phrase, the approved apply was executed once and created or idempotently confirmed one operator approval row and one approval event row only. LLM execution remains blocked until a later explicit draft-generation patch.
 
 ## Patch 3 설정 화면
 

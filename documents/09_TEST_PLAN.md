@@ -331,9 +331,13 @@ Next session start DB guard should use the published/success values above. The c
 - Preview should report `patchVersion=9F-2K`, `approvalPurpose=draft_generation_execution`, `operatorAction=approve_for_draft_generation_execution`, target integrity pass, `existingApprovalFound=false`, `approvalWouldBeCreated=true`, and `eventWouldBeCreated=true` before the approved apply.
 - Preview side effects must remain `dbRead=true`, `dbWrite=false`, `approvalMutation=false`, `approvalEventMutation=false`, `contentGeneration=false`, `llmCall=false`, `contentMutation=false`, `draftMarkdownMutation=false`, `draftHtmlMutation=false`, `bloggerWrite=false`, and `bloggerPublish=false`.
 - Apply-negative smoke without `BLOG_DAILY_CONTENT_OPERATOR_APPROVAL_WRITE_ENABLED=true` should return `mode=apply`, `featureFlagEnabled=false`, `confirmationPhraseAccepted=true`, `idempotencyKeyAccepted=true`, `applyAttempted=false`, `applyBlocked=true`, `applyOk=false`, and a feature-flag blocker.
-- Because the Korean approval phrase was not provided for this patch, approved apply must not be executed.
-- `operator_approvals_count` and `operator_approval_events_count` should remain `0 / 0`.
-- 9F-2K should update the 9F-2J execution gate preview to read persisted approval state only when the approval tables exist; before apply, `operatorApprovalSatisfied=false` and `operator_approval_missing` remains.
+- After the Korean approval phrase is provided, approved apply should be executed exactly once with `BLOG_DAILY_CONTENT_OPERATOR_APPROVAL_WRITE_ENABLED=true`.
+- Approved apply should create or idempotently confirm exactly one operator approval row and exactly one operator approval event row only.
+- After approved apply, `operator_approvals_count` and `operator_approval_events_count` should be `1 / 1`.
+- The persisted approval should have `approvalPurpose=draft_generation_execution`, `approvalStatus=approved`, `operatorAction=approve_for_draft_generation_execution`, `riskAcknowledged=true`, `llmExecutionAcknowledged=true`, `contentMutationAcknowledged=true`, and `bloggerWriteAcknowledged=false`.
+- After approved apply, preview should report `existingApprovalFound=true`, `approvalWouldBeCreated=false`, `eventWouldBeCreated=false`, `applyAttempted=false`, and `dbWrite=false`.
+- After approved apply, apply-negative without the write flag should remain blocked with `dbWrite=false` and no duplicate approval/event.
+- 9F-2K should update the 9F-2J execution gate preview to read persisted approval state only when the approval tables exist; after apply, `operatorApprovalSatisfied=true` and `operator_approval_missing` should be absent while execution remains blocked by LLM/write/confirmation/idempotency gates.
 - 9F-2K must not rerun 9F-2B apply, 9F-2D apply, or 9F-2I-APPLY.
 - 9F-2K must not modify `prisma/schema.prisma` or create a migration.
 - 9F-2K must not create `draftMarkdown` or `draftHtml`, call LLM providers, mutate `content_items`, write to Blogger, publish/schedule, reconnect OAuth, refresh tokens, mutate publish approvals, or mutate publish attempts.

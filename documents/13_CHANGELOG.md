@@ -1,5 +1,30 @@
 # 13_CHANGELOG
 
+## Patch 9F-2K-APPLY Persist Operator Approval For Draft Generation Gate
+
+Applied after Patch 9F-2K:
+
+- Executed the approved 9F-2K apply exactly once after the operator provided the Korean approval phrase.
+- Created one operator approval row: `cmqmcs1l10001iwu863doda1s`.
+- Created one operator approval event row: `cmqmcs1lg0003iwu8ff4780ll`.
+- Approval target: plan item `cmqlr1v1y0001iwj2gpv2875r`, content item `daily_fixture_cmqlr1v1y0001iwj2gpv2875r`.
+- Approval state: `approvalPurpose=draft_generation_execution`, `approvalStatus=approved`, `operatorAction=approve_for_draft_generation_execution`, `operatorLabel=초안 생성 실행 승인`.
+- Confirmed `operator_approvals_count=1` and `operator_approval_events_count=1`.
+- Confirmed post-apply preview reports `existingApprovalFound=true`, `approvalWouldBeCreated=false`, `eventWouldBeCreated=false`, and `dbWrite=false`.
+- Confirmed 9F-2J execution gate preview now reports `operatorApprovalSatisfied=true`, removes `operator_approval_missing`, and keeps `executionAllowed=false` because LLM/content mutation/write/confirmation/idempotency gates remain blocked.
+
+Policy:
+
+- 9F-2K-APPLY did not rerun 9F-2B apply, 9F-2D apply, or 9F-2I-APPLY.
+- 9F-2K-APPLY did not modify `prisma/schema.prisma` or create a migration.
+- 9F-2K-APPLY did not mutate Daily Content Plan rows/items, `content_items`, Blogger tables, operation profiles, publish approvals, publish attempts, or LLM logs.
+- 9F-2K-APPLY did not run content generation, LLM calls, Blogger publish/write/update/draft save/schedule, OAuth reconnect, token refresh, deploy, push, or external service writes.
+- Daily plan rows remain `1`, daily plan item rows remain `3`, and `content_items` count remains `2`.
+- The linked fixture remains `planned` with empty `draftMarkdown` and `draftHtml`.
+- The 9E published/success milestone baseline remained unchanged.
+- Recommended next patch: `9F-2L — Draft-generation execution gate post-approval preview polish, no LLM/no mutation`.
+- Alternative next patch: `9F-2M — Draft-generation dry-run planner, no LLM/no content mutation`.
+
 ## Patch 9F-2K Operator Approval Persistence Route
 
 Implemented after Patch 9F-2I-APPLY:
@@ -11,7 +36,7 @@ Implemented after Patch 9F-2I-APPLY:
 - Preview mode reports target integrity, existing approval/event state, whether approval/event would be created, guardrails, and side-effect summary.
 - Apply mode is implemented but blocked unless `BLOG_DAILY_CONTENT_OPERATOR_APPROVAL_WRITE_ENABLED=true`, exact confirmation phrase `I_UNDERSTAND_THIS_WILL_PERSIST_OPERATOR_APPROVAL_ONLY`, and expected idempotency key are present.
 
-Pending apply state:
+Initial pending apply state:
 
 - The required Korean approval phrase was not provided in this patch.
 - Approved apply was not executed.
