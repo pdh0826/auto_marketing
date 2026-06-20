@@ -18,6 +18,7 @@ import type { DailyPlanContentItemFixtureResponse } from "@/lib/daily-content-pl
 import type { DailyContentPlanResponse } from "@/lib/daily-content-plans/daily-content-plan-summary";
 import type { DailyContentDraftGenerationDryRunPlannerResponse } from "@/lib/daily-content-plans/draft-generation-dry-run-planner";
 import type { DailyContentDraftGenerationExecutionGatePreviewResponse } from "@/lib/daily-content-plans/draft-generation-execution-gate-preview";
+import type { DailyContentDraftGenerationLlmProviderHealthCheckPreviewResponse } from "@/lib/daily-content-plans/draft-generation-llm-provider-health-check-preview";
 import type { DailyContentDraftGenerationLlmProviderReadinessResponse } from "@/lib/daily-content-plans/draft-generation-llm-provider-readiness";
 import type { DailyContentDraftGenerationReadinessResponse } from "@/lib/daily-content-plans/draft-generation-readiness";
 import type { DailyContentOperatorApprovalPersistenceResponse } from "@/lib/daily-content-plans/operator-approval-persistence";
@@ -86,6 +87,8 @@ export function BloggerSettingsClient() {
   const [draftGenerationExecutionGateResult, setDraftGenerationExecutionGateResult] = useState<DailyContentDraftGenerationExecutionGatePreviewResponse | null>(null);
   const [draftGenerationDryRunPlannerResult, setDraftGenerationDryRunPlannerResult] = useState<DailyContentDraftGenerationDryRunPlannerResponse | null>(null);
   const [draftGenerationLlmProviderReadinessResult, setDraftGenerationLlmProviderReadinessResult] = useState<DailyContentDraftGenerationLlmProviderReadinessResponse | null>(null);
+  const [draftGenerationLlmProviderHealthCheckPreviewResult, setDraftGenerationLlmProviderHealthCheckPreviewResult] =
+    useState<DailyContentDraftGenerationLlmProviderHealthCheckPreviewResponse | null>(null);
   const [oauthDryRun, setOauthDryRun] = useState<BloggerOAuthStartDryRun | null>(null);
   const [blogListResult, setBlogListResult] = useState<BloggerBlogListResult | null>(null);
   const [blogListLoadingId, setBlogListLoadingId] = useState<string | null>(null);
@@ -99,6 +102,7 @@ export function BloggerSettingsClient() {
   const [loadingDraftGenerationExecutionGateItemId, setLoadingDraftGenerationExecutionGateItemId] = useState<string | null>(null);
   const [loadingDraftGenerationDryRunPlannerItemId, setLoadingDraftGenerationDryRunPlannerItemId] = useState<string | null>(null);
   const [loadingDraftGenerationLlmProviderReadinessItemId, setLoadingDraftGenerationLlmProviderReadinessItemId] = useState<string | null>(null);
+  const [loadingDraftGenerationLlmProviderHealthCheckPreviewItemId, setLoadingDraftGenerationLlmProviderHealthCheckPreviewItemId] = useState<string | null>(null);
   const [selectingBlogId, setSelectingBlogId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -176,6 +180,7 @@ export function BloggerSettingsClient() {
       setDraftGenerationExecutionGateResult(null);
       setDraftGenerationDryRunPlannerResult(null);
       setDraftGenerationLlmProviderReadinessResult(null);
+      setDraftGenerationLlmProviderHealthCheckPreviewResult(null);
       setOauthDryRun(null);
       setBlogListResult(null);
       setNotice("Blogger connection을 저장했습니다. Blogger draft/publish는 수행하지 않았습니다.");
@@ -301,6 +306,7 @@ export function BloggerSettingsClient() {
       setDraftGenerationExecutionGateResult(null);
       setDraftGenerationDryRunPlannerResult(null);
       setDraftGenerationLlmProviderReadinessResult(null);
+      setDraftGenerationLlmProviderHealthCheckPreviewResult(null);
       setNotice("Daily Content Plan preview를 생성했습니다. Plan row 저장, content generation, LLM call, Blogger write/publish는 수행하지 않았습니다.");
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Daily Content Plan preview에 실패했습니다.");
@@ -530,6 +536,42 @@ export function BloggerSettingsClient() {
     }
   }
 
+  async function previewDraftGenerationLlmProviderHealthCheck(
+    planId: string | null | undefined,
+    planItemId: string | null | undefined,
+    contentItemId: string | null | undefined
+  ) {
+    if (!planId || !planItemId || !contentItemId) {
+      setError("Daily plan id, item id, linked content item id가 필요합니다.");
+      return;
+    }
+
+    setError(null);
+    setNotice(null);
+    setLoadingDraftGenerationLlmProviderHealthCheckPreviewItemId(planItemId);
+
+    try {
+      const result = await requestJson<ApiResult<DailyContentDraftGenerationLlmProviderHealthCheckPreviewResponse>>(
+        "/api/daily-content-plans/draft-generation-llm-provider-health-check-preview",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            mode: "preview",
+            planId,
+            planItemId,
+            contentItemId
+          })
+        }
+      );
+      setDraftGenerationLlmProviderHealthCheckPreviewResult(result.data);
+      setNotice("초안 생성 LLM health-check preview를 확인했습니다. provider 호출, LLM completion, prompt 렌더링, llm_call_logs 생성, content_items 수정, Blogger write/publish는 수행하지 않았습니다.");
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "초안 생성 LLM health-check preview 확인에 실패했습니다.");
+    } finally {
+      setLoadingDraftGenerationLlmProviderHealthCheckPreviewItemId(null);
+    }
+  }
+
   async function createOAuthDryRun(connection: BloggerConnectionAdmin) {
     setError(null);
     setNotice(null);
@@ -715,6 +757,9 @@ export function BloggerSettingsClient() {
                   setOperatorWorkflowResult(null);
                   setDraftGenerationReadinessResult(null);
                   setDraftGenerationExecutionGateResult(null);
+                  setDraftGenerationDryRunPlannerResult(null);
+                  setDraftGenerationLlmProviderReadinessResult(null);
+                  setDraftGenerationLlmProviderHealthCheckPreviewResult(null);
                   setOauthDryRun(null);
                   setBlogListResult(null);
                 }}
@@ -1280,6 +1325,25 @@ export function BloggerSettingsClient() {
                         }
                       >
                         {loadingDraftGenerationLlmProviderReadinessItemId === getDailyPlanItemId(item) ? "LLM 준비 확인 중" : "LLM 준비상태"}
+                      </button>
+                      <button
+                        className="button small secondary"
+                        type="button"
+                        disabled={
+                          !dailyContentPlanSummary.persistedPlanId ||
+                          !getDailyPlanItemId(item) ||
+                          !getDailyPlanItemContentItemId(item) ||
+                          loadingDraftGenerationLlmProviderHealthCheckPreviewItemId === getDailyPlanItemId(item)
+                        }
+                        onClick={() =>
+                          void previewDraftGenerationLlmProviderHealthCheck(
+                            dailyContentPlanSummary.persistedPlanId,
+                            getDailyPlanItemId(item),
+                            getDailyPlanItemContentItemId(item)
+                          )
+                        }
+                      >
+                        {loadingDraftGenerationLlmProviderHealthCheckPreviewItemId === getDailyPlanItemId(item) ? "health-check 확인 중" : "LLM health-check preview"}
                       </button>
                     </td>
                   </tr>
@@ -2013,6 +2077,317 @@ export function BloggerSettingsClient() {
               )}
             </div>
 
+            <div className="read-block">
+              <h3>초안 생성 LLM health-check preview</h3>
+              <div className="notice warning">
+                <strong>9F-2O provider health-check plan only</strong>
+                <p>provider health-check 실행 계획을 확인합니다. 이번 단계에서는 provider 호출, 네트워크 호출, LLM completion, prompt 렌더링, llm_call_logs 생성, content_items 수정이 모두 차단됩니다.</p>
+              </div>
+              <div className="button-row">
+                <button className="button small secondary" type="button" disabled>
+                  Health-check 실행 - 비활성
+                </button>
+                <button className="button small secondary" type="button" disabled>
+                  LLM completion - 비활성
+                </button>
+                <button className="button small secondary" type="button" disabled>
+                  초안 저장 - 비활성
+                </button>
+              </div>
+              {draftGenerationLlmProviderHealthCheckPreviewResult ? (
+                <>
+                  <div className="notice warning">
+                    <strong>Health-check preview 확인됨 · provider 호출 없음</strong>
+                    <p>
+                      health-check 허용:{" "}
+                      {draftGenerationLlmProviderHealthCheckPreviewResult.draftGenerationLlmProviderHealthCheckPreviewSummary.healthCheckPreviewSummary.healthCheckAllowedNow
+                        ? "가능"
+                        : "차단"}{" "}
+                      / 실행 deferred:{" "}
+                      {String(
+                        draftGenerationLlmProviderHealthCheckPreviewResult.draftGenerationLlmProviderHealthCheckPreviewSummary.healthCheckPreviewSummary
+                          .healthCheckExecutionDeferred
+                      )}
+                    </p>
+                    <p>이번 preview는 selected provider/model을 기준으로 다음 패치에서 가능한 safe health-check contract만 보여줍니다.</p>
+                  </div>
+                  <div className="detail-grid">
+                    <DetailItem label="Patch" value={draftGenerationLlmProviderHealthCheckPreviewResult.draftGenerationLlmProviderHealthCheckPreviewSummary.patchVersion} />
+                    <DetailItem
+                      label="Preview Mode"
+                      value={draftGenerationLlmProviderHealthCheckPreviewResult.draftGenerationLlmProviderHealthCheckPreviewSummary.healthCheckPreviewMode}
+                    />
+                    <DetailItem label="Requested Mode" value={draftGenerationLlmProviderHealthCheckPreviewResult.draftGenerationLlmProviderHealthCheckPreviewSummary.requestedMode} />
+                    <DetailItem label="Plan ID" value={draftGenerationLlmProviderHealthCheckPreviewResult.draftGenerationLlmProviderHealthCheckPreviewSummary.targetSummary.planId ?? "-"} />
+                    <DetailItem label="Plan Item" value={draftGenerationLlmProviderHealthCheckPreviewResult.draftGenerationLlmProviderHealthCheckPreviewSummary.targetSummary.planItemId || "-"} />
+                    <DetailItem
+                      label="Linked Fixture"
+                      value={draftGenerationLlmProviderHealthCheckPreviewResult.draftGenerationLlmProviderHealthCheckPreviewSummary.targetSummary.contentItemId ?? "-"}
+                    />
+                    <DetailItem
+                      label="Approval Satisfied"
+                      value={String(
+                        draftGenerationLlmProviderHealthCheckPreviewResult.draftGenerationLlmProviderHealthCheckPreviewSummary.persistedApprovalSummary
+                          .operatorApprovalSatisfied
+                      )}
+                    />
+                    <DetailItem
+                      label="Execution Allowed"
+                      value={String(draftGenerationLlmProviderHealthCheckPreviewResult.draftGenerationLlmProviderHealthCheckPreviewSummary.executionGateSummary.executionAllowed)}
+                    />
+                  </div>
+                  <div className="detail-grid">
+                    <DetailItem
+                      label="Route Resolved"
+                      value={String(
+                        draftGenerationLlmProviderHealthCheckPreviewResult.draftGenerationLlmProviderHealthCheckPreviewSummary.llmProviderReadinessSummary
+                          .selectedRouteResolved
+                      )}
+                    />
+                    <DetailItem
+                      label="Provider Kind"
+                      value={draftGenerationLlmProviderHealthCheckPreviewResult.draftGenerationLlmProviderHealthCheckPreviewSummary.llmProviderReadinessSummary.providerKind ?? "-"}
+                    />
+                    <DetailItem
+                      label="Provider Config"
+                      value={String(
+                        draftGenerationLlmProviderHealthCheckPreviewResult.draftGenerationLlmProviderHealthCheckPreviewSummary.llmProviderReadinessSummary
+                          .providerConfigFound
+                      )}
+                    />
+                    <DetailItem
+                      label="Model Config"
+                      value={String(
+                        draftGenerationLlmProviderHealthCheckPreviewResult.draftGenerationLlmProviderHealthCheckPreviewSummary.llmProviderReadinessSummary.modelConfigFound
+                      )}
+                    />
+                    <DetailItem
+                      label="Selected Provider"
+                      value={draftGenerationLlmProviderHealthCheckPreviewResult.draftGenerationLlmProviderHealthCheckPreviewSummary.llmProviderReadinessSummary.selectedProviderKey ?? "-"}
+                    />
+                    <DetailItem
+                      label="Selected Model"
+                      value={
+                        draftGenerationLlmProviderHealthCheckPreviewResult.draftGenerationLlmProviderHealthCheckPreviewSummary.llmProviderReadinessSummary
+                          .selectedModelDisplayName ?? "-"
+                      }
+                    />
+                    <DetailItem
+                      label="Secret Exposed"
+                      value={String(
+                        draftGenerationLlmProviderHealthCheckPreviewResult.draftGenerationLlmProviderHealthCheckPreviewSummary.llmProviderReadinessSummary
+                          .rawSecretValueExposed
+                      )}
+                    />
+                    <DetailItem
+                      label="Planned Timeout"
+                      value={`${draftGenerationLlmProviderHealthCheckPreviewResult.draftGenerationLlmProviderHealthCheckPreviewSummary.healthCheckPreviewSummary.plannedHealthCheckContract.plannedTimeoutMs}ms`}
+                    />
+                  </div>
+                  <ValidationList
+                    title="기존 실행 blocker"
+                    items={draftGenerationLlmProviderHealthCheckPreviewResult.draftGenerationLlmProviderHealthCheckPreviewSummary.executionGateSummary.remainingBlockers.map(
+                      formatDraftGenerationGateBlocker
+                    )}
+                    emptyText="남은 실행 blocker가 없습니다."
+                    isWarning
+                  />
+                  <ValidationList
+                    title="Health-check blockers"
+                    items={draftGenerationLlmProviderHealthCheckPreviewResult.draftGenerationLlmProviderHealthCheckPreviewSummary.healthCheckPreviewSummary.healthCheckBlockers.map(
+                      formatLlmHealthCheckBlocker
+                    )}
+                    emptyText="health-check blocker가 없습니다."
+                    isWarning
+                  />
+                  <details className="read-block">
+                    <summary>초안 생성 LLM health-check preview 기술 상세</summary>
+                    <div className="detail-grid">
+                      <DetailItem
+                        label="Provider Health Attempted"
+                        value={String(
+                          draftGenerationLlmProviderHealthCheckPreviewResult.draftGenerationLlmProviderHealthCheckPreviewSummary.providerHealthCheckAttempted
+                        )}
+                      />
+                      <DetailItem
+                        label="Provider Network Call"
+                        value={String(
+                          draftGenerationLlmProviderHealthCheckPreviewResult.draftGenerationLlmProviderHealthCheckPreviewSummary.providerNetworkCallAttempted
+                        )}
+                      />
+                      <DetailItem
+                        label="LLM Completion"
+                        value={String(draftGenerationLlmProviderHealthCheckPreviewResult.draftGenerationLlmProviderHealthCheckPreviewSummary.llmCompletionAttempted)}
+                      />
+                      <DetailItem
+                        label="Prompt Rendered"
+                        value={String(draftGenerationLlmProviderHealthCheckPreviewResult.draftGenerationLlmProviderHealthCheckPreviewSummary.promptRendered)}
+                      />
+                      <DetailItem
+                        label="Raw Prompt Stored"
+                        value={String(draftGenerationLlmProviderHealthCheckPreviewResult.draftGenerationLlmProviderHealthCheckPreviewSummary.rawPromptStored)}
+                      />
+                      <DetailItem
+                        label="Will Send Draft Prompt"
+                        value={String(
+                          draftGenerationLlmProviderHealthCheckPreviewResult.draftGenerationLlmProviderHealthCheckPreviewSummary.healthCheckPreviewSummary
+                            .plannedHealthCheckContract.willSendDraftPrompt
+                        )}
+                      />
+                      <DetailItem
+                        label="Will Request Completion"
+                        value={String(
+                          draftGenerationLlmProviderHealthCheckPreviewResult.draftGenerationLlmProviderHealthCheckPreviewSummary.healthCheckPreviewSummary
+                            .plannedHealthCheckContract.willRequestCompletion
+                        )}
+                      />
+                      <DetailItem
+                        label="Will Create LLM Log"
+                        value={String(
+                          draftGenerationLlmProviderHealthCheckPreviewResult.draftGenerationLlmProviderHealthCheckPreviewSummary.healthCheckPreviewSummary
+                            .plannedHealthCheckContract.willCreateLlmCallLog
+                        )}
+                      />
+                    </div>
+                    <ValidationList
+                      title="Planned Result Shape"
+                      items={
+                        draftGenerationLlmProviderHealthCheckPreviewResult.draftGenerationLlmProviderHealthCheckPreviewSummary.healthCheckPreviewSummary
+                          .plannedHealthCheckContract.plannedResultShape
+                      }
+                      emptyText="planned result shape가 없습니다."
+                    />
+                    <ValidationList
+                      title="Health-check Warnings"
+                      items={draftGenerationLlmProviderHealthCheckPreviewResult.draftGenerationLlmProviderHealthCheckPreviewSummary.healthCheckPreviewSummary.healthCheckWarnings}
+                      emptyText="warning이 없습니다."
+                      isWarning
+                    />
+                    <div className="detail-grid">
+                      <DetailItem
+                        label="OpenAI Contract"
+                        value={
+                          draftGenerationLlmProviderHealthCheckPreviewResult.draftGenerationLlmProviderHealthCheckPreviewSummary.healthCheckPreviewSummary
+                            .providerSpecificPlan.openai.allowedHealthCheckType
+                        }
+                      />
+                      <DetailItem
+                        label="Local Contract"
+                        value={
+                          draftGenerationLlmProviderHealthCheckPreviewResult.draftGenerationLlmProviderHealthCheckPreviewSummary.healthCheckPreviewSummary
+                            .providerSpecificPlan.local.allowedHealthCheckType
+                        }
+                      />
+                      <DetailItem
+                        label="HTTP Contract"
+                        value={
+                          draftGenerationLlmProviderHealthCheckPreviewResult.draftGenerationLlmProviderHealthCheckPreviewSummary.healthCheckPreviewSummary
+                            .providerSpecificPlan.http.allowedHealthCheckType
+                        }
+                      />
+                      <DetailItem
+                        label="CLI Contract"
+                        value={
+                          draftGenerationLlmProviderHealthCheckPreviewResult.draftGenerationLlmProviderHealthCheckPreviewSummary.healthCheckPreviewSummary
+                            .providerSpecificPlan.cli.allowedHealthCheckType
+                        }
+                      />
+                    </div>
+                    <div className="detail-grid">
+                      <DetailItem
+                        label="DB Read"
+                        value={String(
+                          draftGenerationLlmProviderHealthCheckPreviewResult.draftGenerationLlmProviderHealthCheckPreviewSummary.healthCheckPreviewSummary
+                            .currentSideEffectSummary.dbRead
+                        )}
+                      />
+                      <DetailItem
+                        label="DB Write"
+                        value={String(
+                          draftGenerationLlmProviderHealthCheckPreviewResult.draftGenerationLlmProviderHealthCheckPreviewSummary.healthCheckPreviewSummary
+                            .currentSideEffectSummary.dbWrite
+                        )}
+                      />
+                      <DetailItem
+                        label="Env Read"
+                        value={String(
+                          draftGenerationLlmProviderHealthCheckPreviewResult.draftGenerationLlmProviderHealthCheckPreviewSummary.healthCheckPreviewSummary
+                            .currentSideEffectSummary.envRead
+                        )}
+                      />
+                      <DetailItem
+                        label="Secret Exposed"
+                        value={String(
+                          draftGenerationLlmProviderHealthCheckPreviewResult.draftGenerationLlmProviderHealthCheckPreviewSummary.healthCheckPreviewSummary
+                            .currentSideEffectSummary.secretValueExposed
+                        )}
+                      />
+                      <DetailItem
+                        label="Provider Health"
+                        value={String(
+                          draftGenerationLlmProviderHealthCheckPreviewResult.draftGenerationLlmProviderHealthCheckPreviewSummary.healthCheckPreviewSummary
+                            .currentSideEffectSummary.providerHealthCheck
+                        )}
+                      />
+                      <DetailItem
+                        label="Provider Network"
+                        value={String(
+                          draftGenerationLlmProviderHealthCheckPreviewResult.draftGenerationLlmProviderHealthCheckPreviewSummary.healthCheckPreviewSummary
+                            .currentSideEffectSummary.providerNetworkCall
+                        )}
+                      />
+                      <DetailItem
+                        label="LLM Completion"
+                        value={String(
+                          draftGenerationLlmProviderHealthCheckPreviewResult.draftGenerationLlmProviderHealthCheckPreviewSummary.healthCheckPreviewSummary
+                            .currentSideEffectSummary.llmCompletion
+                        )}
+                      />
+                      <DetailItem
+                        label="LLM Log Mutation"
+                        value={String(
+                          draftGenerationLlmProviderHealthCheckPreviewResult.draftGenerationLlmProviderHealthCheckPreviewSummary.healthCheckPreviewSummary
+                            .currentSideEffectSummary.llmCallLogMutation
+                        )}
+                      />
+                      <DetailItem
+                        label="Content Mutation"
+                        value={String(
+                          draftGenerationLlmProviderHealthCheckPreviewResult.draftGenerationLlmProviderHealthCheckPreviewSummary.healthCheckPreviewSummary
+                            .currentSideEffectSummary.contentItemMutation
+                        )}
+                      />
+                      <DetailItem
+                        label="Draft Markdown"
+                        value={String(
+                          draftGenerationLlmProviderHealthCheckPreviewResult.draftGenerationLlmProviderHealthCheckPreviewSummary.healthCheckPreviewSummary
+                            .currentSideEffectSummary.draftMarkdownMutation
+                        )}
+                      />
+                      <DetailItem
+                        label="Draft HTML"
+                        value={String(
+                          draftGenerationLlmProviderHealthCheckPreviewResult.draftGenerationLlmProviderHealthCheckPreviewSummary.healthCheckPreviewSummary
+                            .currentSideEffectSummary.draftHtmlMutation
+                        )}
+                      />
+                      <DetailItem
+                        label="Blogger Write"
+                        value={String(
+                          draftGenerationLlmProviderHealthCheckPreviewResult.draftGenerationLlmProviderHealthCheckPreviewSummary.healthCheckPreviewSummary
+                            .currentSideEffectSummary.bloggerWrite
+                        )}
+                      />
+                    </div>
+                  </details>
+                </>
+              ) : (
+                <div className="notice">
+                  후보 큐에서 linked content item이 있는 행의 “LLM health-check preview”를 실행하세요. 이 버튼은 provider health-check를 실행하지 않고 다음 패치의 safe contract만 확인합니다.
+                </div>
+              )}
+            </div>
+
             <details className="read-block">
               <summary>기술 상세</summary>
               <div className="detail-grid">
@@ -2383,6 +2758,18 @@ function formatLlmReadinessBlocker(blocker: string) {
     llm_provider_disabled_for_draft_generation: "LLM provider 비활성",
     llm_model_candidate_not_resolved: "LLM model 후보 미확정",
     llm_required_env_missing: "필수 env 존재 확인 실패"
+  };
+  return labels[blocker] ?? blocker;
+}
+
+function formatLlmHealthCheckBlocker(blocker: string) {
+  const labels: Record<string, string> = {
+    draft_generation_llm_provider_health_check_preview_is_preview_only: "health-check preview 전용 mode만 허용",
+    llm_provider_healthcheck_feature_flag_disabled: "LLM provider health-check feature flag 꺼짐",
+    healthcheck_confirmation_phrase_missing: "health-check 확인 문구 없음",
+    healthcheck_idempotency_key_missing: "health-check idempotency key 없음",
+    llm_completion_disabled_by_patch_policy: "이번 패치 정책상 LLM completion 금지",
+    content_mutation_disabled_by_patch_policy: "이번 패치 정책상 content mutation 금지"
   };
   return labels[blocker] ?? blocker;
 }

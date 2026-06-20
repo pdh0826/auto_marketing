@@ -117,6 +117,18 @@ The preview reads the existing `content_draft` Task Route, safe provider/model m
 
 It does not perform provider health checks, make provider network calls, call LLM providers, create `llm_call_logs`, render/store prompts, generate draft content, mutate `content_items`, write to Blogger, publish, schedule, reconnect OAuth, or refresh tokens. It also does not expose env values, raw secrets, encrypted values, API keys, bearer tokens, provider request bodies, or raw provider responses. Execution still remains blocked by LLM execution, content mutation, draft write, confirmation phrase, and idempotency gates.
 
+## Patch 9F-2O LLM Provider Health-check Preview
+
+Patch 9F-2O implements the read-only health-check preview/gate after the 9F-2N static provider readiness step:
+
+- `POST /api/daily-content-plans/draft-generation-llm-provider-health-check-preview`
+- `/settings/blogger` section `초안 생성 LLM health-check preview`
+- health-check preview mode `read_only_llm_provider_health_check_preview`
+
+The preview reuses the 9F-2N provider/model readiness result and describes the future safe health-check contract. It shows the selected provider/model, the provider-specific safe health-check type, feature flag/confirmation/idempotency blockers, and a no-side-effect summary.
+
+It does not execute provider health checks, make provider network calls, call completion/generate/chat endpoints, render/store prompts, create `llm_call_logs`, generate draft content, mutate `content_items`, write to Blogger, publish, schedule, reconnect OAuth, or refresh tokens. `mode=healthcheck_preview` is still blocked by design in 9F-2O and should only be opened by a later explicit health-check execution patch.
+
 ## Execution Gate Layers
 
 The future execution route should evaluate these layers in order and return every blocking reason in a safe summary. No layer may store prompt text, raw LLM response text, generated candidate text, Blogger tokens, secrets, or external raw bodies.

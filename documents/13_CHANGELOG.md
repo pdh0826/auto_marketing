@@ -1,5 +1,30 @@
 # 13_CHANGELOG
 
+## Patch 9F-2O LLM Provider Health-check Preview
+
+Implemented after Patch 9F-2N:
+
+- Added read-only helper `src/lib/daily-content-plans/draft-generation-llm-provider-health-check-preview.ts`.
+- Added route `POST /api/daily-content-plans/draft-generation-llm-provider-health-check-preview`.
+- Added `/settings/blogger` `초안 생성 LLM health-check preview` UI readback.
+- The preview reuses the 9F-2N provider/model readiness response and shows the future provider health-check contract without executing it.
+- The preview reports `healthCheckPreviewMode=read_only_llm_provider_health_check_preview`, `dryRunOnly=true`, `providerHealthCheckAttempted=false`, `providerNetworkCallAttempted=false`, `llmCompletionAttempted=false`, `promptRendered=false`, and `rawPromptStored=false`.
+- `mode=healthcheck_preview` remains gated/blocked with health-check feature flag, confirmation phrase, idempotency, completion-disabled, and content-mutation-disabled blockers.
+- Unsupported modes are blocked with `draft_generation_llm_provider_health_check_preview_is_preview_only`.
+
+Policy:
+
+- 9F-2O did not rerun 9F-2B apply, 9F-2D apply, 9F-2I-APPLY, or 9F-2K approval apply.
+- 9F-2O did not create, update, or delete business rows.
+- 9F-2O did not modify `prisma/schema.prisma` or create a migration.
+- 9F-2O did not expose env values, raw secret values, encrypted values, API keys, bearer tokens, provider request bodies, prompt text, or raw provider responses.
+- 9F-2O did not run provider health checks, make provider network calls, call LLM providers, create `llm_call_logs`, generate drafts, mutate `content_items`, write to Blogger, publish, schedule, reconnect OAuth, refresh tokens, mutate publish approvals, or mutate publish attempts.
+- Daily plan rows remain `1`, daily plan item rows remain `3`, `content_items` count remains `2`, and operator approvals/events remain `1 / 1`.
+- Publish milestone counts remain `1 / 1 / 1 / 1 / 22`, and `llm_call_logs` remains `22`.
+- The linked fixture remains `planned` with empty `draftMarkdown` and `draftHtml`.
+- Recommended next patch: `9F-2P — Gated LLM provider health-check execution, no completion/no content mutation`.
+- Alternative next patch: `9F-2Q — Draft-generation execution readiness checklist polish, no call/no mutation`.
+
 ## Patch 9F-2N LLM Provider Execution Readiness Preview
 
 Implemented after Patch 9F-2M:

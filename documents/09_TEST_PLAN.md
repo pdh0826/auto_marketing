@@ -393,6 +393,24 @@ Next session start DB guard should use the published/success values above. The c
 - 9F-2N should not modify `prisma/schema.prisma` or create a migration.
 - Post-change DB checks should keep daily plan rows `1`, item rows `3`, `content_items` count `2`, operator approvals/events `1 / 1`, publish milestone counts `1 / 1 / 1 / 1 / 22`, and `llm_call_logs=22`.
 
+## Patch 9F-2O LLM Provider Health-check Preview
+
+- `POST /api/daily-content-plans/draft-generation-llm-provider-health-check-preview` should support `mode=preview` and `mode=healthcheck_preview` for plan `cmqlr1v1d0000iwj2smxcsajr`, plan item `cmqlr1v1y0001iwj2gpv2875r`, and linked fixture `daily_fixture_cmqlr1v1y0001iwj2gpv2875r`.
+- Preview should report `patchVersion=9F-2O`, `healthCheckPreviewMode=read_only_llm_provider_health_check_preview`, `dryRunOnly=true`, `llmCompletionAttempted=false`, `promptRendered=false`, `rawPromptStored=false`, `providerHealthCheckAttempted=false`, and `providerNetworkCallAttempted=false`.
+- Persisted approval summary should keep `operatorApprovalPersisted=true`, `operatorApprovalSatisfied=true`, approval id `cmqmcs1l10001iwu863doda1s`, `approvalPurpose=draft_generation_execution`, `approvalStatus=approved`, and `operatorAction=approve_for_draft_generation_execution`.
+- Execution gate summary should keep `executionAllowed=false` with the existing five blockers: `llm_execution_feature_flag_disabled`, `content_mutation_feature_flag_disabled`, `draft_generation_write_feature_flag_disabled`, `confirmation_phrase_missing`, and `idempotency_key_missing`.
+- Resolved blockers should include `operator_approval_missing`.
+- Health-check preview should reuse the 9F-2N provider/model readiness summary and show the selected route/provider/model without exposing raw env values, raw secrets, encrypted values, API keys, bearer tokens, prompt text, or raw provider response bodies.
+- `healthCheckAllowedNow` should be `false`, `healthCheckExecutionDeferred=true`, and blockers should include `llm_provider_healthcheck_feature_flag_disabled`, `healthcheck_confirmation_phrase_missing`, `healthcheck_idempotency_key_missing`, `llm_completion_disabled_by_patch_policy`, and `content_mutation_disabled_by_patch_policy`.
+- `healthcheck_preview` mode should remain gated/blocked and still perform no provider health check, provider network call, LLM completion, DB write, `llm_call_logs` insert, or content mutation.
+- Unsupported modes such as `completion` should be blocked with `draft_generation_llm_provider_health_check_preview_is_preview_only`.
+- Current side effects should be `dbRead=true` and `envRead=true`; `dbWrite`, `secretValueExposed`, `providerHealthCheck`, `providerNetworkCall`, `llmCompletion`, `llmCall`, `llmCallLogMutation`, `promptRendered`, `rawPromptStored`, `contentItemMutation`, `draftMarkdownMutation`, `draftHtmlMutation`, `bloggerWrite`, `bloggerDraftSave`, `bloggerPublish`, `scheduledPublish`, `oauthReconnect`, `tokenRefresh`, `publishApprovalMutation`, `publishAttemptMutation`, and `externalSend` should be `false`.
+- `/settings/blogger` should show `초안 생성 LLM health-check preview` with target, approval, execution blockers, provider/model readiness, planned health-check contract, provider-specific safe health-check types, blockers, and side-effect summary.
+- 9F-2O should not rerun 9F-2B apply, 9F-2D apply, 9F-2I-APPLY, or 9F-2K approval apply.
+- 9F-2O should not create `draftMarkdown` or `draftHtml`, call LLM providers, create `llm_call_logs`, mutate `content_items`, write to Blogger, publish/schedule, reconnect OAuth, refresh tokens, mutate publish approvals, or mutate publish attempts.
+- 9F-2O should not modify `prisma/schema.prisma` or create a migration.
+- Post-change DB checks should keep daily plan rows `1`, item rows `3`, `content_items` count `2`, operator approvals/events `1 / 1`, publish milestone counts `1 / 1 / 1 / 1 / 22`, target fixture draft lengths `0 / 0`, and `llm_call_logs=22`.
+
 ## Patch 9E-9D Post-publish DB Reconciliation
 
 - `POST /api/content-items/[id]/post-publish-reconciliation` route가 있어야 한다.

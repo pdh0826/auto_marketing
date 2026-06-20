@@ -81,6 +81,8 @@ Patch 9F-2L polishes only the post-approval draft-generation execution gate prev
 
 Patch 9F-2N adds a read-only LLM provider execution readiness preview for future Daily Content Plan draft generation. It reads the existing `content_draft` Task Route and safe provider/model metadata, checks only env presence booleans, and reports route/provider/model readiness blockers before any execution patch. It must not call OpenAI, local HTTP, Ollama, CLI, or any LLM provider; it must not run provider health checks or network calls; it must not expose env values, raw secrets, encrypted values, API keys, bearer tokens, provider request bodies, or raw responses; it must not create `llm_call_logs`; and it must not generate or save `draftMarkdown` or `draftHtml`.
 
+Patch 9F-2O adds a read-only LLM provider health-check preview for future Daily Content Plan draft generation. It reuses the 9F-2N provider/model readiness result, describes the future safe health-check contract, and reports provider-specific allowed health-check types before any provider call is allowed. It must not execute provider health checks, make provider network calls, call completion/generate/chat endpoints, render or store prompts, create `llm_call_logs`, generate drafts, mutate `content_items`, or expose env values, raw secrets, encrypted values, API keys, bearer tokens, prompt text, provider request bodies, or raw responses. `mode=healthcheck_preview` remains gated/blocked and only previews the future health-check execution path.
+
 ## Patch 3 설정 화면
 
 `/settings/llm` 화면은 Patch 2의 PostgreSQL + Prisma CRUD API를 사용해 다음 데이터를 관리한다.
