@@ -92,6 +92,18 @@ Current state after the 9F-2K approved apply:
 
 9F-2K does not generate content, call LLM providers, create `llm_call_logs`, mutate `content_items`, create `draftMarkdown`/`draftHtml`, write to Blogger, publish, schedule, reconnect OAuth, refresh tokens, mutate publish approvals, or mutate publish attempts.
 
+## Patch 9F-2L Post-approval Readback Polish
+
+Patch 9F-2L keeps the persisted approval rows unchanged and improves only post-approval readback:
+
+- The operator approval preview now labels the current state as `승인 저장됨`.
+- The same preview also states that `초안 생성 실행은 아직 차단됨`.
+- The execution gate preview exposes post-approval state separately from execution blockers.
+- `operator_approval_missing` is treated as resolved after the persisted approval is read.
+- Remaining blockers stay focused on LLM execution, content mutation, draft generation write, confirmation phrase, and idempotency gates.
+
+No new approval/event row is created by 9F-2L. The approval/event counts remain `1 / 1`. 9F-2L does not generate content, call LLM providers, create `llm_call_logs`, mutate `content_items`, create `draftMarkdown`/`draftHtml`, write to Blogger, publish, schedule, reconnect OAuth, refresh tokens, mutate publish approvals, or mutate publish attempts.
+
 ## Recommended Model
 
 Use two future tables:

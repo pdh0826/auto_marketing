@@ -73,6 +73,19 @@ After the approved apply:
 
 Execution remains blocked because LLM execution, content mutation, draft write, confirmation, and idempotency gates remain blocked. 9F-2K approval persistence is necessary but not sufficient for draft generation execution.
 
+## Patch 9F-2L Post-approval Preview Polish
+
+Patch 9F-2L adds read-only post-approval clarity to the preview and Settings UI:
+
+- `postApprovalState` shows persisted approval id/status/purpose/action and `operatorApprovalSatisfied=true`.
+- `executionBlockerSummary` separates resolved blockers from remaining blockers.
+- `operator_approval_missing` is resolved after the persisted approval is read.
+- `executionAllowed=false` remains explicit and unchanged.
+- Remaining blockers are `llm_execution_feature_flag_disabled`, `content_mutation_feature_flag_disabled`, `draft_generation_write_feature_flag_disabled`, `confirmation_phrase_missing`, and `idempotency_key_missing`.
+- `nextSafeStepSummary` points to a future dry-run planner before any LLM call or content mutation.
+
+This polish does not add an execution route, does not create execution runs, does not call LLM providers, does not mutate `content_items`, and does not write to Blogger. The persisted approval is necessary but still insufficient for draft-generation execution.
+
 ## Execution Gate Layers
 
 The future execution route should evaluate these layers in order and return every blocking reason in a safe summary. No layer may store prompt text, raw LLM response text, generated candidate text, Blogger tokens, secrets, or external raw bodies.

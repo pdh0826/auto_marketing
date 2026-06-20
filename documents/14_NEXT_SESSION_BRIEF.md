@@ -1,16 +1,17 @@
 # 14_NEXT_SESSION_BRIEF
 
-## Current State: Patch 9F-2K-APPLY Completed
+## Current State: Patch 9F-2L Completed
 
 ```text
 repo: ~/blog-growth-agent
 branch: master
 previous HEAD before 9F-2D apply closeout: b3cf210 Link daily plan item to content fixture
-expected HEAD after 9F-2K-APPLY commit: local commit `Persist operator approval for draft generation gate` (verify exact hash with `git log --oneline -8`)
+expected HEAD after 9F-2L commit: local commit `Polish post-approval draft generation gate` (verify exact hash with `git log --oneline -8`)
 current DB schema state: operator approval persistence migration applied
 operator approval tables in DB: created
 operator approval rows/events: 1 / 1
 operator approval apply state: completed exactly once
+draft-generation execution gate: post-approval preview polished, execution still blocked
 milestone: 9E first end-to-end Blogger publish completed; 9F operation automation foundation started
 ```
 
@@ -137,6 +138,12 @@ Current baseline:
 - 9F-2J execution gate preview now reports `operatorApprovalSatisfied=true`, removes `operator_approval_missing`, and still keeps `executionAllowed=false` because LLM/content mutation/write/confirmation/idempotency gates remain blocked.
 - 9F-2K did not rerun 9F-2B apply, 9F-2D apply, or 9F-2I-APPLY.
 - 9F-2K did not modify `prisma/schema.prisma`, create a migration, generate drafts, call LLM providers, mutate `content_items`, write to Blogger, publish, schedule, reconnect OAuth, refresh tokens, mutate publish approvals, or mutate publish attempts.
+- 9F-2L polished the post-approval draft-generation execution gate preview and `/settings/blogger` readback without business DB writes.
+- 9F-2L shows `운영자 승인 저장됨 · 실행 차단 유지`, approval id/status, Korean remaining blocker labels, resolved blocker labels, and side-effect guardrails.
+- 9F-2L keeps `operatorApprovalSatisfied=true`, treats `operator_approval_missing` as resolved, and keeps `executionAllowed=false`.
+- Remaining blockers after 9F-2L are `llm_execution_feature_flag_disabled`, `content_mutation_feature_flag_disabled`, `draft_generation_write_feature_flag_disabled`, `confirmation_phrase_missing`, and `idempotency_key_missing`.
+- 9F-2L did not rerun 9F-2B apply, 9F-2D apply, 9F-2I-APPLY, or 9F-2K approval apply.
+- 9F-2L did not modify `prisma/schema.prisma`, create a migration, generate drafts, call LLM providers, create `llm_call_logs`, mutate `content_items`, write to Blogger, publish, schedule, reconnect OAuth, refresh tokens, mutate publish approvals, or mutate publish attempts.
 
 9E first end-to-end publish path:
 
@@ -148,21 +155,21 @@ Current baseline:
 6. `9E-9C` read back `https://mathlearningappl.blogspot.com/2026/06/blog-post.html`.
 7. `9E-9D-APPLY` reconciled internal DB state from `planned`/`planned_only` to `published`/`success`.
 
-Recommended next after 9F-2K-APPLY:
-
-**9F-2L — Draft-generation execution gate post-approval preview polish, no LLM/no mutation**
-
-Goal:
-
-- Polish the execution gate UI/readback now that operator approval is satisfied, emphasizing the remaining LLM/content mutation/write/confirmation/idempotency blockers without executing generation.
-
-Alternative:
+Recommended next after 9F-2L:
 
 **9F-2M — Draft-generation dry-run planner, no LLM/no content mutation**
 
 Goal:
 
 - Add a deterministic dry-run planner for the future draft-generation execution step, keeping LLM calls and `content_items` mutation disabled.
+
+Alternative:
+
+**9F-2N — LLM provider execution readiness check for draft generation, no call/no mutation**
+
+Goal:
+
+- Check provider/model/task-route readiness for future draft generation without calling any LLM and without mutating content.
 
 ## 9F Automation Roadmap
 
@@ -190,6 +197,7 @@ Goal:
 | 9F-2K-UI | Operator approval preview UI polish |
 | 9F-2L | Draft-generation execution gate post-approval preview polish |
 | 9F-2M | Draft-generation dry-run planner, no LLM/no content mutation |
+| 9F-2N | LLM provider execution readiness check for draft generation, no call/no mutation |
 | 9F-3A | Alert & Recovery Center |
 
 Core operation principles:

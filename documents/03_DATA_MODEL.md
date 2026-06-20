@@ -219,6 +219,23 @@ Current implementation state after approved 9F-2K apply:
 
 9F-2K does not modify `prisma/schema.prisma`, create migrations, generate drafts, call LLM providers, mutate `content_items`, write to Blogger, publish, schedule, reconnect OAuth, refresh tokens, mutate publish approvals, or mutate publish attempts.
 
+## Patch 9F-2L Post-approval Execution Gate Readback
+
+Patch 9F-2L is a read-only UI/API polish patch for the already persisted operator approval.
+
+Current implementation state after 9F-2L:
+
+- No Prisma schema or migration changes.
+- No new approval row or approval event was created.
+- Existing operator approvals/events remain `1 / 1`.
+- Daily plan rows remain `1`, daily plan item rows remain `3`, and `content_items` count remains `2`.
+- The linked fixture `daily_fixture_cmqlr1v1y0001iwj2gpv2875r` remains `planned` with empty `draftMarkdown` and `draftHtml`.
+- The execution gate preview explicitly separates persisted approval state from execution blockers.
+- `operatorApprovalSatisfied=true` and `operator_approval_missing` is treated as a resolved blocker.
+- `executionAllowed=false` remains because LLM execution, content mutation, draft generation write, confirmation phrase, and idempotency gates remain blocked.
+
+9F-2L does not generate content, call LLM providers, create `llm_call_logs`, mutate `content_items`, write to Blogger, publish, schedule, reconnect OAuth, refresh tokens, mutate publish approvals, or mutate publish attempts.
+
 ## Patch 2 구현 테이블
 
 Patch 2는 PostgreSQL + Prisma 기준으로 다음 테이블을 우선 구현한다.

@@ -1338,7 +1338,11 @@ export function BloggerSettingsClient() {
                           : "notice"
                     }
                   >
-                    <strong>{operatorApprovalPersistenceResult.operatorApprovalPersistenceSummary.existingApprovalFound ? "승인 저장됨" : "승인 미저장"}</strong>
+                    <strong>
+                      {operatorApprovalPersistenceResult.operatorApprovalPersistenceSummary.operatorReadbackSummary.approvalStoredLabelKo} ·{" "}
+                      {operatorApprovalPersistenceResult.operatorApprovalPersistenceSummary.operatorReadbackSummary.executionStillBlockedLabelKo}
+                    </strong>
+                    <p>{operatorApprovalPersistenceResult.operatorApprovalPersistenceSummary.operatorReadbackSummary.operatorMessageKo}</p>
                     <p>
                       목적: {operatorApprovalPersistenceResult.operatorApprovalPersistenceSummary.approvalPurpose} / 액션:{" "}
                       {operatorApprovalPersistenceResult.operatorApprovalPersistenceSummary.operatorLabel}
@@ -1355,6 +1359,8 @@ export function BloggerSettingsClient() {
                     <DetailItem label="Content Item" value={operatorApprovalPersistenceResult.operatorApprovalPersistenceSummary.targetContentItemId || "-"} />
                     <DetailItem label="Existing Approval" value={operatorApprovalPersistenceResult.operatorApprovalPersistenceSummary.existingApprovalFound ? "있음" : "없음"} />
                     <DetailItem label="Approval ID" value={operatorApprovalPersistenceResult.operatorApprovalPersistenceSummary.existingApprovalId ?? "-"} />
+                    <DetailItem label="Approval Status" value={operatorApprovalPersistenceResult.operatorApprovalPersistenceSummary.persistedApprovalSummary?.approvalStatus ?? "-"} />
+                    <DetailItem label="Event ID" value={operatorApprovalPersistenceResult.operatorApprovalPersistenceSummary.persistedEventSummary?.id ?? "-"} />
                     <DetailItem label="Event Count" value={String(operatorApprovalPersistenceResult.operatorApprovalPersistenceSummary.existingEventCount)} />
                     <DetailItem label="Approval Would Be Created" value={String(operatorApprovalPersistenceResult.operatorApprovalPersistenceSummary.approvalWouldBeCreated)} />
                     <DetailItem label="Event Would Be Created" value={String(operatorApprovalPersistenceResult.operatorApprovalPersistenceSummary.eventWouldBeCreated)} />
@@ -1541,12 +1547,16 @@ export function BloggerSettingsClient() {
                 <>
                   <div
                     className={
-                      draftGenerationExecutionGateResult.draftGenerationExecutionGatePreviewSummary.executionGateSummary.readinessStructuralReady
-                        ? "notice warning"
-                        : "notice error"
+                      draftGenerationExecutionGateResult.draftGenerationExecutionGatePreviewSummary.executionBlockerSummary.executionAllowed
+                        ? "notice success"
+                        : "notice warning"
                     }
                   >
-                    <strong>{draftGenerationExecutionGateResult.draftGenerationExecutionGatePreviewSummary.executionGateSummary.overallLabelKo}</strong>
+                    <strong>
+                      {draftGenerationExecutionGateResult.draftGenerationExecutionGatePreviewSummary.postApprovalState.operatorApprovalLabelKo} ·{" "}
+                      {draftGenerationExecutionGateResult.draftGenerationExecutionGatePreviewSummary.executionBlockerSummary.executionAllowed ? "실행 가능" : "실행 차단 유지"}
+                    </strong>
+                    <p>{draftGenerationExecutionGateResult.draftGenerationExecutionGatePreviewSummary.executionBlockerSummary.operatorMessageKo}</p>
                     <p>
                       구조 준비: {draftGenerationExecutionGateResult.draftGenerationExecutionGatePreviewSummary.executionGateSummary.readinessStructuralReady ? "완료" : "미완료"} / 실행:{" "}
                       {draftGenerationExecutionGateResult.draftGenerationExecutionGatePreviewSummary.executionGateSummary.executionAllowed ? "가능" : "차단"}
@@ -1555,6 +1565,7 @@ export function BloggerSettingsClient() {
                       승인 테이블: {draftGenerationExecutionGateResult.draftGenerationExecutionGatePreviewSummary.migrationState.operatorApprovalTablesExist ? "적용됨" : "미적용"} / 운영자 승인:{" "}
                       {draftGenerationExecutionGateResult.draftGenerationExecutionGatePreviewSummary.executionGateSummary.operatorApprovalSatisfied ? "충족" : "미저장"}
                     </p>
+                    <p>주요 남은 조건: {draftGenerationExecutionGateResult.draftGenerationExecutionGatePreviewSummary.executionBlockerSummary.primaryRemainingBlockerKo}</p>
                   </div>
                   <div className="detail-grid">
                     <DetailItem label="Patch" value={draftGenerationExecutionGateResult.draftGenerationExecutionGatePreviewSummary.patchVersion} />
@@ -1568,7 +1579,22 @@ export function BloggerSettingsClient() {
                       label="Approval Persistence"
                       value={draftGenerationExecutionGateResult.draftGenerationExecutionGatePreviewSummary.migrationState.operatorApprovalPersistenceAvailable ? "사용 가능" : "미적용"}
                     />
+                    <DetailItem label="Approval ID" value={draftGenerationExecutionGateResult.draftGenerationExecutionGatePreviewSummary.postApprovalState.operatorApprovalId ?? "-"} />
+                    <DetailItem label="Approval Status" value={draftGenerationExecutionGateResult.draftGenerationExecutionGatePreviewSummary.postApprovalState.operatorApprovalStatus ?? "-"} />
+                    <DetailItem label="Resolved Blockers" value={draftGenerationExecutionGateResult.draftGenerationExecutionGatePreviewSummary.executionBlockerSummary.resolvedBlockers.join(", ") || "-"} />
+                    <DetailItem label="Remaining Blockers" value={String(draftGenerationExecutionGateResult.draftGenerationExecutionGatePreviewSummary.executionBlockerSummary.blockerCount)} />
                   </div>
+                  <ValidationList
+                    title="남은 필수 조건"
+                    items={draftGenerationExecutionGateResult.draftGenerationExecutionGatePreviewSummary.executionBlockerSummary.remainingBlockers.map(formatDraftGenerationGateBlocker)}
+                    emptyText="남은 필수 조건이 없습니다."
+                    isWarning
+                  />
+                  <ValidationList
+                    title="해결된 조건"
+                    items={draftGenerationExecutionGateResult.draftGenerationExecutionGatePreviewSummary.executionBlockerSummary.resolvedBlockers.map(formatDraftGenerationGateBlocker)}
+                    emptyText="해결된 조건이 없습니다."
+                  />
                   <div className="detail-grid">
                     <DetailItem label="LLM 호출" value={draftGenerationExecutionGateResult.draftGenerationExecutionGatePreviewSummary.sideEffectSummary.llmCall ? "있음" : "없음"} />
                     <DetailItem label="draftMarkdown 변경" value={draftGenerationExecutionGateResult.draftGenerationExecutionGatePreviewSummary.sideEffectSummary.draftMarkdownMutation ? "있음" : "없음"} />
@@ -1576,6 +1602,7 @@ export function BloggerSettingsClient() {
                     <DetailItem label="content_items 수정" value={draftGenerationExecutionGateResult.draftGenerationExecutionGatePreviewSummary.sideEffectSummary.contentMutation ? "있음" : "없음"} />
                     <DetailItem label="Blogger 쓰기" value={draftGenerationExecutionGateResult.draftGenerationExecutionGatePreviewSummary.sideEffectSummary.bloggerWrite ? "있음" : "없음"} />
                     <DetailItem label="발행 실행" value={draftGenerationExecutionGateResult.draftGenerationExecutionGatePreviewSummary.sideEffectSummary.bloggerPublish ? "있음" : "없음"} />
+                    <DetailItem label="다음 추천 패치" value={draftGenerationExecutionGateResult.draftGenerationExecutionGatePreviewSummary.nextSafeStepSummary.nextRecommendedPatch} />
                   </div>
                   <ValidationList
                     title="현재 실행 차단 조건"
@@ -1983,6 +2010,21 @@ function formatOperatorApprovalState(value: string) {
     blocked_by_guardrail: "가드레일 차단"
   };
   return labels[value] ?? value;
+}
+
+function formatDraftGenerationGateBlocker(blocker: string) {
+  const labels: Record<string, string> = {
+    operator_approval_missing: "운영자 승인 미저장",
+    operator_approval_tables_not_applied: "운영자 승인 테이블 미적용",
+    operator_approval_read_failed: "운영자 승인 테이블 read 실패",
+    llm_execution_feature_flag_disabled: "LLM 실행 flag 꺼짐",
+    content_mutation_feature_flag_disabled: "content mutation flag 꺼짐",
+    draft_generation_write_feature_flag_disabled: "draft generation write flag 꺼짐",
+    confirmation_phrase_missing: "확인 문구 없음",
+    idempotency_key_missing: "idempotency key 없음",
+    draft_generation_readiness_failed: "초안 생성 구조 준비 미완료"
+  };
+  return labels[blocker] ?? blocker;
 }
 
 function ValidationList({ title, items, emptyText, isError, isWarning }: { title: string; items: string[]; emptyText: string; isError?: boolean; isWarning?: boolean }) {

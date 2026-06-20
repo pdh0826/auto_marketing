@@ -84,6 +84,12 @@ export interface DailyContentOperatorApprovalPersistenceSummary {
     toStatus: string;
     idempotencyKey: string;
   };
+  operatorReadbackSummary: {
+    approvalStoredLabelKo: string;
+    executionStillBlockedLabelKo: string;
+    operatorMessageKo: string;
+    approvalReadFailed: boolean;
+  };
   guardrailSummary: {
     noContentGeneration: true;
     noLlmCall: true;
@@ -426,6 +432,14 @@ export async function buildDailyContentOperatorApprovalPersistenceResponse(
     warnings: Array.from(warnings),
     persistedApprovalSummary: appliedApproval ? summarizeApproval(appliedApproval) : null,
     persistedEventSummary: appliedEvent ? summarizeEvent(appliedEvent) : null,
+    operatorReadbackSummary: {
+      approvalStoredLabelKo: existingApproval ? "승인 저장됨" : "승인 미저장",
+      executionStillBlockedLabelKo: "초안 생성 실행은 아직 차단됨",
+      operatorMessageKo: existingApproval
+        ? "초안 생성 실행 승인 기록이 있습니다. 하지만 LLM 호출, content_items 수정, Blogger 쓰기/발행은 이 단계에서 실행하지 않습니다."
+        : "승인 저장 preview만 확인했습니다. 실제 승인 저장은 별도 feature flag와 확인 문구가 필요합니다.",
+      approvalReadFailed: !existingApprovalState.readOk
+    },
     guardrailSummary: buildGuardrailSummary(),
     sideEffectSummary: {
       dbRead: true,

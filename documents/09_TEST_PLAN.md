@@ -342,6 +342,20 @@ Next session start DB guard should use the published/success values above. The c
 - 9F-2K must not modify `prisma/schema.prisma` or create a migration.
 - 9F-2K must not create `draftMarkdown` or `draftHtml`, call LLM providers, mutate `content_items`, write to Blogger, publish/schedule, reconnect OAuth, refresh tokens, mutate publish approvals, or mutate publish attempts.
 
+## Patch 9F-2L Draft-generation Execution Gate Post-approval Preview Polish
+
+- 9F-2L should not rerun 9F-2B apply, 9F-2D apply, 9F-2I-APPLY, or 9F-2K approval apply.
+- 9F-2L should not create, update, or delete Daily Content Plan rows/items, `content_items`, operator approvals, operator approval events, Blogger rows, publish approvals, publish attempts, or LLM logs.
+- Execution gate preview for plan item `cmqlr1v1y0001iwj2gpv2875r` and fixture `daily_fixture_cmqlr1v1y0001iwj2gpv2875r` should report `postApprovalState.operatorApprovalPersisted=true`, `postApprovalState.operatorApprovalSatisfied=true`, and approval id `cmqmcs1l10001iwu863doda1s`.
+- Execution gate preview should report `executionAllowed=false` and `executionBlockerSummary.executionAllowed=false`.
+- `executionBlockerSummary.resolvedBlockers` should include `operator_approval_missing`.
+- Remaining blockers should include `llm_execution_feature_flag_disabled`, `content_mutation_feature_flag_disabled`, `draft_generation_write_feature_flag_disabled`, `confirmation_phrase_missing`, and `idempotency_key_missing`.
+- `/settings/blogger` should show `운영자 승인 저장됨 · 실행 차단 유지`, approval id/status, Korean remaining blocker labels, resolved blocker labels, and no-side-effect summary.
+- Operator approval preview after approval should report `existingApprovalFound=true`, `approvalWouldBeCreated=false`, `eventWouldBeCreated=false`, and `sideEffectSummary.dbWrite=false`.
+- Blocked non-preview gate smoke should not call LLM providers or mutate `content_items`; it should report generation blocked with all side-effect fields false except DB read.
+- Post-change DB checks should keep daily plan rows `1`, item rows `3`, `content_items` count `2`, operator approvals/events `1 / 1`, and publish milestone counts `1 / 1 / 1 / 1 / 22`.
+- 9F-2L should not modify `prisma/schema.prisma` or create a migration.
+
 ## Patch 9E-9D Post-publish DB Reconciliation
 
 - `POST /api/content-items/[id]/post-publish-reconciliation` route가 있어야 한다.

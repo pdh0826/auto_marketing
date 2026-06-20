@@ -1,5 +1,30 @@
 # 13_CHANGELOG
 
+## Patch 9F-2L Draft-generation Execution Gate Post-approval Preview Polish
+
+Implemented after Patch 9F-2K-APPLY:
+
+- Polished the read-only draft-generation execution gate preview after operator approval persistence.
+- Added explicit post-approval summary fields showing `operatorApprovalPersisted=true`, the approval id/status/purpose/action, and `operatorApprovalSatisfied=true`.
+- Added execution blocker summary fields that separate resolved blockers from remaining blockers.
+- Confirmed `operator_approval_missing` is resolved, while execution remains blocked by `llm_execution_feature_flag_disabled`, `content_mutation_feature_flag_disabled`, `draft_generation_write_feature_flag_disabled`, `confirmation_phrase_missing`, and `idempotency_key_missing`.
+- Added a next-safe-step summary pointing to `9F-2M — Draft-generation dry-run planner, no LLM/no content mutation`.
+- Polished `/settings/blogger` so the operator sees `운영자 승인 저장됨 · 실행 차단 유지`, approval id/status, remaining Korean blocker labels, resolved blocker labels, and no-side-effect details.
+- Polished operator approval preview/readback so it clearly says approval is stored but draft-generation execution is still blocked.
+
+Policy:
+
+- 9F-2L did not rerun 9F-2B apply, 9F-2D apply, 9F-2I-APPLY, or 9F-2K approval apply.
+- 9F-2L did not create, update, or delete business rows.
+- 9F-2L did not modify `prisma/schema.prisma` or create a migration.
+- 9F-2L did not create `draftMarkdown` or `draftHtml`, run content generation, call LLM providers, create `llm_call_logs`, mutate `content_items`, write to Blogger, publish, schedule, reconnect OAuth, refresh tokens, mutate publish approvals, or mutate publish attempts.
+- Daily plan rows remain `1`, daily plan item rows remain `3`, `content_items` count remains `2`, and operator approvals/events remain `1 / 1`.
+- Publish milestone counts remain `1 / 1 / 1 / 1 / 22`.
+- The linked fixture remains `planned` with empty `draftMarkdown` and `draftHtml`.
+- The 9E published/success milestone baseline remained unchanged.
+- Recommended next patch: `9F-2M — Draft-generation dry-run planner, no LLM/no content mutation`.
+- Alternative next patch: `9F-2N — LLM provider execution readiness check for draft generation, no call/no mutation`.
+
 ## Patch 9F-2K-APPLY Persist Operator Approval For Draft Generation Gate
 
 Applied after Patch 9F-2K:

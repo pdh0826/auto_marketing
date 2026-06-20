@@ -54,6 +54,30 @@ export interface DailyContentDraftGenerationExecutionGatePreviewSummary {
     publishIsolationSatisfied: boolean;
     overallLabelKo: string;
   };
+  postApprovalState: {
+    operatorApprovalPersisted: boolean;
+    operatorApprovalId: string | null;
+    operatorApprovalStatus: string | null;
+    operatorApprovalPurpose: string | null;
+    operatorApprovalAction: string | null;
+    operatorApprovalSatisfied: boolean;
+    operatorApprovalLabelKo: string;
+  };
+  executionBlockerSummary: {
+    executionAllowed: false;
+    blockerCount: number;
+    resolvedBlockers: string[];
+    remainingBlockers: string[];
+    primaryRemainingBlockerKo: string;
+    operatorMessageKo: string;
+  };
+  nextSafeStepSummary: {
+    nextRecommendedPatch: string;
+    nextExecutionPrerequisite: string;
+    generationStillRequiresSeparateApproval: true;
+    llmStillRequiresSeparateApproval: true;
+    contentMutationStillRequiresSeparateApproval: true;
+  };
   gateLayers: DailyContentDraftGenerationExecutionGateLayer[];
   canonicalBlockingReasons: string[];
   futureApplyRequirements: {
@@ -257,6 +281,12 @@ export async function buildDailyContentDraftGenerationExecutionGatePreviewRespon
   }
 
   const canonicalBlockingReasons = Array.from(blockingReasons);
+  const resolvedBlockers = compact([
+    operatorApprovalSatisfied ? "operator_approval_missing" : null,
+    operatorApprovalTablesExist ? "operator_approval_tables_not_applied" : null,
+    readinessStructuralReady ? "draft_generation_readiness_failed" : null
+  ]);
+  const remainingBlockers = canonicalBlockingReasons;
   const summary: DailyContentDraftGenerationExecutionGatePreviewSummary = {
     patchVersion: PATCH_VERSION,
     checked: true,
@@ -292,6 +322,32 @@ export async function buildDailyContentDraftGenerationExecutionGatePreviewRespon
       idempotencySatisfied: false,
       publishIsolationSatisfied,
       overallLabelKo: readinessStructuralReady ? "구조 준비 완료, 실행 차단" : "실행 차단"
+    },
+    postApprovalState: {
+      operatorApprovalPersisted: operatorApprovalSatisfied,
+      operatorApprovalId: operatorApproval?.id ?? null,
+      operatorApprovalStatus: operatorApproval?.approvalStatus ?? null,
+      operatorApprovalPurpose: operatorApproval?.approvalPurpose ?? null,
+      operatorApprovalAction: operatorApproval?.operatorAction ?? null,
+      operatorApprovalSatisfied,
+      operatorApprovalLabelKo: operatorApprovalSatisfied ? "운영자 승인 저장됨" : "운영자 승인 미저장"
+    },
+    executionBlockerSummary: {
+      executionAllowed: false,
+      blockerCount: remainingBlockers.length,
+      resolvedBlockers,
+      remainingBlockers,
+      primaryRemainingBlockerKo: getPrimaryRemainingBlockerKo(remainingBlockers),
+      operatorMessageKo: operatorApprovalSatisfied
+        ? "운영자 승인은 저장됐지만 초안 생성 실행은 아직 차단되어 있습니다. LLM/write/확인 문구/idempotency 조건을 별도 패치에서 검토해야 합니다."
+        : "운영자 승인 저장이 아직 필요합니다. 초안 생성 실행은 계속 차단되어 있습니다."
+    },
+    nextSafeStepSummary: {
+      nextRecommendedPatch: "9F-2M — Draft-generation dry-run planner, no LLM/no content mutation",
+      nextExecutionPrerequisite: "LLM execution flag, content mutation flag, draft generation write flag, confirmation phrase, and idempotency key must be handled in a separate approved patch.",
+      generationStillRequiresSeparateApproval: true,
+      llmStillRequiresSeparateApproval: true,
+      contentMutationStillRequiresSeparateApproval: true
     },
     gateLayers: buildGateLayers({
       requestMode: request.mode,
@@ -546,6 +602,28 @@ function normalizeRequest(raw: DailyContentDraftGenerationExecutionGatePreviewRe
 
 function getString(value: unknown) {
   return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+function getPrimaryRemainingBlockerKo(blockers: string[]) {
+  if (blockers.includes("llm_execution_feature_flag_disabled")) {
+    return "LLM 실행 flag가 꺼져 있습니다.";
+  }
+  if (blockers.includes("content_mutation_feature_flag_disabled")) {
+    return "content_items 수정 flag가 꺼져 있습니다.";
+  }
+  if (blockers.includes("draft_generation_write_feature_flag_disabled")) {
+    return "초안 생성 write flag가 꺼져 있습니다.";
+  }
+  if (blockers.includes("confirmation_phrase_missing")) {
+    return "확인 문구가 없습니다.";
+  }
+  if (blockers.includes("idempotency_key_missing")) {
+    return "idempotency key가 없습니다.";
+  }
+  if (blockers.includes("operator_approval_read_failed")) {
+    return "운영자 승인 테이블 read 권한 또는 DB role 확인이 필요합니다.";
+  }
+  return blockers.length > 0 ? "초안 생성 실행 차단 조건이 남아 있습니다." : "남은 blocker가 없습니다.";
 }
 
 function compact(values: Array<string | null>) {

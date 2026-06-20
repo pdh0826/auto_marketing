@@ -77,6 +77,8 @@ Patch 9F-2I-APPLY applies only the existing operator approval persistence migrat
 
 Patch 9F-2K adds the guarded operator approval persistence preview/apply route and Settings readback. It still does not call OpenAI, local HTTP, CLI, or any LLM provider; it does not create `llm_call_logs`; and it does not generate or save `draftMarkdown` or `draftHtml`. After the exact Korean approval phrase, the approved apply was executed once and created or idempotently confirmed one operator approval row and one approval event row only. LLM execution remains blocked until a later explicit draft-generation patch.
 
+Patch 9F-2L polishes only the post-approval draft-generation execution gate preview and Settings readback. It confirms that the operator approval is persisted and satisfied, but it keeps draft-generation execution blocked because LLM execution, content mutation, draft generation write, confirmation phrase, and idempotency gates remain disabled or missing. It must not call OpenAI, local HTTP, CLI, or any LLM provider; it must not create `llm_call_logs`; it must not generate or save `draftMarkdown` or `draftHtml`; and it must not mutate `content_items`.
+
 ## Patch 3 설정 화면
 
 `/settings/llm` 화면은 Patch 2의 PostgreSQL + Prisma CRUD API를 사용해 다음 데이터를 관리한다.
