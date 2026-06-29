@@ -24,6 +24,7 @@ import type { DailyContentDraftGenerationExecutionGatePreviewResponse } from "@/
 import type { DailyContentDraftGenerationLlmProviderHealthCheckExecutionResponse } from "@/lib/daily-content-plans/draft-generation-llm-provider-health-check-execution";
 import type { DailyContentDraftGenerationLlmProviderHealthCheckPreviewResponse } from "@/lib/daily-content-plans/draft-generation-llm-provider-health-check-preview";
 import type { DailyContentDraftGenerationLlmProviderReadinessResponse } from "@/lib/daily-content-plans/draft-generation-llm-provider-readiness";
+import type { DailyContentDraftGenerationLlmDispatchGatePreviewResponse } from "@/lib/daily-content-plans/draft-generation-llm-dispatch-gate-preview";
 import type { DailyContentDraftGenerationLlmRequestEnvelopePreviewResponse } from "@/lib/daily-content-plans/draft-generation-llm-request-envelope-preview";
 import type { DailyContentDraftGenerationReadinessResponse } from "@/lib/daily-content-plans/draft-generation-readiness";
 import type { DailyContentOperatorApprovalPersistenceResponse } from "@/lib/daily-content-plans/operator-approval-persistence";
@@ -104,6 +105,8 @@ export function BloggerSettingsClient() {
     useState<DailyContentDraftGenerationPromptQualityChecklistPreviewResponse | null>(null);
   const [draftGenerationLlmRequestEnvelopePreviewResult, setDraftGenerationLlmRequestEnvelopePreviewResult] =
     useState<DailyContentDraftGenerationLlmRequestEnvelopePreviewResponse | null>(null);
+  const [draftGenerationLlmDispatchGatePreviewResult, setDraftGenerationLlmDispatchGatePreviewResult] =
+    useState<DailyContentDraftGenerationLlmDispatchGatePreviewResponse | null>(null);
   const [oauthDryRun, setOauthDryRun] = useState<BloggerOAuthStartDryRun | null>(null);
   const [blogListResult, setBlogListResult] = useState<BloggerBlogListResult | null>(null);
   const [blogListLoadingId, setBlogListLoadingId] = useState<string | null>(null);
@@ -123,6 +126,7 @@ export function BloggerSettingsClient() {
   const [loadingDraftGenerationPromptRenderPreviewItemId, setLoadingDraftGenerationPromptRenderPreviewItemId] = useState<string | null>(null);
   const [loadingDraftGenerationPromptQualityChecklistPreviewItemId, setLoadingDraftGenerationPromptQualityChecklistPreviewItemId] = useState<string | null>(null);
   const [loadingDraftGenerationLlmRequestEnvelopePreviewItemId, setLoadingDraftGenerationLlmRequestEnvelopePreviewItemId] = useState<string | null>(null);
+  const [loadingDraftGenerationLlmDispatchGatePreviewItemId, setLoadingDraftGenerationLlmDispatchGatePreviewItemId] = useState<string | null>(null);
   const [selectingBlogId, setSelectingBlogId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -206,6 +210,7 @@ export function BloggerSettingsClient() {
       setDraftGenerationPromptRenderPreviewResult(null);
       setDraftGenerationPromptQualityChecklistPreviewResult(null);
       setDraftGenerationLlmRequestEnvelopePreviewResult(null);
+      setDraftGenerationLlmDispatchGatePreviewResult(null);
       setOauthDryRun(null);
       setBlogListResult(null);
       setNotice("Blogger connection을 저장했습니다. Blogger draft/publish는 수행하지 않았습니다.");
@@ -337,6 +342,7 @@ export function BloggerSettingsClient() {
       setDraftGenerationPromptRenderPreviewResult(null);
       setDraftGenerationPromptQualityChecklistPreviewResult(null);
       setDraftGenerationLlmRequestEnvelopePreviewResult(null);
+      setDraftGenerationLlmDispatchGatePreviewResult(null);
       setNotice("Daily Content Plan preview를 생성했습니다. Plan row 저장, content generation, LLM call, Blogger write/publish는 수행하지 않았습니다.");
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Daily Content Plan preview에 실패했습니다.");
@@ -788,6 +794,44 @@ export function BloggerSettingsClient() {
     }
   }
 
+  async function previewDraftGenerationLlmDispatchGate(
+    planId: string | null | undefined,
+    planItemId: string | null | undefined,
+    contentItemId: string | null | undefined
+  ) {
+    if (!planId || !planItemId || !contentItemId) {
+      setError("Daily plan id, item id, linked content item id가 필요합니다.");
+      return;
+    }
+
+    setError(null);
+    setNotice(null);
+    setLoadingDraftGenerationLlmDispatchGatePreviewItemId(planItemId);
+
+    try {
+      const result = await requestJson<ApiResult<DailyContentDraftGenerationLlmDispatchGatePreviewResponse>>(
+        "/api/daily-content-plans/draft-generation-llm-dispatch-gate-preview",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            mode: "preview",
+            planId,
+            planItemId,
+            contentItemId
+          })
+        }
+      );
+      setDraftGenerationLlmDispatchGatePreviewResult(result.data);
+      setNotice(
+        "초안 생성 LLM dispatch gate preview를 확인했습니다. request 전송, provider network call, LLM call, content_items 수정, Blogger write/publish는 수행하지 않았습니다."
+      );
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "초안 생성 LLM dispatch gate preview 확인에 실패했습니다.");
+    } finally {
+      setLoadingDraftGenerationLlmDispatchGatePreviewItemId(null);
+    }
+  }
+
   async function createOAuthDryRun(connection: BloggerConnectionAdmin) {
     setError(null);
     setNotice(null);
@@ -981,6 +1025,7 @@ export function BloggerSettingsClient() {
                   setDraftGenerationPromptRenderPreviewResult(null);
                   setDraftGenerationPromptQualityChecklistPreviewResult(null);
                   setDraftGenerationLlmRequestEnvelopePreviewResult(null);
+                  setDraftGenerationLlmDispatchGatePreviewResult(null);
                   setOauthDryRun(null);
                   setBlogListResult(null);
                 }}
@@ -1660,6 +1705,25 @@ export function BloggerSettingsClient() {
                         }
                       >
                         {loadingDraftGenerationLlmRequestEnvelopePreviewItemId === getDailyPlanItemId(item) ? "envelope 확인 중" : "request envelope"}
+                      </button>
+                      <button
+                        className="button small secondary"
+                        type="button"
+                        disabled={
+                          !dailyContentPlanSummary.persistedPlanId ||
+                          !getDailyPlanItemId(item) ||
+                          !getDailyPlanItemContentItemId(item) ||
+                          loadingDraftGenerationLlmDispatchGatePreviewItemId === getDailyPlanItemId(item)
+                        }
+                        onClick={() =>
+                          void previewDraftGenerationLlmDispatchGate(
+                            dailyContentPlanSummary.persistedPlanId,
+                            getDailyPlanItemId(item),
+                            getDailyPlanItemContentItemId(item)
+                          )
+                        }
+                      >
+                        {loadingDraftGenerationLlmDispatchGatePreviewItemId === getDailyPlanItemId(item) ? "dispatch gate 확인 중" : "dispatch gate"}
                       </button>
                     </td>
                   </tr>
@@ -3676,6 +3740,250 @@ export function BloggerSettingsClient() {
               )}
             </div>
 
+            <div className="read-block">
+              <h3>초안 생성 LLM dispatch gate preview</h3>
+              <div className="notice">
+                <strong>LLM request를 실제 provider로 보내기 전 dispatch gate를 점검합니다.</strong>
+                <p>이번 단계에서는 request 전송, provider network call, LLM 호출, 초안 저장, content_items 수정, Blogger write/publish를 수행하지 않습니다.</p>
+              </div>
+              <div className="button-row">
+                <button className="button small secondary" type="button" disabled>
+                  Dispatch - 비활성
+                </button>
+                <button className="button small secondary" type="button" disabled>
+                  LLM call - 비활성
+                </button>
+                <button className="button small secondary" type="button" disabled>
+                  Draft mutation - 비활성
+                </button>
+              </div>
+              {draftGenerationLlmDispatchGatePreviewResult ? (
+                <>
+                  <div className="notice warning">
+                    <strong>
+                      Dispatch allowed: {String(draftGenerationLlmDispatchGatePreviewResult.dispatchGatePreviewSummary.dispatchAllowedNow)}
+                    </strong>
+                    <p>
+                      dispatchWouldBeBlocked={String(draftGenerationLlmDispatchGatePreviewResult.dispatchGatePreviewSummary.dispatchWouldBeBlocked)}입니다.
+                      provider health check, confirmation phrase, idempotency key, feature flags가 별도 실행 패치 전까지 blocker로 남습니다.
+                    </p>
+                  </div>
+                  <div className="detail-grid">
+                    <DetailItem label="Patch" value={draftGenerationLlmDispatchGatePreviewResult.patchVersion} />
+                    <DetailItem label="Preview Mode" value={draftGenerationLlmDispatchGatePreviewResult.previewMode} />
+                    <DetailItem label="Plan ID" value={draftGenerationLlmDispatchGatePreviewResult.targetSummary.planId ?? "-"} />
+                    <DetailItem label="Plan Item" value={draftGenerationLlmDispatchGatePreviewResult.targetSummary.planItemId} />
+                    <DetailItem label="Content Item" value={draftGenerationLlmDispatchGatePreviewResult.targetSummary.contentItemId ?? "-"} />
+                    <DetailItem label="Fixture Status" value={draftGenerationLlmDispatchGatePreviewResult.targetSummary.fixtureStatus ?? "-"} />
+                    <DetailItem
+                      label="Approval Satisfied"
+                      value={String(draftGenerationLlmDispatchGatePreviewResult.persistedApprovalSummary.operatorApprovalSatisfied)}
+                    />
+                    <DetailItem label="Execution Allowed" value={String(draftGenerationLlmDispatchGatePreviewResult.executionGateSummary.executionAllowed)} />
+                    <DetailItem
+                      label="Final Draft Allowed"
+                      value={String(draftGenerationLlmDispatchGatePreviewResult.executionGateSummary.finalDraftGenerationAllowed)}
+                    />
+                  </div>
+                  <div className="detail-grid">
+                    <DetailItem label="Gate Version" value={draftGenerationLlmDispatchGatePreviewResult.dispatchGatePreviewSummary.dispatchGateVersion} />
+                    <DetailItem
+                      label="Gate Passed"
+                      value={String(draftGenerationLlmDispatchGatePreviewResult.dispatchGatePreviewSummary.dispatchGatePassed)}
+                    />
+                    <DetailItem
+                      label="Dispatch Allowed"
+                      value={String(draftGenerationLlmDispatchGatePreviewResult.dispatchGatePreviewSummary.dispatchAllowedNow)}
+                    />
+                    <DetailItem
+                      label="Would Be Blocked"
+                      value={String(draftGenerationLlmDispatchGatePreviewResult.dispatchGatePreviewSummary.dispatchWouldBeBlocked)}
+                    />
+                    <DetailItem
+                      label="Request Envelope Ready"
+                      value={String(draftGenerationLlmDispatchGatePreviewResult.dispatchGatePreviewSummary.requestEnvelopeReadyForFutureDispatch)}
+                    />
+                    <DetailItem
+                      label="Provider Route Ready"
+                      value={String(draftGenerationLlmDispatchGatePreviewResult.dispatchGatePreviewSummary.providerRouteReadyForFutureDispatch)}
+                    />
+                    <DetailItem
+                      label="Prompt Quality Ready"
+                      value={String(draftGenerationLlmDispatchGatePreviewResult.dispatchGatePreviewSummary.promptQualityReadyForFutureDispatch)}
+                    />
+                    <DetailItem
+                      label="Approval Ready"
+                      value={String(draftGenerationLlmDispatchGatePreviewResult.dispatchGatePreviewSummary.operatorApprovalReadyForFutureDispatch)}
+                    />
+                    <DetailItem
+                      label="Provider Health Required"
+                      value={String(draftGenerationLlmDispatchGatePreviewResult.dispatchGatePreviewSummary.providerHealthCheckRequiredBeforeDispatch)}
+                    />
+                    <DetailItem
+                      label="Provider Health Satisfied"
+                      value={String(draftGenerationLlmDispatchGatePreviewResult.dispatchGatePreviewSummary.providerHealthCheckSatisfiedNow)}
+                    />
+                    <DetailItem
+                      label="Confirmation Present"
+                      value={String(draftGenerationLlmDispatchGatePreviewResult.dispatchGatePreviewSummary.confirmationPhrasePresentNow)}
+                    />
+                    <DetailItem
+                      label="Idempotency Present"
+                      value={String(draftGenerationLlmDispatchGatePreviewResult.dispatchGatePreviewSummary.idempotencyKeyPresentNow)}
+                    />
+                  </div>
+                  <div className="detail-grid">
+                    <DetailItem label="Total Checks" value={String(draftGenerationLlmDispatchGatePreviewResult.dispatchGatePreviewSummary.totalChecks)} />
+                    <DetailItem label="Pass" value={String(draftGenerationLlmDispatchGatePreviewResult.dispatchGatePreviewSummary.passCount)} />
+                    <DetailItem label="Blocked" value={String(draftGenerationLlmDispatchGatePreviewResult.dispatchGatePreviewSummary.blockedCount)} />
+                    <DetailItem label="Warn" value={String(draftGenerationLlmDispatchGatePreviewResult.dispatchGatePreviewSummary.warnCount)} />
+                    <DetailItem label="N/A" value={String(draftGenerationLlmDispatchGatePreviewResult.dispatchGatePreviewSummary.notApplicableCount)} />
+                    <DetailItem
+                      label="Request Stored"
+                      value={String(draftGenerationLlmDispatchGatePreviewResult.requestEnvelopeStored)}
+                    />
+                    <DetailItem
+                      label="Request Would Be Sent"
+                      value={String(draftGenerationLlmDispatchGatePreviewResult.requestWouldBeSent)}
+                    />
+                    <DetailItem
+                      label="Request Sent To Provider"
+                      value={String(draftGenerationLlmDispatchGatePreviewResult.requestSentToProvider)}
+                    />
+                  </div>
+                  <ValidationList
+                    title="Dispatch blockers"
+                    items={draftGenerationLlmDispatchGatePreviewResult.dispatchGatePreviewSummary.dispatchBlockers.map(formatDraftGenerationGateBlocker)}
+                    emptyText="dispatch blocker가 없습니다."
+                    isWarning
+                  />
+                  <ValidationList
+                    title="Next required operator inputs"
+                    items={draftGenerationLlmDispatchGatePreviewResult.dispatchGatePreviewSummary.nextRequiredOperatorInputs}
+                    emptyText="필요한 operator input이 없습니다."
+                    isWarning
+                  />
+                  <ValidationList
+                    title="Next required feature flags"
+                    items={draftGenerationLlmDispatchGatePreviewResult.dispatchGatePreviewSummary.nextRequiredFeatureFlags}
+                    emptyText="필요한 feature flag가 없습니다."
+                    isWarning
+                  />
+                  <ValidationList
+                    title="Gate groups"
+                    items={draftGenerationLlmDispatchGatePreviewResult.dispatchGatePreviewSummary.gateGroups.map(
+                      (group) => `${group.status}: ${group.label} (${group.checks.length} checks)`
+                    )}
+                    emptyText="gate group이 없습니다."
+                    isWarning
+                  />
+                  <details className="read-block">
+                    <summary>Gate group별 체크 상세</summary>
+                    {draftGenerationLlmDispatchGatePreviewResult.dispatchGatePreviewSummary.gateGroups.map((group) => (
+                      <div className="read-block" key={group.key}>
+                        <h4>
+                          {group.label} · {group.status}
+                        </h4>
+                        <ValidationList
+                          title="Checks"
+                          items={group.checks.map(formatDispatchGateCheck)}
+                          emptyText="check가 없습니다."
+                          isWarning={group.status !== "pass"}
+                        />
+                      </div>
+                    ))}
+                  </details>
+                  <details className="read-block">
+                    <summary>Future dispatch plan / side-effect 상세</summary>
+                    <div className="detail-grid">
+                      <DetailItem
+                        label="Separate Execution Patch Required"
+                        value={String(
+                          draftGenerationLlmDispatchGatePreviewResult.dispatchGatePreviewSummary.futureDispatchPlan
+                            .separateDispatchExecutionPatchRequired
+                        )}
+                      />
+                      <DetailItem
+                        label="Dispatch Route Created Now"
+                        value={String(
+                          draftGenerationLlmDispatchGatePreviewResult.dispatchGatePreviewSummary.futureDispatchPlan.dispatchExecutionRouteCreatedNow
+                        )}
+                      />
+                      <DetailItem
+                        label="Provider Call Allowed"
+                        value={String(
+                          draftGenerationLlmDispatchGatePreviewResult.dispatchGatePreviewSummary.futureDispatchPlan.providerCallAllowedInThisPatch
+                        )}
+                      />
+                      <DetailItem
+                        label="LLM Completion Allowed"
+                        value={String(
+                          draftGenerationLlmDispatchGatePreviewResult.dispatchGatePreviewSummary.futureDispatchPlan.llmCompletionAllowedInThisPatch
+                        )}
+                      />
+                      <DetailItem
+                        label="Content Mutation Allowed"
+                        value={String(
+                          draftGenerationLlmDispatchGatePreviewResult.dispatchGatePreviewSummary.futureDispatchPlan.contentMutationAllowedInThisPatch
+                        )}
+                      />
+                      <DetailItem label="DB Read" value={String(draftGenerationLlmDispatchGatePreviewResult.currentSideEffectSummary.dbRead)} />
+                      <DetailItem label="DB Write" value={String(draftGenerationLlmDispatchGatePreviewResult.currentSideEffectSummary.dbWrite)} />
+                      <DetailItem label="Env Read" value={String(draftGenerationLlmDispatchGatePreviewResult.currentSideEffectSummary.envRead)} />
+                      <DetailItem label="Secret Exposed" value={String(draftGenerationLlmDispatchGatePreviewResult.currentSideEffectSummary.secretValueExposed)} />
+                      <DetailItem
+                        label="Dispatch Gate Evaluated"
+                        value={String(draftGenerationLlmDispatchGatePreviewResult.currentSideEffectSummary.dispatchGateEvaluatedForPreview)}
+                      />
+                      <DetailItem
+                        label="Request Envelope Built"
+                        value={String(draftGenerationLlmDispatchGatePreviewResult.currentSideEffectSummary.requestEnvelopeBuiltForPreview)}
+                      />
+                      <DetailItem
+                        label="Request Envelope Stored"
+                        value={String(draftGenerationLlmDispatchGatePreviewResult.currentSideEffectSummary.requestEnvelopeStored)}
+                      />
+                      <DetailItem
+                        label="Request Sent"
+                        value={String(draftGenerationLlmDispatchGatePreviewResult.currentSideEffectSummary.requestSentToProvider)}
+                      />
+                      <DetailItem
+                        label="Provider Health Checked"
+                        value={String(draftGenerationLlmDispatchGatePreviewResult.currentSideEffectSummary.providerHealthChecked)}
+                      />
+                      <DetailItem
+                        label="Provider Network"
+                        value={String(draftGenerationLlmDispatchGatePreviewResult.currentSideEffectSummary.providerNetworkCall)}
+                      />
+                      <DetailItem label="LLM Call" value={String(draftGenerationLlmDispatchGatePreviewResult.currentSideEffectSummary.llmCall)} />
+                      <DetailItem
+                        label="LLM Evaluator Call"
+                        value={String(draftGenerationLlmDispatchGatePreviewResult.currentSideEffectSummary.llmEvaluatorCall)}
+                      />
+                      <DetailItem
+                        label="LLM Log Mutation"
+                        value={String(draftGenerationLlmDispatchGatePreviewResult.currentSideEffectSummary.llmCallLogMutation)}
+                      />
+                      <DetailItem
+                        label="Content Mutation"
+                        value={String(draftGenerationLlmDispatchGatePreviewResult.currentSideEffectSummary.contentItemMutation)}
+                      />
+                      <DetailItem
+                        label="Draft Markdown"
+                        value={String(draftGenerationLlmDispatchGatePreviewResult.currentSideEffectSummary.draftMarkdownMutation)}
+                      />
+                      <DetailItem label="Draft HTML" value={String(draftGenerationLlmDispatchGatePreviewResult.currentSideEffectSummary.draftHtmlMutation)} />
+                      <DetailItem label="Blogger Write" value={String(draftGenerationLlmDispatchGatePreviewResult.currentSideEffectSummary.bloggerWrite)} />
+                    </div>
+                  </details>
+                </>
+              ) : (
+                <div className="notice">
+                  후보 큐에서 linked content item이 있는 행의 “dispatch gate”를 실행하세요. 이 단계는 dispatch 가능 조건만 점검하고 저장/전송/생성하지 않습니다.
+                </div>
+              )}
+            </div>
+
             <details className="read-block">
               <summary>기술 상세</summary>
               <div className="detail-grid">
@@ -4085,6 +4393,12 @@ function formatChecklistItem(item: { key: string; status: string; label: string;
 
 function formatPromptQualityCheck(item: { key: string; status: string; severity: string; label: string; detail: string; remediation: string | null }) {
   return `${item.status}/${item.severity}: ${item.label} - ${item.detail}${item.remediation ? ` · remediation: ${item.remediation}` : ""}`;
+}
+
+function formatDispatchGateCheck(item: { key: string; status: string; severity: string; label: string; detail: string; blockerCode?: string; remediation?: string }) {
+  return `${item.status}/${item.severity}: ${item.label} - ${item.detail}${item.blockerCode ? ` · blocker: ${item.blockerCode}` : ""}${
+    item.remediation ? ` · remediation: ${item.remediation}` : ""
+  }`;
 }
 
 function ValidationList({ title, items, emptyText, isError, isWarning }: { title: string; items: string[]; emptyText: string; isError?: boolean; isWarning?: boolean }) {

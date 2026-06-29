@@ -948,3 +948,13 @@ Patch 9F-2T adds a read-only request envelope preview immediately before any fut
 - It does not call any provider, provider health endpoint, local LLM, Ollama, OpenAI, custom HTTP endpoint, or CLI process.
 - It does not create `llm_call_logs`, store request envelopes, store prompts, mutate `content_items`, or create `draftMarkdown`/`draftHtml`.
 - Non-preview modes remain blocked with `draft_generation_llm_request_envelope_preview_is_preview_only`.
+
+## Patch 9F-2U draft-generation dispatch gate preview boundary
+
+Patch 9F-2U adds a read-only dispatch gate preview after the request envelope preview and before any future provider call.
+
+- `POST /api/daily-content-plans/draft-generation-llm-dispatch-gate-preview` evaluates whether the future request dispatch would still be blocked.
+- The preview reuses the 9F-2T request envelope preview and checks target integrity, operator approval, prompt quality, request envelope readiness, provider route readiness, provider health status, feature flags, confirmation phrase, idempotency key, and side-effect policy.
+- It keeps `dispatchAllowedNow=false`, `dispatchWouldBeBlocked=true`, `requestSentToProvider=false`, `providerNetworkCall=false`, `llmCall=false`, and `contentItemMutation=false`.
+- It does not create a dispatch execution route, send the request envelope, call a provider, run provider health checks, call any LLM, create `llm_call_logs`, store request envelopes, store prompts, mutate `content_items`, or create `draftMarkdown`/`draftHtml`.
+- Non-preview modes remain blocked with `draft_generation_llm_dispatch_gate_preview_is_preview_only`.

@@ -1,17 +1,17 @@
 # 14_NEXT_SESSION_BRIEF
 
-## Current State: Patch 9F-2T Completed
+## Current State: Patch 9F-2U Completed
 
 ```text
 repo: ~/blog-growth-agent
 branch: master
 previous HEAD before 9F-2D apply closeout: b3cf210 Link daily plan item to content fixture
-expected HEAD after 9F-2T commit: local commit `Add draft generation LLM request envelope preview` (verify exact hash with `git log --oneline -8`)
+expected HEAD after 9F-2U commit: local commit `Add draft generation LLM dispatch gate preview` (verify exact hash with `git log --oneline -8`)
 current DB schema state: operator approval persistence migration applied
 operator approval tables in DB: created
 operator approval rows/events: 1 / 1
 operator approval apply state: completed exactly once
-draft-generation execution gate: post-approval preview polished, dry-run planner implemented, LLM provider readiness preview implemented, LLM provider health-check preview implemented, gated health-check execution route implemented, final execution checklist/runbook implemented, prompt render preview implemented, prompt quality checklist preview implemented, request envelope preview implemented, draft generation execution still blocked
+draft-generation execution gate: post-approval preview polished, dry-run planner implemented, LLM provider readiness preview implemented, LLM provider health-check preview implemented, gated health-check execution route implemented, final execution checklist/runbook implemented, prompt render preview implemented, prompt quality checklist preview implemented, request envelope preview implemented, dispatch gate preview implemented, draft generation execution still blocked
 milestone: 9E first end-to-end Blogger publish completed; 9F operation automation foundation started
 ```
 
@@ -206,6 +206,13 @@ Current baseline:
 - 9F-2T keeps `requestEnvelopeStored=false`, `requestWouldBeSent=false`, `llmCallAttempted=false`, `providerNetworkCallAttempted=false`, `providerHealthCheckAttempted=false`, `contentMutationAttempted=false`, `executionAllowed=false`, and `finalDraftGenerationAllowed=false`.
 - 9F-2T did not rerun 9F-2B apply, 9F-2D apply, 9F-2I-APPLY, or 9F-2K approval apply.
 - 9F-2T did not modify `prisma/schema.prisma`, create a migration, store request envelopes, store prompts, run LLM evaluator/judge calls, run provider health checks, make provider network calls, call LLM providers, create `llm_call_logs`, mutate `content_items`, write to Blogger, publish, schedule, reconnect OAuth, refresh tokens, mutate publish approvals, or mutate publish attempts.
+- 9F-2U added read-only helper `src/lib/daily-content-plans/draft-generation-llm-dispatch-gate-preview.ts`.
+- 9F-2U added route `POST /api/daily-content-plans/draft-generation-llm-dispatch-gate-preview`.
+- 9F-2U added `/settings/blogger` `초안 생성 LLM dispatch gate preview` readback.
+- 9F-2U reuses the 9F-2T request envelope preview and evaluates target, approval, prompt, request envelope, provider route, provider health, final execution checklist, feature flag, confirmation, idempotency, and side-effect policy gates.
+- 9F-2U keeps `dispatchAllowedNow=false`, `dispatchWouldBeBlocked=true`, `requestSentToProvider=false`, `llmCallAttempted=false`, `providerNetworkCallAttempted=false`, `providerHealthCheckAttempted=false`, `contentMutationAttempted=false`, `executionAllowed=false`, and `finalDraftGenerationAllowed=false`.
+- 9F-2U did not rerun 9F-2B apply, 9F-2D apply, 9F-2I-APPLY, or 9F-2K approval apply.
+- 9F-2U did not modify `prisma/schema.prisma`, create a migration, create a dispatch execution route, dispatch a request, store request envelopes, store prompts, run LLM evaluator/judge calls, run provider health checks, make provider network calls, call LLM providers, create `llm_call_logs`, mutate `content_items`, write to Blogger, publish, schedule, reconnect OAuth, refresh tokens, mutate publish approvals, or mutate publish attempts.
 
 9E first end-to-end publish path:
 
@@ -217,13 +224,13 @@ Current baseline:
 6. `9E-9C` read back `https://mathlearningappl.blogspot.com/2026/06/blog-post.html`.
 7. `9E-9D-APPLY` reconciled internal DB state from `planned`/`planned_only` to `published`/`success`.
 
-Recommended next after 9F-2T:
+Recommended next after 9F-2U:
 
-**9F-2U — Draft-generation LLM dispatch gate preview, no provider call/no content mutation**
+**9F-2V — Draft-generation LLM dispatch audit schema design, no migration/no provider call/no content mutation**
 
 Goal:
 
-- Add a read-only dispatch gate preview that confirms whether a future LLM provider dispatch would be blocked or theoretically allowed, without sending the request to any provider and without mutating `content_items`.
+- Design the future dispatch attempt/audit storage structure before any actual dispatch implementation, without creating a migration, calling a provider, creating `llm_call_logs`, or mutating `content_items`.
 
 Alternative:
 
@@ -267,6 +274,7 @@ Goal:
 | 9F-2S | Draft-generation prompt quality checklist preview, no LLM/no content mutation |
 | 9F-2T | Draft-generation LLM request envelope preview, no provider call/no content mutation |
 | 9F-2U | Draft-generation LLM dispatch gate preview, no provider call/no content mutation |
+| 9F-2V | Draft-generation LLM dispatch audit schema design, no migration/no provider call/no content mutation |
 | 9F-3A | Alert & Recovery Center |
 
 Core operation principles:

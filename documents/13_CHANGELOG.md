@@ -1,5 +1,29 @@
 # 13_CHANGELOG
 
+## Patch 9F-2U Draft-generation LLM Dispatch Gate Preview
+
+Implemented after Patch 9F-2T:
+
+- Added read-only helper `src/lib/daily-content-plans/draft-generation-llm-dispatch-gate-preview.ts`.
+- Added route `POST /api/daily-content-plans/draft-generation-llm-dispatch-gate-preview`.
+- Added `/settings/blogger` `초안 생성 LLM dispatch gate preview` UI readback.
+- The preview reuses the 9F-2T request envelope preview and evaluates target, approval, prompt, request envelope, provider route, provider health, final execution checklist, feature flag, confirmation, idempotency, and side-effect policy gates.
+- The response reports `patchVersion=9F-2U`, `previewMode=read_only_draft_generation_llm_dispatch_gate_preview`, `dryRunOnly=true`, `dispatchGateEvaluatedForPreview=true`, `dispatchAllowedNow=false`, `dispatchWouldBeBlocked=true`, `requestEnvelopeStored=false`, `requestWouldBeSent=false`, `requestSentToProvider=false`, `llmCallAttempted=false`, `providerNetworkCallAttempted=false`, `providerHealthCheckAttempted=false`, and `contentMutationAttempted=false`.
+- Provider health check, confirmation phrase, idempotency key, and draft-generation feature flags remain blockers for any future dispatch execution.
+- Non-preview modes are blocked with `draft_generation_llm_dispatch_gate_preview_is_preview_only`.
+
+Policy:
+
+- 9F-2U did not rerun 9F-2B apply, 9F-2D apply, 9F-2I-APPLY, or 9F-2K approval apply.
+- 9F-2U did not create, update, or delete business rows.
+- 9F-2U did not modify `prisma/schema.prisma` or create a migration.
+- 9F-2U did not expose env values, raw secret values, encrypted values, API keys, bearer tokens, OAuth tokens, provider request values, response bodies, or raw provider responses.
+- 9F-2U did not run LLM evaluator/judge calls, provider health checks, provider network calls, LLM provider calls, request dispatch, request storage, prompt storage, `llm_call_logs` creation, draft generation, `content_items` mutation, Blogger write, publish, schedule, OAuth reconnect, token refresh, publish approval mutation, or publish attempt mutation.
+- Daily plan rows remain `1`, daily plan item rows remain `3`, `content_items` count remains `2`, and operator approvals/events remain `1 / 1`.
+- Publish milestone counts remain `1 / 1 / 1 / 1 / 22`, and `llm_call_logs` remains `22`.
+- The linked fixture remains `planned` with empty `draftMarkdown` and `draftHtml`.
+- Recommended next patch: `9F-2V — Draft-generation LLM dispatch audit schema design, no migration/no provider call/no content mutation`.
+
 ## Patch 9F-2T Draft-generation LLM Request Envelope Preview
 
 Implemented after Patch 9F-2S:

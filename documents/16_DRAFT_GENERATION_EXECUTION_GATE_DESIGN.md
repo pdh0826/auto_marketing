@@ -463,3 +463,18 @@ Patch 9F-2T is the read-only request envelope preview gate after the prompt qual
 Next candidate gate:
 
 - `9F-2U — Draft-generation LLM dispatch gate preview, no provider call/no content mutation`
+
+## Patch 9F-2U Dispatch Gate Preview
+
+Patch 9F-2U is the read-only dispatch gate preview after the request envelope preview.
+
+- It reuses the 9F-2T request envelope preview and evaluates target, approval, prompt, request envelope, provider route, provider health, final execution checklist, feature flag, confirmation, idempotency, and side-effect policy gates.
+- It keeps provider health check satisfaction false unless a later persistence mechanism proves otherwise.
+- It keeps confirmation phrase and idempotency key absent in preview mode.
+- It does not create a dispatch execution route, store a request envelope, send a request, call a provider, run provider health checks, call any LLM, create `llm_call_logs`, mutate `content_items`, create drafts, or call Blogger.
+- It keeps `dispatchAllowedNow=false`, `dispatchWouldBeBlocked=true`, `requestSentToProvider=false`, `providerNetworkCallAttempted=false`, `llmCallAttempted=false`, `executionAllowed=false`, and `finalDraftGenerationAllowed=false`.
+- Non-preview modes are blocked with `draft_generation_llm_dispatch_gate_preview_is_preview_only`.
+
+Next candidate gate:
+
+- `9F-2V — Draft-generation LLM dispatch audit schema design, no migration/no provider call/no content mutation`
