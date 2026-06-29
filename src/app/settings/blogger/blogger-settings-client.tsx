@@ -17,6 +17,7 @@ import type { BlogAdmin } from "@/lib/blogs/admin-types";
 import type { DailyPlanContentItemFixtureResponse } from "@/lib/daily-content-plans/content-item-fixture";
 import type { DailyContentPlanResponse } from "@/lib/daily-content-plans/daily-content-plan-summary";
 import type { DailyContentDraftGenerationFinalExecutionChecklistResponse } from "@/lib/daily-content-plans/draft-generation-final-execution-checklist";
+import type { DailyContentDraftGenerationPromptRenderPreviewResponse } from "@/lib/daily-content-plans/draft-generation-prompt-render-preview";
 import type { DailyContentDraftGenerationDryRunPlannerResponse } from "@/lib/daily-content-plans/draft-generation-dry-run-planner";
 import type { DailyContentDraftGenerationExecutionGatePreviewResponse } from "@/lib/daily-content-plans/draft-generation-execution-gate-preview";
 import type { DailyContentDraftGenerationLlmProviderHealthCheckExecutionResponse } from "@/lib/daily-content-plans/draft-generation-llm-provider-health-check-execution";
@@ -95,6 +96,8 @@ export function BloggerSettingsClient() {
     useState<DailyContentDraftGenerationLlmProviderHealthCheckExecutionResponse | null>(null);
   const [draftGenerationFinalExecutionChecklistResult, setDraftGenerationFinalExecutionChecklistResult] =
     useState<DailyContentDraftGenerationFinalExecutionChecklistResponse | null>(null);
+  const [draftGenerationPromptRenderPreviewResult, setDraftGenerationPromptRenderPreviewResult] =
+    useState<DailyContentDraftGenerationPromptRenderPreviewResponse | null>(null);
   const [oauthDryRun, setOauthDryRun] = useState<BloggerOAuthStartDryRun | null>(null);
   const [blogListResult, setBlogListResult] = useState<BloggerBlogListResult | null>(null);
   const [blogListLoadingId, setBlogListLoadingId] = useState<string | null>(null);
@@ -111,6 +114,7 @@ export function BloggerSettingsClient() {
   const [loadingDraftGenerationLlmProviderHealthCheckPreviewItemId, setLoadingDraftGenerationLlmProviderHealthCheckPreviewItemId] = useState<string | null>(null);
   const [loadingDraftGenerationLlmProviderHealthCheckExecutionItemId, setLoadingDraftGenerationLlmProviderHealthCheckExecutionItemId] = useState<string | null>(null);
   const [loadingDraftGenerationFinalExecutionChecklistItemId, setLoadingDraftGenerationFinalExecutionChecklistItemId] = useState<string | null>(null);
+  const [loadingDraftGenerationPromptRenderPreviewItemId, setLoadingDraftGenerationPromptRenderPreviewItemId] = useState<string | null>(null);
   const [selectingBlogId, setSelectingBlogId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -191,6 +195,7 @@ export function BloggerSettingsClient() {
       setDraftGenerationLlmProviderHealthCheckPreviewResult(null);
       setDraftGenerationLlmProviderHealthCheckExecutionResult(null);
       setDraftGenerationFinalExecutionChecklistResult(null);
+      setDraftGenerationPromptRenderPreviewResult(null);
       setOauthDryRun(null);
       setBlogListResult(null);
       setNotice("Blogger connection을 저장했습니다. Blogger draft/publish는 수행하지 않았습니다.");
@@ -319,6 +324,7 @@ export function BloggerSettingsClient() {
       setDraftGenerationLlmProviderHealthCheckPreviewResult(null);
       setDraftGenerationLlmProviderHealthCheckExecutionResult(null);
       setDraftGenerationFinalExecutionChecklistResult(null);
+      setDraftGenerationPromptRenderPreviewResult(null);
       setNotice("Daily Content Plan preview를 생성했습니다. Plan row 저장, content generation, LLM call, Blogger write/publish는 수행하지 않았습니다.");
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Daily Content Plan preview에 실패했습니다.");
@@ -656,6 +662,44 @@ export function BloggerSettingsClient() {
     }
   }
 
+  async function previewDraftGenerationPromptRender(
+    planId: string | null | undefined,
+    planItemId: string | null | undefined,
+    contentItemId: string | null | undefined
+  ) {
+    if (!planId || !planItemId || !contentItemId) {
+      setError("Daily plan id, item id, linked content item id가 필요합니다.");
+      return;
+    }
+
+    setError(null);
+    setNotice(null);
+    setLoadingDraftGenerationPromptRenderPreviewItemId(planItemId);
+
+    try {
+      const result = await requestJson<ApiResult<DailyContentDraftGenerationPromptRenderPreviewResponse>>(
+        "/api/daily-content-plans/draft-generation-prompt-render-preview",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            mode: "preview",
+            planId,
+            planItemId,
+            contentItemId
+          })
+        }
+      );
+      setDraftGenerationPromptRenderPreviewResult(result.data);
+      setNotice(
+        "초안 생성 prompt preview를 렌더링했습니다. prompt는 저장하지 않았고, LLM 호출, provider network call, content_items 수정, Blogger write/publish도 수행하지 않았습니다."
+      );
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "초안 생성 prompt preview 확인에 실패했습니다.");
+    } finally {
+      setLoadingDraftGenerationPromptRenderPreviewItemId(null);
+    }
+  }
+
   async function createOAuthDryRun(connection: BloggerConnectionAdmin) {
     setError(null);
     setNotice(null);
@@ -846,6 +890,7 @@ export function BloggerSettingsClient() {
                   setDraftGenerationLlmProviderHealthCheckPreviewResult(null);
                   setDraftGenerationLlmProviderHealthCheckExecutionResult(null);
                   setDraftGenerationFinalExecutionChecklistResult(null);
+                  setDraftGenerationPromptRenderPreviewResult(null);
                   setOauthDryRun(null);
                   setBlogListResult(null);
                 }}
@@ -1468,6 +1513,25 @@ export function BloggerSettingsClient() {
                         }
                       >
                         {loadingDraftGenerationFinalExecutionChecklistItemId === getDailyPlanItemId(item) ? "최종 점검 중" : "최종 실행 체크리스트"}
+                      </button>
+                      <button
+                        className="button small secondary"
+                        type="button"
+                        disabled={
+                          !dailyContentPlanSummary.persistedPlanId ||
+                          !getDailyPlanItemId(item) ||
+                          !getDailyPlanItemContentItemId(item) ||
+                          loadingDraftGenerationPromptRenderPreviewItemId === getDailyPlanItemId(item)
+                        }
+                        onClick={() =>
+                          void previewDraftGenerationPromptRender(
+                            dailyContentPlanSummary.persistedPlanId,
+                            getDailyPlanItemId(item),
+                            getDailyPlanItemContentItemId(item)
+                          )
+                        }
+                      >
+                        {loadingDraftGenerationPromptRenderPreviewItemId === getDailyPlanItemId(item) ? "prompt 렌더링 중" : "prompt preview"}
                       </button>
                     </td>
                   </tr>
@@ -2916,6 +2980,130 @@ export function BloggerSettingsClient() {
                 </>
               ) : (
                 <div className="notice">후보 큐에서 linked content item이 있는 행의 “최종 실행 체크리스트”를 실행하세요. 이 preview는 읽기 전용 runbook만 표시합니다.</div>
+              )}
+            </div>
+
+            <div className="read-block">
+              <h3>초안 생성 prompt preview</h3>
+              <div className="notice">
+                <strong>LLM에 보낼 지시문을 미리 렌더링했지만, 실제 LLM 호출이나 초안 저장은 하지 않았습니다.</strong>
+                <p>이 preview는 prompt 구조와 입력 컨텍스트를 운영자가 확인하기 위한 읽기 전용 화면입니다.</p>
+                <p>prompt는 DB에 저장하지 않으며, provider network call, content_items 수정, Blogger write/publish/schedule도 수행하지 않습니다.</p>
+              </div>
+              <div className="button-row">
+                <button className="button small secondary" type="button" disabled>
+                  LLM 호출 - 비활성
+                </button>
+                <button className="button small secondary" type="button" disabled>
+                  Prompt 저장 - 비활성
+                </button>
+                <button className="button small secondary" type="button" disabled>
+                  Draft 생성 - 비활성
+                </button>
+              </div>
+              {draftGenerationPromptRenderPreviewResult ? (
+                <>
+                  <div className="notice warning">
+                    <strong>
+                      Prompt preview only: {draftGenerationPromptRenderPreviewResult.promptRenderPreviewSummary.promptVersion}
+                    </strong>
+                    <p>
+                      executionAllowed: {String(draftGenerationPromptRenderPreviewResult.executionGateSummary.executionAllowed)} / finalDraftGenerationAllowed:{" "}
+                      {String(draftGenerationPromptRenderPreviewResult.executionGateSummary.finalDraftGenerationAllowed)}
+                    </p>
+                  </div>
+                  <div className="detail-grid">
+                    <DetailItem label="Patch" value={draftGenerationPromptRenderPreviewResult.patchVersion} />
+                    <DetailItem label="Preview Mode" value={draftGenerationPromptRenderPreviewResult.previewMode} />
+                    <DetailItem label="Plan ID" value={draftGenerationPromptRenderPreviewResult.targetSummary.planId ?? "-"} />
+                    <DetailItem label="Plan Item" value={draftGenerationPromptRenderPreviewResult.targetSummary.planItemId} />
+                    <DetailItem label="Content Item" value={draftGenerationPromptRenderPreviewResult.targetSummary.contentItemId ?? "-"} />
+                    <DetailItem label="Fixture Status" value={draftGenerationPromptRenderPreviewResult.targetSummary.fixtureStatus ?? "-"} />
+                    <DetailItem label="Approval Satisfied" value={String(draftGenerationPromptRenderPreviewResult.persistedApprovalSummary.operatorApprovalSatisfied)} />
+                    <DetailItem label="Prompt Stored" value={String(draftGenerationPromptRenderPreviewResult.promptRenderPreviewSummary.rawPromptStored)} />
+                    <DetailItem label="Prompt Sent To LLM" value={String(draftGenerationPromptRenderPreviewResult.promptRenderPreviewSummary.promptSentToLlm)} />
+                    <DetailItem label="Prompt Char Length" value={String(draftGenerationPromptRenderPreviewResult.promptRenderPreviewSummary.promptCharLength)} />
+                    <DetailItem label="Estimated Tokens" value={String(draftGenerationPromptRenderPreviewResult.promptRenderPreviewSummary.estimatedPromptTokens)} />
+                    <DetailItem label="Prompt SHA-256" value={draftGenerationPromptRenderPreviewResult.promptRenderPreviewSummary.promptSha256} />
+                  </div>
+                  <ValidationList
+                    title="Remaining execution blockers"
+                    items={draftGenerationPromptRenderPreviewResult.executionGateSummary.remainingBlockers.map(formatDraftGenerationGateBlocker)}
+                    emptyText="remaining blocker가 없습니다."
+                    isWarning
+                  />
+                  <ValidationList
+                    title="Prompt sections"
+                    items={draftGenerationPromptRenderPreviewResult.promptRenderPreviewSummary.promptSections.map(
+                      (section) => `${section.key}: ${section.title} (${section.charLength} chars)`
+                    )}
+                    emptyText="prompt section이 없습니다."
+                  />
+                  <div className="detail-grid">
+                    <DetailItem label="Redaction Applied" value={String(draftGenerationPromptRenderPreviewResult.promptRenderPreviewSummary.redactionApplied)} />
+                    <DetailItem
+                      label="Redacted Placeholder Count"
+                      value={String(draftGenerationPromptRenderPreviewResult.promptRenderPreviewSummary.redactionSummary.redactedPlaceholderCount)}
+                    />
+                    <DetailItem
+                      label="Raw Secrets Included"
+                      value={String(draftGenerationPromptRenderPreviewResult.promptRenderPreviewSummary.redactionSummary.rawSecretsIncluded)}
+                    />
+                    <DetailItem
+                      label="Raw Tokens Included"
+                      value={String(draftGenerationPromptRenderPreviewResult.promptRenderPreviewSummary.redactionSummary.rawTokensIncluded)}
+                    />
+                    <DetailItem
+                      label="Raw Env Values Included"
+                      value={String(draftGenerationPromptRenderPreviewResult.promptRenderPreviewSummary.redactionSummary.rawEnvValuesIncluded)}
+                    />
+                    <DetailItem
+                      label="Provider Credentials Included"
+                      value={String(draftGenerationPromptRenderPreviewResult.promptRenderPreviewSummary.redactionSummary.providerCredentialsIncluded)}
+                    />
+                  </div>
+                  <details className="read-block">
+                    <summary>Prompt section preview</summary>
+                    {draftGenerationPromptRenderPreviewResult.promptRenderPreviewSummary.promptSections.map((section) => (
+                      <div className="read-block" key={section.key}>
+                        <h4>{section.title}</h4>
+                        <p className="muted">
+                          {section.key} / {section.charLength} chars
+                        </p>
+                        <pre>{section.previewText}</pre>
+                      </div>
+                    ))}
+                  </details>
+                  <details className="read-block">
+                    <summary>Full prompt preview</summary>
+                    <div className="notice">
+                      full prompt preview truncated: {String(draftGenerationPromptRenderPreviewResult.promptRenderPreviewSummary.fullPromptPreviewTruncated)} / max chars:{" "}
+                      {draftGenerationPromptRenderPreviewResult.promptRenderPreviewSummary.maxPreviewChars}
+                    </div>
+                    <pre>{draftGenerationPromptRenderPreviewResult.promptRenderPreviewSummary.fullPromptPreview}</pre>
+                  </details>
+                  <details className="read-block">
+                    <summary>Prompt preview side-effect 상세</summary>
+                    <div className="detail-grid">
+                      <DetailItem label="DB Read" value={String(draftGenerationPromptRenderPreviewResult.currentSideEffectSummary.dbRead)} />
+                      <DetailItem label="DB Write" value={String(draftGenerationPromptRenderPreviewResult.currentSideEffectSummary.dbWrite)} />
+                      <DetailItem label="Env Read" value={String(draftGenerationPromptRenderPreviewResult.currentSideEffectSummary.envRead)} />
+                      <DetailItem label="Secret Exposed" value={String(draftGenerationPromptRenderPreviewResult.currentSideEffectSummary.secretValueExposed)} />
+                      <DetailItem label="Prompt Rendered For Preview" value={String(draftGenerationPromptRenderPreviewResult.currentSideEffectSummary.promptRenderedForPreview)} />
+                      <DetailItem label="Prompt Stored" value={String(draftGenerationPromptRenderPreviewResult.currentSideEffectSummary.promptStored)} />
+                      <DetailItem label="Provider Health Checked" value={String(draftGenerationPromptRenderPreviewResult.currentSideEffectSummary.providerHealthChecked)} />
+                      <DetailItem label="Provider Network" value={String(draftGenerationPromptRenderPreviewResult.currentSideEffectSummary.providerNetworkCall)} />
+                      <DetailItem label="LLM Call" value={String(draftGenerationPromptRenderPreviewResult.currentSideEffectSummary.llmCall)} />
+                      <DetailItem label="LLM Log Mutation" value={String(draftGenerationPromptRenderPreviewResult.currentSideEffectSummary.llmCallLogMutation)} />
+                      <DetailItem label="Content Mutation" value={String(draftGenerationPromptRenderPreviewResult.currentSideEffectSummary.contentItemMutation)} />
+                      <DetailItem label="Draft Markdown" value={String(draftGenerationPromptRenderPreviewResult.currentSideEffectSummary.draftMarkdownMutation)} />
+                      <DetailItem label="Draft HTML" value={String(draftGenerationPromptRenderPreviewResult.currentSideEffectSummary.draftHtmlMutation)} />
+                      <DetailItem label="Blogger Write" value={String(draftGenerationPromptRenderPreviewResult.currentSideEffectSummary.bloggerWrite)} />
+                    </div>
+                  </details>
+                </>
+              ) : (
+                <div className="notice">후보 큐에서 linked content item이 있는 행의 “prompt preview”를 실행하세요. 이 단계는 prompt만 미리 보고 저장/전송/생성하지 않습니다.</div>
               )}
             </div>
 

@@ -916,3 +916,13 @@ Patch 9E-8A adds a read-only publish OAuth gate, not an LLM routing change.
 - The gate reads safe Blogger connection/token expiry metadata and saved publish approval/attempt metadata only.
 - The gate does not start OAuth, exchange codes, refresh tokens, call Blogger APIs, publish, schedule publish, call `posts.update`, save additional drafts, invalidate approvals, update attempts, or mutate content items.
 - UI output must not expose prompts, raw model responses, generated candidate text, Blogger tokens, encrypted values, client secrets, raw OAuth responses, raw Blogger response/error bodies, or full draft HTML.
+
+## Patch 9F-2R draft-generation prompt preview boundary
+
+Patch 9F-2R adds a read-only prompt render preview before any future draft-generation LLM execution.
+
+- `POST /api/daily-content-plans/draft-generation-prompt-render-preview` renders deterministic prompt sections for operator review only.
+- The preview does not call OpenAI, local LLM, Ollama, custom HTTP/CLI providers, or provider health-check endpoints.
+- The preview does not create `llm_call_logs`, store prompt text, mutate `content_items`, or create `draftMarkdown`/`draftHtml`.
+- Prompt preview redaction must keep raw secrets, API keys, bearer tokens, OAuth token material, provider credentials, and raw env values out of API/UI output.
+- Future execution still requires separate feature flags, confirmation phrase, idempotency key, and an execution patch.

@@ -420,3 +420,18 @@ Approval persistence and draft-generation execution remain separate:
 - Should raw LLM output ever be stored in a redacted audit table, or only in target draft fields after approval?
 - Which prompt/input hashes are stable enough for idempotency fingerprints?
 - Should transient provider failures allow automatic retry, or require another operator-approved attempt?
+
+## Patch 9F-2R Prompt Render Preview Gate
+
+Patch 9F-2R is the read-only prompt preview gate after the final execution checklist.
+
+- It renders deterministic prompt sections from Daily Content Plan metadata, the linked content fixture metadata, safe blog/brand context, operation policy, and content policy.
+- It does not use existing `draftMarkdown` or `draftHtml` as prompt source material.
+- It does not store the prompt, call any LLM/provider, run provider health checks, create `llm_call_logs`, mutate `content_items`, create drafts, or call Blogger.
+- It keeps `executionAllowed=false` and `finalDraftGenerationAllowed=false` with the existing feature flag, confirmation phrase, and idempotency blockers.
+- It exposes prompt version, section summaries, bounded full preview, SHA-256 hash, estimated tokens, redaction summary, and no-side-effect summary for operator review.
+- Non-preview modes are blocked with `draft_generation_prompt_render_preview_is_preview_only`.
+
+Next candidate gate:
+
+- `9F-2S — Draft-generation prompt quality checklist preview, no LLM/no content mutation`
