@@ -141,6 +141,18 @@ The route may execute a future safe provider health/connectivity check only when
 
 This health-check execution path is not draft generation execution. A successful future provider health-check does not satisfy content mutation, draft write, confirmation/idempotency for draft generation, or publish isolation gates. It must not call completion/chat/generate/responses endpoints, render/store prompts, create `llm_call_logs`, mutate `content_items`, create/update `draftMarkdown` or `draftHtml`, write to Blogger, publish, schedule, reconnect OAuth, refresh tokens, or mutate publish approvals/attempts.
 
+## Patch 9F-2Q Final Execution Checklist
+
+Patch 9F-2Q adds the final read-only operator checklist and runbook before prompt-render preview or any later draft-generation execution patch:
+
+- `POST /api/daily-content-plans/draft-generation-final-execution-checklist`
+- `/settings/blogger` section `초안 생성 최종 실행 체크리스트`
+- checklist mode `read_only_draft_generation_final_execution_checklist`
+
+The checklist consolidates target fixture state, persisted operator approval, dry-run planner, LLM provider readiness, health-check preview, health-check execution gate, remaining blockers, pass/blocked/caution items, and safe next steps. It keeps `executionAllowed=false` and `finalDraftGenerationAllowed=false`.
+
+It does not render prompts, run provider health checks, make provider network calls, call LLM providers, create `llm_call_logs`, generate draft content, mutate `content_items`, write to Blogger, publish, schedule, reconnect OAuth, or refresh tokens.
+
 ## Execution Gate Layers
 
 The future execution route should evaluate these layers in order and return every blocking reason in a safe summary. No layer may store prompt text, raw LLM response text, generated candidate text, Blogger tokens, secrets, or external raw bodies.

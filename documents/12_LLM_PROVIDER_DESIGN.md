@@ -85,6 +85,8 @@ Patch 9F-2O adds a read-only LLM provider health-check preview for future Daily 
 
 Patch 9F-2P adds the first gated provider health-check execution path for future Daily Content Plan draft generation. The route is separate from content generation and defaults to blocked/no-network behavior unless both health-check feature flags, the exact confirmation phrase, idempotency key, route/provider/model readiness, required env presence, and supported safe endpoint category all pass. Completion/chat/generate/responses endpoints remain forbidden. A future explicitly approved positive health-check may only use safe metadata/version/tags/models/health endpoint categories, must use a short timeout with no retries, must not return raw response bodies or headers, and must not create `llm_call_logs` or mutate provider/content/Blogger/publish rows. Default validation must prove `providerNetworkCallAttempted=false`, `llmCompletionAttempted=false`, and all mutation side effects false.
 
+Patch 9F-2Q adds a final read-only draft-generation execution checklist and operator runbook. It consolidates the 9F-2M dry-run planner, 9F-2N provider readiness, 9F-2O health-check preview, and 9F-2P health-check execution gate into an operator-facing status summary without calling LLM providers, rendering prompts, running provider health checks, creating `llm_call_logs`, or mutating content.
+
 ## Patch 3 설정 화면
 
 `/settings/llm` 화면은 Patch 2의 PostgreSQL + Prisma CRUD API를 사용해 다음 데이터를 관리한다.

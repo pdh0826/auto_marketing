@@ -1,5 +1,28 @@
 # 13_CHANGELOG
 
+## Patch 9F-2Q Draft-generation Final Execution Checklist
+
+Implemented after Patch 9F-2P:
+
+- Added read-only helper `src/lib/daily-content-plans/draft-generation-final-execution-checklist.ts`.
+- Added route `POST /api/daily-content-plans/draft-generation-final-execution-checklist`.
+- Added `/settings/blogger` `초안 생성 최종 실행 체크리스트` UI readback.
+- The checklist aggregates the daily plan/fixture state, persisted operator approval, 9F-2M dry-run planner, 9F-2N LLM readiness, 9F-2O health-check preview, 9F-2P health-check execution gate, remaining blockers, and operator runbook.
+- The preview keeps `executionAllowed=false`, `finalDraftGenerationAllowed=false`, `llmCompletionAttempted=false`, `promptRendered=false`, `providerNetworkCallAttempted=false`, `contentMutationAttempted=false`, and `bloggerWriteAttempted=false`.
+- Non-preview modes are blocked with `draft_generation_final_execution_checklist_is_preview_only`.
+
+Policy:
+
+- 9F-2Q did not rerun 9F-2B apply, 9F-2D apply, 9F-2I-APPLY, or 9F-2K approval apply.
+- 9F-2Q did not create, update, or delete business rows.
+- 9F-2Q did not modify `prisma/schema.prisma` or create a migration.
+- 9F-2Q did not expose env values, raw secret values, encrypted values, API keys, bearer tokens, provider request bodies, prompt text, response bodies, or raw provider responses.
+- 9F-2Q did not run provider health checks, make provider network calls, call LLM providers, render/store prompts, create `llm_call_logs`, generate drafts, mutate `content_items`, write to Blogger, publish, schedule, reconnect OAuth, refresh tokens, mutate publish approvals, or mutate publish attempts.
+- Daily plan rows remain `1`, daily plan item rows remain `3`, `content_items` count remains `2`, and operator approvals/events remain `1 / 1`.
+- Publish milestone counts remain `1 / 1 / 1 / 1 / 22`, and `llm_call_logs` remains `22`.
+- The linked fixture remains `planned` with empty `draftMarkdown` and `draftHtml`.
+- Recommended next patch: `9F-2R — Draft-generation prompt render preview, no LLM/no content mutation`.
+
 ## Patch 9F-2P Gated LLM Provider Health-check Execution
 
 Implemented after Patch 9F-2O:

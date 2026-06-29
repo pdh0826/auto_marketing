@@ -1,17 +1,17 @@
 # 14_NEXT_SESSION_BRIEF
 
-## Current State: Patch 9F-2P Completed
+## Current State: Patch 9F-2Q Completed
 
 ```text
 repo: ~/blog-growth-agent
 branch: master
 previous HEAD before 9F-2D apply closeout: b3cf210 Link daily plan item to content fixture
-expected HEAD after 9F-2P commit: local commit `Add gated draft generation LLM provider health-check execution` (verify exact hash with `git log --oneline -8`)
+expected HEAD after 9F-2Q commit: local commit `Add draft generation final execution checklist` (verify exact hash with `git log --oneline -8`)
 current DB schema state: operator approval persistence migration applied
 operator approval tables in DB: created
 operator approval rows/events: 1 / 1
 operator approval apply state: completed exactly once
-draft-generation execution gate: post-approval preview polished, dry-run planner implemented, LLM provider readiness preview implemented, LLM provider health-check preview implemented, gated health-check execution route implemented, draft generation execution still blocked
+draft-generation execution gate: post-approval preview polished, dry-run planner implemented, LLM provider readiness preview implemented, LLM provider health-check preview implemented, gated health-check execution route implemented, final execution checklist/runbook implemented, draft generation execution still blocked
 milestone: 9E first end-to-end Blogger publish completed; 9F operation automation foundation started
 ```
 
@@ -178,6 +178,13 @@ Current baseline:
 - 9F-2P does not expose env values, raw secrets, encrypted values, API keys, bearer tokens, prompt text, response bodies, provider request bodies, or raw provider responses.
 - 9F-2P did not rerun 9F-2B apply, 9F-2D apply, 9F-2I-APPLY, or 9F-2K approval apply.
 - 9F-2P did not modify `prisma/schema.prisma`, create a migration, generate drafts, call completion/chat/generate/responses endpoints, create `llm_call_logs`, mutate `content_items`, write to Blogger, publish, schedule, reconnect OAuth, refresh tokens, mutate publish approvals, or mutate publish attempts.
+- 9F-2Q added read-only helper `src/lib/daily-content-plans/draft-generation-final-execution-checklist.ts`.
+- 9F-2Q added route `POST /api/daily-content-plans/draft-generation-final-execution-checklist`.
+- 9F-2Q added `/settings/blogger` `초안 생성 최종 실행 체크리스트` readback.
+- 9F-2Q consolidates target fixture state, persisted operator approval, 9F-2M dry-run planner, 9F-2N LLM readiness, 9F-2O health-check preview, 9F-2P health-check execution gate, remaining blockers, pass/blocked/caution items, and operator runbook.
+- 9F-2Q keeps `executionAllowed=false`, `finalDraftGenerationAllowed=false`, `llmCompletionAttempted=false`, `promptRendered=false`, `providerNetworkCallAttempted=false`, `contentMutationAttempted=false`, and `bloggerWriteAttempted=false`.
+- 9F-2Q did not rerun 9F-2B apply, 9F-2D apply, 9F-2I-APPLY, or 9F-2K approval apply.
+- 9F-2Q did not modify `prisma/schema.prisma`, create a migration, render prompts, run provider health checks, make provider network calls, call LLM providers, create `llm_call_logs`, mutate `content_items`, write to Blogger, publish, schedule, reconnect OAuth, refresh tokens, mutate publish approvals, or mutate publish attempts.
 
 9E first end-to-end publish path:
 
@@ -189,13 +196,13 @@ Current baseline:
 6. `9E-9C` read back `https://mathlearningappl.blogspot.com/2026/06/blog-post.html`.
 7. `9E-9D-APPLY` reconciled internal DB state from `planned`/`planned_only` to `published`/`success`.
 
-Recommended next after 9F-2P:
+Recommended next after 9F-2Q:
 
-**9F-2Q — Draft-generation final execution checklist and operator runbook, no LLM completion/no content mutation**
+**9F-2R — Draft-generation prompt render preview, no LLM/no content mutation**
 
 Goal:
 
-- Add a final operator checklist/runbook view that combines approval, dry-run planner, LLM readiness, health-check gate, execution blockers, and next manual approval steps before any draft-generation execution patch.
+- Add a redacted/safe prompt render preview path for the linked daily content fixture without dispatching the prompt to any provider and without mutating `content_items`.
 
 Alternative:
 
@@ -235,6 +242,7 @@ Goal:
 | 9F-2O | LLM provider health-check preview for draft generation, no completion/no content mutation |
 | 9F-2P | Gated LLM provider health-check execution, no completion/no content mutation |
 | 9F-2Q | Draft-generation final execution checklist and operator runbook |
+| 9F-2R | Draft-generation prompt render preview, no LLM/no content mutation |
 | 9F-3A | Alert & Recovery Center |
 
 Core operation principles:

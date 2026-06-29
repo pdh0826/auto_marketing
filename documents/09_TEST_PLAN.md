@@ -426,6 +426,24 @@ Next session start DB guard should use the published/success values above. The c
 - 9F-2P should not modify `prisma/schema.prisma` or create a migration.
 - Post-change DB checks should keep daily plan rows `1`, item rows `3`, `content_items` count `2`, operator approvals/events `1 / 1`, publish milestone counts `1 / 1 / 1 / 1 / 22`, target fixture draft lengths `0 / 0`, and `llm_call_logs=22`.
 
+## Patch 9F-2Q Draft-generation Final Execution Checklist
+
+- `POST /api/daily-content-plans/draft-generation-final-execution-checklist` should support only `mode=preview`.
+- Preview should report `patchVersion=9F-2Q`, `checklistMode=read_only_draft_generation_final_execution_checklist`, `dryRunOnly=true`, `executionAllowed=false`, and `finalDraftGenerationAllowed=false`.
+- Preview should report `llmCompletionAttempted=false`, `promptRendered=false`, `providerNetworkCallAttempted=false`, `contentMutationAttempted=false`, and `bloggerWriteAttempted=false`.
+- Target summary should show linked fixture `daily_fixture_cmqlr1v1y0001iwj2gpv2875r`, status `planned`, not published, not scheduled, and draft lengths `0 / 0`.
+- Operator approval summary should show `operatorApprovalSatisfied=true`.
+- Prior gate summary should show dry-run planner, LLM provider readiness, health-check preview, and health-check execution gate are available, while `healthCheckExecutedNow=false` and `providerNetworkCallAttemptedNow=false`.
+- Remaining execution blockers should stay `llm_execution_feature_flag_disabled`, `content_mutation_feature_flag_disabled`, `draft_generation_write_feature_flag_disabled`, `confirmation_phrase_missing`, and `idempotency_key_missing`.
+- Final checklist should include pass, blocked, and caution items plus an operator runbook and recommended next patch.
+- Non-preview modes should be blocked with `draft_generation_final_execution_checklist_is_preview_only`.
+- Current side effects should be `dbRead=true` and `envRead=true`; `dbWrite`, `secretValueExposed`, `providerHealthChecked`, `providerNetworkCall`, `promptRendered`, `rawPromptStored`, `llmCompletion`, `llmCall`, `llmCallLogMutation`, `contentItemMutation`, `draftMarkdownMutation`, `draftHtmlMutation`, `bloggerWrite`, `bloggerDraftSave`, `bloggerPublish`, `scheduledPublish`, `oauthReconnect`, `tokenRefresh`, `publishApprovalMutation`, `publishAttemptMutation`, and `externalSend` should be `false`.
+- `/settings/blogger` should show `초안 생성 최종 실행 체크리스트` with target, fixture state, approval state, prior gate status, remaining blockers, pass/blocked/caution checklist, operator runbook, side-effect summary, and recommended next patch.
+- 9F-2Q should not rerun 9F-2B apply, 9F-2D apply, 9F-2I-APPLY, or 9F-2K approval apply.
+- 9F-2Q should not call LLM providers, render prompts, run provider network calls, create `llm_call_logs`, mutate `content_items`, create/update drafts, write to Blogger, publish/schedule, reconnect OAuth, refresh tokens, mutate publish approvals, or mutate publish attempts.
+- 9F-2Q should not modify `prisma/schema.prisma` or create a migration.
+- Post-change DB checks should keep daily plan rows `1`, item rows `3`, `content_items` count `2`, operator approvals/events `1 / 1`, publish milestone counts `1 / 1 / 1 / 1 / 22`, target fixture draft lengths `0 / 0`, and `llm_call_logs=22`.
+
 ## Patch 9E-9D Post-publish DB Reconciliation
 
 - `POST /api/content-items/[id]/post-publish-reconciliation` route가 있어야 한다.

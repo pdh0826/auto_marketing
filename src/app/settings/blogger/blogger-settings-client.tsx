@@ -16,6 +16,7 @@ import type { BlogOperationProfileResponse } from "@/lib/blog-operation-profiles
 import type { BlogAdmin } from "@/lib/blogs/admin-types";
 import type { DailyPlanContentItemFixtureResponse } from "@/lib/daily-content-plans/content-item-fixture";
 import type { DailyContentPlanResponse } from "@/lib/daily-content-plans/daily-content-plan-summary";
+import type { DailyContentDraftGenerationFinalExecutionChecklistResponse } from "@/lib/daily-content-plans/draft-generation-final-execution-checklist";
 import type { DailyContentDraftGenerationDryRunPlannerResponse } from "@/lib/daily-content-plans/draft-generation-dry-run-planner";
 import type { DailyContentDraftGenerationExecutionGatePreviewResponse } from "@/lib/daily-content-plans/draft-generation-execution-gate-preview";
 import type { DailyContentDraftGenerationLlmProviderHealthCheckExecutionResponse } from "@/lib/daily-content-plans/draft-generation-llm-provider-health-check-execution";
@@ -92,6 +93,8 @@ export function BloggerSettingsClient() {
     useState<DailyContentDraftGenerationLlmProviderHealthCheckPreviewResponse | null>(null);
   const [draftGenerationLlmProviderHealthCheckExecutionResult, setDraftGenerationLlmProviderHealthCheckExecutionResult] =
     useState<DailyContentDraftGenerationLlmProviderHealthCheckExecutionResponse | null>(null);
+  const [draftGenerationFinalExecutionChecklistResult, setDraftGenerationFinalExecutionChecklistResult] =
+    useState<DailyContentDraftGenerationFinalExecutionChecklistResponse | null>(null);
   const [oauthDryRun, setOauthDryRun] = useState<BloggerOAuthStartDryRun | null>(null);
   const [blogListResult, setBlogListResult] = useState<BloggerBlogListResult | null>(null);
   const [blogListLoadingId, setBlogListLoadingId] = useState<string | null>(null);
@@ -107,6 +110,7 @@ export function BloggerSettingsClient() {
   const [loadingDraftGenerationLlmProviderReadinessItemId, setLoadingDraftGenerationLlmProviderReadinessItemId] = useState<string | null>(null);
   const [loadingDraftGenerationLlmProviderHealthCheckPreviewItemId, setLoadingDraftGenerationLlmProviderHealthCheckPreviewItemId] = useState<string | null>(null);
   const [loadingDraftGenerationLlmProviderHealthCheckExecutionItemId, setLoadingDraftGenerationLlmProviderHealthCheckExecutionItemId] = useState<string | null>(null);
+  const [loadingDraftGenerationFinalExecutionChecklistItemId, setLoadingDraftGenerationFinalExecutionChecklistItemId] = useState<string | null>(null);
   const [selectingBlogId, setSelectingBlogId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -186,6 +190,7 @@ export function BloggerSettingsClient() {
       setDraftGenerationLlmProviderReadinessResult(null);
       setDraftGenerationLlmProviderHealthCheckPreviewResult(null);
       setDraftGenerationLlmProviderHealthCheckExecutionResult(null);
+      setDraftGenerationFinalExecutionChecklistResult(null);
       setOauthDryRun(null);
       setBlogListResult(null);
       setNotice("Blogger connection을 저장했습니다. Blogger draft/publish는 수행하지 않았습니다.");
@@ -313,6 +318,7 @@ export function BloggerSettingsClient() {
       setDraftGenerationLlmProviderReadinessResult(null);
       setDraftGenerationLlmProviderHealthCheckPreviewResult(null);
       setDraftGenerationLlmProviderHealthCheckExecutionResult(null);
+      setDraftGenerationFinalExecutionChecklistResult(null);
       setNotice("Daily Content Plan preview를 생성했습니다. Plan row 저장, content generation, LLM call, Blogger write/publish는 수행하지 않았습니다.");
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Daily Content Plan preview에 실패했습니다.");
@@ -614,6 +620,42 @@ export function BloggerSettingsClient() {
     }
   }
 
+  async function previewDraftGenerationFinalExecutionChecklist(
+    planId: string | null | undefined,
+    planItemId: string | null | undefined,
+    contentItemId: string | null | undefined
+  ) {
+    if (!planId || !planItemId || !contentItemId) {
+      setError("Daily plan id, item id, linked content item id가 필요합니다.");
+      return;
+    }
+
+    setError(null);
+    setNotice(null);
+    setLoadingDraftGenerationFinalExecutionChecklistItemId(planItemId);
+
+    try {
+      const result = await requestJson<ApiResult<DailyContentDraftGenerationFinalExecutionChecklistResponse>>(
+        "/api/daily-content-plans/draft-generation-final-execution-checklist",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            mode: "preview",
+            planId,
+            planItemId,
+            contentItemId
+          })
+        }
+      );
+      setDraftGenerationFinalExecutionChecklistResult(result.data);
+      setNotice("초안 생성 최종 실행 체크리스트를 확인했습니다. LLM 호출, prompt 렌더링, provider network call, content_items 수정, Blogger write/publish는 수행하지 않았습니다.");
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "초안 생성 최종 실행 체크리스트 확인에 실패했습니다.");
+    } finally {
+      setLoadingDraftGenerationFinalExecutionChecklistItemId(null);
+    }
+  }
+
   async function createOAuthDryRun(connection: BloggerConnectionAdmin) {
     setError(null);
     setNotice(null);
@@ -803,6 +845,7 @@ export function BloggerSettingsClient() {
                   setDraftGenerationLlmProviderReadinessResult(null);
                   setDraftGenerationLlmProviderHealthCheckPreviewResult(null);
                   setDraftGenerationLlmProviderHealthCheckExecutionResult(null);
+                  setDraftGenerationFinalExecutionChecklistResult(null);
                   setOauthDryRun(null);
                   setBlogListResult(null);
                 }}
@@ -1406,6 +1449,25 @@ export function BloggerSettingsClient() {
                         }
                       >
                         {loadingDraftGenerationLlmProviderHealthCheckExecutionItemId === getDailyPlanItemId(item) ? "실행 게이트 확인 중" : "health-check 실행 게이트"}
+                      </button>
+                      <button
+                        className="button small secondary"
+                        type="button"
+                        disabled={
+                          !dailyContentPlanSummary.persistedPlanId ||
+                          !getDailyPlanItemId(item) ||
+                          !getDailyPlanItemContentItemId(item) ||
+                          loadingDraftGenerationFinalExecutionChecklistItemId === getDailyPlanItemId(item)
+                        }
+                        onClick={() =>
+                          void previewDraftGenerationFinalExecutionChecklist(
+                            dailyContentPlanSummary.persistedPlanId,
+                            getDailyPlanItemId(item),
+                            getDailyPlanItemContentItemId(item)
+                          )
+                        }
+                      >
+                        {loadingDraftGenerationFinalExecutionChecklistItemId === getDailyPlanItemId(item) ? "최종 점검 중" : "최종 실행 체크리스트"}
                       </button>
                     </td>
                   </tr>
@@ -2691,6 +2753,172 @@ export function BloggerSettingsClient() {
               )}
             </div>
 
+            <div className="read-block">
+              <h3>초안 생성 최종 실행 체크리스트</h3>
+              <div className="notice warning">
+                <strong>운영자 승인은 저장되어 있지만, 실제 초안 생성은 아직 차단되어 있습니다.</strong>
+                <p>이 화면은 실행 전 최종 점검표이며 LLM 호출, prompt 렌더링, provider network call, 초안 저장, Blogger write/publish/schedule을 하지 않습니다.</p>
+              </div>
+              <div className="button-row">
+                <button className="button small secondary" type="button" disabled>
+                  LLM 실행 - 비활성
+                </button>
+                <button className="button small secondary" type="button" disabled>
+                  Draft mutation - 비활성
+                </button>
+                <button className="button small secondary" type="button" disabled>
+                  Blogger write - 비활성
+                </button>
+              </div>
+              {draftGenerationFinalExecutionChecklistResult ? (
+                <>
+                  <div className="notice warning">
+                    <strong>
+                      Final checklist:{" "}
+                      {draftGenerationFinalExecutionChecklistResult.draftGenerationFinalExecutionChecklistSummary.finalChecklistSummary.overallStatus}
+                    </strong>
+                    <p>
+                      executionAllowed: {String(draftGenerationFinalExecutionChecklistResult.draftGenerationFinalExecutionChecklistSummary.executionAllowed)} / finalDraftGenerationAllowed:{" "}
+                      {String(draftGenerationFinalExecutionChecklistResult.draftGenerationFinalExecutionChecklistSummary.finalDraftGenerationAllowed)}
+                    </p>
+                  </div>
+                  <div className="detail-grid">
+                    <DetailItem label="Patch" value={draftGenerationFinalExecutionChecklistResult.draftGenerationFinalExecutionChecklistSummary.patchVersion} />
+                    <DetailItem label="Checklist Mode" value={draftGenerationFinalExecutionChecklistResult.draftGenerationFinalExecutionChecklistSummary.checklistMode} />
+                    <DetailItem label="Plan ID" value={draftGenerationFinalExecutionChecklistResult.draftGenerationFinalExecutionChecklistSummary.targetSummary.planId ?? "-"} />
+                    <DetailItem label="Plan Item" value={draftGenerationFinalExecutionChecklistResult.draftGenerationFinalExecutionChecklistSummary.targetSummary.planItemId} />
+                    <DetailItem label="Content Item" value={draftGenerationFinalExecutionChecklistResult.draftGenerationFinalExecutionChecklistSummary.targetSummary.contentItemId ?? "-"} />
+                    <DetailItem label="Fixture Status" value={draftGenerationFinalExecutionChecklistResult.draftGenerationFinalExecutionChecklistSummary.targetSummary.fixtureStatus ?? "-"} />
+                    <DetailItem
+                      label="Draft Lengths"
+                      value={`${draftGenerationFinalExecutionChecklistResult.draftGenerationFinalExecutionChecklistSummary.targetSummary.draftMarkdownLength} / ${draftGenerationFinalExecutionChecklistResult.draftGenerationFinalExecutionChecklistSummary.targetSummary.draftHtmlLength}`}
+                    />
+                    <DetailItem
+                      label="Approval Satisfied"
+                      value={String(draftGenerationFinalExecutionChecklistResult.draftGenerationFinalExecutionChecklistSummary.persistedApprovalSummary.operatorApprovalSatisfied)}
+                    />
+                  </div>
+                  <div className="detail-grid">
+                    <DetailItem
+                      label="Dry-run Planner"
+                      value={String(draftGenerationFinalExecutionChecklistResult.draftGenerationFinalExecutionChecklistSummary.priorGateSummary.dryRunPlannerAvailable)}
+                    />
+                    <DetailItem
+                      label="LLM Readiness"
+                      value={String(draftGenerationFinalExecutionChecklistResult.draftGenerationFinalExecutionChecklistSummary.priorGateSummary.llmProviderReadinessAvailable)}
+                    />
+                    <DetailItem
+                      label="Health Preview"
+                      value={String(draftGenerationFinalExecutionChecklistResult.draftGenerationFinalExecutionChecklistSummary.priorGateSummary.llmProviderHealthCheckPreviewAvailable)}
+                    />
+                    <DetailItem
+                      label="Health Gate"
+                      value={String(draftGenerationFinalExecutionChecklistResult.draftGenerationFinalExecutionChecklistSummary.priorGateSummary.llmProviderHealthCheckExecutionGateAvailable)}
+                    />
+                    <DetailItem
+                      label="Health Executed Now"
+                      value={String(draftGenerationFinalExecutionChecklistResult.draftGenerationFinalExecutionChecklistSummary.priorGateSummary.healthCheckExecutedNow)}
+                    />
+                    <DetailItem
+                      label="Provider Network Now"
+                      value={String(draftGenerationFinalExecutionChecklistResult.draftGenerationFinalExecutionChecklistSummary.priorGateSummary.providerNetworkCallAttemptedNow)}
+                    />
+                  </div>
+                  <ValidationList
+                    title="Final checklist pass"
+                    items={draftGenerationFinalExecutionChecklistResult.draftGenerationFinalExecutionChecklistSummary.finalChecklistSummary.passItems.map(formatChecklistItem)}
+                    emptyText="pass 항목이 없습니다."
+                  />
+                  <ValidationList
+                    title="Final checklist blocked"
+                    items={draftGenerationFinalExecutionChecklistResult.draftGenerationFinalExecutionChecklistSummary.finalChecklistSummary.blockedItems.map(formatChecklistItem)}
+                    emptyText="blocked 항목이 없습니다."
+                    isWarning
+                  />
+                  <ValidationList
+                    title="Final checklist caution"
+                    items={draftGenerationFinalExecutionChecklistResult.draftGenerationFinalExecutionChecklistSummary.finalChecklistSummary.cautionItems.map(formatChecklistItem)}
+                    emptyText="caution 항목이 없습니다."
+                    isWarning
+                  />
+                  <ValidationList
+                    title="Remaining execution blockers"
+                    items={draftGenerationFinalExecutionChecklistResult.draftGenerationFinalExecutionChecklistSummary.executionGateSummary.remainingBlockers.map(formatDraftGenerationGateBlocker)}
+                    emptyText="remaining blocker가 없습니다."
+                    isWarning
+                  />
+                  <details className="read-block">
+                    <summary>운영자 runbook 및 side-effect 상세</summary>
+                    <ValidationList
+                      title="This patch does"
+                      items={draftGenerationFinalExecutionChecklistResult.draftGenerationFinalExecutionChecklistSummary.operatorRunbook.thisPatchDoes}
+                      emptyText="항목이 없습니다."
+                    />
+                    <ValidationList
+                      title="This patch does not do"
+                      items={draftGenerationFinalExecutionChecklistResult.draftGenerationFinalExecutionChecklistSummary.operatorRunbook.thisPatchDoesNotDo}
+                      emptyText="항목이 없습니다."
+                      isWarning
+                    />
+                    <ValidationList
+                      title="Future execution would require"
+                      items={draftGenerationFinalExecutionChecklistResult.draftGenerationFinalExecutionChecklistSummary.operatorRunbook.futureExecutionWouldRequire}
+                      emptyText="항목이 없습니다."
+                      isWarning
+                    />
+                    <div className="detail-grid">
+                      <DetailItem
+                        label="Recommended Next"
+                        value={draftGenerationFinalExecutionChecklistResult.draftGenerationFinalExecutionChecklistSummary.operatorRunbook.recommendedNextPatch}
+                      />
+                      <DetailItem
+                        label="DB Read"
+                        value={String(draftGenerationFinalExecutionChecklistResult.draftGenerationFinalExecutionChecklistSummary.currentSideEffectSummary.dbRead)}
+                      />
+                      <DetailItem
+                        label="DB Write"
+                        value={String(draftGenerationFinalExecutionChecklistResult.draftGenerationFinalExecutionChecklistSummary.currentSideEffectSummary.dbWrite)}
+                      />
+                      <DetailItem
+                        label="Provider Network"
+                        value={String(draftGenerationFinalExecutionChecklistResult.draftGenerationFinalExecutionChecklistSummary.currentSideEffectSummary.providerNetworkCall)}
+                      />
+                      <DetailItem
+                        label="Prompt Rendered"
+                        value={String(draftGenerationFinalExecutionChecklistResult.draftGenerationFinalExecutionChecklistSummary.currentSideEffectSummary.promptRendered)}
+                      />
+                      <DetailItem
+                        label="LLM Completion"
+                        value={String(draftGenerationFinalExecutionChecklistResult.draftGenerationFinalExecutionChecklistSummary.currentSideEffectSummary.llmCompletion)}
+                      />
+                      <DetailItem
+                        label="LLM Log Mutation"
+                        value={String(draftGenerationFinalExecutionChecklistResult.draftGenerationFinalExecutionChecklistSummary.currentSideEffectSummary.llmCallLogMutation)}
+                      />
+                      <DetailItem
+                        label="Content Mutation"
+                        value={String(draftGenerationFinalExecutionChecklistResult.draftGenerationFinalExecutionChecklistSummary.currentSideEffectSummary.contentItemMutation)}
+                      />
+                      <DetailItem
+                        label="Draft Markdown"
+                        value={String(draftGenerationFinalExecutionChecklistResult.draftGenerationFinalExecutionChecklistSummary.currentSideEffectSummary.draftMarkdownMutation)}
+                      />
+                      <DetailItem
+                        label="Draft HTML"
+                        value={String(draftGenerationFinalExecutionChecklistResult.draftGenerationFinalExecutionChecklistSummary.currentSideEffectSummary.draftHtmlMutation)}
+                      />
+                      <DetailItem
+                        label="Blogger Write"
+                        value={String(draftGenerationFinalExecutionChecklistResult.draftGenerationFinalExecutionChecklistSummary.currentSideEffectSummary.bloggerWrite)}
+                      />
+                    </div>
+                  </details>
+                </>
+              ) : (
+                <div className="notice">후보 큐에서 linked content item이 있는 행의 “최종 실행 체크리스트”를 실행하세요. 이 preview는 읽기 전용 runbook만 표시합니다.</div>
+              )}
+            </div>
+
             <details className="read-block">
               <summary>기술 상세</summary>
               <div className="detail-grid">
@@ -3092,6 +3320,10 @@ function formatLlmHealthCheckExecutionBlocker(blocker: string) {
     llm_provider_health_check_not_supported_for_provider_kind: "provider kind의 safe health-check 미지원"
   };
   return labels[blocker] ?? blocker;
+}
+
+function formatChecklistItem(item: { key: string; status: string; label: string; requiredBeforeExecution?: boolean }) {
+  return `${item.status}: ${item.label}${item.requiredBeforeExecution ? " (required)" : ""}`;
 }
 
 function ValidationList({ title, items, emptyText, isError, isWarning }: { title: string; items: string[]; emptyText: string; isError?: boolean; isWarning?: boolean }) {
