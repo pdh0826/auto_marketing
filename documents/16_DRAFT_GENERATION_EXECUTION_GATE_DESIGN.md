@@ -435,3 +435,17 @@ Patch 9F-2R is the read-only prompt preview gate after the final execution check
 Next candidate gate:
 
 - `9F-2S — Draft-generation prompt quality checklist preview, no LLM/no content mutation`
+
+## Patch 9F-2S Prompt Quality Checklist Gate
+
+Patch 9F-2S is the static quality checklist gate after prompt render preview.
+
+- It reuses the 9F-2R prompt render preview in memory and evaluates static categories such as target context, required sections, safety policy, SEO structure, reader value, output contract, redaction safety, length/token budget, and execution safety.
+- It does not run an LLM judge/evaluator, call any provider, run provider health checks, store prompt text, create `llm_call_logs`, mutate `content_items`, create drafts, or call Blogger.
+- It keeps `executionAllowed=false` and `finalDraftGenerationAllowed=false` even when the static quality gate passes.
+- It returns pass/warn/fail counts, category status, remediation text, forbidden scan summary, and side-effect summary for operator review.
+- Non-preview modes are blocked with `draft_generation_prompt_quality_checklist_preview_is_preview_only`.
+
+Next candidate gate:
+
+- `9F-2T — Draft-generation LLM request envelope preview, no provider call/no content mutation`

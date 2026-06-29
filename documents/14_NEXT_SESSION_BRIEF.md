@@ -1,17 +1,17 @@
 # 14_NEXT_SESSION_BRIEF
 
-## Current State: Patch 9F-2R Completed
+## Current State: Patch 9F-2S Completed
 
 ```text
 repo: ~/blog-growth-agent
 branch: master
 previous HEAD before 9F-2D apply closeout: b3cf210 Link daily plan item to content fixture
-expected HEAD after 9F-2R commit: local commit `Add draft generation prompt render preview` (verify exact hash with `git log --oneline -8`)
+expected HEAD after 9F-2S commit: local commit `Add draft generation prompt quality checklist preview` (verify exact hash with `git log --oneline -8`)
 current DB schema state: operator approval persistence migration applied
 operator approval tables in DB: created
 operator approval rows/events: 1 / 1
 operator approval apply state: completed exactly once
-draft-generation execution gate: post-approval preview polished, dry-run planner implemented, LLM provider readiness preview implemented, LLM provider health-check preview implemented, gated health-check execution route implemented, final execution checklist/runbook implemented, prompt render preview implemented, draft generation execution still blocked
+draft-generation execution gate: post-approval preview polished, dry-run planner implemented, LLM provider readiness preview implemented, LLM provider health-check preview implemented, gated health-check execution route implemented, final execution checklist/runbook implemented, prompt render preview implemented, prompt quality checklist preview implemented, draft generation execution still blocked
 milestone: 9E first end-to-end Blogger publish completed; 9F operation automation foundation started
 ```
 
@@ -192,6 +192,13 @@ Current baseline:
 - 9F-2R keeps `promptStored=false`, `llmCallAttempted=false`, `providerNetworkCallAttempted=false`, `providerHealthCheckAttempted=false`, `contentMutationAttempted=false`, `executionAllowed=false`, and `finalDraftGenerationAllowed=false`.
 - 9F-2R did not rerun 9F-2B apply, 9F-2D apply, 9F-2I-APPLY, or 9F-2K approval apply.
 - 9F-2R did not modify `prisma/schema.prisma`, create a migration, store prompts, run provider health checks, make provider network calls, call LLM providers, create `llm_call_logs`, mutate `content_items`, write to Blogger, publish, schedule, reconnect OAuth, refresh tokens, mutate publish approvals, or mutate publish attempts.
+- 9F-2S added read-only helper `src/lib/daily-content-plans/draft-generation-prompt-quality-checklist-preview.ts`.
+- 9F-2S added route `POST /api/daily-content-plans/draft-generation-prompt-quality-checklist-preview`.
+- 9F-2S added `/settings/blogger` `초안 생성 prompt 품질 체크리스트` readback.
+- 9F-2S reuses the 9F-2R prompt render preview in memory and checks target context, required sections, safety/policy, SEO structure, reader value, output contract, redaction/secret safety, length/token budget, and execution safety with deterministic static rules.
+- 9F-2S keeps `promptStored=false`, `promptSentToLlm=false`, `llmCallAttempted=false`, `providerNetworkCallAttempted=false`, `providerHealthCheckAttempted=false`, `contentMutationAttempted=false`, `executionAllowed=false`, and `finalDraftGenerationAllowed=false`.
+- 9F-2S did not rerun 9F-2B apply, 9F-2D apply, 9F-2I-APPLY, or 9F-2K approval apply.
+- 9F-2S did not modify `prisma/schema.prisma`, create a migration, store prompts, run LLM evaluator/judge calls, run provider health checks, make provider network calls, call LLM providers, create `llm_call_logs`, mutate `content_items`, write to Blogger, publish, schedule, reconnect OAuth, refresh tokens, mutate publish approvals, or mutate publish attempts.
 
 9E first end-to-end publish path:
 
@@ -203,13 +210,13 @@ Current baseline:
 6. `9E-9C` read back `https://mathlearningappl.blogspot.com/2026/06/blog-post.html`.
 7. `9E-9D-APPLY` reconciled internal DB state from `planned`/`planned_only` to `published`/`success`.
 
-Recommended next after 9F-2R:
+Recommended next after 9F-2S:
 
-**9F-2S — Draft-generation prompt quality checklist preview, no LLM/no content mutation**
+**9F-2T — Draft-generation LLM request envelope preview, no provider call/no content mutation**
 
 Goal:
 
-- Add an operator-readable quality checklist for the rendered prompt before any LLM execution, still without dispatching the prompt to any provider and without mutating `content_items`.
+- Add a read-only request envelope preview that shows the future provider request shape and safe metadata without sending it to any provider and without mutating `content_items`.
 
 Alternative:
 
@@ -251,6 +258,7 @@ Goal:
 | 9F-2Q | Draft-generation final execution checklist and operator runbook |
 | 9F-2R | Draft-generation prompt render preview, no LLM/no content mutation |
 | 9F-2S | Draft-generation prompt quality checklist preview, no LLM/no content mutation |
+| 9F-2T | Draft-generation LLM request envelope preview, no provider call/no content mutation |
 | 9F-3A | Alert & Recovery Center |
 
 Core operation principles:

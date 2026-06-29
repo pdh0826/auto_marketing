@@ -1,5 +1,29 @@
 # 13_CHANGELOG
 
+## Patch 9F-2S Draft-generation Prompt Quality Checklist Preview
+
+Implemented after Patch 9F-2R:
+
+- Added read-only helper `src/lib/daily-content-plans/draft-generation-prompt-quality-checklist-preview.ts`.
+- Added route `POST /api/daily-content-plans/draft-generation-prompt-quality-checklist-preview`.
+- Added `/settings/blogger` `초안 생성 prompt 품질 체크리스트` UI readback.
+- The checklist reuses the 9F-2R prompt render preview in memory and evaluates it with deterministic static rules only.
+- The preview reports `patchVersion=9F-2S`, `previewMode=read_only_draft_generation_prompt_quality_checklist_preview`, `dryRunOnly=true`, `promptRenderedForChecklist=true`, `promptStored=false`, `promptSentToLlm=false`, `llmCallAttempted=false`, `providerNetworkCallAttempted=false`, `providerHealthCheckAttempted=false`, and `contentMutationAttempted=false`.
+- Quality categories cover target context, required prompt sections, safety and policy, SEO structure, reader value, output contract, redaction/secret safety, length/token budget, and execution safety.
+- Non-preview modes are blocked with `draft_generation_prompt_quality_checklist_preview_is_preview_only`.
+
+Policy:
+
+- 9F-2S did not rerun 9F-2B apply, 9F-2D apply, 9F-2I-APPLY, or 9F-2K approval apply.
+- 9F-2S did not create, update, or delete business rows.
+- 9F-2S did not modify `prisma/schema.prisma` or create a migration.
+- 9F-2S did not expose env values, raw secret values, encrypted values, API keys, bearer tokens, OAuth tokens, provider request bodies, response bodies, or raw provider responses.
+- 9F-2S did not run LLM evaluator/judge calls, provider health checks, provider network calls, LLM provider calls, prompt storage, `llm_call_logs` creation, draft generation, `content_items` mutation, Blogger write, publish, schedule, OAuth reconnect, token refresh, publish approval mutation, or publish attempt mutation.
+- Daily plan rows remain `1`, daily plan item rows remain `3`, `content_items` count remains `2`, and operator approvals/events remain `1 / 1`.
+- Publish milestone counts remain `1 / 1 / 1 / 1 / 22`, and `llm_call_logs` remains `22`.
+- The linked fixture remains `planned` with empty `draftMarkdown` and `draftHtml`.
+- Recommended next patch: `9F-2T — Draft-generation LLM request envelope preview, no provider call/no content mutation`.
+
 ## Patch 9F-2R Draft-generation Prompt Render Preview
 
 Implemented after Patch 9F-2Q:

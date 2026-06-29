@@ -926,3 +926,13 @@ Patch 9F-2R adds a read-only prompt render preview before any future draft-gener
 - The preview does not create `llm_call_logs`, store prompt text, mutate `content_items`, or create `draftMarkdown`/`draftHtml`.
 - Prompt preview redaction must keep raw secrets, API keys, bearer tokens, OAuth token material, provider credentials, and raw env values out of API/UI output.
 - Future execution still requires separate feature flags, confirmation phrase, idempotency key, and an execution patch.
+
+## Patch 9F-2S draft-generation prompt quality checklist boundary
+
+Patch 9F-2S adds a static prompt quality checklist before any future draft-generation LLM execution.
+
+- `POST /api/daily-content-plans/draft-generation-prompt-quality-checklist-preview` reuses the 9F-2R prompt preview in memory and evaluates deterministic rule checks only.
+- The checklist is not an LLM judge/evaluator and does not call any provider, provider health endpoint, local LLM, Ollama, OpenAI, custom HTTP, or CLI process.
+- The checklist does not create `llm_call_logs`, store prompts, mutate `content_items`, or create `draftMarkdown`/`draftHtml`.
+- The checklist reports category statuses, pass/warn/fail counts, remediation, redaction/forbidden scan summary, and no-side-effect flags.
+- Even if `qualityGatePassed=true`, execution remains blocked until a later explicit execution patch with feature flags, confirmation phrase, and idempotency key.

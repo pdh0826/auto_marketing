@@ -17,6 +17,7 @@ import type { BlogAdmin } from "@/lib/blogs/admin-types";
 import type { DailyPlanContentItemFixtureResponse } from "@/lib/daily-content-plans/content-item-fixture";
 import type { DailyContentPlanResponse } from "@/lib/daily-content-plans/daily-content-plan-summary";
 import type { DailyContentDraftGenerationFinalExecutionChecklistResponse } from "@/lib/daily-content-plans/draft-generation-final-execution-checklist";
+import type { DailyContentDraftGenerationPromptQualityChecklistPreviewResponse } from "@/lib/daily-content-plans/draft-generation-prompt-quality-checklist-preview";
 import type { DailyContentDraftGenerationPromptRenderPreviewResponse } from "@/lib/daily-content-plans/draft-generation-prompt-render-preview";
 import type { DailyContentDraftGenerationDryRunPlannerResponse } from "@/lib/daily-content-plans/draft-generation-dry-run-planner";
 import type { DailyContentDraftGenerationExecutionGatePreviewResponse } from "@/lib/daily-content-plans/draft-generation-execution-gate-preview";
@@ -98,6 +99,8 @@ export function BloggerSettingsClient() {
     useState<DailyContentDraftGenerationFinalExecutionChecklistResponse | null>(null);
   const [draftGenerationPromptRenderPreviewResult, setDraftGenerationPromptRenderPreviewResult] =
     useState<DailyContentDraftGenerationPromptRenderPreviewResponse | null>(null);
+  const [draftGenerationPromptQualityChecklistPreviewResult, setDraftGenerationPromptQualityChecklistPreviewResult] =
+    useState<DailyContentDraftGenerationPromptQualityChecklistPreviewResponse | null>(null);
   const [oauthDryRun, setOauthDryRun] = useState<BloggerOAuthStartDryRun | null>(null);
   const [blogListResult, setBlogListResult] = useState<BloggerBlogListResult | null>(null);
   const [blogListLoadingId, setBlogListLoadingId] = useState<string | null>(null);
@@ -115,6 +118,7 @@ export function BloggerSettingsClient() {
   const [loadingDraftGenerationLlmProviderHealthCheckExecutionItemId, setLoadingDraftGenerationLlmProviderHealthCheckExecutionItemId] = useState<string | null>(null);
   const [loadingDraftGenerationFinalExecutionChecklistItemId, setLoadingDraftGenerationFinalExecutionChecklistItemId] = useState<string | null>(null);
   const [loadingDraftGenerationPromptRenderPreviewItemId, setLoadingDraftGenerationPromptRenderPreviewItemId] = useState<string | null>(null);
+  const [loadingDraftGenerationPromptQualityChecklistPreviewItemId, setLoadingDraftGenerationPromptQualityChecklistPreviewItemId] = useState<string | null>(null);
   const [selectingBlogId, setSelectingBlogId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -196,6 +200,7 @@ export function BloggerSettingsClient() {
       setDraftGenerationLlmProviderHealthCheckExecutionResult(null);
       setDraftGenerationFinalExecutionChecklistResult(null);
       setDraftGenerationPromptRenderPreviewResult(null);
+      setDraftGenerationPromptQualityChecklistPreviewResult(null);
       setOauthDryRun(null);
       setBlogListResult(null);
       setNotice("Blogger connection을 저장했습니다. Blogger draft/publish는 수행하지 않았습니다.");
@@ -325,6 +330,7 @@ export function BloggerSettingsClient() {
       setDraftGenerationLlmProviderHealthCheckExecutionResult(null);
       setDraftGenerationFinalExecutionChecklistResult(null);
       setDraftGenerationPromptRenderPreviewResult(null);
+      setDraftGenerationPromptQualityChecklistPreviewResult(null);
       setNotice("Daily Content Plan preview를 생성했습니다. Plan row 저장, content generation, LLM call, Blogger write/publish는 수행하지 않았습니다.");
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Daily Content Plan preview에 실패했습니다.");
@@ -700,6 +706,44 @@ export function BloggerSettingsClient() {
     }
   }
 
+  async function previewDraftGenerationPromptQualityChecklist(
+    planId: string | null | undefined,
+    planItemId: string | null | undefined,
+    contentItemId: string | null | undefined
+  ) {
+    if (!planId || !planItemId || !contentItemId) {
+      setError("Daily plan id, item id, linked content item id가 필요합니다.");
+      return;
+    }
+
+    setError(null);
+    setNotice(null);
+    setLoadingDraftGenerationPromptQualityChecklistPreviewItemId(planItemId);
+
+    try {
+      const result = await requestJson<ApiResult<DailyContentDraftGenerationPromptQualityChecklistPreviewResponse>>(
+        "/api/daily-content-plans/draft-generation-prompt-quality-checklist-preview",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            mode: "preview",
+            planId,
+            planItemId,
+            contentItemId
+          })
+        }
+      );
+      setDraftGenerationPromptQualityChecklistPreviewResult(result.data);
+      setNotice(
+        "초안 생성 prompt 품질 체크리스트를 확인했습니다. 정적 규칙만 사용했으며 LLM judge, provider network call, prompt 저장, content_items 수정, Blogger write/publish는 수행하지 않았습니다."
+      );
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "초안 생성 prompt 품질 체크리스트 확인에 실패했습니다.");
+    } finally {
+      setLoadingDraftGenerationPromptQualityChecklistPreviewItemId(null);
+    }
+  }
+
   async function createOAuthDryRun(connection: BloggerConnectionAdmin) {
     setError(null);
     setNotice(null);
@@ -891,6 +935,7 @@ export function BloggerSettingsClient() {
                   setDraftGenerationLlmProviderHealthCheckExecutionResult(null);
                   setDraftGenerationFinalExecutionChecklistResult(null);
                   setDraftGenerationPromptRenderPreviewResult(null);
+                  setDraftGenerationPromptQualityChecklistPreviewResult(null);
                   setOauthDryRun(null);
                   setBlogListResult(null);
                 }}
@@ -1532,6 +1577,25 @@ export function BloggerSettingsClient() {
                         }
                       >
                         {loadingDraftGenerationPromptRenderPreviewItemId === getDailyPlanItemId(item) ? "prompt 렌더링 중" : "prompt preview"}
+                      </button>
+                      <button
+                        className="button small secondary"
+                        type="button"
+                        disabled={
+                          !dailyContentPlanSummary.persistedPlanId ||
+                          !getDailyPlanItemId(item) ||
+                          !getDailyPlanItemContentItemId(item) ||
+                          loadingDraftGenerationPromptQualityChecklistPreviewItemId === getDailyPlanItemId(item)
+                        }
+                        onClick={() =>
+                          void previewDraftGenerationPromptQualityChecklist(
+                            dailyContentPlanSummary.persistedPlanId,
+                            getDailyPlanItemId(item),
+                            getDailyPlanItemContentItemId(item)
+                          )
+                        }
+                      >
+                        {loadingDraftGenerationPromptQualityChecklistPreviewItemId === getDailyPlanItemId(item) ? "prompt 품질 점검 중" : "prompt 품질 체크"}
                       </button>
                     </td>
                   </tr>
@@ -3107,6 +3171,206 @@ export function BloggerSettingsClient() {
               )}
             </div>
 
+            <div className="read-block">
+              <h3>초안 생성 prompt 품질 체크리스트</h3>
+              <div className="notice">
+                <strong>LLM 호출 전에 prompt 구조와 안전 조건을 정적 규칙으로 점검했습니다.</strong>
+                <p>이 단계는 LLM judge가 아니며 실제 LLM 호출, prompt 저장, 초안 저장, provider network call, Blogger write/publish를 수행하지 않습니다.</p>
+              </div>
+              <div className="button-row">
+                <button className="button small secondary" type="button" disabled>
+                  LLM judge - 비활성
+                </button>
+                <button className="button small secondary" type="button" disabled>
+                  Provider call - 비활성
+                </button>
+                <button className="button small secondary" type="button" disabled>
+                  Content mutation - 비활성
+                </button>
+              </div>
+              {draftGenerationPromptQualityChecklistPreviewResult ? (
+                <>
+                  <div
+                    className={
+                      draftGenerationPromptQualityChecklistPreviewResult.promptQualityChecklistSummary.qualityGatePassed
+                        ? "notice"
+                        : "notice warning"
+                    }
+                  >
+                    <strong>
+                      Quality gate:{" "}
+                      {draftGenerationPromptQualityChecklistPreviewResult.promptQualityChecklistSummary.qualityGatePassed ? "pass" : "blocked"}
+                    </strong>
+                    <p>
+                      qualityGatePassed가 true여도 executionAllowed와 finalDraftGenerationAllowed는 계속 false입니다. 실제 실행은 별도 패치와 명시 승인 전까지 차단됩니다.
+                    </p>
+                  </div>
+                  <div className="detail-grid">
+                    <DetailItem label="Patch" value={draftGenerationPromptQualityChecklistPreviewResult.patchVersion} />
+                    <DetailItem label="Preview Mode" value={draftGenerationPromptQualityChecklistPreviewResult.previewMode} />
+                    <DetailItem label="Plan ID" value={draftGenerationPromptQualityChecklistPreviewResult.targetSummary.planId ?? "-"} />
+                    <DetailItem label="Plan Item" value={draftGenerationPromptQualityChecklistPreviewResult.targetSummary.planItemId} />
+                    <DetailItem label="Content Item" value={draftGenerationPromptQualityChecklistPreviewResult.targetSummary.contentItemId ?? "-"} />
+                    <DetailItem label="Fixture Status" value={draftGenerationPromptQualityChecklistPreviewResult.targetSummary.fixtureStatus ?? "-"} />
+                    <DetailItem
+                      label="Approval Satisfied"
+                      value={String(draftGenerationPromptQualityChecklistPreviewResult.persistedApprovalSummary.operatorApprovalSatisfied)}
+                    />
+                    <DetailItem label="Execution Allowed" value={String(draftGenerationPromptQualityChecklistPreviewResult.executionGateSummary.executionAllowed)} />
+                    <DetailItem
+                      label="Final Draft Allowed"
+                      value={String(draftGenerationPromptQualityChecklistPreviewResult.executionGateSummary.finalDraftGenerationAllowed)}
+                    />
+                    <DetailItem label="Checklist Version" value={draftGenerationPromptQualityChecklistPreviewResult.promptQualityChecklistSummary.checklistVersion} />
+                    <DetailItem
+                      label="Prompt Version"
+                      value={draftGenerationPromptQualityChecklistPreviewResult.promptQualityChecklistSummary.promptVersion}
+                    />
+                    <DetailItem
+                      label="Source Prompt Patch"
+                      value={draftGenerationPromptQualityChecklistPreviewResult.promptQualityChecklistSummary.sourcePromptPreviewPatchVersion}
+                    />
+                  </div>
+                  <div className="detail-grid">
+                    <DetailItem
+                      label="Total Checks"
+                      value={String(draftGenerationPromptQualityChecklistPreviewResult.promptQualityChecklistSummary.totalChecks)}
+                    />
+                    <DetailItem label="Pass" value={String(draftGenerationPromptQualityChecklistPreviewResult.promptQualityChecklistSummary.passCount)} />
+                    <DetailItem label="Warn" value={String(draftGenerationPromptQualityChecklistPreviewResult.promptQualityChecklistSummary.warnCount)} />
+                    <DetailItem label="Fail" value={String(draftGenerationPromptQualityChecklistPreviewResult.promptQualityChecklistSummary.failCount)} />
+                    <DetailItem
+                      label="N/A"
+                      value={String(draftGenerationPromptQualityChecklistPreviewResult.promptQualityChecklistSummary.notApplicableCount)}
+                    />
+                    <DetailItem
+                      label="Future Execution Allowed By Quality"
+                      value={String(draftGenerationPromptQualityChecklistPreviewResult.promptQualityChecklistSummary.qualityGateWouldAllowFutureExecution)}
+                    />
+                  </div>
+                  <ValidationList
+                    title="Remaining execution blockers"
+                    items={draftGenerationPromptQualityChecklistPreviewResult.executionGateSummary.remainingBlockers.map(formatDraftGenerationGateBlocker)}
+                    emptyText="remaining blocker가 없습니다."
+                    isWarning
+                  />
+                  <ValidationList
+                    title="Quality gate blockers"
+                    items={draftGenerationPromptQualityChecklistPreviewResult.promptQualityChecklistSummary.qualityGateBlockingReasons}
+                    emptyText="quality gate blocker가 없습니다."
+                    isWarning
+                  />
+                  <ValidationList
+                    title="Quality warnings"
+                    items={draftGenerationPromptQualityChecklistPreviewResult.promptQualityChecklistSummary.qualityWarnings}
+                    emptyText="quality warning이 없습니다."
+                    isWarning
+                  />
+                  <ValidationList
+                    title="Category status"
+                    items={draftGenerationPromptQualityChecklistPreviewResult.promptQualityChecklistSummary.categories.map(
+                      (category) => `${category.status}: ${category.label} (${category.checks.length} checks)`
+                    )}
+                    emptyText="category가 없습니다."
+                  />
+                  <details className="read-block">
+                    <summary>Category별 체크 상세</summary>
+                    {draftGenerationPromptQualityChecklistPreviewResult.promptQualityChecklistSummary.categories.map((category) => (
+                      <div className="read-block" key={category.key}>
+                        <h4>
+                          {category.label} · {category.status}
+                        </h4>
+                        <ValidationList
+                          title="Checks"
+                          items={category.checks.map(formatPromptQualityCheck)}
+                          emptyText="check가 없습니다."
+                          isWarning={category.status !== "pass"}
+                        />
+                      </div>
+                    ))}
+                  </details>
+                  <div className="detail-grid">
+                    <DetailItem
+                      label="Forbidden Scan"
+                      value={draftGenerationPromptQualityChecklistPreviewResult.promptQualityChecklistSummary.redactionAndSecretScan.passed ? "pass" : "fail"}
+                    />
+                    <DetailItem
+                      label="Forbidden Hits"
+                      value={String(draftGenerationPromptQualityChecklistPreviewResult.promptQualityChecklistSummary.redactionAndSecretScan.forbiddenHits.length)}
+                    />
+                    <DetailItem
+                      label="Raw Secrets Included"
+                      value={String(draftGenerationPromptQualityChecklistPreviewResult.promptQualityChecklistSummary.redactionAndSecretScan.rawSecretsIncluded)}
+                    />
+                    <DetailItem
+                      label="Raw Tokens Included"
+                      value={String(draftGenerationPromptQualityChecklistPreviewResult.promptQualityChecklistSummary.redactionAndSecretScan.rawTokensIncluded)}
+                    />
+                    <DetailItem
+                      label="Raw Env Values Included"
+                      value={String(draftGenerationPromptQualityChecklistPreviewResult.promptQualityChecklistSummary.redactionAndSecretScan.rawEnvValuesIncluded)}
+                    />
+                    <DetailItem
+                      label="Prompt Char Length"
+                      value={String(draftGenerationPromptQualityChecklistPreviewResult.promptQualityChecklistSummary.lengthAndBudget.promptCharLength)}
+                    />
+                    <DetailItem
+                      label="Estimated Tokens"
+                      value={String(draftGenerationPromptQualityChecklistPreviewResult.promptQualityChecklistSummary.lengthAndBudget.estimatedPromptTokens ?? "-")}
+                    />
+                    <DetailItem
+                      label="Within Preview Budget"
+                      value={String(draftGenerationPromptQualityChecklistPreviewResult.promptQualityChecklistSummary.lengthAndBudget.promptWithinPreviewBudget)}
+                    />
+                  </div>
+                  <details className="read-block">
+                    <summary>Prompt quality side-effect 상세</summary>
+                    <div className="detail-grid">
+                      <DetailItem label="DB Read" value={String(draftGenerationPromptQualityChecklistPreviewResult.currentSideEffectSummary.dbRead)} />
+                      <DetailItem label="DB Write" value={String(draftGenerationPromptQualityChecklistPreviewResult.currentSideEffectSummary.dbWrite)} />
+                      <DetailItem label="Env Read" value={String(draftGenerationPromptQualityChecklistPreviewResult.currentSideEffectSummary.envRead)} />
+                      <DetailItem label="Secret Exposed" value={String(draftGenerationPromptQualityChecklistPreviewResult.currentSideEffectSummary.secretValueExposed)} />
+                      <DetailItem
+                        label="Prompt Rendered For Checklist"
+                        value={String(draftGenerationPromptQualityChecklistPreviewResult.currentSideEffectSummary.promptRenderedForChecklist)}
+                      />
+                      <DetailItem label="Prompt Stored" value={String(draftGenerationPromptQualityChecklistPreviewResult.currentSideEffectSummary.promptStored)} />
+                      <DetailItem label="Prompt Sent To LLM" value={String(draftGenerationPromptQualityChecklistPreviewResult.currentSideEffectSummary.promptSentToLlm)} />
+                      <DetailItem
+                        label="Provider Health Checked"
+                        value={String(draftGenerationPromptQualityChecklistPreviewResult.currentSideEffectSummary.providerHealthChecked)}
+                      />
+                      <DetailItem
+                        label="Provider Network"
+                        value={String(draftGenerationPromptQualityChecklistPreviewResult.currentSideEffectSummary.providerNetworkCall)}
+                      />
+                      <DetailItem label="LLM Call" value={String(draftGenerationPromptQualityChecklistPreviewResult.currentSideEffectSummary.llmCall)} />
+                      <DetailItem
+                        label="LLM Evaluator Call"
+                        value={String(draftGenerationPromptQualityChecklistPreviewResult.currentSideEffectSummary.llmEvaluatorCall)}
+                      />
+                      <DetailItem
+                        label="LLM Log Mutation"
+                        value={String(draftGenerationPromptQualityChecklistPreviewResult.currentSideEffectSummary.llmCallLogMutation)}
+                      />
+                      <DetailItem
+                        label="Content Mutation"
+                        value={String(draftGenerationPromptQualityChecklistPreviewResult.currentSideEffectSummary.contentItemMutation)}
+                      />
+                      <DetailItem
+                        label="Draft Markdown"
+                        value={String(draftGenerationPromptQualityChecklistPreviewResult.currentSideEffectSummary.draftMarkdownMutation)}
+                      />
+                      <DetailItem label="Draft HTML" value={String(draftGenerationPromptQualityChecklistPreviewResult.currentSideEffectSummary.draftHtmlMutation)} />
+                      <DetailItem label="Blogger Write" value={String(draftGenerationPromptQualityChecklistPreviewResult.currentSideEffectSummary.bloggerWrite)} />
+                    </div>
+                  </details>
+                </>
+              ) : (
+                <div className="notice">후보 큐에서 linked content item이 있는 행의 “prompt 품질 체크”를 실행하세요. 이 단계는 정적 규칙만 실행하고 저장/전송/생성하지 않습니다.</div>
+              )}
+            </div>
+
             <details className="read-block">
               <summary>기술 상세</summary>
               <div className="detail-grid">
@@ -3512,6 +3776,10 @@ function formatLlmHealthCheckExecutionBlocker(blocker: string) {
 
 function formatChecklistItem(item: { key: string; status: string; label: string; requiredBeforeExecution?: boolean }) {
   return `${item.status}: ${item.label}${item.requiredBeforeExecution ? " (required)" : ""}`;
+}
+
+function formatPromptQualityCheck(item: { key: string; status: string; severity: string; label: string; detail: string; remediation: string | null }) {
+  return `${item.status}/${item.severity}: ${item.label} - ${item.detail}${item.remediation ? ` · remediation: ${item.remediation}` : ""}`;
 }
 
 function ValidationList({ title, items, emptyText, isError, isWarning }: { title: string; items: string[]; emptyText: string; isError?: boolean; isWarning?: boolean }) {
