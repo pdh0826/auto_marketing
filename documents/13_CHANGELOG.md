@@ -1,5 +1,27 @@
 # 13_CHANGELOG
 
+## Patch 9F-2V Draft-generation LLM Dispatch Audit Schema Design
+
+Implemented after Patch 9F-2U:
+
+- Added design-only helper `src/lib/daily-content-plans/draft-generation-llm-dispatch-audit-schema-design.ts`.
+- Added route `POST /api/daily-content-plans/draft-generation-llm-dispatch-audit-schema-design`.
+- Added `/settings/blogger` `초안 생성 LLM dispatch audit schema design` UI readback.
+- Added `documents/17_LLM_DISPATCH_AUDIT_SCHEMA_DESIGN.md`.
+- The design proposes future `blog_daily_content_llm_dispatch_attempts`, `blog_daily_content_llm_dispatch_events`, and optional `blog_daily_content_llm_dispatch_artifacts` tables.
+- The design covers proposed fields, indexes, foreign keys, unique constraints, idempotency semantics, redaction policy, retention policy, and future migration sequencing.
+- The response reports `patchVersion=9F-2V`, `previewMode=read_only_draft_generation_llm_dispatch_audit_schema_design`, `designOnly=true`, `schemaModified=false`, `migrationCreated=false`, `migrationApplied=false`, `dbWrite=false`, `providerNetworkCallAttempted=false`, `llmCallAttempted=false`, and `contentMutationAttempted=false`.
+- Non-preview modes are blocked with `draft_generation_llm_dispatch_audit_schema_design_is_preview_only`.
+
+Policy:
+
+- 9F-2V did not rerun 9F-2B apply, 9F-2D apply, 9F-2I-APPLY, or 9F-2K approval apply.
+- 9F-2V did not modify `prisma/schema.prisma`, create a migration, apply a migration, create dispatch attempt rows, create event rows, store request envelopes, store prompts, run provider health checks, make provider network calls, call LLM providers, create `llm_call_logs`, mutate `content_items`, write to Blogger, publish, schedule, reconnect OAuth, refresh tokens, mutate publish approvals, or mutate publish attempts.
+- Daily plan rows remain `1`, daily plan item rows remain `3`, `content_items` count remains `2`, and operator approvals/events remain `1 / 1`.
+- Publish milestone counts remain `1 / 1 / 1 / 1 / 22`, and `llm_call_logs` remains `22`.
+- The linked fixture remains `planned` with empty `draftMarkdown` and `draftHtml`.
+- Recommended next patch: `9F-2W — LLM dispatch audit schema scaffold, no apply/no provider call/no content mutation`.
+
 ## Patch 9F-2U Draft-generation LLM Dispatch Gate Preview
 
 Implemented after Patch 9F-2T:

@@ -478,3 +478,19 @@ Patch 9F-2U is the read-only dispatch gate preview after the request envelope pr
 Next candidate gate:
 
 - `9F-2V — Draft-generation LLM dispatch audit schema design, no migration/no provider call/no content mutation`
+
+## Patch 9F-2V Dispatch Audit Schema Design
+
+Patch 9F-2V is the design-only audit schema step after the dispatch gate preview.
+
+- It proposes future `blog_daily_content_llm_dispatch_attempts`, `blog_daily_content_llm_dispatch_events`, and optional `blog_daily_content_llm_dispatch_artifacts` storage.
+- It defines safe attempt fields, append-only event fields, redacted artifact metadata, indexes, foreign keys, and idempotency unique constraints.
+- It requires raw idempotency keys to stay out of storage; only hashes may be stored.
+- It keeps raw secrets, raw tokens, raw provider request bodies, raw provider response bodies, authorization header values, full prompts, and full candidates out of default persistence.
+- It does not modify `prisma/schema.prisma`, create a migration, apply a migration, create rows, store request envelopes, call providers, run health checks, call any LLM, create `llm_call_logs`, mutate `content_items`, create drafts, or call Blogger.
+- It keeps `schemaModified=false`, `migrationCreated=false`, `migrationApplied=false`, `dbWrite=false`, `providerNetworkCallAttempted=false`, `llmCallAttempted=false`, `executionAllowed=false`, and `finalDraftGenerationAllowed=false`.
+- Non-preview modes are blocked with `draft_generation_llm_dispatch_audit_schema_design_is_preview_only`.
+
+Next candidate gate:
+
+- `9F-2W — LLM dispatch audit schema scaffold, no apply/no provider call/no content mutation`

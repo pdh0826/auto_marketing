@@ -65,6 +65,32 @@ npm run build
 - DB baseline should remain: daily plan rows `1`, daily plan item rows `3`, `content_items` count `2`, operator approvals/events `1 / 1`, publish milestone counts `1 / 1 / 1 / 1 / 22`, and `llm_call_logs=22`.
 - Target fixture `daily_fixture_cmqlr1v1y0001iwj2gpv2875r` should remain `status=planned`, `publishedAt=null`, `scheduledAt=null`, and draft Markdown/HTML lengths `0 / 0`.
 
+## Patch 9F-2V Draft-generation LLM Dispatch Audit Schema Design
+
+- `POST /api/daily-content-plans/draft-generation-llm-dispatch-audit-schema-design` should return `patchVersion=9F-2V`.
+- `previewMode=read_only_draft_generation_llm_dispatch_audit_schema_design`.
+- `designOnly=true`.
+- `schemaModified=false`.
+- `migrationCreated=false`.
+- `migrationApplied=false`.
+- `dbWrite=false`.
+- `providerNetworkCallAttempted=false`.
+- `llmCallAttempted=false`.
+- `contentMutationAttempted=false`.
+- `persistedApprovalSummary.operatorApprovalSatisfied=true` for fixture item `cmqlr1v1y0001iwj2gpv2875r`.
+- `executionGateSummary.executionAllowed=false`.
+- `executionGateSummary.finalDraftGenerationAllowed=false`.
+- The existing execution blockers should remain: `llm_execution_feature_flag_disabled`, `content_mutation_feature_flag_disabled`, `draft_generation_write_feature_flag_disabled`, `confirmation_phrase_missing`, and `idempotency_key_missing`.
+- Proposed tables should include `blog_daily_content_llm_dispatch_attempts` and `blog_daily_content_llm_dispatch_events`.
+- Optional proposed artifacts table may be included as `blog_daily_content_llm_dispatch_artifacts`.
+- Redaction policy should keep `rawSecretsStored=false`, `rawTokensStored=false`, `rawProviderRequestStoredByDefault=false`, `rawProviderResponseStoredByDefault=false`, and `authorizationHeaderValueStored=false`.
+- Idempotency policy should keep `rawIdempotencyKeyStored=false` and `idempotencyKeyHashStored=true`.
+- Side effects should remain false for schema file modification, migration creation, migration apply, DB write, provider health check, provider network call, LLM call, LLM evaluator call, `llm_call_logs` mutation, content mutation, draft Markdown/HTML mutation, Blogger write, publish, schedule, OAuth reconnect, token refresh, publish approval mutation, and publish attempt mutation.
+- `git diff -- prisma/schema.prisma prisma/migrations` should produce no output.
+- Non-preview mode such as `migrate` should include `draft_generation_llm_dispatch_audit_schema_design_is_preview_only`.
+- DB baseline should remain: daily plan rows `1`, daily plan item rows `3`, `content_items` count `2`, operator approvals/events `1 / 1`, publish milestone counts `1 / 1 / 1 / 1 / 22`, and `llm_call_logs=22`.
+- Target fixture `daily_fixture_cmqlr1v1y0001iwj2gpv2875r` should remain `status=planned`, `publishedAt=null`, `scheduledAt=null`, and draft Markdown/HTML lengths `0 / 0`.
+
 ## 9E Publish Milestone Closeout Baseline
 
 Expected current state after `9E-9D-APPLY`:

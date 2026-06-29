@@ -958,3 +958,13 @@ Patch 9F-2U adds a read-only dispatch gate preview after the request envelope pr
 - It keeps `dispatchAllowedNow=false`, `dispatchWouldBeBlocked=true`, `requestSentToProvider=false`, `providerNetworkCall=false`, `llmCall=false`, and `contentItemMutation=false`.
 - It does not create a dispatch execution route, send the request envelope, call a provider, run provider health checks, call any LLM, create `llm_call_logs`, store request envelopes, store prompts, mutate `content_items`, or create `draftMarkdown`/`draftHtml`.
 - Non-preview modes remain blocked with `draft_generation_llm_dispatch_gate_preview_is_preview_only`.
+
+## Patch 9F-2V draft-generation dispatch audit schema design boundary
+
+Patch 9F-2V adds a design-only audit schema preview before any future dispatch persistence or provider call.
+
+- `POST /api/daily-content-plans/draft-generation-llm-dispatch-audit-schema-design` returns proposed future dispatch attempt/event/artifact persistence design.
+- The design covers fields, indexes, foreign keys, unique constraints, idempotency hash semantics, redaction policy, retention policy, and migration sequencing.
+- It keeps `schemaModified=false`, `migrationCreated=false`, `migrationApplied=false`, `dbWrite=false`, `providerNetworkCall=false`, `llmCall=false`, and `contentItemMutation=false`.
+- It does not modify `prisma/schema.prisma`, create migrations, apply migrations, create rows, store request envelopes, store prompts, call providers, create `llm_call_logs`, mutate `content_items`, or create `draftMarkdown`/`draftHtml`.
+- Non-preview modes remain blocked with `draft_generation_llm_dispatch_audit_schema_design_is_preview_only`.

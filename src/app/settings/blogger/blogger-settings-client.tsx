@@ -24,6 +24,7 @@ import type { DailyContentDraftGenerationExecutionGatePreviewResponse } from "@/
 import type { DailyContentDraftGenerationLlmProviderHealthCheckExecutionResponse } from "@/lib/daily-content-plans/draft-generation-llm-provider-health-check-execution";
 import type { DailyContentDraftGenerationLlmProviderHealthCheckPreviewResponse } from "@/lib/daily-content-plans/draft-generation-llm-provider-health-check-preview";
 import type { DailyContentDraftGenerationLlmProviderReadinessResponse } from "@/lib/daily-content-plans/draft-generation-llm-provider-readiness";
+import type { DailyContentDraftGenerationLlmDispatchAuditSchemaDesignResponse } from "@/lib/daily-content-plans/draft-generation-llm-dispatch-audit-schema-design";
 import type { DailyContentDraftGenerationLlmDispatchGatePreviewResponse } from "@/lib/daily-content-plans/draft-generation-llm-dispatch-gate-preview";
 import type { DailyContentDraftGenerationLlmRequestEnvelopePreviewResponse } from "@/lib/daily-content-plans/draft-generation-llm-request-envelope-preview";
 import type { DailyContentDraftGenerationReadinessResponse } from "@/lib/daily-content-plans/draft-generation-readiness";
@@ -107,6 +108,8 @@ export function BloggerSettingsClient() {
     useState<DailyContentDraftGenerationLlmRequestEnvelopePreviewResponse | null>(null);
   const [draftGenerationLlmDispatchGatePreviewResult, setDraftGenerationLlmDispatchGatePreviewResult] =
     useState<DailyContentDraftGenerationLlmDispatchGatePreviewResponse | null>(null);
+  const [draftGenerationLlmDispatchAuditSchemaDesignResult, setDraftGenerationLlmDispatchAuditSchemaDesignResult] =
+    useState<DailyContentDraftGenerationLlmDispatchAuditSchemaDesignResponse | null>(null);
   const [oauthDryRun, setOauthDryRun] = useState<BloggerOAuthStartDryRun | null>(null);
   const [blogListResult, setBlogListResult] = useState<BloggerBlogListResult | null>(null);
   const [blogListLoadingId, setBlogListLoadingId] = useState<string | null>(null);
@@ -127,6 +130,7 @@ export function BloggerSettingsClient() {
   const [loadingDraftGenerationPromptQualityChecklistPreviewItemId, setLoadingDraftGenerationPromptQualityChecklistPreviewItemId] = useState<string | null>(null);
   const [loadingDraftGenerationLlmRequestEnvelopePreviewItemId, setLoadingDraftGenerationLlmRequestEnvelopePreviewItemId] = useState<string | null>(null);
   const [loadingDraftGenerationLlmDispatchGatePreviewItemId, setLoadingDraftGenerationLlmDispatchGatePreviewItemId] = useState<string | null>(null);
+  const [loadingDraftGenerationLlmDispatchAuditSchemaDesignItemId, setLoadingDraftGenerationLlmDispatchAuditSchemaDesignItemId] = useState<string | null>(null);
   const [selectingBlogId, setSelectingBlogId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -211,6 +215,7 @@ export function BloggerSettingsClient() {
       setDraftGenerationPromptQualityChecklistPreviewResult(null);
       setDraftGenerationLlmRequestEnvelopePreviewResult(null);
       setDraftGenerationLlmDispatchGatePreviewResult(null);
+      setDraftGenerationLlmDispatchAuditSchemaDesignResult(null);
       setOauthDryRun(null);
       setBlogListResult(null);
       setNotice("Blogger connection을 저장했습니다. Blogger draft/publish는 수행하지 않았습니다.");
@@ -343,6 +348,7 @@ export function BloggerSettingsClient() {
       setDraftGenerationPromptQualityChecklistPreviewResult(null);
       setDraftGenerationLlmRequestEnvelopePreviewResult(null);
       setDraftGenerationLlmDispatchGatePreviewResult(null);
+      setDraftGenerationLlmDispatchAuditSchemaDesignResult(null);
       setNotice("Daily Content Plan preview를 생성했습니다. Plan row 저장, content generation, LLM call, Blogger write/publish는 수행하지 않았습니다.");
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Daily Content Plan preview에 실패했습니다.");
@@ -832,6 +838,44 @@ export function BloggerSettingsClient() {
     }
   }
 
+  async function previewDraftGenerationLlmDispatchAuditSchemaDesign(
+    planId: string | null | undefined,
+    planItemId: string | null | undefined,
+    contentItemId: string | null | undefined
+  ) {
+    if (!planId || !planItemId || !contentItemId) {
+      setError("Daily plan id, item id, linked content item id가 필요합니다.");
+      return;
+    }
+
+    setError(null);
+    setNotice(null);
+    setLoadingDraftGenerationLlmDispatchAuditSchemaDesignItemId(planItemId);
+
+    try {
+      const result = await requestJson<ApiResult<DailyContentDraftGenerationLlmDispatchAuditSchemaDesignResponse>>(
+        "/api/daily-content-plans/draft-generation-llm-dispatch-audit-schema-design",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            mode: "preview",
+            planId,
+            planItemId,
+            contentItemId
+          })
+        }
+      );
+      setDraftGenerationLlmDispatchAuditSchemaDesignResult(result.data);
+      setNotice(
+        "초안 생성 LLM dispatch audit schema design을 확인했습니다. schema/migration 적용, DB write, provider network call, LLM call, content_items 수정, Blogger write/publish는 수행하지 않았습니다."
+      );
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "초안 생성 LLM dispatch audit schema design 확인에 실패했습니다.");
+    } finally {
+      setLoadingDraftGenerationLlmDispatchAuditSchemaDesignItemId(null);
+    }
+  }
+
   async function createOAuthDryRun(connection: BloggerConnectionAdmin) {
     setError(null);
     setNotice(null);
@@ -1026,6 +1070,7 @@ export function BloggerSettingsClient() {
                   setDraftGenerationPromptQualityChecklistPreviewResult(null);
                   setDraftGenerationLlmRequestEnvelopePreviewResult(null);
                   setDraftGenerationLlmDispatchGatePreviewResult(null);
+                  setDraftGenerationLlmDispatchAuditSchemaDesignResult(null);
                   setOauthDryRun(null);
                   setBlogListResult(null);
                 }}
@@ -1724,6 +1769,25 @@ export function BloggerSettingsClient() {
                         }
                       >
                         {loadingDraftGenerationLlmDispatchGatePreviewItemId === getDailyPlanItemId(item) ? "dispatch gate 확인 중" : "dispatch gate"}
+                      </button>
+                      <button
+                        className="button small secondary"
+                        type="button"
+                        disabled={
+                          !dailyContentPlanSummary.persistedPlanId ||
+                          !getDailyPlanItemId(item) ||
+                          !getDailyPlanItemContentItemId(item) ||
+                          loadingDraftGenerationLlmDispatchAuditSchemaDesignItemId === getDailyPlanItemId(item)
+                        }
+                        onClick={() =>
+                          void previewDraftGenerationLlmDispatchAuditSchemaDesign(
+                            dailyContentPlanSummary.persistedPlanId,
+                            getDailyPlanItemId(item),
+                            getDailyPlanItemContentItemId(item)
+                          )
+                        }
+                      >
+                        {loadingDraftGenerationLlmDispatchAuditSchemaDesignItemId === getDailyPlanItemId(item) ? "audit 설계 확인 중" : "audit schema"}
                       </button>
                     </td>
                   </tr>
@@ -3984,6 +4048,263 @@ export function BloggerSettingsClient() {
               )}
             </div>
 
+            <div className="read-block">
+              <h3>초안 생성 LLM dispatch audit schema design</h3>
+              <div className="notice">
+                <strong>미래 LLM dispatch 실행을 감사 가능하게 기록하기 위한 schema를 설계합니다.</strong>
+                <p>이번 단계에서는 schema.prisma 수정, migration 생성/적용, DB write, provider call, LLM call, content mutation을 수행하지 않습니다.</p>
+              </div>
+              <div className="button-row">
+                <button className="button small secondary" type="button" disabled>
+                  Migration - 비활성
+                </button>
+                <button className="button small secondary" type="button" disabled>
+                  Schema apply - 비활성
+                </button>
+                <button className="button small secondary" type="button" disabled>
+                  Dispatch - 비활성
+                </button>
+              </div>
+              {draftGenerationLlmDispatchAuditSchemaDesignResult ? (
+                <>
+                  <div className="notice warning">
+                    <strong>Design only: {String(draftGenerationLlmDispatchAuditSchemaDesignResult.designOnly)}</strong>
+                    <p>
+                      schemaModified={String(draftGenerationLlmDispatchAuditSchemaDesignResult.schemaModified)}, migrationCreated=
+                      {String(draftGenerationLlmDispatchAuditSchemaDesignResult.migrationCreated)}, migrationApplied=
+                      {String(draftGenerationLlmDispatchAuditSchemaDesignResult.migrationApplied)}입니다.
+                    </p>
+                  </div>
+                  <div className="detail-grid">
+                    <DetailItem label="Patch" value={draftGenerationLlmDispatchAuditSchemaDesignResult.patchVersion} />
+                    <DetailItem label="Preview Mode" value={draftGenerationLlmDispatchAuditSchemaDesignResult.previewMode} />
+                    <DetailItem label="Plan ID" value={draftGenerationLlmDispatchAuditSchemaDesignResult.targetSummary.planId ?? "-"} />
+                    <DetailItem label="Plan Item" value={draftGenerationLlmDispatchAuditSchemaDesignResult.targetSummary.planItemId} />
+                    <DetailItem label="Content Item" value={draftGenerationLlmDispatchAuditSchemaDesignResult.targetSummary.contentItemId ?? "-"} />
+                    <DetailItem label="Fixture Status" value={draftGenerationLlmDispatchAuditSchemaDesignResult.targetSummary.fixtureStatus ?? "-"} />
+                    <DetailItem
+                      label="Approval Satisfied"
+                      value={String(draftGenerationLlmDispatchAuditSchemaDesignResult.persistedApprovalSummary.operatorApprovalSatisfied)}
+                    />
+                    <DetailItem label="Execution Allowed" value={String(draftGenerationLlmDispatchAuditSchemaDesignResult.executionGateSummary.executionAllowed)} />
+                    <DetailItem
+                      label="Final Draft Allowed"
+                      value={String(draftGenerationLlmDispatchAuditSchemaDesignResult.executionGateSummary.finalDraftGenerationAllowed)}
+                    />
+                  </div>
+                  <div className="detail-grid">
+                    <DetailItem
+                      label="Design Version"
+                      value={draftGenerationLlmDispatchAuditSchemaDesignResult.auditSchemaDesignSummary.designVersion}
+                    />
+                    <DetailItem
+                      label="Prisma Change Proposed"
+                      value={String(draftGenerationLlmDispatchAuditSchemaDesignResult.auditSchemaDesignSummary.prismaSchemaChangeProposed)}
+                    />
+                    <DetailItem
+                      label="Prisma Changed Now"
+                      value={String(draftGenerationLlmDispatchAuditSchemaDesignResult.auditSchemaDesignSummary.prismaSchemaChangedNow)}
+                    />
+                    <DetailItem
+                      label="Migration Required Later"
+                      value={String(draftGenerationLlmDispatchAuditSchemaDesignResult.auditSchemaDesignSummary.migrationRequiredLater)}
+                    />
+                    <DetailItem
+                      label="Migration Created Now"
+                      value={String(draftGenerationLlmDispatchAuditSchemaDesignResult.auditSchemaDesignSummary.migrationCreatedNow)}
+                    />
+                    <DetailItem
+                      label="Migration Applied Now"
+                      value={String(draftGenerationLlmDispatchAuditSchemaDesignResult.auditSchemaDesignSummary.migrationAppliedNow)}
+                    />
+                    <DetailItem
+                      label="Source Dispatch Gate"
+                      value={draftGenerationLlmDispatchAuditSchemaDesignResult.auditSchemaDesignSummary.sourceDispatchGatePatchVersion}
+                    />
+                    <DetailItem
+                      label="Dispatch Blocked"
+                      value={String(draftGenerationLlmDispatchAuditSchemaDesignResult.auditSchemaDesignSummary.sourceDispatchGateSummary.dispatchWouldBeBlocked)}
+                    />
+                  </div>
+                  <ValidationList
+                    title="Proposed tables"
+                    items={draftGenerationLlmDispatchAuditSchemaDesignResult.auditSchemaDesignSummary.proposedTables.map(
+                      (table) => `${table.tableName}: ${table.purpose} (${table.fields.length} fields)`
+                    )}
+                    emptyText="proposed table이 없습니다."
+                  />
+                  <details className="read-block">
+                    <summary>Table design 상세</summary>
+                    {draftGenerationLlmDispatchAuditSchemaDesignResult.auditSchemaDesignSummary.proposedTables.map((table) => (
+                      <div className="read-block" key={table.tableName}>
+                        <h4>{table.tableName}</h4>
+                        <div className="detail-grid">
+                          <DetailItem label="Purpose" value={table.purpose} />
+                          <DetailItem label="Create Now" value={String(table.createNow)} />
+                          <DetailItem label="Field Count" value={String(table.fields.length)} />
+                        </div>
+                        <ValidationList title="Fields" items={table.fields.map(formatAuditSchemaField)} emptyText="field가 없습니다." />
+                        <ValidationList title="Indexes" items={table.indexes} emptyText="index가 없습니다." />
+                        <ValidationList title="Foreign Keys" items={table.foreignKeys} emptyText="foreign key가 없습니다." />
+                        <ValidationList title="Unique Constraints" items={table.uniqueConstraints} emptyText="unique constraint가 없습니다." />
+                      </div>
+                    ))}
+                  </details>
+                  <div className="detail-grid">
+                    <DetailItem
+                      label="Raw Idempotency Stored"
+                      value={String(draftGenerationLlmDispatchAuditSchemaDesignResult.auditSchemaDesignSummary.idempotencyDesign.rawIdempotencyKeyStored)}
+                    />
+                    <DetailItem
+                      label="Idempotency Hash Stored"
+                      value={String(draftGenerationLlmDispatchAuditSchemaDesignResult.auditSchemaDesignSummary.idempotencyDesign.idempotencyKeyHashStored)}
+                    />
+                    <DetailItem
+                      label="Duplicate Behavior"
+                      value={draftGenerationLlmDispatchAuditSchemaDesignResult.auditSchemaDesignSummary.idempotencyDesign.duplicateBehavior}
+                    />
+                    <DetailItem
+                      label="Raw Secrets Stored"
+                      value={String(draftGenerationLlmDispatchAuditSchemaDesignResult.auditSchemaDesignSummary.redactionPolicy.rawSecretsStored)}
+                    />
+                    <DetailItem
+                      label="Raw Tokens Stored"
+                      value={String(draftGenerationLlmDispatchAuditSchemaDesignResult.auditSchemaDesignSummary.redactionPolicy.rawTokensStored)}
+                    />
+                    <DetailItem
+                      label="Raw Request Stored"
+                      value={String(
+                        draftGenerationLlmDispatchAuditSchemaDesignResult.auditSchemaDesignSummary.redactionPolicy.rawProviderRequestStoredByDefault
+                      )}
+                    />
+                    <DetailItem
+                      label="Raw Response Stored"
+                      value={String(
+                        draftGenerationLlmDispatchAuditSchemaDesignResult.auditSchemaDesignSummary.redactionPolicy.rawProviderResponseStoredByDefault
+                      )}
+                    />
+                    <DetailItem
+                      label="Auth Header Stored"
+                      value={String(draftGenerationLlmDispatchAuditSchemaDesignResult.auditSchemaDesignSummary.redactionPolicy.authorizationHeaderValueStored)}
+                    />
+                  </div>
+                  <details className="read-block">
+                    <summary>Idempotency / redaction / retention / migration plan</summary>
+                    <div className="detail-grid">
+                      <DetailItem
+                        label="Unique Constraint"
+                        value={draftGenerationLlmDispatchAuditSchemaDesignResult.auditSchemaDesignSummary.idempotencyDesign.uniqueConstraint}
+                      />
+                      <DetailItem
+                        label="Retry Policy"
+                        value={draftGenerationLlmDispatchAuditSchemaDesignResult.auditSchemaDesignSummary.idempotencyDesign.retryPolicy}
+                      />
+                      <DetailItem
+                        label="Prompt Hash Allowed"
+                        value={String(draftGenerationLlmDispatchAuditSchemaDesignResult.auditSchemaDesignSummary.redactionPolicy.promptHashAllowed)}
+                      />
+                      <DetailItem
+                        label="Envelope Hash Allowed"
+                        value={String(draftGenerationLlmDispatchAuditSchemaDesignResult.auditSchemaDesignSummary.redactionPolicy.requestEnvelopeHashAllowed)}
+                      />
+                      <DetailItem
+                        label="Redacted Error Allowed"
+                        value={String(draftGenerationLlmDispatchAuditSchemaDesignResult.auditSchemaDesignSummary.redactionPolicy.redactedErrorMessageAllowed)}
+                      />
+                      <DetailItem
+                        label="Attempt Retention"
+                        value={draftGenerationLlmDispatchAuditSchemaDesignResult.auditSchemaDesignSummary.retentionPlan.attemptMetadataRetention}
+                      />
+                      <DetailItem
+                        label="Event Retention"
+                        value={draftGenerationLlmDispatchAuditSchemaDesignResult.auditSchemaDesignSummary.retentionPlan.eventMetadataRetention}
+                      />
+                      <DetailItem
+                        label="Artifact Retention"
+                        value={draftGenerationLlmDispatchAuditSchemaDesignResult.auditSchemaDesignSummary.retentionPlan.redactedArtifactRetention}
+                      />
+                      <DetailItem
+                        label="Raw Payload Retention"
+                        value={draftGenerationLlmDispatchAuditSchemaDesignResult.auditSchemaDesignSummary.retentionPlan.rawProviderPayloadRetention}
+                      />
+                      <DetailItem
+                        label="Next Schema Patch"
+                        value={draftGenerationLlmDispatchAuditSchemaDesignResult.auditSchemaDesignSummary.futureMigrationPlan.nextSchemaScaffoldPatchCandidate}
+                      />
+                      <DetailItem
+                        label="Apply Patch"
+                        value={draftGenerationLlmDispatchAuditSchemaDesignResult.auditSchemaDesignSummary.futureMigrationPlan.applyPatchCandidate}
+                      />
+                      <DetailItem
+                        label="Rows Created By Migration"
+                        value={String(draftGenerationLlmDispatchAuditSchemaDesignResult.auditSchemaDesignSummary.futureMigrationPlan.migrationShouldCreateRows)}
+                      />
+                    </div>
+                  </details>
+                  <details className="read-block">
+                    <summary>Audit schema design side-effect 상세</summary>
+                    <div className="detail-grid">
+                      <DetailItem label="DB Read" value={String(draftGenerationLlmDispatchAuditSchemaDesignResult.currentSideEffectSummary.dbRead)} />
+                      <DetailItem label="DB Write" value={String(draftGenerationLlmDispatchAuditSchemaDesignResult.currentSideEffectSummary.dbWrite)} />
+                      <DetailItem
+                        label="Schema File Modified"
+                        value={String(draftGenerationLlmDispatchAuditSchemaDesignResult.currentSideEffectSummary.schemaFileModified)}
+                      />
+                      <DetailItem
+                        label="Migration File Created"
+                        value={String(draftGenerationLlmDispatchAuditSchemaDesignResult.currentSideEffectSummary.migrationFileCreated)}
+                      />
+                      <DetailItem
+                        label="Migration Applied"
+                        value={String(draftGenerationLlmDispatchAuditSchemaDesignResult.currentSideEffectSummary.migrationApplied)}
+                      />
+                      <DetailItem label="Env Read" value={String(draftGenerationLlmDispatchAuditSchemaDesignResult.currentSideEffectSummary.envRead)} />
+                      <DetailItem label="Secret Exposed" value={String(draftGenerationLlmDispatchAuditSchemaDesignResult.currentSideEffectSummary.secretValueExposed)} />
+                      <DetailItem
+                        label="Design Preview"
+                        value={String(draftGenerationLlmDispatchAuditSchemaDesignResult.currentSideEffectSummary.auditSchemaDesignedForPreview)}
+                      />
+                      <DetailItem
+                        label="Request Sent"
+                        value={String(draftGenerationLlmDispatchAuditSchemaDesignResult.currentSideEffectSummary.requestSentToProvider)}
+                      />
+                      <DetailItem
+                        label="Provider Health Checked"
+                        value={String(draftGenerationLlmDispatchAuditSchemaDesignResult.currentSideEffectSummary.providerHealthChecked)}
+                      />
+                      <DetailItem
+                        label="Provider Network"
+                        value={String(draftGenerationLlmDispatchAuditSchemaDesignResult.currentSideEffectSummary.providerNetworkCall)}
+                      />
+                      <DetailItem label="LLM Call" value={String(draftGenerationLlmDispatchAuditSchemaDesignResult.currentSideEffectSummary.llmCall)} />
+                      <DetailItem
+                        label="LLM Evaluator Call"
+                        value={String(draftGenerationLlmDispatchAuditSchemaDesignResult.currentSideEffectSummary.llmEvaluatorCall)}
+                      />
+                      <DetailItem
+                        label="LLM Log Mutation"
+                        value={String(draftGenerationLlmDispatchAuditSchemaDesignResult.currentSideEffectSummary.llmCallLogMutation)}
+                      />
+                      <DetailItem
+                        label="Content Mutation"
+                        value={String(draftGenerationLlmDispatchAuditSchemaDesignResult.currentSideEffectSummary.contentItemMutation)}
+                      />
+                      <DetailItem
+                        label="Draft Markdown"
+                        value={String(draftGenerationLlmDispatchAuditSchemaDesignResult.currentSideEffectSummary.draftMarkdownMutation)}
+                      />
+                      <DetailItem label="Draft HTML" value={String(draftGenerationLlmDispatchAuditSchemaDesignResult.currentSideEffectSummary.draftHtmlMutation)} />
+                      <DetailItem label="Blogger Write" value={String(draftGenerationLlmDispatchAuditSchemaDesignResult.currentSideEffectSummary.bloggerWrite)} />
+                    </div>
+                  </details>
+                </>
+              ) : (
+                <div className="notice">
+                  후보 큐에서 linked content item이 있는 행의 “audit schema”를 실행하세요. 이 단계는 audit persistence 구조만 설계하고 schema/migration을 적용하지 않습니다.
+                </div>
+              )}
+            </div>
+
             <details className="read-block">
               <summary>기술 상세</summary>
               <div className="detail-grid">
@@ -4399,6 +4720,10 @@ function formatDispatchGateCheck(item: { key: string; status: string; severity: 
   return `${item.status}/${item.severity}: ${item.label} - ${item.detail}${item.blockerCode ? ` · blocker: ${item.blockerCode}` : ""}${
     item.remediation ? ` · remediation: ${item.remediation}` : ""
   }`;
+}
+
+function formatAuditSchemaField(item: { name: string; type: string; nullable: boolean; defaultValue: string | null; notes: string }) {
+  return `${item.name}: ${item.type}${item.nullable ? " nullable" : ""}${item.defaultValue ? ` default=${item.defaultValue}` : ""} - ${item.notes}`;
 }
 
 function ValidationList({ title, items, emptyText, isError, isWarning }: { title: string; items: string[]; emptyText: string; isError?: boolean; isWarning?: boolean }) {
