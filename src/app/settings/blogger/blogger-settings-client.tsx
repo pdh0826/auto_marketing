@@ -24,6 +24,7 @@ import type { DailyContentDraftGenerationExecutionGatePreviewResponse } from "@/
 import type { DailyContentDraftGenerationLlmProviderHealthCheckExecutionResponse } from "@/lib/daily-content-plans/draft-generation-llm-provider-health-check-execution";
 import type { DailyContentDraftGenerationLlmProviderHealthCheckPreviewResponse } from "@/lib/daily-content-plans/draft-generation-llm-provider-health-check-preview";
 import type { DailyContentDraftGenerationLlmProviderReadinessResponse } from "@/lib/daily-content-plans/draft-generation-llm-provider-readiness";
+import type { DailyContentDraftGenerationLlmRequestEnvelopePreviewResponse } from "@/lib/daily-content-plans/draft-generation-llm-request-envelope-preview";
 import type { DailyContentDraftGenerationReadinessResponse } from "@/lib/daily-content-plans/draft-generation-readiness";
 import type { DailyContentOperatorApprovalPersistenceResponse } from "@/lib/daily-content-plans/operator-approval-persistence";
 import type { DailyContentQueueOperatorWorkflowResponse } from "@/lib/daily-content-plans/operator-approval-workflow";
@@ -101,6 +102,8 @@ export function BloggerSettingsClient() {
     useState<DailyContentDraftGenerationPromptRenderPreviewResponse | null>(null);
   const [draftGenerationPromptQualityChecklistPreviewResult, setDraftGenerationPromptQualityChecklistPreviewResult] =
     useState<DailyContentDraftGenerationPromptQualityChecklistPreviewResponse | null>(null);
+  const [draftGenerationLlmRequestEnvelopePreviewResult, setDraftGenerationLlmRequestEnvelopePreviewResult] =
+    useState<DailyContentDraftGenerationLlmRequestEnvelopePreviewResponse | null>(null);
   const [oauthDryRun, setOauthDryRun] = useState<BloggerOAuthStartDryRun | null>(null);
   const [blogListResult, setBlogListResult] = useState<BloggerBlogListResult | null>(null);
   const [blogListLoadingId, setBlogListLoadingId] = useState<string | null>(null);
@@ -119,6 +122,7 @@ export function BloggerSettingsClient() {
   const [loadingDraftGenerationFinalExecutionChecklistItemId, setLoadingDraftGenerationFinalExecutionChecklistItemId] = useState<string | null>(null);
   const [loadingDraftGenerationPromptRenderPreviewItemId, setLoadingDraftGenerationPromptRenderPreviewItemId] = useState<string | null>(null);
   const [loadingDraftGenerationPromptQualityChecklistPreviewItemId, setLoadingDraftGenerationPromptQualityChecklistPreviewItemId] = useState<string | null>(null);
+  const [loadingDraftGenerationLlmRequestEnvelopePreviewItemId, setLoadingDraftGenerationLlmRequestEnvelopePreviewItemId] = useState<string | null>(null);
   const [selectingBlogId, setSelectingBlogId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -201,6 +205,7 @@ export function BloggerSettingsClient() {
       setDraftGenerationFinalExecutionChecklistResult(null);
       setDraftGenerationPromptRenderPreviewResult(null);
       setDraftGenerationPromptQualityChecklistPreviewResult(null);
+      setDraftGenerationLlmRequestEnvelopePreviewResult(null);
       setOauthDryRun(null);
       setBlogListResult(null);
       setNotice("Blogger connection을 저장했습니다. Blogger draft/publish는 수행하지 않았습니다.");
@@ -331,6 +336,7 @@ export function BloggerSettingsClient() {
       setDraftGenerationFinalExecutionChecklistResult(null);
       setDraftGenerationPromptRenderPreviewResult(null);
       setDraftGenerationPromptQualityChecklistPreviewResult(null);
+      setDraftGenerationLlmRequestEnvelopePreviewResult(null);
       setNotice("Daily Content Plan preview를 생성했습니다. Plan row 저장, content generation, LLM call, Blogger write/publish는 수행하지 않았습니다.");
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Daily Content Plan preview에 실패했습니다.");
@@ -744,6 +750,44 @@ export function BloggerSettingsClient() {
     }
   }
 
+  async function previewDraftGenerationLlmRequestEnvelope(
+    planId: string | null | undefined,
+    planItemId: string | null | undefined,
+    contentItemId: string | null | undefined
+  ) {
+    if (!planId || !planItemId || !contentItemId) {
+      setError("Daily plan id, item id, linked content item id가 필요합니다.");
+      return;
+    }
+
+    setError(null);
+    setNotice(null);
+    setLoadingDraftGenerationLlmRequestEnvelopePreviewItemId(planItemId);
+
+    try {
+      const result = await requestJson<ApiResult<DailyContentDraftGenerationLlmRequestEnvelopePreviewResponse>>(
+        "/api/daily-content-plans/draft-generation-llm-request-envelope-preview",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            mode: "preview",
+            planId,
+            planItemId,
+            contentItemId
+          })
+        }
+      );
+      setDraftGenerationLlmRequestEnvelopePreviewResult(result.data);
+      setNotice(
+        "초안 생성 LLM request envelope preview를 확인했습니다. request는 저장/전송하지 않았고, provider network call, LLM call, content_items 수정, Blogger write/publish는 수행하지 않았습니다."
+      );
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "초안 생성 LLM request envelope preview 확인에 실패했습니다.");
+    } finally {
+      setLoadingDraftGenerationLlmRequestEnvelopePreviewItemId(null);
+    }
+  }
+
   async function createOAuthDryRun(connection: BloggerConnectionAdmin) {
     setError(null);
     setNotice(null);
@@ -936,6 +980,7 @@ export function BloggerSettingsClient() {
                   setDraftGenerationFinalExecutionChecklistResult(null);
                   setDraftGenerationPromptRenderPreviewResult(null);
                   setDraftGenerationPromptQualityChecklistPreviewResult(null);
+                  setDraftGenerationLlmRequestEnvelopePreviewResult(null);
                   setOauthDryRun(null);
                   setBlogListResult(null);
                 }}
@@ -1596,6 +1641,25 @@ export function BloggerSettingsClient() {
                         }
                       >
                         {loadingDraftGenerationPromptQualityChecklistPreviewItemId === getDailyPlanItemId(item) ? "prompt 품질 점검 중" : "prompt 품질 체크"}
+                      </button>
+                      <button
+                        className="button small secondary"
+                        type="button"
+                        disabled={
+                          !dailyContentPlanSummary.persistedPlanId ||
+                          !getDailyPlanItemId(item) ||
+                          !getDailyPlanItemContentItemId(item) ||
+                          loadingDraftGenerationLlmRequestEnvelopePreviewItemId === getDailyPlanItemId(item)
+                        }
+                        onClick={() =>
+                          void previewDraftGenerationLlmRequestEnvelope(
+                            dailyContentPlanSummary.persistedPlanId,
+                            getDailyPlanItemId(item),
+                            getDailyPlanItemContentItemId(item)
+                          )
+                        }
+                      >
+                        {loadingDraftGenerationLlmRequestEnvelopePreviewItemId === getDailyPlanItemId(item) ? "envelope 확인 중" : "request envelope"}
                       </button>
                     </td>
                   </tr>
@@ -3368,6 +3432,247 @@ export function BloggerSettingsClient() {
                 </>
               ) : (
                 <div className="notice">후보 큐에서 linked content item이 있는 행의 “prompt 품질 체크”를 실행하세요. 이 단계는 정적 규칙만 실행하고 저장/전송/생성하지 않습니다.</div>
+              )}
+            </div>
+
+            <div className="read-block">
+              <h3>초안 생성 LLM request envelope preview</h3>
+              <div className="notice">
+                <strong>LLM 호출 직전의 request envelope 구조만 미리 구성합니다.</strong>
+                <p>실제 provider 전송, request 저장, LLM 호출, 초안 저장, content_items 수정, Blogger write/publish는 수행하지 않습니다.</p>
+              </div>
+              <div className="button-row">
+                <button className="button small secondary" type="button" disabled>
+                  Provider dispatch - 비활성
+                </button>
+                <button className="button small secondary" type="button" disabled>
+                  LLM call - 비활성
+                </button>
+                <button className="button small secondary" type="button" disabled>
+                  Content mutation - 비활성
+                </button>
+              </div>
+              {draftGenerationLlmRequestEnvelopePreviewResult ? (
+                <>
+                  <div className="notice warning">
+                    <strong>Dispatch allowed: false</strong>
+                    <p>
+                      requestEnvelopeStored=false, requestWouldBeSent=false입니다. 이 preview는 request 구조를 보여줄 뿐 생성/저장/전송을 실행하지 않습니다.
+                    </p>
+                  </div>
+                  <div className="detail-grid">
+                    <DetailItem label="Patch" value={draftGenerationLlmRequestEnvelopePreviewResult.patchVersion} />
+                    <DetailItem label="Preview Mode" value={draftGenerationLlmRequestEnvelopePreviewResult.previewMode} />
+                    <DetailItem label="Plan ID" value={draftGenerationLlmRequestEnvelopePreviewResult.targetSummary.planId ?? "-"} />
+                    <DetailItem label="Plan Item" value={draftGenerationLlmRequestEnvelopePreviewResult.targetSummary.planItemId} />
+                    <DetailItem label="Content Item" value={draftGenerationLlmRequestEnvelopePreviewResult.targetSummary.contentItemId ?? "-"} />
+                    <DetailItem label="Fixture Status" value={draftGenerationLlmRequestEnvelopePreviewResult.targetSummary.fixtureStatus ?? "-"} />
+                    <DetailItem
+                      label="Approval Satisfied"
+                      value={String(draftGenerationLlmRequestEnvelopePreviewResult.persistedApprovalSummary.operatorApprovalSatisfied)}
+                    />
+                    <DetailItem label="Execution Allowed" value={String(draftGenerationLlmRequestEnvelopePreviewResult.executionGateSummary.executionAllowed)} />
+                    <DetailItem
+                      label="Final Draft Allowed"
+                      value={String(draftGenerationLlmRequestEnvelopePreviewResult.executionGateSummary.finalDraftGenerationAllowed)}
+                    />
+                  </div>
+                  <div className="detail-grid">
+                    <DetailItem label="Envelope Version" value={draftGenerationLlmRequestEnvelopePreviewResult.requestEnvelopePreviewSummary.envelopeVersion} />
+                    <DetailItem
+                      label="Request Stored"
+                      value={String(draftGenerationLlmRequestEnvelopePreviewResult.requestEnvelopePreviewSummary.requestEnvelopeStored)}
+                    />
+                    <DetailItem
+                      label="Request Would Be Sent"
+                      value={String(draftGenerationLlmRequestEnvelopePreviewResult.requestEnvelopePreviewSummary.requestWouldBeSent)}
+                    />
+                    <DetailItem
+                      label="Dispatch Allowed Now"
+                      value={String(draftGenerationLlmRequestEnvelopePreviewResult.requestEnvelopePreviewSummary.dispatchAllowedNow)}
+                    />
+                    <DetailItem label="Route Resolved" value={String(draftGenerationLlmRequestEnvelopePreviewResult.requestEnvelopePreviewSummary.routeResolved)} />
+                    <DetailItem label="Provider Kind" value={draftGenerationLlmRequestEnvelopePreviewResult.requestEnvelopePreviewSummary.providerKind ?? "-"} />
+                    <DetailItem label="Provider Key" value={draftGenerationLlmRequestEnvelopePreviewResult.requestEnvelopePreviewSummary.providerKey ?? "-"} />
+                    <DetailItem label="Model Key" value={draftGenerationLlmRequestEnvelopePreviewResult.requestEnvelopePreviewSummary.modelKey ?? "-"} />
+                    <DetailItem
+                      label="Model"
+                      value={draftGenerationLlmRequestEnvelopePreviewResult.requestEnvelopePreviewSummary.modelDisplayName ?? "-"}
+                    />
+                    <DetailItem label="Payload Shape" value={draftGenerationLlmRequestEnvelopePreviewResult.requestEnvelopePreviewSummary.payloadShape} />
+                    <DetailItem label="Message Count" value={String(draftGenerationLlmRequestEnvelopePreviewResult.requestEnvelopePreviewSummary.messageCount)} />
+                    <DetailItem label="Prompt Hash" value={draftGenerationLlmRequestEnvelopePreviewResult.requestEnvelopePreviewSummary.promptSha256} />
+                    <DetailItem label="Prompt Chars" value={String(draftGenerationLlmRequestEnvelopePreviewResult.requestEnvelopePreviewSummary.promptCharLength)} />
+                    <DetailItem
+                      label="Prompt Tokens"
+                      value={String(draftGenerationLlmRequestEnvelopePreviewResult.requestEnvelopePreviewSummary.promptTokenEstimate ?? "-")}
+                    />
+                    <DetailItem
+                      label="Header Values Exposed"
+                      value={String(draftGenerationLlmRequestEnvelopePreviewResult.requestEnvelopePreviewSummary.headerValuesExposed)}
+                    />
+                    <DetailItem
+                      label="Secret Values Exposed"
+                      value={String(draftGenerationLlmRequestEnvelopePreviewResult.requestEnvelopePreviewSummary.secretValuesExposed)}
+                    />
+                    <DetailItem
+                      label="Endpoint Value Exposed"
+                      value={String(draftGenerationLlmRequestEnvelopePreviewResult.requestEnvelopePreviewSummary.endpointValueExposed)}
+                    />
+                  </div>
+                  <ValidationList
+                    title="Dispatch blockers"
+                    items={draftGenerationLlmRequestEnvelopePreviewResult.requestEnvelopePreviewSummary.dispatchBlockers.map(formatDraftGenerationGateBlocker)}
+                    emptyText="dispatch blocker가 없습니다."
+                    isWarning
+                  />
+                  <ValidationList
+                    title="Envelope warnings"
+                    items={draftGenerationLlmRequestEnvelopePreviewResult.requestEnvelopePreviewSummary.warnings}
+                    emptyText="envelope warning이 없습니다."
+                    isWarning
+                  />
+                  <details className="read-block">
+                    <summary>Request envelope 상세</summary>
+                    <div className="detail-grid">
+                      <DetailItem
+                        label="Endpoint Known"
+                        value={String(draftGenerationLlmRequestEnvelopePreviewResult.requestEnvelopePreviewSummary.envelopePreview.endpointPreview.endpointKnown)}
+                      />
+                      <DetailItem
+                        label="Endpoint Category"
+                        value={
+                          draftGenerationLlmRequestEnvelopePreviewResult.requestEnvelopePreviewSummary.envelopePreview.endpointPreview.endpointHostCategory ?? "-"
+                        }
+                      />
+                      <DetailItem
+                        label="Network Allowed"
+                        value={String(
+                          draftGenerationLlmRequestEnvelopePreviewResult.requestEnvelopePreviewSummary.envelopePreview.endpointPreview.networkCallAllowedNow
+                        )}
+                      />
+                      <DetailItem
+                        label="Header Names Only"
+                        value={String(draftGenerationLlmRequestEnvelopePreviewResult.requestEnvelopePreviewSummary.envelopePreview.headersPreview.headerNamesOnly)}
+                      />
+                      <DetailItem
+                        label="Header Values"
+                        value={String(draftGenerationLlmRequestEnvelopePreviewResult.requestEnvelopePreviewSummary.envelopePreview.headersPreview.valuesExposed)}
+                      />
+                      <DetailItem
+                        label="Headers"
+                        value={
+                          draftGenerationLlmRequestEnvelopePreviewResult.requestEnvelopePreviewSummary.envelopePreview.headersPreview.requiredHeaderNames.join(", ") ||
+                          "-"
+                        }
+                      />
+                      <DetailItem
+                        label="Redacted Headers"
+                        value={
+                          draftGenerationLlmRequestEnvelopePreviewResult.requestEnvelopePreviewSummary.envelopePreview.headersPreview.redactedHeaderNames.join(", ") ||
+                          "-"
+                        }
+                      />
+                      <DetailItem
+                        label="Temperature"
+                        value={String(
+                          draftGenerationLlmRequestEnvelopePreviewResult.requestEnvelopePreviewSummary.envelopePreview.payloadPreview.modelParameters.temperature ??
+                            "-"
+                        )}
+                      />
+                      <DetailItem
+                        label="Max Tokens"
+                        value={String(
+                          draftGenerationLlmRequestEnvelopePreviewResult.requestEnvelopePreviewSummary.envelopePreview.payloadPreview.modelParameters.maxTokens ?? "-"
+                        )}
+                      />
+                      <DetailItem
+                        label="Output Storage Deferred"
+                        value={String(
+                          draftGenerationLlmRequestEnvelopePreviewResult.requestEnvelopePreviewSummary.envelopePreview.payloadPreview.responseFormatPlan
+                            .outputStorageDeferred
+                        )}
+                      />
+                      <DetailItem
+                        label="Future Idempotency Required"
+                        value={String(
+                          draftGenerationLlmRequestEnvelopePreviewResult.requestEnvelopePreviewSummary.envelopePreview.idempotencyPlan
+                            .idempotencyKeyRequiredForFutureDispatch
+                        )}
+                      />
+                    </div>
+                    <ValidationList
+                      title="Future dispatch requirements"
+                      items={draftGenerationLlmRequestEnvelopePreviewResult.requestEnvelopePreviewSummary.envelopePreview.executionGuardPlan.requiredBeforeDispatch}
+                      emptyText="future dispatch requirement가 없습니다."
+                      isWarning
+                    />
+                    <ValidationList
+                      title="Message preview roles"
+                      items={draftGenerationLlmRequestEnvelopePreviewResult.requestEnvelopePreviewSummary.envelopePreview.payloadPreview.messagesPreview.map(
+                        (message) => `${message.role}: ${message.charLength} chars${message.truncated ? " (truncated)" : ""}`
+                      )}
+                      emptyText="message preview가 없습니다."
+                    />
+                  </details>
+                  <details className="read-block">
+                    <summary>Request envelope side-effect 상세</summary>
+                    <div className="detail-grid">
+                      <DetailItem label="DB Read" value={String(draftGenerationLlmRequestEnvelopePreviewResult.currentSideEffectSummary.dbRead)} />
+                      <DetailItem label="DB Write" value={String(draftGenerationLlmRequestEnvelopePreviewResult.currentSideEffectSummary.dbWrite)} />
+                      <DetailItem label="Env Read" value={String(draftGenerationLlmRequestEnvelopePreviewResult.currentSideEffectSummary.envRead)} />
+                      <DetailItem label="Secret Exposed" value={String(draftGenerationLlmRequestEnvelopePreviewResult.currentSideEffectSummary.secretValueExposed)} />
+                      <DetailItem
+                        label="Prompt Rendered"
+                        value={String(draftGenerationLlmRequestEnvelopePreviewResult.currentSideEffectSummary.promptRenderedForEnvelope)}
+                      />
+                      <DetailItem label="Prompt Stored" value={String(draftGenerationLlmRequestEnvelopePreviewResult.currentSideEffectSummary.promptStored)} />
+                      <DetailItem
+                        label="Envelope Built"
+                        value={String(draftGenerationLlmRequestEnvelopePreviewResult.currentSideEffectSummary.requestEnvelopeBuiltForPreview)}
+                      />
+                      <DetailItem
+                        label="Envelope Stored"
+                        value={String(draftGenerationLlmRequestEnvelopePreviewResult.currentSideEffectSummary.requestEnvelopeStored)}
+                      />
+                      <DetailItem
+                        label="Request Sent"
+                        value={String(draftGenerationLlmRequestEnvelopePreviewResult.currentSideEffectSummary.requestSentToProvider)}
+                      />
+                      <DetailItem
+                        label="Provider Health Checked"
+                        value={String(draftGenerationLlmRequestEnvelopePreviewResult.currentSideEffectSummary.providerHealthChecked)}
+                      />
+                      <DetailItem
+                        label="Provider Network"
+                        value={String(draftGenerationLlmRequestEnvelopePreviewResult.currentSideEffectSummary.providerNetworkCall)}
+                      />
+                      <DetailItem label="LLM Call" value={String(draftGenerationLlmRequestEnvelopePreviewResult.currentSideEffectSummary.llmCall)} />
+                      <DetailItem
+                        label="LLM Evaluator Call"
+                        value={String(draftGenerationLlmRequestEnvelopePreviewResult.currentSideEffectSummary.llmEvaluatorCall)}
+                      />
+                      <DetailItem
+                        label="LLM Log Mutation"
+                        value={String(draftGenerationLlmRequestEnvelopePreviewResult.currentSideEffectSummary.llmCallLogMutation)}
+                      />
+                      <DetailItem
+                        label="Content Mutation"
+                        value={String(draftGenerationLlmRequestEnvelopePreviewResult.currentSideEffectSummary.contentItemMutation)}
+                      />
+                      <DetailItem
+                        label="Draft Markdown"
+                        value={String(draftGenerationLlmRequestEnvelopePreviewResult.currentSideEffectSummary.draftMarkdownMutation)}
+                      />
+                      <DetailItem label="Draft HTML" value={String(draftGenerationLlmRequestEnvelopePreviewResult.currentSideEffectSummary.draftHtmlMutation)} />
+                      <DetailItem label="Blogger Write" value={String(draftGenerationLlmRequestEnvelopePreviewResult.currentSideEffectSummary.bloggerWrite)} />
+                    </div>
+                  </details>
+                </>
+              ) : (
+                <div className="notice">
+                  후보 큐에서 linked content item이 있는 행의 “request envelope”을 실행하세요. 이 단계는 request 구조만 만들고 저장/전송/생성하지 않습니다.
+                </div>
               )}
             </div>
 

@@ -8,6 +8,34 @@ npm run typecheck
 npm run build
 ```
 
+## Patch 9F-2T Draft-generation LLM Request Envelope Preview
+
+- `POST /api/daily-content-plans/draft-generation-llm-request-envelope-preview` should return `patchVersion=9F-2T`.
+- `previewMode=read_only_draft_generation_llm_request_envelope_preview`.
+- `dryRunOnly=true`.
+- `requestEnvelopeBuiltForPreview=true`.
+- `requestEnvelopeStored=false`.
+- `requestWouldBeSent=false`.
+- `currentSideEffectSummary.requestSentToProvider=false`.
+- `llmCallAttempted=false`.
+- `providerNetworkCallAttempted=false`.
+- `providerHealthCheckAttempted=false`.
+- `persistedApprovalSummary.operatorApprovalSatisfied=true` for fixture item `cmqlr1v1y0001iwj2gpv2875r`.
+- `executionGateSummary.executionAllowed=false`.
+- `executionGateSummary.finalDraftGenerationAllowed=false`.
+- The existing execution blockers should remain: `llm_execution_feature_flag_disabled`, `content_mutation_feature_flag_disabled`, `draft_generation_write_feature_flag_disabled`, `confirmation_phrase_missing`, and `idempotency_key_missing`.
+- `requestEnvelopePreviewSummary.headerValuesExposed=false`.
+- `requestEnvelopePreviewSummary.secretValuesExposed=false`.
+- `requestEnvelopePreviewSummary.endpointValueExposed=false`.
+- `requestEnvelopePreviewSummary.redactionSummary.rawSecretsIncluded=false`.
+- `requestEnvelopePreviewSummary.redactionSummary.rawTokensIncluded=false`.
+- `requestEnvelopePreviewSummary.redactionSummary.rawEnvValuesIncluded=false`.
+- Forbidden secret/token scan should pass with no response JSON occurrences of dangerous credential strings.
+- Non-preview mode such as `dispatch` should include `draft_generation_llm_request_envelope_preview_is_preview_only`.
+- Side effects should remain false for DB write, provider health check, provider network call, LLM call, LLM evaluator call, `llm_call_logs` mutation, content mutation, draft Markdown/HTML mutation, Blogger write, publish, schedule, OAuth reconnect, token refresh, publish approval mutation, and publish attempt mutation.
+- DB baseline should remain: daily plan rows `1`, daily plan item rows `3`, `content_items` count `2`, operator approvals/events `1 / 1`, publish milestone counts `1 / 1 / 1 / 1 / 22`, and `llm_call_logs=22`.
+- Target fixture `daily_fixture_cmqlr1v1y0001iwj2gpv2875r` should remain `status=planned`, `publishedAt=null`, `scheduledAt=null`, and draft Markdown/HTML lengths `0 / 0`.
+
 ## 9E Publish Milestone Closeout Baseline
 
 Expected current state after `9E-9D-APPLY`:

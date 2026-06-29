@@ -936,3 +936,15 @@ Patch 9F-2S adds a static prompt quality checklist before any future draft-gener
 - The checklist does not create `llm_call_logs`, store prompts, mutate `content_items`, or create `draftMarkdown`/`draftHtml`.
 - The checklist reports category statuses, pass/warn/fail counts, remediation, redaction/forbidden scan summary, and no-side-effect flags.
 - Even if `qualityGatePassed=true`, execution remains blocked until a later explicit execution patch with feature flags, confirmation phrase, and idempotency key.
+
+## Patch 9F-2T draft-generation request envelope preview boundary
+
+Patch 9F-2T adds a read-only request envelope preview immediately before any future LLM provider dispatch.
+
+- `POST /api/daily-content-plans/draft-generation-llm-request-envelope-preview` builds the provider request structure in memory only.
+- The preview reuses 9F-2R prompt rendering, 9F-2S prompt quality checklist metadata, and 9F-2N provider/model readiness metadata.
+- It shows safe route/provider/model metadata, endpoint category, header names with values hidden, payload shape, message count, prompt hash/length/token estimate, and future dispatch blockers.
+- It does not expose raw provider endpoints, header values, credential values, API keys, OAuth token material, env values, prompt storage records, or raw external payload values.
+- It does not call any provider, provider health endpoint, local LLM, Ollama, OpenAI, custom HTTP endpoint, or CLI process.
+- It does not create `llm_call_logs`, store request envelopes, store prompts, mutate `content_items`, or create `draftMarkdown`/`draftHtml`.
+- Non-preview modes remain blocked with `draft_generation_llm_request_envelope_preview_is_preview_only`.

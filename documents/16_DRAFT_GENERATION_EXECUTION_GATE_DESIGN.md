@@ -449,3 +449,17 @@ Patch 9F-2S is the static quality checklist gate after prompt render preview.
 Next candidate gate:
 
 - `9F-2T — Draft-generation LLM request envelope preview, no provider call/no content mutation`
+
+## Patch 9F-2T Request Envelope Preview Gate
+
+Patch 9F-2T is the read-only request envelope preview gate after the prompt quality checklist.
+
+- It builds the future LLM request envelope shape in memory only from the sanitized 9F-2R prompt preview, 9F-2S prompt quality result, and 9F-2N safe provider/model readiness metadata.
+- It exposes only safe route/provider/model metadata, endpoint category, header names without values, payload shape, prompt hash/length/token estimate, model parameters, idempotency requirements, and dispatch blockers.
+- It does not store the request envelope, send it to a provider, run provider health checks, call any LLM, create `llm_call_logs`, mutate `content_items`, create drafts, or call Blogger.
+- It keeps `requestEnvelopeStored=false`, `requestWouldBeSent=false`, `providerNetworkCallAttempted=false`, `llmCallAttempted=false`, `executionAllowed=false`, and `finalDraftGenerationAllowed=false`.
+- Non-preview modes are blocked with `draft_generation_llm_request_envelope_preview_is_preview_only`.
+
+Next candidate gate:
+
+- `9F-2U — Draft-generation LLM dispatch gate preview, no provider call/no content mutation`
