@@ -1,5 +1,31 @@
 # 13_CHANGELOG
 
+## Patch 9F-2P Gated LLM Provider Health-check Execution
+
+Implemented after Patch 9F-2O:
+
+- Added helper `src/lib/daily-content-plans/draft-generation-llm-provider-health-check-execution.ts`.
+- Added route `POST /api/daily-content-plans/draft-generation-llm-provider-health-check-execution`.
+- Added `/settings/blogger` `초안 생성 LLM health-check 실행 게이트` UI readback.
+- The route reuses the 9F-2O preview/readiness path and adds a gated provider health-check execution policy.
+- Default `preview` and blocked `healthcheck_execute` smoke keep `healthCheckExecuted=false`, `providerNetworkCallAttempted=false`, `llmCompletionAttempted=false`, `promptRendered=false`, `promptStored=false`, and all mutation side effects false.
+- Future positive execution requires `BLOG_DAILY_CONTENT_LLM_PROVIDER_HEALTHCHECK_EXECUTION_ENABLED=true`, `BLOG_DAILY_CONTENT_LLM_PROVIDER_NETWORK_CALLS_ENABLED=true`, the exact confirmation phrase, and an idempotency key.
+- Completion/chat/generate/responses endpoints remain forbidden; only safe provider metadata/version/tags/models/health endpoint categories may be used by a future explicitly approved health-check.
+- Unsupported modes are blocked with `draft_generation_llm_provider_health_check_execution_mode_not_allowed`.
+
+Policy:
+
+- 9F-2P did not rerun 9F-2B apply, 9F-2D apply, 9F-2I-APPLY, or 9F-2K approval apply.
+- 9F-2P did not create, update, or delete business rows during default validation.
+- 9F-2P did not modify `prisma/schema.prisma` or create a migration.
+- 9F-2P did not expose env values, raw secret values, encrypted values, API keys, bearer tokens, provider request bodies, prompt text, response bodies, or raw provider responses.
+- 9F-2P default validation did not run provider health checks, make provider network calls, call LLM providers, create `llm_call_logs`, generate drafts, mutate `content_items`, write to Blogger, publish, schedule, reconnect OAuth, refresh tokens, mutate publish approvals, or mutate publish attempts.
+- Daily plan rows remain `1`, daily plan item rows remain `3`, `content_items` count remains `2`, and operator approvals/events remain `1 / 1`.
+- Publish milestone counts remain `1 / 1 / 1 / 1 / 22`, and `llm_call_logs` remains `22`.
+- The linked fixture remains `planned` with empty `draftMarkdown` and `draftHtml`.
+- Recommended next patch: `9F-2Q — Draft-generation final execution checklist and operator runbook, no LLM completion/no content mutation`.
+- Alternative next patch after explicit approval: `9F-2P-LIVE-VERIFY — Execute one gated provider health-check only, no completion/no content mutation`.
+
 ## Patch 9F-2O LLM Provider Health-check Preview
 
 Implemented after Patch 9F-2N:

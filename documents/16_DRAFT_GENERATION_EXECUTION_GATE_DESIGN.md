@@ -129,6 +129,18 @@ The preview reuses the 9F-2N provider/model readiness result and describes the f
 
 It does not execute provider health checks, make provider network calls, call completion/generate/chat endpoints, render/store prompts, create `llm_call_logs`, generate draft content, mutate `content_items`, write to Blogger, publish, schedule, reconnect OAuth, or refresh tokens. `mode=healthcheck_preview` is still blocked by design in 9F-2O and should only be opened by a later explicit health-check execution patch.
 
+## Patch 9F-2P Gated LLM Provider Health-check Execution
+
+Patch 9F-2P adds a separate gated health-check execution route after the 9F-2O preview:
+
+- `POST /api/daily-content-plans/draft-generation-llm-provider-health-check-execution`
+- `/settings/blogger` section `초안 생성 LLM health-check 실행 게이트`
+- execution mode `gated_llm_provider_health_check_execution`
+
+The route may execute a future safe provider health/connectivity check only when explicit health-check feature flags, confirmation phrase, idempotency key, provider route/model readiness, required env presence, and supported provider health-check category all pass. Default validation keeps those gates closed, so no provider network call occurs.
+
+This health-check execution path is not draft generation execution. A successful future provider health-check does not satisfy content mutation, draft write, confirmation/idempotency for draft generation, or publish isolation gates. It must not call completion/chat/generate/responses endpoints, render/store prompts, create `llm_call_logs`, mutate `content_items`, create/update `draftMarkdown` or `draftHtml`, write to Blogger, publish, schedule, reconnect OAuth, refresh tokens, or mutate publish approvals/attempts.
+
 ## Execution Gate Layers
 
 The future execution route should evaluate these layers in order and return every blocking reason in a safe summary. No layer may store prompt text, raw LLM response text, generated candidate text, Blogger tokens, secrets, or external raw bodies.

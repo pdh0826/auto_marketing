@@ -1,17 +1,17 @@
 # 14_NEXT_SESSION_BRIEF
 
-## Current State: Patch 9F-2O Completed
+## Current State: Patch 9F-2P Completed
 
 ```text
 repo: ~/blog-growth-agent
 branch: master
 previous HEAD before 9F-2D apply closeout: b3cf210 Link daily plan item to content fixture
-expected HEAD after 9F-2O commit: local commit `Add draft generation LLM provider health-check preview` (verify exact hash with `git log --oneline -8`)
+expected HEAD after 9F-2P commit: local commit `Add gated draft generation LLM provider health-check execution` (verify exact hash with `git log --oneline -8`)
 current DB schema state: operator approval persistence migration applied
 operator approval tables in DB: created
 operator approval rows/events: 1 / 1
 operator approval apply state: completed exactly once
-draft-generation execution gate: post-approval preview polished, dry-run planner implemented, LLM provider readiness preview implemented, LLM provider health-check preview implemented, execution still blocked
+draft-generation execution gate: post-approval preview polished, dry-run planner implemented, LLM provider readiness preview implemented, LLM provider health-check preview implemented, gated health-check execution route implemented, draft generation execution still blocked
 milestone: 9E first end-to-end Blogger publish completed; 9F operation automation foundation started
 ```
 
@@ -169,6 +169,15 @@ Current baseline:
 - 9F-2O does not expose env values, raw secrets, encrypted values, API keys, bearer tokens, prompt text, provider request bodies, or raw provider responses.
 - 9F-2O did not rerun 9F-2B apply, 9F-2D apply, 9F-2I-APPLY, or 9F-2K approval apply.
 - 9F-2O did not modify `prisma/schema.prisma`, create a migration, generate drafts, run provider health checks, make provider network calls, call LLM providers, create `llm_call_logs`, mutate `content_items`, write to Blogger, publish, schedule, reconnect OAuth, refresh tokens, mutate publish approvals, or mutate publish attempts.
+- 9F-2P added helper `src/lib/daily-content-plans/draft-generation-llm-provider-health-check-execution.ts`.
+- 9F-2P added route `POST /api/daily-content-plans/draft-generation-llm-provider-health-check-execution`.
+- 9F-2P added `/settings/blogger` `초안 생성 LLM health-check 실행 게이트` readback.
+- 9F-2P reuses the 9F-2O preview/readiness path and adds a gated provider health-check execution policy.
+- 9F-2P default validation keeps `healthCheckExecuted=false`, `providerNetworkCallAttempted=false`, `llmCompletionAttempted=false`, `promptRendered=false`, `promptStored=false`, `llmCallLogMutation=false`, and all content/Blogger/publish mutations false.
+- 9F-2P future positive health-check requires `BLOG_DAILY_CONTENT_LLM_PROVIDER_HEALTHCHECK_EXECUTION_ENABLED=true`, `BLOG_DAILY_CONTENT_LLM_PROVIDER_NETWORK_CALLS_ENABLED=true`, exact confirmation phrase, idempotency key, route/provider/model readiness, required env presence, and supported safe endpoint category.
+- 9F-2P does not expose env values, raw secrets, encrypted values, API keys, bearer tokens, prompt text, response bodies, provider request bodies, or raw provider responses.
+- 9F-2P did not rerun 9F-2B apply, 9F-2D apply, 9F-2I-APPLY, or 9F-2K approval apply.
+- 9F-2P did not modify `prisma/schema.prisma`, create a migration, generate drafts, call completion/chat/generate/responses endpoints, create `llm_call_logs`, mutate `content_items`, write to Blogger, publish, schedule, reconnect OAuth, refresh tokens, mutate publish approvals, or mutate publish attempts.
 
 9E first end-to-end publish path:
 
@@ -180,21 +189,21 @@ Current baseline:
 6. `9E-9C` read back `https://mathlearningappl.blogspot.com/2026/06/blog-post.html`.
 7. `9E-9D-APPLY` reconciled internal DB state from `planned`/`planned_only` to `published`/`success`.
 
-Recommended next after 9F-2O:
+Recommended next after 9F-2P:
 
-**9F-2P — Gated LLM provider health-check execution, no completion/no content mutation**
+**9F-2Q — Draft-generation final execution checklist and operator runbook, no LLM completion/no content mutation**
 
 Goal:
 
-- Add a feature-flagged provider health-check execution path for the selected draft-generation provider while still forbidding LLM completion, prompt execution, content mutation, Blogger writes, and `llm_call_logs` creation unless a later explicit policy allows safe logging.
+- Add a final operator checklist/runbook view that combines approval, dry-run planner, LLM readiness, health-check gate, execution blockers, and next manual approval steps before any draft-generation execution patch.
 
 Alternative:
 
-**9F-2Q — Draft-generation execution readiness checklist polish, no call/no mutation**
+**9F-2P-LIVE-VERIFY — Execute one gated provider health-check only, no completion/no content mutation**
 
 Goal:
 
-- Polish the combined operator approval, dry-run planner, LLM readiness, and execution blocker checklist before any execution path is added.
+- After explicit operator approval, execute one health-check-only provider metadata/version/tags/models call with feature flags, confirmation phrase, and idempotency key, still with no completion, no prompt, no content mutation, no Blogger write, and no `llm_call_logs` mutation.
 
 ## 9F Automation Roadmap
 
@@ -225,7 +234,7 @@ Goal:
 | 9F-2N | LLM provider execution readiness check for draft generation, no call/no mutation |
 | 9F-2O | LLM provider health-check preview for draft generation, no completion/no content mutation |
 | 9F-2P | Gated LLM provider health-check execution, no completion/no content mutation |
-| 9F-2Q | Draft-generation execution readiness checklist polish |
+| 9F-2Q | Draft-generation final execution checklist and operator runbook |
 | 9F-3A | Alert & Recovery Center |
 
 Core operation principles:

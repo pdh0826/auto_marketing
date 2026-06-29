@@ -411,6 +411,21 @@ Next session start DB guard should use the published/success values above. The c
 - 9F-2O should not modify `prisma/schema.prisma` or create a migration.
 - Post-change DB checks should keep daily plan rows `1`, item rows `3`, `content_items` count `2`, operator approvals/events `1 / 1`, publish milestone counts `1 / 1 / 1 / 1 / 22`, target fixture draft lengths `0 / 0`, and `llm_call_logs=22`.
 
+## Patch 9F-2P Gated LLM Provider Health-check Execution
+
+- `POST /api/daily-content-plans/draft-generation-llm-provider-health-check-execution` should support `mode=preview` and `mode=healthcheck_execute` for plan `cmqlr1v1d0000iwj2smxcsajr`, plan item `cmqlr1v1y0001iwj2gpv2875r`, and linked fixture `daily_fixture_cmqlr1v1y0001iwj2gpv2875r`.
+- Preview should report `patchVersion=9F-2P`, `executionMode=gated_llm_provider_health_check_execution`, `healthCheckExecutionAllowedNow=false`, `healthCheckExecuted=false`, `providerNetworkCallAttempted=false`, `llmCompletionAttempted=false`, `promptRendered=false`, and `promptStored=false`.
+- Blocked `healthcheck_execute` smoke must run without enabling feature flags and without confirmation phrase/idempotency key. It should return blockers including `llm_provider_healthcheck_execution_feature_flag_disabled`, `llm_provider_network_call_feature_flag_disabled`, `confirmation_phrase_missing`, and `idempotency_key_missing`.
+- Unsupported modes such as `completion`, `generate`, `chat`, and `responses` should be blocked with `draft_generation_llm_provider_health_check_execution_mode_not_allowed`.
+- Safe health-check contract should report `completionEndpointsForbidden=true`, `responseBodyReturned=false`, `rawHeadersReturned=false`, `secretValueExposed=false`, `timeoutMs=3000`, and `retries=0`.
+- Default smoke must keep `providerNetworkCallAttempted=false`, `healthCheckExecuted=false`, `llmCall=false`, `llmCompletionCall=false`, `llmCallLogMutation=false`, `contentItemMutation=false`, `draftMarkdownMutation=false`, `draftHtmlMutation=false`, `bloggerWrite=false`, and `externalSend=false`.
+- `/settings/blogger` should show `초안 생성 LLM health-check 실행 게이트` with feature flag, network flag, confirmation, idempotency, route/model/env support, safe endpoint category, blockers, and side-effect summary.
+- 9F-2P should not run a positive live health-check unless explicitly approved later.
+- 9F-2P should not rerun 9F-2B apply, 9F-2D apply, 9F-2I-APPLY, or 9F-2K approval apply.
+- 9F-2P should not create `draftMarkdown` or `draftHtml`, call completion/chat/generate/responses endpoints, create `llm_call_logs`, mutate `content_items`, write to Blogger, publish/schedule, reconnect OAuth, refresh tokens, mutate publish approvals, or mutate publish attempts.
+- 9F-2P should not modify `prisma/schema.prisma` or create a migration.
+- Post-change DB checks should keep daily plan rows `1`, item rows `3`, `content_items` count `2`, operator approvals/events `1 / 1`, publish milestone counts `1 / 1 / 1 / 1 / 22`, target fixture draft lengths `0 / 0`, and `llm_call_logs=22`.
+
 ## Patch 9E-9D Post-publish DB Reconciliation
 
 - `POST /api/content-items/[id]/post-publish-reconciliation` route가 있어야 한다.
