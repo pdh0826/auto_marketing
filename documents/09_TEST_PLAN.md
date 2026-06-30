@@ -1894,3 +1894,13 @@ Safety guard:
 - Expected counts after smoke: attempts/events/artifacts `1 / 1 / 1`, `llm_call_logs=22`.
 - linked daily fixture는 계속 `status=planned`, `draftMarkdown` length `0`, `draftHtml` length `0`, `publishedAt=null`, `scheduledAt=null`이어야 한다.
 - 9F-3H 구현/스모크 중에는 audit row 생성, lock persistence, content item mutation, Blogger write/publish, OAuth reconnect, token refresh가 발생하지 않아야 한다.
+
+## Patch 9F-3I gated LLM dispatch execution 검증
+
+- `POST /api/daily-content-plans/draft-generation-llm-dispatch-execution`는 기본 `mode=preview`에서는 DB write, provider network call, LLM call, `llm_call_logs` 생성, content mutation, Blogger write/publish를 수행하지 않아야 한다.
+- `mode=execute`는 `BLOG_DAILY_CONTENT_DRAFT_GENERATION_LLM_ENABLED=true`, 정확한 confirmation phrase, idempotency key, current execution plan lock hash match, final preflight/plan lock readiness, prior provider call 없음이 모두 만족될 때만 provider call 1회를 허용한다.
+- 성공 시 기존 dispatch attempt를 safe metadata로 update하고, provider response received event 1건, hash-only response artifact 1건, `llm_call_logs` 1건을 생성한다.
+- 실패 시 raw prompt/raw response/body/token/secret 없이 safe error로 `llm_call_logs` failed row와 failed event를 생성하고 content item은 변경하지 않아야 한다.
+- UI `/settings/blogger`의 `dispatch 실행 preview` 버튼은 preview만 호출해야 하며 provider/LLM call을 실행하지 않아야 한다.
+- linked daily fixture는 계속 `status=planned`, `draftMarkdown` length `0`, `draftHtml` length `0`, `publishedAt=null`, `scheduledAt=null`이어야 한다.
+- 9F-3I 구현/스모크 중에는 `draftMarkdown`, `draftHtml`, status, `qualityScore`, Blogger write/publish, OAuth reconnect, token refresh가 발생하지 않아야 한다.

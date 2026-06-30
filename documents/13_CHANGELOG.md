@@ -1,5 +1,23 @@
 # 13_CHANGELOG
 
+## Patch 9F-3I Gated LLM Dispatch Without Content Mutation
+
+Implemented after Patch 9F-3H:
+
+- Added `POST /api/daily-content-plans/draft-generation-llm-dispatch-execution`.
+- Added a `/settings/blogger` UI action and summary block for dispatch execution preview.
+- The route defaults to preview mode, which performs no DB write, provider call, LLM call, or `llm_call_logs` creation.
+- Execute mode is gated by `BLOG_DAILY_CONTENT_DRAFT_GENERATION_LLM_ENABLED=true`, exact confirmation phrase, idempotency key, current execution plan lock hash match, final preflight/plan lock readiness, and no prior provider/LLM call on the latest attempt.
+- A successful execute may create one `llm_call_logs` row, one redacted provider response event, one hash-only response artifact, and one attempt update.
+- A failed execute records only safe failed-dispatch audit metadata and a failed `llm_call_logs` row.
+
+Policy:
+
+- 9F-3I does not store or return raw prompt, raw provider response body/header, full generated candidate, API key, token, secret, or encrypted value.
+- 9F-3I does not mutate `content_items.draftMarkdown`, `draftHtml`, status, `qualityScore`, `publishedAt`, or `scheduledAt`.
+- 9F-3I does not write to Blogger, publish, schedule, reconnect OAuth, or refresh tokens.
+- Recommended next patch: `9F-3J — LLM dispatch result readback and no-content-mutation verification`.
+
 ## Patch 9F-3H LLM Dispatch Execution Plan Lock
 
 Implemented after Patch 9F-3G:

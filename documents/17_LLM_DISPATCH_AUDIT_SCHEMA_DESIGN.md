@@ -310,3 +310,18 @@ Next patch candidate:
 Next patch candidate:
 
 - `9F-3I — Gated single LLM dispatch, no content mutation`
+
+## Patch 9F-3I Dispatch Execution Audit Semantics
+
+9F-3I is the first patch that may add provider-dispatch audit rows after an explicit execute request.
+
+- Preview mode adds no rows and performs no provider/LLM call.
+- Execute success adds one `llm_call_logs` row, one `llm_dispatch_provider_response_received` event, one `llm_response_metadata_hash` hash-only artifact, and updates the existing dispatch attempt.
+- Execute failure adds one failed `llm_call_logs` row, one `llm_dispatch_provider_call_failed` event, and updates the existing dispatch attempt with safe error metadata.
+- Attempt metadata may include safe ids, lock hash, response hash, response length, latency/token counts, and redaction booleans.
+- Event/artifact payloads must not contain raw prompt, raw request body, raw provider response body/header, full generated candidate, API key, token, secret, or encrypted value.
+- The dispatch attempt records provider/LLM call attempts but continues to record `contentMutationAttempted=false` and `bloggerWriteAttempted=false`.
+
+Next patch candidate:
+
+- `9F-3J — LLM dispatch result readback and no-content-mutation verification`

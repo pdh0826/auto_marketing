@@ -1111,3 +1111,16 @@ Patch 9F-3H computes a deterministic execution plan lock candidate without dispa
 - It keeps lock persistence disabled and returns `lockPersistedNow=false`.
 - It does not call provider health-check endpoints, call completion/chat/generate/responses endpoints, create `llm_call_logs`, store prompts, store raw provider response bodies/headers, mutate `content_items`, create `draftMarkdown`/`draftHtml`, call Blogger, reconnect OAuth, or refresh tokens.
 - Next boundary is `9F-3I — Gated single LLM dispatch, no content mutation`.
+
+## Patch 9F-3I gated single LLM dispatch boundary
+
+Patch 9F-3I adds the first guarded content-draft provider dispatch path without mutating generated content.
+
+- It adds `POST /api/daily-content-plans/draft-generation-llm-dispatch-execution`.
+- The route defaults to `mode=preview`; preview never calls the provider, never creates `llm_call_logs`, and never writes DB rows.
+- Execute mode requires `BLOG_DAILY_CONTENT_DRAFT_GENERATION_LLM_ENABLED=true`, exact confirmation phrase, idempotency key, current execution plan lock hash match, final preflight/plan lock readiness, a ready `content_draft` route/model/provider, and no prior provider/LLM call on the latest dispatch attempt.
+- A successful execute performs one provider call, creates one `llm_call_logs` row, updates the existing dispatch attempt, creates one redacted event, and creates one hash-only response artifact.
+- Raw prompts, raw request bodies, raw provider response bodies/headers, API keys, tokens, secrets, and full generated candidate text are not stored or returned.
+- `content_items.draftMarkdown`, `draftHtml`, status, `qualityScore`, `publishedAt`, and `scheduledAt` remain unchanged.
+- Blogger write/publish, OAuth reconnect, and token refresh remain disabled.
+- Next boundary is `9F-3J — LLM dispatch result readback and no-content-mutation verification`.

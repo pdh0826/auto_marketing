@@ -1,5 +1,28 @@
 # 14_NEXT_SESSION_BRIEF
 
+## Current State: Patch 9F-3I Completed
+
+```text
+repo: ~/blog-growth-agent
+branch: master
+expected HEAD after 9F-3I commit: local commit `Run gated draft generation LLM dispatch without content mutation` (verify exact hash with `git log --oneline -8`)
+```
+
+9F-3I adds the guarded provider-dispatch execution route:
+
+- Route used: `POST /api/daily-content-plans/draft-generation-llm-dispatch-execution`
+- UI: `/settings/blogger` shows `초안 생성 LLM dispatch execution preview`.
+- Default `preview` mode is read-only and does not call the provider or create `llm_call_logs`.
+- `execute` mode requires feature flag, exact confirmation phrase, idempotency key, current lock hash match, final preflight/plan lock readiness, and no prior provider/LLM call on the latest attempt.
+- A successful execute may create one `llm_call_logs` row, one provider response event, one hash-only response artifact, and update the existing dispatch attempt.
+- Raw prompt, raw provider response, full generated candidate, API key, token, secret, and encrypted value are not stored or returned.
+- The linked fixture must remain `planned` with unchanged `draftMarkdown` and `draftHtml`.
+- Blogger write/publish, OAuth reconnect, and token refresh remain disabled.
+
+Next recommended patch:
+
+- `9F-3J — LLM dispatch result readback and no-content-mutation verification`
+
 ## Current State: Patch 9F-3H Completed
 
 ```text

@@ -29,6 +29,7 @@ import type { DailyContentDraftGenerationLlmDispatchAuditSchemaDesignResponse } 
 import type { DailyContentDraftGenerationLlmDispatchAuditMigrationApplyReadbackResponse } from "@/lib/daily-content-plans/draft-generation-llm-dispatch-audit-migration-apply-readback";
 import type { DailyContentDraftGenerationLlmDispatchArtifactCreationResponse } from "@/lib/daily-content-plans/draft-generation-llm-dispatch-artifact-creation";
 import type { DailyContentDraftGenerationLlmDispatchArtifactPreviewResponse } from "@/lib/daily-content-plans/draft-generation-llm-dispatch-artifact-preview";
+import type { DailyContentDraftGenerationLlmDispatchExecutionResponse } from "@/lib/daily-content-plans/draft-generation-llm-dispatch-execution";
 import type { DailyContentDraftGenerationLlmDispatchExecutionPlanLockResponse } from "@/lib/daily-content-plans/draft-generation-llm-dispatch-execution-plan-lock";
 import type { DailyContentDraftGenerationLlmDispatchFinalPreflightResponse } from "@/lib/daily-content-plans/draft-generation-llm-dispatch-final-preflight";
 import type { DailyContentDraftGenerationLlmDispatchAttemptCreationResponse } from "@/lib/daily-content-plans/draft-generation-llm-dispatch-attempt-creation";
@@ -146,6 +147,8 @@ export function BloggerSettingsClient() {
     useState<DailyContentDraftGenerationLlmDispatchFinalPreflightResponse | null>(null);
   const [draftGenerationLlmDispatchExecutionPlanLockResult, setDraftGenerationLlmDispatchExecutionPlanLockResult] =
     useState<DailyContentDraftGenerationLlmDispatchExecutionPlanLockResponse | null>(null);
+  const [draftGenerationLlmDispatchExecutionResult, setDraftGenerationLlmDispatchExecutionResult] =
+    useState<DailyContentDraftGenerationLlmDispatchExecutionResponse | null>(null);
   const [oauthDryRun, setOauthDryRun] = useState<BloggerOAuthStartDryRun | null>(null);
   const [blogListResult, setBlogListResult] = useState<BloggerBlogListResult | null>(null);
   const [blogListLoadingId, setBlogListLoadingId] = useState<string | null>(null);
@@ -182,6 +185,7 @@ export function BloggerSettingsClient() {
   const [loadingDraftGenerationLlmDispatchArtifactCreationItemId, setLoadingDraftGenerationLlmDispatchArtifactCreationItemId] = useState<string | null>(null);
   const [loadingDraftGenerationLlmDispatchFinalPreflightItemId, setLoadingDraftGenerationLlmDispatchFinalPreflightItemId] = useState<string | null>(null);
   const [loadingDraftGenerationLlmDispatchExecutionPlanLockItemId, setLoadingDraftGenerationLlmDispatchExecutionPlanLockItemId] = useState<string | null>(null);
+  const [loadingDraftGenerationLlmDispatchExecutionItemId, setLoadingDraftGenerationLlmDispatchExecutionItemId] = useState<string | null>(null);
   const [selectingBlogId, setSelectingBlogId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -279,6 +283,7 @@ export function BloggerSettingsClient() {
       setDraftGenerationLlmDispatchArtifactCreationResult(null);
       setDraftGenerationLlmDispatchFinalPreflightResult(null);
       setDraftGenerationLlmDispatchExecutionPlanLockResult(null);
+      setDraftGenerationLlmDispatchExecutionResult(null);
       setOauthDryRun(null);
       setBlogListResult(null);
       setNotice("Blogger connection을 저장했습니다. Blogger draft/publish는 수행하지 않았습니다.");
@@ -424,6 +429,7 @@ export function BloggerSettingsClient() {
       setDraftGenerationLlmDispatchArtifactCreationResult(null);
       setDraftGenerationLlmDispatchFinalPreflightResult(null);
       setDraftGenerationLlmDispatchExecutionPlanLockResult(null);
+      setDraftGenerationLlmDispatchExecutionResult(null);
       setNotice("Daily Content Plan preview를 생성했습니다. Plan row 저장, content generation, LLM call, Blogger write/publish는 수행하지 않았습니다.");
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Daily Content Plan preview에 실패했습니다.");
@@ -1407,6 +1413,44 @@ export function BloggerSettingsClient() {
     }
   }
 
+  async function previewDraftGenerationLlmDispatchExecution(
+    planId: string | null | undefined,
+    planItemId: string | null | undefined,
+    contentItemId: string | null | undefined
+  ) {
+    if (!planId || !planItemId || !contentItemId) {
+      setError("Daily plan id, item id, linked content item id가 필요합니다.");
+      return;
+    }
+
+    setError(null);
+    setNotice(null);
+    setLoadingDraftGenerationLlmDispatchExecutionItemId(planItemId);
+
+    try {
+      const result = await requestJson<ApiResult<DailyContentDraftGenerationLlmDispatchExecutionResponse>>(
+        "/api/daily-content-plans/draft-generation-llm-dispatch-execution",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            mode: "preview",
+            planId,
+            planItemId,
+            contentItemId
+          })
+        }
+      );
+      setDraftGenerationLlmDispatchExecutionResult(result.data);
+      setNotice(
+        "초안 생성 LLM dispatch execution gate를 preview로 확인했습니다. UI preview는 provider/LLM call, llm_call_logs 생성, content_items 수정, Blogger write/publish를 수행하지 않습니다."
+      );
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "초안 생성 LLM dispatch execution preview 확인에 실패했습니다.");
+    } finally {
+      setLoadingDraftGenerationLlmDispatchExecutionItemId(null);
+    }
+  }
+
   async function createOAuthDryRun(connection: BloggerConnectionAdmin) {
     setError(null);
     setNotice(null);
@@ -1614,6 +1658,7 @@ export function BloggerSettingsClient() {
                   setDraftGenerationLlmDispatchArtifactCreationResult(null);
                   setDraftGenerationLlmDispatchFinalPreflightResult(null);
                   setDraftGenerationLlmDispatchExecutionPlanLockResult(null);
+                  setDraftGenerationLlmDispatchExecutionResult(null);
                   setOauthDryRun(null);
                   setBlogListResult(null);
                 }}
@@ -2563,6 +2608,25 @@ export function BloggerSettingsClient() {
                         }
                       >
                         {loadingDraftGenerationLlmDispatchExecutionPlanLockItemId === getDailyPlanItemId(item) ? "plan lock 확인 중" : "plan lock"}
+                      </button>
+                      <button
+                        className="button small secondary"
+                        type="button"
+                        disabled={
+                          !dailyContentPlanSummary.persistedPlanId ||
+                          !getDailyPlanItemId(item) ||
+                          !getDailyPlanItemContentItemId(item) ||
+                          loadingDraftGenerationLlmDispatchExecutionItemId === getDailyPlanItemId(item)
+                        }
+                        onClick={() =>
+                          void previewDraftGenerationLlmDispatchExecution(
+                            dailyContentPlanSummary.persistedPlanId,
+                            getDailyPlanItemId(item),
+                            getDailyPlanItemContentItemId(item)
+                          )
+                        }
+                      >
+                        {loadingDraftGenerationLlmDispatchExecutionItemId === getDailyPlanItemId(item) ? "dispatch 실행 확인 중" : "dispatch 실행 preview"}
                       </button>
                     </td>
                   </tr>
@@ -7011,6 +7075,104 @@ export function BloggerSettingsClient() {
               ) : (
                 <div className="notice">
                   후보 큐에서 linked content item이 있는 행의 “plan lock”을 실행하세요. 이 단계는 execution plan lock 후보를 읽기 전용으로 계산합니다.
+                </div>
+              )}
+            </div>
+
+            <div className="read-block">
+              <h3>초안 생성 LLM dispatch execution preview</h3>
+              <div className="notice">
+                <strong>9F-3I gated execution · UI preview only</strong>
+                <p>이 UI 버튼은 execution gate와 현재 lock hash만 preview합니다. provider/LLM call은 실행하지 않습니다.</p>
+                <p>실제 1회 provider call은 feature flag, confirmation phrase, idempotency key, current lock hash가 모두 맞을 때 API execute 모드에서만 허용됩니다.</p>
+              </div>
+              {draftGenerationLlmDispatchExecutionResult ? (
+                <>
+                  <div className={draftGenerationLlmDispatchExecutionResult.dispatchExecutionSummary.canExecuteNow ? "notice warning" : "notice"}>
+                    <strong>
+                      canExecuteNow={String(draftGenerationLlmDispatchExecutionResult.dispatchExecutionSummary.canExecuteNow)} / executedNow=
+                      {String(draftGenerationLlmDispatchExecutionResult.dispatchExecutedNow)}
+                    </strong>
+                    <p>
+                      latestAttempt={draftGenerationLlmDispatchExecutionResult.dispatchExecutionSummary.latestAttemptId ?? "null"} / lockHash=
+                      {draftGenerationLlmDispatchExecutionResult.dispatchExecutionSummary.currentLockHash?.slice(0, 16) ?? "null"}
+                    </p>
+                  </div>
+                  <div className="detail-grid">
+                    <DetailItem label="Patch" value={draftGenerationLlmDispatchExecutionResult.patchVersion} />
+                    <DetailItem label="Mode" value={draftGenerationLlmDispatchExecutionResult.mode} />
+                    <DetailItem label="Plan Item" value={draftGenerationLlmDispatchExecutionResult.targetSummary.planItemId} />
+                    <DetailItem label="Linked Fixture" value={draftGenerationLlmDispatchExecutionResult.targetSummary.contentItemId ?? "-"} />
+                    <DetailItem label="Feature Flag" value={String(draftGenerationLlmDispatchExecutionResult.dispatchExecutionSummary.featureFlagEnabled)} />
+                    <DetailItem
+                      label="Confirmation"
+                      value={String(draftGenerationLlmDispatchExecutionResult.dispatchExecutionSummary.confirmationPhraseMatched)}
+                    />
+                    <DetailItem label="Idempotency" value={String(draftGenerationLlmDispatchExecutionResult.dispatchExecutionSummary.idempotencyKeyPresent)} />
+                    <DetailItem label="Lock Match" value={String(draftGenerationLlmDispatchExecutionResult.dispatchExecutionSummary.expectedLockHashMatched)} />
+                    <DetailItem label="Plan Lock Ready" value={String(draftGenerationLlmDispatchExecutionResult.dispatchExecutionSummary.planLockCandidateReady)} />
+                    <DetailItem
+                      label="Final Preflight"
+                      value={String(draftGenerationLlmDispatchExecutionResult.dispatchExecutionSummary.finalPreflightReadyForPlanLock)}
+                    />
+                  </div>
+                  <div className="detail-grid">
+                    <DetailItem
+                      label="Prior LLM Call"
+                      value={String(draftGenerationLlmDispatchExecutionResult.dispatchExecutionSummary.priorLlmCallDetected)}
+                    />
+                    <DetailItem
+                      label="Provider Sent"
+                      value={String(draftGenerationLlmDispatchExecutionResult.dispatchExecutionSummary.providerRequestSent)}
+                    />
+                    <DetailItem
+                      label="Response Received"
+                      value={String(draftGenerationLlmDispatchExecutionResult.dispatchExecutionSummary.providerResponseReceived)}
+                    />
+                    <DetailItem label="LLM Log Created" value={String(draftGenerationLlmDispatchExecutionResult.dispatchExecutionSummary.llmCallLogCreated)} />
+                    <DetailItem label="LLM Log ID" value={draftGenerationLlmDispatchExecutionResult.dispatchExecutionSummary.llmCallLogId ?? "null"} />
+                    <DetailItem
+                      label="Artifact Created"
+                      value={String(draftGenerationLlmDispatchExecutionResult.dispatchExecutionSummary.responseArtifactCreated)}
+                    />
+                    <DetailItem label="Artifact ID" value={draftGenerationLlmDispatchExecutionResult.dispatchExecutionSummary.responseArtifactId ?? "null"} />
+                    <DetailItem label="Event Created" value={String(draftGenerationLlmDispatchExecutionResult.dispatchExecutionSummary.responseEventCreated)} />
+                    <DetailItem label="Event ID" value={draftGenerationLlmDispatchExecutionResult.dispatchExecutionSummary.responseEventId ?? "null"} />
+                    <DetailItem label="Attempt Updated" value={String(draftGenerationLlmDispatchExecutionResult.dispatchExecutionSummary.attemptUpdated)} />
+                    <DetailItem label="Response Hash" value={draftGenerationLlmDispatchExecutionResult.dispatchExecutionSummary.responseHash?.slice(0, 16) ?? "null"} />
+                    <DetailItem label="Response Length" value={String(draftGenerationLlmDispatchExecutionResult.dispatchExecutionSummary.responseLength ?? "null")} />
+                    <DetailItem label="Latency MS" value={String(draftGenerationLlmDispatchExecutionResult.dispatchExecutionSummary.latencyMs ?? "null")} />
+                    <DetailItem label="Error Code" value={draftGenerationLlmDispatchExecutionResult.dispatchExecutionSummary.errorCode ?? "null"} />
+                  </div>
+                  <ValidationList
+                    title="Execution blockers"
+                    items={draftGenerationLlmDispatchExecutionResult.dispatchExecutionSummary.executionBlockers}
+                    emptyText="execution blocker가 없습니다."
+                    isError
+                  />
+                  <ValidationList title="Warnings" items={draftGenerationLlmDispatchExecutionResult.warnings} emptyText="warning이 없습니다." isWarning />
+                  <details className="read-block">
+                    <summary>Execution side-effect 상세</summary>
+                    <div className="detail-grid">
+                      <DetailItem label="DB Read" value={String(draftGenerationLlmDispatchExecutionResult.currentSideEffectSummary.dbRead)} />
+                      <DetailItem label="DB Write" value={String(draftGenerationLlmDispatchExecutionResult.currentSideEffectSummary.dbWrite)} />
+                      <DetailItem label="Attempt Mutation" value={String(draftGenerationLlmDispatchExecutionResult.currentSideEffectSummary.auditAttemptMutation)} />
+                      <DetailItem label="Event Mutation" value={String(draftGenerationLlmDispatchExecutionResult.currentSideEffectSummary.auditEventMutation)} />
+                      <DetailItem label="Artifact Mutation" value={String(draftGenerationLlmDispatchExecutionResult.currentSideEffectSummary.auditArtifactMutation)} />
+                      <DetailItem label="LLM Log Mutation" value={String(draftGenerationLlmDispatchExecutionResult.currentSideEffectSummary.llmCallLogMutation)} />
+                      <DetailItem label="Provider Network" value={String(draftGenerationLlmDispatchExecutionResult.currentSideEffectSummary.providerNetworkCall)} />
+                      <DetailItem label="LLM Call" value={String(draftGenerationLlmDispatchExecutionResult.currentSideEffectSummary.llmCall)} />
+                      <DetailItem label="Content Mutation" value={String(draftGenerationLlmDispatchExecutionResult.currentSideEffectSummary.contentItemMutation)} />
+                      <DetailItem label="Draft Markdown" value={String(draftGenerationLlmDispatchExecutionResult.currentSideEffectSummary.draftMarkdownMutation)} />
+                      <DetailItem label="Draft HTML" value={String(draftGenerationLlmDispatchExecutionResult.currentSideEffectSummary.draftHtmlMutation)} />
+                      <DetailItem label="Blogger Write" value={String(draftGenerationLlmDispatchExecutionResult.currentSideEffectSummary.bloggerWrite)} />
+                      <DetailItem label="Blogger Publish" value={String(draftGenerationLlmDispatchExecutionResult.currentSideEffectSummary.bloggerPublish)} />
+                    </div>
+                  </details>
+                </>
+              ) : (
+                <div className="notice">
+                  후보 큐에서 linked content item이 있는 행의 “dispatch 실행 preview”를 실행하세요. 이 UI 경로는 실행 가능 여부만 읽고 provider call을 수행하지 않습니다.
                 </div>
               )}
             </div>

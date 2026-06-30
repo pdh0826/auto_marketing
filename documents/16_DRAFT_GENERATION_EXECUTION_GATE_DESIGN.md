@@ -685,3 +685,19 @@ Patch 9F-3H computes a deterministic plan lock candidate without persisting it.
 Next candidate gate:
 
 - `9F-3I — Gated single LLM dispatch, no content mutation`
+
+## Patch 9F-3I Gated Single LLM Dispatch
+
+Patch 9F-3I executes at most one content-draft provider dispatch after all prior gates have passed.
+
+- Route: `POST /api/daily-content-plans/draft-generation-llm-dispatch-execution`.
+- Default `preview` mode is read-only and is the only mode exposed from `/settings/blogger`.
+- `execute` mode requires the dedicated feature flag, exact confirmation phrase, idempotency key, current lock hash match, plan lock readiness, final preflight readiness, route/model/provider readiness, and a latest dispatch attempt with no prior provider/LLM call.
+- Success writes only dispatch audit metadata: one `llm_call_logs` row, one provider response event, one hash-only response artifact, and one attempt update.
+- Failure writes only safe failed dispatch audit metadata and a failed `llm_call_logs` row.
+- It never writes generated markdown/html into `content_items`, never changes item status/timestamps/quality score, and never calls Blogger/OAuth/token refresh.
+- Raw prompts, raw provider response body/header, full generated candidate, secrets, and tokens remain unstored and unreturned.
+
+Next candidate gate:
+
+- `9F-3J — LLM dispatch result readback and no-content-mutation verification`
