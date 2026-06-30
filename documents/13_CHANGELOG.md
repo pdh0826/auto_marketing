@@ -1,5 +1,27 @@
 # 13_CHANGELOG
 
+## Patch 9F-2Z Gated LLM Dispatch Attempt Creation Persistence
+
+Implemented after Patch 9F-2Y:
+
+- Added helper `src/lib/daily-content-plans/draft-generation-llm-dispatch-attempt-creation.ts`.
+- Added route `POST /api/daily-content-plans/draft-generation-llm-dispatch-attempt-creation`.
+- Added `/settings/blogger` `초안 생성 LLM dispatch attempt 생성 preview` UI readback.
+- The route supports `mode=preview` and guarded `mode=apply`.
+- Preview mode performs DB reads only and never creates an attempt row.
+- Apply mode can create at most one `blog_daily_content_llm_dispatch_attempts` row when `BLOG_DAILY_CONTENT_LLM_DISPATCH_ATTEMPT_CREATE_ENABLED=true`, the exact confirmation phrase is supplied, an idempotency key is supplied, the fixture remains planned/empty/unpublished/unscheduled, operator approval is satisfied, and no active target attempt exists.
+- Duplicate apply with the same idempotency key hash returns the existing attempt instead of inserting another row.
+- The persisted attempt uses `attemptPurpose=draft_generation_execution` and `attemptStatus=created_pending_dispatch_gate`.
+- The persisted attempt stores hash-only idempotency and confirmation metadata, prompt/request-envelope hashes, safe provider/model metadata, and all provider/LLM/content/Blogger side-effect booleans as false.
+
+Policy:
+
+- 9F-2Z does not create dispatch events or artifacts.
+- 9F-2Z does not store raw idempotency keys, raw confirmation phrases, raw prompts, raw request bodies, raw response bodies, full generated candidates, secret values, token values, or raw env values.
+- 9F-2Z does not call providers, run provider health checks, call LLMs, create `llm_call_logs`, mutate `content_items`, create `draftMarkdown`/`draftHtml`, write to Blogger, publish, schedule, reconnect OAuth, refresh tokens, mutate publish approvals, or mutate publish attempts.
+- The positive local apply smoke is expected to increase `blog_daily_content_llm_dispatch_attempts` from `0` to `1` only; events/artifacts remain `0 / 0`.
+- Recommended next patch: `9F-3A — LLM dispatch attempt event creation preview, no provider call/no content mutation`.
+
 ## Patch 9F-2Y LLM Dispatch Attempt Creation Gate Preview
 
 Implemented after Patch 9F-2X:

@@ -1,5 +1,31 @@
 # 14_NEXT_SESSION_BRIEF
 
+## Current State: Patch 9F-2Z Completed
+
+```text
+repo: ~/blog-growth-agent
+branch: master
+expected HEAD after 9F-2Z commit: local commit `Add gated draft generation LLM dispatch attempt creation` (verify exact hash with `git log --oneline -8`)
+current DB schema state: operator approval persistence migration applied; LLM dispatch audit schema migration applied
+```
+
+9F-2Z adds guarded persistence for the first draft-generation LLM dispatch audit attempt:
+
+- Route: `POST /api/daily-content-plans/draft-generation-llm-dispatch-attempt-creation`
+- UI: `/settings/blogger` shows `초안 생성 LLM dispatch attempt 생성 preview`
+- Preview mode is DB-read-only and does not create rows.
+- Apply mode requires `BLOG_DAILY_CONTENT_LLM_DISPATCH_ATTEMPT_CREATE_ENABLED=true`, exact confirmation phrase, idempotency key, valid planned/empty fixture, persisted operator approval, existing audit tables, and no conflicting target attempt.
+- Positive local smoke should create exactly one `blog_daily_content_llm_dispatch_attempts` row.
+- Duplicate apply with the same idempotency key should return the existing attempt and create no additional row.
+- Events/artifacts remain `0 / 0`.
+- `llm_call_logs` remains `22`.
+- The linked fixture remains `planned` with empty `draftMarkdown` and `draftHtml`.
+- Provider health checks, provider network calls, LLM calls, content mutations, Blogger writes/publish, OAuth reconnect, and token refresh remain disabled.
+
+Next recommended patch:
+
+- `9F-3A — LLM dispatch attempt event creation preview, no provider call/no content mutation`
+
 ## Current State: Patch 9F-2W-APPLY Completed
 
 ```text

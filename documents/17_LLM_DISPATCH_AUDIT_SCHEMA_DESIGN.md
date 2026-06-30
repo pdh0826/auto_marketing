@@ -179,3 +179,21 @@ Next patch candidate:
 Next patch candidate:
 
 - `9F-2Z — Gated LLM dispatch attempt creation persistence, no provider call/no content mutation`
+
+## Patch 9F-2Z Attempt Creation Persistence Semantics
+
+9F-2Z persists the first audit attempt row without dispatching or mutating content.
+
+- Route: `POST /api/daily-content-plans/draft-generation-llm-dispatch-attempt-creation`.
+- Preview mode returns safe metadata and keeps attempts/events/artifacts counts unchanged.
+- Apply mode requires the dedicated attempt creation feature flag, exact confirmation phrase, idempotency key, valid target fixture, persisted operator approval, existing audit tables, and no conflicting target attempt.
+- Created rows use `attemptPurpose=draft_generation_execution` and `attemptStatus=created_pending_dispatch_gate`.
+- `idempotencyKeyHash` and `confirmationPhraseHash` are stored; raw idempotency keys and raw confirmation phrases are not stored.
+- `requestEnvelopeHash`, `promptSha256`, `promptVersion`, `promptQualityChecklistVersion`, and `dispatchGateVersion` are safe hash/version metadata only.
+- `providerNetworkCallAttempted`, `llmCallAttempted`, `llmCompletionReceived`, `contentMutationAttempted`, `draftMutationAttempted`, and `bloggerWriteAttempted` are initially false.
+- No dispatch events or artifacts are created in 9F-2Z.
+- Duplicate apply with the same `planItemId`, `contentItemId`, `attemptPurpose`, and `idempotencyKeyHash` returns the existing attempt by unique idempotency semantics.
+
+Next patch candidate:
+
+- `9F-3A — LLM dispatch attempt event creation preview, no provider call/no content mutation`

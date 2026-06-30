@@ -1011,3 +1011,16 @@ Patch 9F-2Y adds a read-only creation gate preview for a future dispatch attempt
 - It reports future attempt field planning with hash-only idempotency/confirmation policy and no raw secret/token/request/response body storage by default.
 - It does not create audit rows, insert events, store artifacts, store request envelopes, store prompts, call providers, run provider health checks, call LLM providers, create `llm_call_logs`, mutate `content_items`, or create `draftMarkdown`/`draftHtml`.
 - Non-preview modes remain blocked with `draft_generation_llm_dispatch_attempt_creation_gate_preview_is_preview_only`.
+
+## Patch 9F-2Z draft-generation dispatch attempt creation persistence boundary
+
+Patch 9F-2Z adds the first gated persistence point for a future draft-generation dispatch audit attempt.
+
+- `POST /api/daily-content-plans/draft-generation-llm-dispatch-attempt-creation` supports preview and guarded apply modes.
+- Preview mode is DB-read-only and cannot create rows.
+- Apply mode requires `BLOG_DAILY_CONTENT_LLM_DISPATCH_ATTEMPT_CREATE_ENABLED=true`, exact confirmation phrase, idempotency key, valid target fixture, persisted operator approval, existing audit tables, and no conflicting target attempt.
+- The route may create one `blog_daily_content_llm_dispatch_attempts` row only; it must not create event/artifact rows.
+- The created attempt stores hash-only idempotency and confirmation metadata, safe provider/model metadata, prompt/request-envelope hashes, and side-effect flags indicating no provider/LLM/content/Blogger action.
+- Duplicate apply with the same idempotency key hash returns the existing attempt without another insert.
+- This patch does not dispatch the request envelope, run provider health checks, call providers, create `llm_call_logs`, store raw prompts or raw request/response bodies, mutate `content_items`, create `draftMarkdown`/`draftHtml`, call Blogger, reconnect OAuth, or refresh tokens.
+- Next boundary is `9F-3A — LLM dispatch attempt event creation preview, no provider call/no content mutation`.

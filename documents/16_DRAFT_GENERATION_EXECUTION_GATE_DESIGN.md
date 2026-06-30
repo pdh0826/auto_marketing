@@ -556,3 +556,18 @@ Patch 9F-2Y evaluates whether a future dispatch attempt row could be created, wi
 Next candidate gate:
 
 - `9F-2Z — Gated LLM dispatch attempt creation persistence, no provider call/no content mutation`
+
+## Patch 9F-2Z Dispatch Attempt Creation Persistence
+
+Patch 9F-2Z is the first guarded DB persistence step after the creation gate preview.
+
+- It adds `POST /api/daily-content-plans/draft-generation-llm-dispatch-attempt-creation`.
+- `mode=preview` reads the same gate/envelope/checklist metadata and reports whether apply would be blocked without creating rows.
+- `mode=apply` is allowed only with `BLOG_DAILY_CONTENT_LLM_DISPATCH_ATTEMPT_CREATE_ENABLED=true`, exact confirmation phrase, idempotency key, persisted operator approval, valid planned/empty fixture, existing audit tables, and no conflicting target attempt.
+- The only allowed write is one `blog_daily_content_llm_dispatch_attempts` row with `attemptStatus=created_pending_dispatch_gate`.
+- Duplicate apply with the same idempotency key hash must return the existing row and not create another row.
+- Dispatch events/artifacts, provider health checks, provider calls, LLM calls, `llm_call_logs`, content item mutation, draft creation, Blogger write, publish, OAuth reconnect, and token refresh remain disabled.
+
+Next candidate gate:
+
+- `9F-3A — LLM dispatch attempt event creation preview, no provider call/no content mutation`

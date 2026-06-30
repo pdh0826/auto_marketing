@@ -1792,3 +1792,17 @@ Safety guard:
 - `publish-oauth-gate`는 `tokenRefreshImplemented=true`를 표시하되 R1에서는 자동 refresh를 실행하지 않아야 한다.
 - R1 smoke 후 content/publish 관련 DB guard는 unchanged여야 한다: content item status `planned`, `publishedAt=null`, `scheduledAt=null`, draft hashes unchanged, attempt status `planned_only`, `bloggerResponseRedactedJson=null`, counts `1/1/1/1/22`.
 - 다음 단계는 9E-9C-R2 readback auto-refresh integration 또는 9E-9D post-publish DB reconciliation/mutation이다.
+
+## Patch 9F-2Z gated LLM dispatch attempt creation persistence 검증
+
+- `POST /api/daily-content-plans/draft-generation-llm-dispatch-attempt-creation` route가 있어야 한다.
+- `mode=preview`는 DB read만 수행하고 `blog_daily_content_llm_dispatch_attempts/events/artifacts` row를 만들지 않아야 한다.
+- feature flag 없이 `mode=apply`를 호출하면 `llm_dispatch_attempt_create_feature_flag_disabled` blocker로 차단되고 row count는 그대로여야 한다.
+- `BLOG_DAILY_CONTENT_LLM_DISPATCH_ATTEMPT_CREATE_ENABLED=true`, exact confirmation phrase, idempotency key, target fixture/approval/audit-table gates가 모두 만족되면 audit attempt row 1건만 생성되어야 한다.
+- 생성 row는 `attemptPurpose=draft_generation_execution`, `attemptStatus=created_pending_dispatch_gate`, hash-only idempotency/confirmation metadata, safe provider/model metadata, request envelope hash, prompt hash/checklist version, dispatch gate version을 저장해야 한다.
+- 같은 idempotency key로 다시 apply하면 기존 attempt를 반환하고 추가 row를 만들지 않아야 한다.
+- unsupported mode는 `draft_generation_llm_dispatch_attempt_creation_mode_not_allowed`로 차단되어야 한다.
+- positive apply 후 expected counts: attempts `1`, events `0`, artifacts `0`, `llm_call_logs=22`.
+- linked daily fixture는 계속 `status=planned`, `draftMarkdown` length `0`, `draftHtml` length `0`, `publishedAt=null`, `scheduledAt=null`이어야 한다.
+- 9F-2Z 구현/스모크 중에는 dispatch event/artifact 생성, provider health check, provider network call, LLM call, `llm_call_logs` 생성, content item mutation, Blogger write/publish, OAuth reconnect, token refresh가 발생하지 않아야 한다.
+- `/settings/blogger` UI는 preview-only attempt creation summary를 보여야 하며 apply/create/provider/content/Blogger buttons는 비활성 또는 미노출이어야 한다.
