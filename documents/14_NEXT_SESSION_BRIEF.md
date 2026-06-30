@@ -1,5 +1,28 @@
 # 14_NEXT_SESSION_BRIEF
 
+## Current State: Patch 9F-3E Completed
+
+```text
+repo: ~/blog-growth-agent
+branch: master
+expected HEAD after 9F-3E commit: local commit `Run gated draft generation LLM provider health check` (verify exact hash with `git log --oneline -8`)
+```
+
+9F-3E runs the provider health-check gate without content mutation:
+
+- Route used: `POST /api/daily-content-plans/draft-generation-llm-provider-health-check-execution`
+- Worklist flag alias supported: `BLOG_DAILY_CONTENT_LLM_PROVIDER_HEALTHCHECK_EXECUTE_ENABLED=true`
+- Network call scope: provider metadata/connectivity health-check only.
+- Completion/chat/generate/responses calls remain forbidden.
+- Audit counts remain attempts/events/artifacts `1 / 1 / 1`.
+- `llm_call_logs` remains `22`.
+- The linked fixture remains `planned` with empty `draftMarkdown` and `draftHtml`.
+- Content mutations, Blogger writes/publish, OAuth reconnect, and token refresh remain disabled.
+
+Next recommended patch:
+
+- `9F-3F — Provider health-check audit/readback`
+
 ## Current State: Patch 9F-3D Completed
 
 ```text

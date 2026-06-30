@@ -1852,3 +1852,15 @@ Safety guard:
 - Positive apply 후 expected counts: attempts/events/artifacts `1 / 1 / 1`, `llm_call_logs=22`.
 - linked daily fixture는 계속 `status=planned`, `draftMarkdown` length `0`, `draftHtml` length `0`, `publishedAt=null`, `scheduledAt=null`이어야 한다.
 - 9F-3D 구현/스모크 중에는 provider health check, provider network call, LLM call, `llm_call_logs` 생성, content item mutation, Blogger write/publish, OAuth reconnect, token refresh가 발생하지 않아야 한다.
+
+## Patch 9F-3E provider health-check positive gated run 검증
+
+- Existing `POST /api/daily-content-plans/draft-generation-llm-provider-health-check-execution` route를 사용해야 한다.
+- Route는 `BLOG_DAILY_CONTENT_LLM_PROVIDER_HEALTHCHECK_EXECUTE_ENABLED=true` 또는 기존 `BLOG_DAILY_CONTENT_LLM_PROVIDER_HEALTHCHECK_EXECUTION_ENABLED=true` 중 하나를 health-check execution flag로 인식해야 한다.
+- Positive run은 `BLOG_DAILY_CONTENT_LLM_PROVIDER_NETWORK_CALLS_ENABLED=true`, exact confirmation phrase, idempotency key, provider route/config/model/env readiness, supported health-check endpoint가 필요하다.
+- 허용 side effect는 provider metadata/connectivity health-check network call 1회뿐이다.
+- Completion/chat/generate/responses endpoint 호출은 없어야 한다.
+- 응답은 raw response body/header, secret value, token value를 반환하지 않아야 한다.
+- Expected counts after smoke: attempts/events/artifacts `1 / 1 / 1`, `llm_call_logs=22`.
+- linked daily fixture는 계속 `status=planned`, `draftMarkdown` length `0`, `draftHtml` length `0`, `publishedAt=null`, `scheduledAt=null`이어야 한다.
+- 9F-3E 구현/스모크 중에는 LLM completion call, `llm_call_logs` 생성, content item mutation, Blogger write/publish, OAuth reconnect, token refresh가 발생하지 않아야 한다.

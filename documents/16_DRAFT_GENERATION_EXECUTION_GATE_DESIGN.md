@@ -629,3 +629,17 @@ Patch 9F-3D persists the first hash-only artifact row for the existing dispatch 
 Next candidate gate:
 
 - `9F-3E — Provider health-check positive gated run`
+
+## Patch 9F-3E Provider Health-Check Positive Run
+
+Patch 9F-3E runs only the provider health-check gate.
+
+- It reuses `POST /api/daily-content-plans/draft-generation-llm-provider-health-check-execution`.
+- It accepts `BLOG_DAILY_CONTENT_LLM_PROVIDER_HEALTHCHECK_EXECUTE_ENABLED=true` as the worklist feature flag alias.
+- The only allowed external side effect is one metadata/connectivity health-check network call.
+- Completion/chat/generate/responses calls, `llm_call_logs`, content mutation, draft creation, Blogger write, OAuth reconnect, and token refresh remain disabled.
+- Attempts/events/artifacts counts remain `1 / 1 / 1`.
+
+Next candidate gate:
+
+- `9F-3F — Provider health-check audit/readback`

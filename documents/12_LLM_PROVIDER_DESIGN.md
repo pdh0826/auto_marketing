@@ -1069,3 +1069,15 @@ Patch 9F-3D persists the first hash-only artifact for the existing dispatch atte
 - The artifact uses `artifactKind=prompt_request_hash_bundle`, `artifactStorageMode=hash_only`, and `artifactRedactionStatus=redacted_or_hash_only`.
 - It does not run provider health checks, call providers, create `llm_call_logs`, store prompts, store raw request/response bodies, mutate `content_items`, create `draftMarkdown`/`draftHtml`, call Blogger, reconnect OAuth, or refresh tokens.
 - Next boundary is `9F-3E — Provider health-check positive gated run`.
+
+## Patch 9F-3E provider health-check execution boundary
+
+Patch 9F-3E allows only a provider metadata/connectivity health-check network call.
+
+- It reuses `POST /api/daily-content-plans/draft-generation-llm-provider-health-check-execution`.
+- The execution gate accepts `BLOG_DAILY_CONTENT_LLM_PROVIDER_HEALTHCHECK_EXECUTE_ENABLED=true` as the worklist flag alias, alongside the existing execution flag.
+- It still requires `BLOG_DAILY_CONTENT_LLM_PROVIDER_NETWORK_CALLS_ENABLED=true`, exact confirmation phrase, idempotency key, provider route/config/model/env readiness, and a supported health-check endpoint.
+- Allowed endpoints are metadata/version/models-list health-check endpoints only.
+- Completion/chat/generate/responses calls remain forbidden.
+- It does not create `llm_call_logs`, store prompts, store raw response bodies/headers, mutate `content_items`, create `draftMarkdown`/`draftHtml`, call Blogger, reconnect OAuth, or refresh tokens.
+- Next boundary is `9F-3F — Provider health-check audit/readback`.

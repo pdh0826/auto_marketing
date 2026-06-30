@@ -9,6 +9,7 @@ const EXECUTION_MODE = "gated_llm_provider_health_check_execution";
 const TASK_TYPE = "content_draft";
 const CONFIRMATION_PHRASE = "I_UNDERSTAND_THIS_WILL_CALL_LLM_PROVIDER_HEALTHCHECK_ONLY";
 const HEALTHCHECK_EXECUTION_FLAG = "BLOG_DAILY_CONTENT_LLM_PROVIDER_HEALTHCHECK_EXECUTION_ENABLED";
+const HEALTHCHECK_EXECUTE_FLAG = "BLOG_DAILY_CONTENT_LLM_PROVIDER_HEALTHCHECK_EXECUTE_ENABLED";
 const NETWORK_CALL_FLAG = "BLOG_DAILY_CONTENT_LLM_PROVIDER_NETWORK_CALLS_ENABLED";
 const HEALTHCHECK_TIMEOUT_MS = 3000;
 
@@ -140,7 +141,7 @@ export async function buildDailyContentDraftGenerationLlmProviderHealthCheckExec
   const primaryModel = route?.primaryModel ?? null;
   const endpointPlan = buildEndpointPlan(provider);
   const gateSummary = {
-    healthCheckFeatureFlagEnabled: process.env[HEALTHCHECK_EXECUTION_FLAG] === "true",
+    healthCheckFeatureFlagEnabled: process.env[HEALTHCHECK_EXECUTION_FLAG] === "true" || process.env[HEALTHCHECK_EXECUTE_FLAG] === "true",
     providerNetworkCallsFeatureFlagEnabled: process.env[NETWORK_CALL_FLAG] === "true",
     confirmationPhraseSatisfied: request.confirmationPhrase === CONFIRMATION_PHRASE,
     idempotencyKeyPresent: Boolean(request.idempotencyKey),

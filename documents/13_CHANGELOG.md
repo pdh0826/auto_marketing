@@ -1,5 +1,21 @@
 # 13_CHANGELOG
 
+## Patch 9F-3E Provider Health-Check Positive Gated Run
+
+Implemented after Patch 9F-3D:
+
+- Reused existing route `POST /api/daily-content-plans/draft-generation-llm-provider-health-check-execution`.
+- Added support for the worklist feature flag alias `BLOG_DAILY_CONTENT_LLM_PROVIDER_HEALTHCHECK_EXECUTE_ENABLED`.
+- The existing execution gate still requires provider network calls to be enabled, exact confirmation phrase, idempotency key, resolved provider route, provider config, model candidate, required env, and supported health-check endpoint.
+- The allowed side effect is one provider metadata/connectivity health-check network call only.
+
+Policy:
+
+- 9F-3E does not call completion/chat/generate/responses endpoints.
+- 9F-3E does not create `llm_call_logs`, mutate `content_items`, create `draftMarkdown`/`draftHtml`, write to Blogger, publish, schedule, reconnect OAuth, or refresh tokens.
+- Audit counts remain attempts/events/artifacts `1 / 1 / 1`.
+- Recommended next patch: `9F-3F — Provider health-check audit/readback`.
+
 ## Patch 9F-3D Gated LLM Dispatch Audit Artifact Persistence
 
 Implemented after Patch 9F-3C:
