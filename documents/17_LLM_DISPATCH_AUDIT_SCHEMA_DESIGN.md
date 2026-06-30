@@ -145,3 +145,21 @@ The route is read-only and reports:
 Next recommended patch:
 
 - `9F-2X — LLM dispatch attempt readback scaffold, no provider call/no content mutation`
+
+## Patch 9F-2X Readback And Empty-State Semantics
+
+9F-2X adds a read-only readback scaffold on top of the applied audit tables.
+
+- Route: `POST /api/daily-content-plans/draft-generation-llm-dispatch-attempt-readback`.
+- Expected first state: attempts/events/artifacts global counts `0 / 0 / 0`.
+- Expected target-scoped state for the daily content fixture: attempts/events/artifacts counts `0 / 0 / 0`.
+- `emptyState=true` means the schema is applied but no future LLM dispatch attempt lifecycle has started.
+- `latestTargetAttempt`, `latestTargetEvent`, and `latestTargetArtifact` should be `null` until a later explicit attempt-creation patch.
+- Current lifecycle status is `not_started`.
+- Attempt creation, event insertion, artifact insertion, dispatch, provider network calls, LLM calls, `llm_call_logs`, and content mutation remain disabled.
+- Future readbacks must expose safe scalar metadata, hashes, statuses, timestamps, and redacted error metadata only.
+- Raw prompts, raw request bodies, raw response bodies, full generated candidates, secret values, token values, and raw env values must not be returned by the API or UI.
+
+Next patch candidate:
+
+- `9F-2Y — LLM dispatch attempt creation gate preview, no rows/no provider call/no content mutation`

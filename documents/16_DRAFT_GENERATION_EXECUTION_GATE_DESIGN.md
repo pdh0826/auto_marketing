@@ -526,3 +526,18 @@ Patch 9F-2W-APPLY applies only the 9F-2W migration scaffold.
 Next candidate gate:
 
 - `9F-2X — LLM dispatch attempt readback scaffold, no provider call/no content mutation`
+
+## Patch 9F-2X Dispatch Attempt Readback
+
+Patch 9F-2X is the first readback layer after the dispatch audit migration is applied.
+
+- It adds `POST /api/daily-content-plans/draft-generation-llm-dispatch-attempt-readback`.
+- It reads the audit attempt/event/artifact tables and reports global plus target-scoped counts.
+- The expected current lifecycle is `not_started` with `emptyState=true`, `latestTargetAttempt=null`, `latestTargetEvent=null`, and `latestTargetArtifact=null`.
+- It keeps `executionAllowed=false`, `finalDraftGenerationAllowed=false`, `canCreateAttemptNow=false`, `canDispatchNow=false`, `providerNetworkCallAttempted=false`, `llmCallAttempted=false`, and `contentMutationAttempted=false`.
+- It does not create attempt rows, create event rows, create artifact rows, store request envelopes, store prompts, call providers, run health checks, call any LLM, create `llm_call_logs`, mutate `content_items`, create drafts, or call Blogger.
+- Non-preview modes remain blocked with `draft_generation_llm_dispatch_attempt_readback_is_preview_only`.
+
+Next candidate gate:
+
+- `9F-2Y — LLM dispatch attempt creation gate preview, no rows/no provider call/no content mutation`

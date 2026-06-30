@@ -141,6 +141,41 @@ npm run build
 - DB baseline should remain: daily plan rows `1`, daily plan item rows `3`, `content_items` count `2`, operator approvals/events `1 / 1`, publish milestone counts `1 / 1 / 1 / 1 / 22`, and `llm_call_logs=22`.
 - Target fixture `daily_fixture_cmqlr1v1y0001iwj2gpv2875r` should remain `status=planned`, `publishedAt=null`, `scheduledAt=null`, and draft Markdown/HTML lengths `0 / 0`.
 
+## Patch 9F-2X LLM Dispatch Attempt Readback
+
+- `POST /api/daily-content-plans/draft-generation-llm-dispatch-attempt-readback` should return `patchVersion=9F-2X`.
+- `previewMode=read_only_draft_generation_llm_dispatch_attempt_readback`.
+- `readbackOnly=true`.
+- `dryRunOnly=true`.
+- `auditTablesExist=true`.
+- Global attempt/event/artifact counts should be `0 / 0 / 0`.
+- Target-scoped attempt/event/artifact counts should be `0 / 0 / 0` for fixture item `cmqlr1v1y0001iwj2gpv2875r`.
+- `dispatchAttemptReadbackSummary.emptyState=true`.
+- `dispatchAttemptReadbackSummary.latestTargetAttempt=null`.
+- `dispatchAttemptReadbackSummary.latestTargetEvent=null`.
+- `dispatchAttemptReadbackSummary.latestTargetArtifact=null`.
+- `dispatchAttemptReadbackSummary.actionAvailability.canCreateAttemptNow=false`.
+- `dispatchAttemptReadbackSummary.actionAvailability.attemptCreationAllowedInThisPatch=false`.
+- `dispatchAttemptReadbackSummary.actionAvailability.canDispatchNow=false`.
+- `dispatchAttemptReadbackSummary.actionAvailability.dispatchAllowedInThisPatch=false`.
+- `auditRowsCreatedNow=false`.
+- `auditRowsMutatedNow=false`.
+- `dbWrite=false`.
+- `providerNetworkCallAttempted=false`.
+- `llmCallAttempted=false`.
+- `contentMutationAttempted=false`.
+- `persistedApprovalSummary.operatorApprovalSatisfied=true`.
+- `executionGateSummary.executionAllowed=false`.
+- `executionGateSummary.finalDraftGenerationAllowed=false`.
+- The existing execution blockers should remain feature flag, confirmation phrase, idempotency key, and provider health-check blockers.
+- Non-preview mode should include `draft_generation_llm_dispatch_attempt_readback_is_preview_only`.
+- `llm_call_logs` count should remain `22`.
+- `content_items` count should remain `2`.
+- Target fixture draft Markdown/HTML lengths should remain `0 / 0`.
+- Approval rows/events should remain `1 / 1`.
+- Publish milestone counts should remain `1 / 1 / 1 / 1 / 22`.
+- Side effects should remain false for audit attempt/event/artifact mutation, provider health check, provider network call, LLM call, LLM evaluator call, `llm_call_logs` mutation, content mutation, draft Markdown/HTML mutation, Blogger write, publish, schedule, OAuth reconnect, token refresh, publish approval mutation, and publish attempt mutation.
+
 ## 9E Publish Milestone Closeout Baseline
 
 Expected current state after `9E-9D-APPLY`:

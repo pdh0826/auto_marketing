@@ -990,3 +990,13 @@ Patch 9F-2W-APPLY applies only the scaffolded dispatch audit schema migration.
 - `POST /api/daily-content-plans/draft-generation-llm-dispatch-audit-migration-apply-readback` reports applied-state metadata only.
 - The patch does not create audit rows, store request envelopes, store prompts, call providers, run provider health checks, call LLM providers, create `llm_call_logs`, mutate `content_items`, or create `draftMarkdown`/`draftHtml`.
 - Non-preview modes remain blocked with `draft_generation_llm_dispatch_audit_migration_apply_readback_is_preview_only`.
+
+## Patch 9F-2X draft-generation dispatch attempt readback boundary
+
+Patch 9F-2X adds a read-only readback scaffold for the empty dispatch attempt/event/artifact audit tables.
+
+- `POST /api/daily-content-plans/draft-generation-llm-dispatch-attempt-readback` reads global and target-scoped dispatch audit counts only.
+- The expected first state is `emptyState=true`, latest target attempt/event/artifact all `null`, and attempt/event/artifact counts `0 / 0 / 0`.
+- The route exposes a future lifecycle/readback shape for operator visibility, but keeps `canCreateAttemptNow=false` and `canDispatchNow=false`.
+- It does not create audit rows, insert events, store artifacts, store request envelopes, store prompts, call providers, run provider health checks, call LLM providers, create `llm_call_logs`, mutate `content_items`, or create `draftMarkdown`/`draftHtml`.
+- Non-preview modes remain blocked with `draft_generation_llm_dispatch_attempt_readback_is_preview_only`.
