@@ -1,5 +1,21 @@
 # 13_CHANGELOG
 
+## Patch 9F-3J LLM Response Readback
+
+Implemented after Patch 9F-3I:
+
+- Added `POST /api/daily-content-plans/draft-generation-llm-dispatch-response-readback`.
+- Added a `/settings/blogger` UI action and summary block for response event/artifact/LLM log readback.
+- The route reads the latest dispatch attempt, redacted provider response event, hash-only response artifact, latest dispatch `llm_call_logs` metadata, and linked fixture content snapshot lengths.
+- It checks response hash/length consistency across safe audit metadata.
+
+Policy:
+
+- 9F-3J does not call a provider, create `llm_call_logs`, mutate content, or write Blogger/OAuth/token state.
+- 9F-3J does not return raw prompt, raw provider response, full generated candidate, request body, API key, token, secret, or encrypted value.
+- Expected current counts after 9F-3I remain attempts/events/artifacts `1 / 2 / 2`, `llm_call_logs=23`.
+- Recommended next patch: `9F-3K — LLM output quality validation preview`.
+
 ## Patch 9F-3I Gated LLM Dispatch Without Content Mutation
 
 Implemented after Patch 9F-3H:

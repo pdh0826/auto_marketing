@@ -701,3 +701,17 @@ Patch 9F-3I executes at most one content-draft provider dispatch after all prior
 Next candidate gate:
 
 - `9F-3J — LLM dispatch result readback and no-content-mutation verification`
+
+## Patch 9F-3J LLM Dispatch Response Readback
+
+Patch 9F-3J verifies the 9F-3I result through safe audit readback only.
+
+- Route: `POST /api/daily-content-plans/draft-generation-llm-dispatch-response-readback`.
+- It reads the latest attempt, redacted response event, hash-only response artifact, dispatch `llm_call_logs` metadata, and linked content item snapshot lengths.
+- It checks response hash and length consistency across event/log/artifact safe metadata.
+- It does not call the provider, create `llm_call_logs`, mutate audit rows, mutate content, write Blogger, reconnect OAuth, or refresh tokens.
+- It returns no raw prompt, raw response body/header, full generated candidate, request body, API key, token, secret, or encrypted value.
+
+Next candidate gate:
+
+- `9F-3K — LLM output quality validation preview`

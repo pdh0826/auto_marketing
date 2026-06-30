@@ -1904,3 +1904,13 @@ Safety guard:
 - UI `/settings/blogger`의 `dispatch 실행 preview` 버튼은 preview만 호출해야 하며 provider/LLM call을 실행하지 않아야 한다.
 - linked daily fixture는 계속 `status=planned`, `draftMarkdown` length `0`, `draftHtml` length `0`, `publishedAt=null`, `scheduledAt=null`이어야 한다.
 - 9F-3I 구현/스모크 중에는 `draftMarkdown`, `draftHtml`, status, `qualityScore`, Blogger write/publish, OAuth reconnect, token refresh가 발생하지 않아야 한다.
+
+## Patch 9F-3J LLM response readback 검증
+
+- `POST /api/daily-content-plans/draft-generation-llm-dispatch-response-readback`는 9F-3I 실행 결과의 safe metadata만 읽어야 한다.
+- Response는 latest attempt status, provider response event, hash-only response artifact, latest `llm_call_logs` dispatch metadata, content item snapshot lengths를 반환해야 한다.
+- Response는 raw prompt, raw provider response, full generated candidate, request body, API key, token, secret, encrypted value를 반환하지 않아야 한다.
+- `responseHashMatchedAcrossAudit=true`, `responseArtifactAlreadyPersisted=true`, `responseArtifactPersistedNow=false`가 정상이다.
+- 호출 중 provider health-check, provider network call, completion/chat/generate/responses endpoint, LLM call, `llm_call_logs` 생성이 없어야 한다.
+- Expected counts after smoke: attempts/events/artifacts `1 / 2 / 2`, `llm_call_logs=23`.
+- linked daily fixture는 계속 `status=planned`, `draftMarkdown` length `0`, `draftHtml` length `0`, `publishedAt=null`, `scheduledAt=null`이어야 한다.

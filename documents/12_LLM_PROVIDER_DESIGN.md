@@ -1124,3 +1124,14 @@ Patch 9F-3I adds the first guarded content-draft provider dispatch path without 
 - `content_items.draftMarkdown`, `draftHtml`, status, `qualityScore`, `publishedAt`, and `scheduledAt` remain unchanged.
 - Blogger write/publish, OAuth reconnect, and token refresh remain disabled.
 - Next boundary is `9F-3J — LLM dispatch result readback and no-content-mutation verification`.
+
+## Patch 9F-3J LLM dispatch response readback boundary
+
+Patch 9F-3J reads back the 9F-3I dispatch result without another provider call.
+
+- It adds `POST /api/daily-content-plans/draft-generation-llm-dispatch-response-readback`.
+- It reads the latest dispatch attempt, redacted provider response event, hash-only response artifact, latest `llm_call_logs` dispatch metadata, and content item snapshot lengths.
+- It verifies response hash/length consistency across event, artifact, and LLM log metadata.
+- It does not call provider health-check endpoints, call completion/chat/generate/responses endpoints, create `llm_call_logs`, store prompts, store raw provider response bodies/headers, mutate `content_items`, create `draftMarkdown`/`draftHtml`, call Blogger, reconnect OAuth, or refresh tokens.
+- It returns no raw prompt, raw request body, raw provider response, full generated candidate, secret, token, or encrypted value.
+- Next boundary is `9F-3K — LLM output quality validation preview`.

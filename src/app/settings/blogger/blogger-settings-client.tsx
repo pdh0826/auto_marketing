@@ -32,6 +32,7 @@ import type { DailyContentDraftGenerationLlmDispatchArtifactPreviewResponse } fr
 import type { DailyContentDraftGenerationLlmDispatchExecutionResponse } from "@/lib/daily-content-plans/draft-generation-llm-dispatch-execution";
 import type { DailyContentDraftGenerationLlmDispatchExecutionPlanLockResponse } from "@/lib/daily-content-plans/draft-generation-llm-dispatch-execution-plan-lock";
 import type { DailyContentDraftGenerationLlmDispatchFinalPreflightResponse } from "@/lib/daily-content-plans/draft-generation-llm-dispatch-final-preflight";
+import type { DailyContentDraftGenerationLlmDispatchResponseReadbackResponse } from "@/lib/daily-content-plans/draft-generation-llm-dispatch-response-readback";
 import type { DailyContentDraftGenerationLlmDispatchAttemptCreationResponse } from "@/lib/daily-content-plans/draft-generation-llm-dispatch-attempt-creation";
 import type { DailyContentDraftGenerationLlmDispatchAttemptCreationGatePreviewResponse } from "@/lib/daily-content-plans/draft-generation-llm-dispatch-attempt-creation-gate-preview";
 import type { DailyContentDraftGenerationLlmDispatchAttemptEventCreationResponse } from "@/lib/daily-content-plans/draft-generation-llm-dispatch-attempt-event-creation";
@@ -149,6 +150,8 @@ export function BloggerSettingsClient() {
     useState<DailyContentDraftGenerationLlmDispatchExecutionPlanLockResponse | null>(null);
   const [draftGenerationLlmDispatchExecutionResult, setDraftGenerationLlmDispatchExecutionResult] =
     useState<DailyContentDraftGenerationLlmDispatchExecutionResponse | null>(null);
+  const [draftGenerationLlmDispatchResponseReadbackResult, setDraftGenerationLlmDispatchResponseReadbackResult] =
+    useState<DailyContentDraftGenerationLlmDispatchResponseReadbackResponse | null>(null);
   const [oauthDryRun, setOauthDryRun] = useState<BloggerOAuthStartDryRun | null>(null);
   const [blogListResult, setBlogListResult] = useState<BloggerBlogListResult | null>(null);
   const [blogListLoadingId, setBlogListLoadingId] = useState<string | null>(null);
@@ -186,6 +189,7 @@ export function BloggerSettingsClient() {
   const [loadingDraftGenerationLlmDispatchFinalPreflightItemId, setLoadingDraftGenerationLlmDispatchFinalPreflightItemId] = useState<string | null>(null);
   const [loadingDraftGenerationLlmDispatchExecutionPlanLockItemId, setLoadingDraftGenerationLlmDispatchExecutionPlanLockItemId] = useState<string | null>(null);
   const [loadingDraftGenerationLlmDispatchExecutionItemId, setLoadingDraftGenerationLlmDispatchExecutionItemId] = useState<string | null>(null);
+  const [loadingDraftGenerationLlmDispatchResponseReadbackItemId, setLoadingDraftGenerationLlmDispatchResponseReadbackItemId] = useState<string | null>(null);
   const [selectingBlogId, setSelectingBlogId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -284,6 +288,7 @@ export function BloggerSettingsClient() {
       setDraftGenerationLlmDispatchFinalPreflightResult(null);
       setDraftGenerationLlmDispatchExecutionPlanLockResult(null);
       setDraftGenerationLlmDispatchExecutionResult(null);
+      setDraftGenerationLlmDispatchResponseReadbackResult(null);
       setOauthDryRun(null);
       setBlogListResult(null);
       setNotice("Blogger connection을 저장했습니다. Blogger draft/publish는 수행하지 않았습니다.");
@@ -430,6 +435,7 @@ export function BloggerSettingsClient() {
       setDraftGenerationLlmDispatchFinalPreflightResult(null);
       setDraftGenerationLlmDispatchExecutionPlanLockResult(null);
       setDraftGenerationLlmDispatchExecutionResult(null);
+      setDraftGenerationLlmDispatchResponseReadbackResult(null);
       setNotice("Daily Content Plan preview를 생성했습니다. Plan row 저장, content generation, LLM call, Blogger write/publish는 수행하지 않았습니다.");
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Daily Content Plan preview에 실패했습니다.");
@@ -1451,6 +1457,44 @@ export function BloggerSettingsClient() {
     }
   }
 
+  async function previewDraftGenerationLlmDispatchResponseReadback(
+    planId: string | null | undefined,
+    planItemId: string | null | undefined,
+    contentItemId: string | null | undefined
+  ) {
+    if (!planId || !planItemId || !contentItemId) {
+      setError("Daily plan id, item id, linked content item id가 필요합니다.");
+      return;
+    }
+
+    setError(null);
+    setNotice(null);
+    setLoadingDraftGenerationLlmDispatchResponseReadbackItemId(planItemId);
+
+    try {
+      const result = await requestJson<ApiResult<DailyContentDraftGenerationLlmDispatchResponseReadbackResponse>>(
+        "/api/daily-content-plans/draft-generation-llm-dispatch-response-readback",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            mode: "preview",
+            planId,
+            planItemId,
+            contentItemId
+          })
+        }
+      );
+      setDraftGenerationLlmDispatchResponseReadbackResult(result.data);
+      setNotice(
+        "초안 생성 LLM dispatch response readback을 확인했습니다. 이 단계는 read-only이며 provider/LLM call, content_items 수정, Blogger write/publish를 수행하지 않았습니다."
+      );
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "초안 생성 LLM dispatch response readback 확인에 실패했습니다.");
+    } finally {
+      setLoadingDraftGenerationLlmDispatchResponseReadbackItemId(null);
+    }
+  }
+
   async function createOAuthDryRun(connection: BloggerConnectionAdmin) {
     setError(null);
     setNotice(null);
@@ -1659,6 +1703,7 @@ export function BloggerSettingsClient() {
                   setDraftGenerationLlmDispatchFinalPreflightResult(null);
                   setDraftGenerationLlmDispatchExecutionPlanLockResult(null);
                   setDraftGenerationLlmDispatchExecutionResult(null);
+                  setDraftGenerationLlmDispatchResponseReadbackResult(null);
                   setOauthDryRun(null);
                   setBlogListResult(null);
                 }}
@@ -2627,6 +2672,27 @@ export function BloggerSettingsClient() {
                         }
                       >
                         {loadingDraftGenerationLlmDispatchExecutionItemId === getDailyPlanItemId(item) ? "dispatch 실행 확인 중" : "dispatch 실행 preview"}
+                      </button>
+                      <button
+                        className="button small secondary"
+                        type="button"
+                        disabled={
+                          !dailyContentPlanSummary.persistedPlanId ||
+                          !getDailyPlanItemId(item) ||
+                          !getDailyPlanItemContentItemId(item) ||
+                          loadingDraftGenerationLlmDispatchResponseReadbackItemId === getDailyPlanItemId(item)
+                        }
+                        onClick={() =>
+                          void previewDraftGenerationLlmDispatchResponseReadback(
+                            dailyContentPlanSummary.persistedPlanId,
+                            getDailyPlanItemId(item),
+                            getDailyPlanItemContentItemId(item)
+                          )
+                        }
+                      >
+                        {loadingDraftGenerationLlmDispatchResponseReadbackItemId === getDailyPlanItemId(item)
+                          ? "response 조회 중"
+                          : "response readback"}
                       </button>
                     </td>
                   </tr>
@@ -7173,6 +7239,171 @@ export function BloggerSettingsClient() {
               ) : (
                 <div className="notice">
                   후보 큐에서 linked content item이 있는 행의 “dispatch 실행 preview”를 실행하세요. 이 UI 경로는 실행 가능 여부만 읽고 provider call을 수행하지 않습니다.
+                </div>
+              )}
+            </div>
+
+            <div className="read-block">
+              <h3>초안 생성 LLM dispatch response readback</h3>
+              <div className="notice">
+                <strong>9F-3J response metadata/artifact readback · read-only</strong>
+                <p>9F-3I provider response의 safe metadata, redacted event, hash-only artifact, llm_call_logs 상태만 조회합니다.</p>
+                <p>raw prompt, raw provider response, full candidate, secret/token은 표시하지 않습니다. content item과 Blogger에는 side effect가 없습니다.</p>
+              </div>
+              {draftGenerationLlmDispatchResponseReadbackResult ? (
+                <>
+                  <div className={draftGenerationLlmDispatchResponseReadbackResult.blockingReasons.length > 0 ? "notice warning" : "notice"}>
+                    <strong>
+                      responseEvent={String(draftGenerationLlmDispatchResponseReadbackResult.responseReadbackSummary.responseEventFound)} / artifact=
+                      {String(draftGenerationLlmDispatchResponseReadbackResult.responseReadbackSummary.responseArtifactFound)} / llmLog=
+                      {String(draftGenerationLlmDispatchResponseReadbackResult.responseReadbackSummary.latestLlmCallLogFound)}
+                    </strong>
+                    <p>
+                      latestAttempt={draftGenerationLlmDispatchResponseReadbackResult.responseReadbackSummary.latestAttemptId ?? "null"} / status=
+                      {draftGenerationLlmDispatchResponseReadbackResult.responseReadbackSummary.latestAttemptStatus ?? "null"}
+                    </p>
+                  </div>
+                  <div className="detail-grid">
+                    <DetailItem label="Patch" value={draftGenerationLlmDispatchResponseReadbackResult.patchVersion} />
+                    <DetailItem label="Mode" value={draftGenerationLlmDispatchResponseReadbackResult.mode} />
+                    <DetailItem label="Plan Item" value={draftGenerationLlmDispatchResponseReadbackResult.targetSummary.planItemId} />
+                    <DetailItem label="Linked Fixture" value={draftGenerationLlmDispatchResponseReadbackResult.targetSummary.contentItemId ?? "-"} />
+                    <DetailItem
+                      label="Provider Response"
+                      value={String(draftGenerationLlmDispatchResponseReadbackResult.responseReadbackSummary.providerResponseReceived)}
+                    />
+                    <DetailItem
+                      label="Completion Received"
+                      value={String(draftGenerationLlmDispatchResponseReadbackResult.responseReadbackSummary.llmCompletionReceived)}
+                    />
+                    <DetailItem
+                      label="Hash Match"
+                      value={String(draftGenerationLlmDispatchResponseReadbackResult.responseReadbackSummary.responseHashMatchedAcrossAudit)}
+                    />
+                    <DetailItem
+                      label="Length Match"
+                      value={String(draftGenerationLlmDispatchResponseReadbackResult.responseReadbackSummary.responseLengthMatchedAcrossAudit)}
+                    />
+                    <DetailItem
+                      label="Artifact Persisted"
+                      value={String(draftGenerationLlmDispatchResponseReadbackResult.responseReadbackSummary.responseArtifactAlreadyPersisted)}
+                    />
+                    <DetailItem
+                      label="Persisted Now"
+                      value={String(draftGenerationLlmDispatchResponseReadbackResult.responseArtifactPersistedNow)}
+                    />
+                  </div>
+                  <div className="detail-grid">
+                    <DetailItem label="Event ID" value={draftGenerationLlmDispatchResponseReadbackResult.responseReadbackSummary.responseEvent?.id ?? "null"} />
+                    <DetailItem
+                      label="Event Hash"
+                      value={draftGenerationLlmDispatchResponseReadbackResult.responseReadbackSummary.responseEvent?.responseHashPrefix ?? "null"}
+                    />
+                    <DetailItem
+                      label="Event Length"
+                      value={String(draftGenerationLlmDispatchResponseReadbackResult.responseReadbackSummary.responseEvent?.responseLength ?? "null")}
+                    />
+                    <DetailItem
+                      label="Event Raw Response Stored"
+                      value={String(draftGenerationLlmDispatchResponseReadbackResult.responseReadbackSummary.responseEvent?.rawResponseStored ?? "null")}
+                    />
+                    <DetailItem
+                      label="Artifact ID"
+                      value={draftGenerationLlmDispatchResponseReadbackResult.responseReadbackSummary.responseArtifact?.id ?? "null"}
+                    />
+                    <DetailItem
+                      label="Artifact Kind"
+                      value={draftGenerationLlmDispatchResponseReadbackResult.responseReadbackSummary.responseArtifact?.artifactKind ?? "null"}
+                    />
+                    <DetailItem
+                      label="Artifact Hash"
+                      value={draftGenerationLlmDispatchResponseReadbackResult.responseReadbackSummary.responseArtifact?.artifactHashPrefix ?? "null"}
+                    />
+                    <DetailItem
+                      label="Artifact Mode"
+                      value={draftGenerationLlmDispatchResponseReadbackResult.responseReadbackSummary.responseArtifact?.artifactStorageMode ?? "null"}
+                    />
+                    <DetailItem
+                      label="LLM Log ID"
+                      value={draftGenerationLlmDispatchResponseReadbackResult.responseReadbackSummary.latestLlmCallLog?.id ?? "null"}
+                    />
+                    <DetailItem
+                      label="LLM Log Status"
+                      value={draftGenerationLlmDispatchResponseReadbackResult.responseReadbackSummary.latestLlmCallLog?.status ?? "null"}
+                    />
+                    <DetailItem
+                      label="LLM Log Phase"
+                      value={draftGenerationLlmDispatchResponseReadbackResult.responseReadbackSummary.latestLlmCallLog?.phase ?? "null"}
+                    />
+                    <DetailItem
+                      label="LLM Log Hash"
+                      value={draftGenerationLlmDispatchResponseReadbackResult.responseReadbackSummary.latestLlmCallLog?.responseHashPrefix ?? "null"}
+                    />
+                  </div>
+                  <div className="detail-grid">
+                    <DetailItem
+                      label="Content Status"
+                      value={draftGenerationLlmDispatchResponseReadbackResult.responseReadbackSummary.contentItemSnapshot?.status ?? "null"}
+                    />
+                    <DetailItem
+                      label="Draft Markdown Len"
+                      value={String(draftGenerationLlmDispatchResponseReadbackResult.responseReadbackSummary.contentItemSnapshot?.draftMarkdownLength ?? "null")}
+                    />
+                    <DetailItem
+                      label="Draft HTML Len"
+                      value={String(draftGenerationLlmDispatchResponseReadbackResult.responseReadbackSummary.contentItemSnapshot?.draftHtmlLength ?? "null")}
+                    />
+                    <DetailItem
+                      label="Raw Prompt Returned"
+                      value={String(draftGenerationLlmDispatchResponseReadbackResult.responseReadbackSummary.rawPromptStoredOrReturned)}
+                    />
+                    <DetailItem
+                      label="Raw Response Returned"
+                      value={String(draftGenerationLlmDispatchResponseReadbackResult.responseReadbackSummary.rawResponseStoredOrReturned)}
+                    />
+                    <DetailItem
+                      label="Full Candidate Returned"
+                      value={String(draftGenerationLlmDispatchResponseReadbackResult.responseReadbackSummary.fullCandidateStoredOrReturned)}
+                    />
+                    <DetailItem
+                      label="Secret/Token Returned"
+                      value={String(draftGenerationLlmDispatchResponseReadbackResult.responseReadbackSummary.secretOrTokenStoredOrReturned)}
+                    />
+                    <DetailItem label="Next Patch" value={draftGenerationLlmDispatchResponseReadbackResult.responseReadbackSummary.nextSafePatchCandidate} />
+                  </div>
+                  <ValidationList
+                    title="Response readback blockers"
+                    items={draftGenerationLlmDispatchResponseReadbackResult.blockingReasons}
+                    emptyText="response readback blocker가 없습니다."
+                    isError
+                  />
+                  <ValidationList title="Warnings" items={draftGenerationLlmDispatchResponseReadbackResult.warnings} emptyText="warning이 없습니다." isWarning />
+                  <details className="read-block">
+                    <summary>Response readback side-effect 상세</summary>
+                    <div className="detail-grid">
+                      <DetailItem label="DB Read" value={String(draftGenerationLlmDispatchResponseReadbackResult.currentSideEffectSummary.dbRead)} />
+                      <DetailItem label="DB Write" value={String(draftGenerationLlmDispatchResponseReadbackResult.currentSideEffectSummary.dbWrite)} />
+                      <DetailItem
+                        label="Artifact Persisted Now"
+                        value={String(draftGenerationLlmDispatchResponseReadbackResult.currentSideEffectSummary.responseArtifactPersistedNow)}
+                      />
+                      <DetailItem label="Provider Network" value={String(draftGenerationLlmDispatchResponseReadbackResult.currentSideEffectSummary.providerNetworkCall)} />
+                      <DetailItem label="LLM Call" value={String(draftGenerationLlmDispatchResponseReadbackResult.currentSideEffectSummary.llmCall)} />
+                      <DetailItem label="LLM Log Mutation" value={String(draftGenerationLlmDispatchResponseReadbackResult.currentSideEffectSummary.llmCallLogMutation)} />
+                      <DetailItem label="Content Mutation" value={String(draftGenerationLlmDispatchResponseReadbackResult.currentSideEffectSummary.contentItemMutation)} />
+                      <DetailItem
+                        label="Draft Markdown"
+                        value={String(draftGenerationLlmDispatchResponseReadbackResult.currentSideEffectSummary.draftMarkdownMutation)}
+                      />
+                      <DetailItem label="Draft HTML" value={String(draftGenerationLlmDispatchResponseReadbackResult.currentSideEffectSummary.draftHtmlMutation)} />
+                      <DetailItem label="Blogger Write" value={String(draftGenerationLlmDispatchResponseReadbackResult.currentSideEffectSummary.bloggerWrite)} />
+                      <DetailItem label="Blogger Publish" value={String(draftGenerationLlmDispatchResponseReadbackResult.currentSideEffectSummary.bloggerPublish)} />
+                    </div>
+                  </details>
+                </>
+              ) : (
+                <div className="notice">
+                  후보 큐에서 linked content item이 있는 행의 “response readback”을 실행하세요. 이 단계는 9F-3I 결과 metadata만 읽습니다.
                 </div>
               )}
             </div>

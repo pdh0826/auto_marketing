@@ -1,5 +1,27 @@
 # 14_NEXT_SESSION_BRIEF
 
+## Current State: Patch 9F-3J Completed
+
+```text
+repo: ~/blog-growth-agent
+branch: master
+expected HEAD after 9F-3J commit: local commit `Add draft generation LLM response readback` (verify exact hash with `git log --oneline -8`)
+```
+
+9F-3J adds read-only response readback after the guarded dispatch:
+
+- Route used: `POST /api/daily-content-plans/draft-generation-llm-dispatch-response-readback`
+- UI: `/settings/blogger` shows `초안 생성 LLM dispatch response readback`.
+- It reads safe metadata from the latest attempt, provider response event, hash-only response artifact, dispatch `llm_call_logs`, and linked fixture snapshot lengths.
+- It verifies hash/length consistency without returning raw prompt, raw provider response, full generated candidate, secret, token, or encrypted value.
+- It does not call provider/LLM endpoints and does not create new `llm_call_logs`.
+- The linked fixture must remain `planned` with unchanged `draftMarkdown` and `draftHtml`.
+- Blogger write/publish, OAuth reconnect, and token refresh remain disabled.
+
+Next recommended patch:
+
+- `9F-3K — LLM output quality validation preview`
+
 ## Current State: Patch 9F-3I Completed
 
 ```text

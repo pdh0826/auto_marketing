@@ -325,3 +325,17 @@ Next patch candidate:
 Next patch candidate:
 
 - `9F-3J — LLM dispatch result readback and no-content-mutation verification`
+
+## Patch 9F-3J Response Readback Audit Semantics
+
+9F-3J reads the 9F-3I dispatch audit result without adding rows.
+
+- It reads only safe metadata from the latest dispatch attempt, provider response event, hash-only response artifact, and dispatch `llm_call_logs`.
+- It compares response hash prefixes and response lengths across safe metadata to detect mismatch.
+- It reports `responseArtifactAlreadyPersisted=true` when the 9F-3I hash-only artifact exists.
+- It keeps `responseArtifactPersistedNow=false`, `dbWrite=false`, `auditEventMutation=false`, `auditArtifactMutation=false`, and `llmCallLogMutation=false`.
+- It returns no raw prompt, raw request body, raw provider response body/header, full generated candidate, secret, token, or encrypted value.
+
+Next patch candidate:
+
+- `9F-3K — LLM output quality validation preview`
