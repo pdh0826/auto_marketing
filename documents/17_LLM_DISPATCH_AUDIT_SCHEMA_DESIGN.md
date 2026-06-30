@@ -353,3 +353,18 @@ Next patch candidate:
 Next patch candidate:
 
 - `9F-3L — Gated output validation persistence`
+
+## Patch 9F-3L Output Validation Persistence Audit Semantics
+
+9F-3L adds a gated way to persist the validation preview as audit metadata.
+
+- Preview mode adds no rows.
+- Apply mode can add one `llm_output_quality_validation_previewed` event and one `llm_output_quality_validation_result` hash-only artifact.
+- Apply requires feature flag, exact confirmation phrase, idempotency key, validation candidate, and no duplicate validation artifact.
+- Persisted payloads include validation hash, readiness booleans, check counts, and redaction booleans only.
+- It stores no raw prompt, raw request body, raw provider response body/header, full generated candidate, secret, token, or encrypted value.
+- It keeps `contentMutationAttempted=false`, `draftMutationAttempted=false`, and `bloggerWriteAttempted=false`.
+
+Next patch candidate:
+
+- `9F-3M — Markdown candidate acceptance gate`

@@ -1147,3 +1147,16 @@ Patch 9F-3K adds deterministic output validation readiness without fabricating a
 - It does not create `llm_call_logs`, mutate audit rows, mutate `content_items`, create `draftMarkdown`/`draftHtml`, call Blogger, reconnect OAuth, or refresh tokens.
 - It returns no raw prompt, raw request body, raw provider response, full generated candidate, secret, token, or encrypted value.
 - Next boundary is `9F-3L — Gated output validation persistence`.
+
+## Patch 9F-3L gated output validation persistence boundary
+
+Patch 9F-3L adds a gated local audit persistence path for the 9F-3K validation preview.
+
+- It adds `POST /api/daily-content-plans/draft-generation-llm-output-validation-persistence`.
+- The route defaults to preview mode; preview never writes DB rows.
+- Apply mode requires a dedicated feature flag, exact confirmation phrase, idempotency key, validation candidate, and no duplicate validation artifact.
+- Apply may create one redacted validation event and one hash-only validation artifact for the existing dispatch attempt.
+- `/settings/blogger` exposes preview only.
+- It does not call provider endpoints, use an LLM judge, create `llm_call_logs`, mutate `content_items`, create `draftMarkdown`/`draftHtml`, call Blogger, reconnect OAuth, or refresh tokens.
+- It returns no raw prompt, raw request body, raw provider response, full generated candidate, secret, token, or encrypted value.
+- Next boundary is `9F-3M — Markdown candidate acceptance gate`.

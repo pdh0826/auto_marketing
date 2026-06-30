@@ -1924,3 +1924,12 @@ Safety guard:
 - 호출 중 provider health-check, provider network call, completion/chat/generate/responses endpoint, LLM call, `llm_call_logs` 생성, audit row 생성이 없어야 한다.
 - Expected counts after smoke: attempts/events/artifacts `1 / 2 / 2`, `llm_call_logs=23`.
 - linked daily fixture는 계속 `status=planned`, `draftMarkdown` length `0`, `draftHtml` length `0`, `publishedAt=null`, `scheduledAt=null`이어야 한다.
+
+## Patch 9F-3L gated output validation persistence 검증
+
+- `POST /api/daily-content-plans/draft-generation-llm-output-validation-persistence`는 기본 `mode=preview`에서 DB write 없이 validation persistence 가능 여부만 반환해야 한다.
+- Apply mode는 feature flag, exact confirmation phrase, idempotency key, validation candidate, duplicate artifact 없음이 모두 만족될 때만 audit event/artifact insert를 허용해야 한다.
+- UI `/settings/blogger`의 `validation 저장 preview` 버튼은 preview만 호출해야 한다.
+- 자동 검증 중에는 apply를 실행하지 않으며, Expected counts after preview smoke는 attempts/events/artifacts `1 / 2 / 2`, `llm_call_logs=23`이다.
+- 호출 중 provider network call, LLM call, `llm_call_logs` 생성, content item mutation, Blogger write/publish, OAuth reconnect, token refresh가 없어야 한다.
+- linked daily fixture는 계속 `status=planned`, `draftMarkdown` length `0`, `draftHtml` length `0`, `publishedAt=null`, `scheduledAt=null`이어야 한다.

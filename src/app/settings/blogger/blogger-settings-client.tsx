@@ -34,6 +34,7 @@ import type { DailyContentDraftGenerationLlmDispatchExecutionPlanLockResponse } 
 import type { DailyContentDraftGenerationLlmDispatchFinalPreflightResponse } from "@/lib/daily-content-plans/draft-generation-llm-dispatch-final-preflight";
 import type { DailyContentDraftGenerationLlmDispatchResponseReadbackResponse } from "@/lib/daily-content-plans/draft-generation-llm-dispatch-response-readback";
 import type { DailyContentDraftGenerationLlmOutputQualityValidationPreviewResponse } from "@/lib/daily-content-plans/draft-generation-llm-output-quality-validation-preview";
+import type { DailyContentDraftGenerationLlmOutputValidationPersistenceResponse } from "@/lib/daily-content-plans/draft-generation-llm-output-validation-persistence";
 import type { DailyContentDraftGenerationLlmDispatchAttemptCreationResponse } from "@/lib/daily-content-plans/draft-generation-llm-dispatch-attempt-creation";
 import type { DailyContentDraftGenerationLlmDispatchAttemptCreationGatePreviewResponse } from "@/lib/daily-content-plans/draft-generation-llm-dispatch-attempt-creation-gate-preview";
 import type { DailyContentDraftGenerationLlmDispatchAttemptEventCreationResponse } from "@/lib/daily-content-plans/draft-generation-llm-dispatch-attempt-event-creation";
@@ -155,6 +156,8 @@ export function BloggerSettingsClient() {
     useState<DailyContentDraftGenerationLlmDispatchResponseReadbackResponse | null>(null);
   const [draftGenerationLlmOutputQualityValidationPreviewResult, setDraftGenerationLlmOutputQualityValidationPreviewResult] =
     useState<DailyContentDraftGenerationLlmOutputQualityValidationPreviewResponse | null>(null);
+  const [draftGenerationLlmOutputValidationPersistenceResult, setDraftGenerationLlmOutputValidationPersistenceResult] =
+    useState<DailyContentDraftGenerationLlmOutputValidationPersistenceResponse | null>(null);
   const [oauthDryRun, setOauthDryRun] = useState<BloggerOAuthStartDryRun | null>(null);
   const [blogListResult, setBlogListResult] = useState<BloggerBlogListResult | null>(null);
   const [blogListLoadingId, setBlogListLoadingId] = useState<string | null>(null);
@@ -194,6 +197,7 @@ export function BloggerSettingsClient() {
   const [loadingDraftGenerationLlmDispatchExecutionItemId, setLoadingDraftGenerationLlmDispatchExecutionItemId] = useState<string | null>(null);
   const [loadingDraftGenerationLlmDispatchResponseReadbackItemId, setLoadingDraftGenerationLlmDispatchResponseReadbackItemId] = useState<string | null>(null);
   const [loadingDraftGenerationLlmOutputQualityValidationPreviewItemId, setLoadingDraftGenerationLlmOutputQualityValidationPreviewItemId] = useState<string | null>(null);
+  const [loadingDraftGenerationLlmOutputValidationPersistenceItemId, setLoadingDraftGenerationLlmOutputValidationPersistenceItemId] = useState<string | null>(null);
   const [selectingBlogId, setSelectingBlogId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -294,6 +298,7 @@ export function BloggerSettingsClient() {
       setDraftGenerationLlmDispatchExecutionResult(null);
       setDraftGenerationLlmDispatchResponseReadbackResult(null);
       setDraftGenerationLlmOutputQualityValidationPreviewResult(null);
+      setDraftGenerationLlmOutputValidationPersistenceResult(null);
       setOauthDryRun(null);
       setBlogListResult(null);
       setNotice("Blogger connection을 저장했습니다. Blogger draft/publish는 수행하지 않았습니다.");
@@ -442,6 +447,7 @@ export function BloggerSettingsClient() {
       setDraftGenerationLlmDispatchExecutionResult(null);
       setDraftGenerationLlmDispatchResponseReadbackResult(null);
       setDraftGenerationLlmOutputQualityValidationPreviewResult(null);
+      setDraftGenerationLlmOutputValidationPersistenceResult(null);
       setNotice("Daily Content Plan preview를 생성했습니다. Plan row 저장, content generation, LLM call, Blogger write/publish는 수행하지 않았습니다.");
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Daily Content Plan preview에 실패했습니다.");
@@ -1539,6 +1545,44 @@ export function BloggerSettingsClient() {
     }
   }
 
+  async function previewDraftGenerationLlmOutputValidationPersistence(
+    planId: string | null | undefined,
+    planItemId: string | null | undefined,
+    contentItemId: string | null | undefined
+  ) {
+    if (!planId || !planItemId || !contentItemId) {
+      setError("Daily plan id, item id, linked content item id가 필요합니다.");
+      return;
+    }
+
+    setError(null);
+    setNotice(null);
+    setLoadingDraftGenerationLlmOutputValidationPersistenceItemId(planItemId);
+
+    try {
+      const result = await requestJson<ApiResult<DailyContentDraftGenerationLlmOutputValidationPersistenceResponse>>(
+        "/api/daily-content-plans/draft-generation-llm-output-validation-persistence",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            mode: "preview",
+            planId,
+            planItemId,
+            contentItemId
+          })
+        }
+      );
+      setDraftGenerationLlmOutputValidationPersistenceResult(result.data);
+      setNotice(
+        "초안 생성 LLM output validation persistence gate를 preview로 확인했습니다. UI에서는 audit event/artifact insert를 실행하지 않았습니다."
+      );
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "초안 생성 LLM output validation persistence preview 확인에 실패했습니다.");
+    } finally {
+      setLoadingDraftGenerationLlmOutputValidationPersistenceItemId(null);
+    }
+  }
+
   async function createOAuthDryRun(connection: BloggerConnectionAdmin) {
     setError(null);
     setNotice(null);
@@ -1749,6 +1793,7 @@ export function BloggerSettingsClient() {
                   setDraftGenerationLlmDispatchExecutionResult(null);
                   setDraftGenerationLlmDispatchResponseReadbackResult(null);
                   setDraftGenerationLlmOutputQualityValidationPreviewResult(null);
+                  setDraftGenerationLlmOutputValidationPersistenceResult(null);
                   setOauthDryRun(null);
                   setBlogListResult(null);
                 }}
@@ -2759,6 +2804,27 @@ export function BloggerSettingsClient() {
                         {loadingDraftGenerationLlmOutputQualityValidationPreviewItemId === getDailyPlanItemId(item)
                           ? "output 검증 중"
                           : "output 품질 preview"}
+                      </button>
+                      <button
+                        className="button small secondary"
+                        type="button"
+                        disabled={
+                          !dailyContentPlanSummary.persistedPlanId ||
+                          !getDailyPlanItemId(item) ||
+                          !getDailyPlanItemContentItemId(item) ||
+                          loadingDraftGenerationLlmOutputValidationPersistenceItemId === getDailyPlanItemId(item)
+                        }
+                        onClick={() =>
+                          void previewDraftGenerationLlmOutputValidationPersistence(
+                            dailyContentPlanSummary.persistedPlanId,
+                            getDailyPlanItemId(item),
+                            getDailyPlanItemContentItemId(item)
+                          )
+                        }
+                      >
+                        {loadingDraftGenerationLlmOutputValidationPersistenceItemId === getDailyPlanItemId(item)
+                          ? "validation 저장 확인 중"
+                          : "validation 저장 preview"}
                       </button>
                     </td>
                   </tr>
@@ -7617,6 +7683,137 @@ export function BloggerSettingsClient() {
               ) : (
                 <div className="notice">
                   후보 큐에서 linked content item이 있는 행의 “output 품질 preview”를 실행하세요. 이 단계는 본문 저장 여부와 validation 가능 여부만 확인합니다.
+                </div>
+              )}
+            </div>
+
+            <div className="read-block">
+              <h3>초안 생성 LLM output validation persistence preview</h3>
+              <div className="notice">
+                <strong>9F-3L gated validation persistence · UI preview only</strong>
+                <p>9F-3K validation result를 audit event/artifact로 저장할 수 있는지 확인합니다.</p>
+                <p>UI는 preview만 호출합니다. 실제 audit row insert는 feature flag, confirmation phrase, idempotency key가 있는 API apply에서만 가능합니다.</p>
+              </div>
+              {draftGenerationLlmOutputValidationPersistenceResult ? (
+                <>
+                  <div className={draftGenerationLlmOutputValidationPersistenceResult.blockingReasons.length > 0 ? "notice warning" : "notice"}>
+                    <strong>
+                      canPersistNow=
+                      {String(draftGenerationLlmOutputValidationPersistenceResult.validationPersistenceSummary.canPersistValidationNow)} / persistedNow=
+                      {String(draftGenerationLlmOutputValidationPersistenceResult.validationPersistedNow)}
+                    </strong>
+                    <p>
+                      attempt={draftGenerationLlmOutputValidationPersistenceResult.validationPersistenceSummary.attemptId ?? "null"} / status=
+                      {draftGenerationLlmOutputValidationPersistenceResult.validationPersistenceSummary.persistenceStatus}
+                    </p>
+                  </div>
+                  <div className="detail-grid">
+                    <DetailItem label="Patch" value={draftGenerationLlmOutputValidationPersistenceResult.patchVersion} />
+                    <DetailItem label="Mode" value={draftGenerationLlmOutputValidationPersistenceResult.mode} />
+                    <DetailItem label="Plan Item" value={draftGenerationLlmOutputValidationPersistenceResult.targetSummary.planItemId} />
+                    <DetailItem label="Linked Fixture" value={draftGenerationLlmOutputValidationPersistenceResult.targetSummary.contentItemId ?? "-"} />
+                    <DetailItem
+                      label="Feature Flag"
+                      value={String(draftGenerationLlmOutputValidationPersistenceResult.validationPersistenceSummary.featureFlagEnabled)}
+                    />
+                    <DetailItem
+                      label="Confirmation"
+                      value={String(draftGenerationLlmOutputValidationPersistenceResult.validationPersistenceSummary.confirmationPhraseMatched)}
+                    />
+                    <DetailItem
+                      label="Idempotency"
+                      value={String(draftGenerationLlmOutputValidationPersistenceResult.validationPersistenceSummary.idempotencyKeyPresent)}
+                    />
+                    <DetailItem
+                      label="Candidate Ready"
+                      value={String(draftGenerationLlmOutputValidationPersistenceResult.validationPersistenceSummary.validationCandidateReady)}
+                    />
+                    <DetailItem
+                      label="Validation Ready"
+                      value={String(draftGenerationLlmOutputValidationPersistenceResult.validationPersistenceSummary.validationReady)}
+                    />
+                    <DetailItem
+                      label="Candidate Available"
+                      value={String(draftGenerationLlmOutputValidationPersistenceResult.validationPersistenceSummary.candidateMarkdownAvailable)}
+                    />
+                  </div>
+                  <div className="detail-grid">
+                    <DetailItem label="Event Type" value={draftGenerationLlmOutputValidationPersistenceResult.validationPersistenceSummary.eventType} />
+                    <DetailItem label="Artifact Kind" value={draftGenerationLlmOutputValidationPersistenceResult.validationPersistenceSummary.artifactKind} />
+                    <DetailItem
+                      label="Validation Hash"
+                      value={draftGenerationLlmOutputValidationPersistenceResult.validationPersistenceSummary.validationHash?.slice(0, 16) ?? "null"}
+                    />
+                    <DetailItem label="Event ID" value={draftGenerationLlmOutputValidationPersistenceResult.validationPersistenceSummary.eventId ?? "null"} />
+                    <DetailItem label="Artifact ID" value={draftGenerationLlmOutputValidationPersistenceResult.validationPersistenceSummary.artifactId ?? "null"} />
+                    <DetailItem label="Pass Checks" value={String(draftGenerationLlmOutputValidationPersistenceResult.validationPersistenceSummary.passCheckCount)} />
+                    <DetailItem
+                      label="Blocked Checks"
+                      value={String(draftGenerationLlmOutputValidationPersistenceResult.validationPersistenceSummary.blockedCheckCount)}
+                    />
+                    <DetailItem
+                      label="Counts Before"
+                      value={`${draftGenerationLlmOutputValidationPersistenceResult.validationPersistenceSummary.attemptsCountBefore}/${draftGenerationLlmOutputValidationPersistenceResult.validationPersistenceSummary.eventsCountBefore}/${draftGenerationLlmOutputValidationPersistenceResult.validationPersistenceSummary.artifactsCountBefore}`}
+                    />
+                    <DetailItem
+                      label="Counts After"
+                      value={`${draftGenerationLlmOutputValidationPersistenceResult.validationPersistenceSummary.attemptsCountAfter}/${draftGenerationLlmOutputValidationPersistenceResult.validationPersistenceSummary.eventsCountAfter}/${draftGenerationLlmOutputValidationPersistenceResult.validationPersistenceSummary.artifactsCountAfter}`}
+                    />
+                  </div>
+                  <ValidationList
+                    title="Validation persistence blockers"
+                    items={draftGenerationLlmOutputValidationPersistenceResult.blockingReasons}
+                    emptyText="validation persistence blocker가 없습니다."
+                    isError
+                  />
+                  <ValidationList
+                    title="Warnings"
+                    items={draftGenerationLlmOutputValidationPersistenceResult.warnings}
+                    emptyText="warning이 없습니다."
+                    isWarning
+                  />
+                  <details className="read-block">
+                    <summary>Validation persistence side-effect 상세</summary>
+                    <div className="detail-grid">
+                      <DetailItem label="DB Read" value={String(draftGenerationLlmOutputValidationPersistenceResult.currentSideEffectSummary.dbRead)} />
+                      <DetailItem label="DB Write" value={String(draftGenerationLlmOutputValidationPersistenceResult.currentSideEffectSummary.dbWrite)} />
+                      <DetailItem
+                        label="Event Persisted"
+                        value={String(draftGenerationLlmOutputValidationPersistenceResult.currentSideEffectSummary.validationEventPersistedNow)}
+                      />
+                      <DetailItem
+                        label="Artifact Persisted"
+                        value={String(draftGenerationLlmOutputValidationPersistenceResult.currentSideEffectSummary.validationArtifactPersistedNow)}
+                      />
+                      <DetailItem
+                        label="Provider Network"
+                        value={String(draftGenerationLlmOutputValidationPersistenceResult.currentSideEffectSummary.providerNetworkCall)}
+                      />
+                      <DetailItem label="LLM Call" value={String(draftGenerationLlmOutputValidationPersistenceResult.currentSideEffectSummary.llmCall)} />
+                      <DetailItem
+                        label="LLM Log Mutation"
+                        value={String(draftGenerationLlmOutputValidationPersistenceResult.currentSideEffectSummary.llmCallLogMutation)}
+                      />
+                      <DetailItem
+                        label="Content Mutation"
+                        value={String(draftGenerationLlmOutputValidationPersistenceResult.currentSideEffectSummary.contentItemMutation)}
+                      />
+                      <DetailItem
+                        label="Draft Markdown"
+                        value={String(draftGenerationLlmOutputValidationPersistenceResult.currentSideEffectSummary.draftMarkdownMutation)}
+                      />
+                      <DetailItem
+                        label="Draft HTML"
+                        value={String(draftGenerationLlmOutputValidationPersistenceResult.currentSideEffectSummary.draftHtmlMutation)}
+                      />
+                      <DetailItem label="Blogger Write" value={String(draftGenerationLlmOutputValidationPersistenceResult.currentSideEffectSummary.bloggerWrite)} />
+                      <DetailItem label="Blogger Publish" value={String(draftGenerationLlmOutputValidationPersistenceResult.currentSideEffectSummary.bloggerPublish)} />
+                    </div>
+                  </details>
+                </>
+              ) : (
+                <div className="notice">
+                  후보 큐에서 linked content item이 있는 행의 “validation 저장 preview”를 실행하세요. UI는 audit row 저장을 수행하지 않습니다.
                 </div>
               )}
             </div>

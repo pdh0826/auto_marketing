@@ -730,3 +730,19 @@ Patch 9F-3K introduces deterministic output validation readiness without claimin
 Next candidate gate:
 
 - `9F-3L — Gated output validation persistence`
+
+## Patch 9F-3L Gated Output Validation Persistence
+
+Patch 9F-3L adds a gated local audit persistence path for the 9F-3K validation preview.
+
+- Route: `POST /api/daily-content-plans/draft-generation-llm-output-validation-persistence`.
+- Default preview mode returns the event/artifact candidate and blockers without DB write.
+- Apply mode requires feature flag, exact confirmation phrase, idempotency key, validation candidate readiness, and duplicate artifact checks.
+- Apply can create one redacted validation event and one hash-only validation artifact.
+- `/settings/blogger` exposes preview only.
+- It does not call the provider, use an LLM judge, create `llm_call_logs`, mutate content, write Blogger, reconnect OAuth, or refresh tokens.
+- It returns no raw prompt, raw response body/header, full generated candidate, request body, API key, token, secret, or encrypted value.
+
+Next candidate gate:
+
+- `9F-3M — Markdown candidate acceptance gate`

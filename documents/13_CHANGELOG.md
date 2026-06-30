@@ -1,5 +1,21 @@
 # 13_CHANGELOG
 
+## Patch 9F-3L Gated Output Validation Persistence
+
+Implemented after Patch 9F-3K:
+
+- Added `POST /api/daily-content-plans/draft-generation-llm-output-validation-persistence`.
+- Added a `/settings/blogger` UI action and summary block for validation persistence preview.
+- The route can build a redacted validation event and hash-only validation artifact candidate from the 9F-3K preview.
+- Apply mode is gated by feature flag, exact confirmation phrase, idempotency key, validation candidate, and duplicate artifact checks.
+- UI exposes preview only; no audit row insert was executed by the UI path.
+
+Policy:
+
+- 9F-3L does not call a provider, use an LLM judge, create `llm_call_logs`, mutate content, or write Blogger/OAuth/token state.
+- 9F-3L does not return raw prompt, raw provider response, full generated candidate, request body, API key, token, secret, or encrypted value.
+- Recommended next patch: `9F-3M — Markdown candidate acceptance gate`.
+
 ## Patch 9F-3K LLM Output Quality Validation Preview
 
 Implemented after Patch 9F-3J:

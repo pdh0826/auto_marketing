@@ -1,5 +1,29 @@
 # 14_NEXT_SESSION_BRIEF
 
+## Current State: Patch 9F-3L Completed
+
+```text
+repo: ~/blog-growth-agent
+branch: master
+expected HEAD after 9F-3L commit: local commit `Persist draft generation LLM output validation result` (verify exact hash with `git log --oneline -8`)
+```
+
+9F-3L adds gated output validation persistence:
+
+- Route used: `POST /api/daily-content-plans/draft-generation-llm-output-validation-persistence`
+- UI: `/settings/blogger` shows `초안 생성 LLM output validation persistence preview`.
+- Default preview mode performs no DB write.
+- Apply mode is code-gated by feature flag, exact confirmation phrase, idempotency key, validation candidate readiness, and duplicate artifact checks.
+- Apply may create one redacted validation event and one hash-only validation artifact for the existing dispatch attempt.
+- The UI path is preview-only and does not insert audit rows.
+- It does not call provider/LLM endpoints, use an LLM judge, create `llm_call_logs`, or mutate content.
+- The linked fixture must remain `planned` with unchanged `draftMarkdown` and `draftHtml`.
+- Blogger write/publish, OAuth reconnect, and token refresh remain disabled.
+
+Next recommended patch:
+
+- `9F-3M — Markdown candidate acceptance gate`
+
 ## Current State: Patch 9F-3K Completed
 
 ```text
