@@ -256,3 +256,29 @@ Next patch candidate:
 Next patch candidate:
 
 - `9F-3E — Provider health-check positive gated run`
+
+## Patch 9F-3E Health-Check Positive Run Audit Boundary
+
+9F-3E executes only a gated provider metadata/connectivity health-check.
+
+- It does not create dispatch event or artifact rows.
+- It does not persist raw provider response bodies, raw provider response headers, prompts, request bodies, generated content, secret values, token values, or env values.
+- Existing attempts/events/artifacts counts remain `1 / 1 / 1`.
+
+Next patch candidate:
+
+- `9F-3F — Provider health-check audit/readback`
+
+## Patch 9F-3F Provider Health-Check Readback Semantics
+
+9F-3F uses the existing audit schema for readback only.
+
+- Route: `POST /api/daily-content-plans/draft-generation-llm-provider-health-check-readback`.
+- It reads latest attempt `healthCheckReferenceId` / `healthCheckSummaryHash` plus target-scoped attempts/events/artifacts counts.
+- It does not insert health-check event/artifact rows because 9F-3E did not persist a provider result object.
+- It returns no raw prompt, raw request body, raw provider response body/header, secret value, token value, full candidate, or generated content.
+- Attempts/events/artifacts counts remain `1 / 1 / 1`.
+
+Next patch candidate:
+
+- `9F-3G — LLM dispatch final preflight`

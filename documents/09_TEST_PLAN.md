@@ -1864,3 +1864,13 @@ Safety guard:
 - Expected counts after smoke: attempts/events/artifacts `1 / 1 / 1`, `llm_call_logs=22`.
 - linked daily fixture는 계속 `status=planned`, `draftMarkdown` length `0`, `draftHtml` length `0`, `publishedAt=null`, `scheduledAt=null`이어야 한다.
 - 9F-3E 구현/스모크 중에는 LLM completion call, `llm_call_logs` 생성, content item mutation, Blogger write/publish, OAuth reconnect, token refresh가 발생하지 않아야 한다.
+
+## Patch 9F-3F provider health-check readback 검증
+
+- `POST /api/daily-content-plans/draft-generation-llm-provider-health-check-readback`는 readback-only여야 한다.
+- Request `mode=preview`는 latest dispatch attempt, target-scoped audit counts, persisted health-check reference/hash, current health-check gate shape를 반환해야 한다.
+- 9F-3E의 positive run은 transient였으므로 persisted raw provider response/body/header가 없어야 한다.
+- Readback 호출은 provider network call, provider health-check, completion/chat/generate/responses endpoint를 호출하지 않아야 한다.
+- Expected counts after smoke: attempts/events/artifacts `1 / 1 / 1`, `llm_call_logs=22`.
+- linked daily fixture는 계속 `status=planned`, `draftMarkdown` length `0`, `draftHtml` length `0`, `publishedAt=null`, `scheduledAt=null`이어야 한다.
+- 9F-3F 구현/스모크 중에는 audit row 생성, LLM call, `llm_call_logs` 생성, content item mutation, Blogger write/publish, OAuth reconnect, token refresh가 발생하지 않아야 한다.

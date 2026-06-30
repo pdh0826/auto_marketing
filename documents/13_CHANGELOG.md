@@ -1,5 +1,21 @@
 # 13_CHANGELOG
 
+## Patch 9F-3F Provider Health-Check Readback
+
+Implemented after Patch 9F-3E:
+
+- Added `POST /api/daily-content-plans/draft-generation-llm-provider-health-check-readback`.
+- Added a `/settings/blogger` UI action and readback block for provider health-check audit/readback.
+- The readback checks the latest dispatch attempt health-check reference/hash fields and current gate shape without running another provider network call.
+- It explicitly reports that the 9F-3E positive health-check run was transient and did not persist raw provider response body/header data.
+
+Policy:
+
+- 9F-3F does not create audit event/artifact rows.
+- 9F-3F does not call provider health-check, completion/chat/generate/responses endpoints, create `llm_call_logs`, mutate `content_items`, write to Blogger, publish, schedule, reconnect OAuth, or refresh tokens.
+- Audit counts remain attempts/events/artifacts `1 / 1 / 1`.
+- Recommended next patch: `9F-3G — LLM dispatch final preflight`.
+
 ## Patch 9F-3E Provider Health-Check Positive Gated Run
 
 Implemented after Patch 9F-3D:

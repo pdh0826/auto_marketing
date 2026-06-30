@@ -1,5 +1,28 @@
 # 14_NEXT_SESSION_BRIEF
 
+## Current State: Patch 9F-3F Completed
+
+```text
+repo: ~/blog-growth-agent
+branch: master
+expected HEAD after 9F-3F commit: local commit `Add draft generation LLM provider health check readback` (verify exact hash with `git log --oneline -8`)
+```
+
+9F-3F adds read-only provider health-check readback:
+
+- Route used: `POST /api/daily-content-plans/draft-generation-llm-provider-health-check-readback`
+- UI: `/settings/blogger` shows `초안 생성 LLM health-check readback`.
+- It reads latest dispatch attempt health-check reference/hash fields, audit counts, and current health-check gate shape.
+- It does not run provider health-check again and does not persist raw provider result data.
+- Audit counts remain attempts/events/artifacts `1 / 1 / 1`.
+- `llm_call_logs` remains `22`.
+- The linked fixture remains `planned` with empty `draftMarkdown` and `draftHtml`.
+- Content mutations, Blogger writes/publish, OAuth reconnect, and token refresh remain disabled.
+
+Next recommended patch:
+
+- `9F-3G — LLM dispatch final preflight`
+
 ## Current State: Patch 9F-3E Completed
 
 ```text

@@ -643,3 +643,17 @@ Patch 9F-3E runs only the provider health-check gate.
 Next candidate gate:
 
 - `9F-3F — Provider health-check audit/readback`
+
+## Patch 9F-3F Provider Health-Check Readback
+
+Patch 9F-3F reads provider health-check audit/gate state without executing another health-check.
+
+- It adds `POST /api/daily-content-plans/draft-generation-llm-provider-health-check-readback`.
+- It reads the latest dispatch attempt, target-scoped audit counts, persisted health-check reference/hash fields, and current health-check execution gate shape.
+- It records no new rows and does not convert the 9F-3E transient run into persisted provider result data.
+- Provider health-check calls, completion/chat/generate/responses calls, `llm_call_logs`, content mutation, draft creation, Blogger write, OAuth reconnect, and token refresh remain disabled.
+- Attempts/events/artifacts counts remain `1 / 1 / 1`.
+
+Next candidate gate:
+
+- `9F-3G — LLM dispatch final preflight`

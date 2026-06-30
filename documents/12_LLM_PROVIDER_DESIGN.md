@@ -1081,3 +1081,13 @@ Patch 9F-3E allows only a provider metadata/connectivity health-check network ca
 - Completion/chat/generate/responses calls remain forbidden.
 - It does not create `llm_call_logs`, store prompts, store raw response bodies/headers, mutate `content_items`, create `draftMarkdown`/`draftHtml`, call Blogger, reconnect OAuth, or refresh tokens.
 - Next boundary is `9F-3F — Provider health-check audit/readback`.
+
+## Patch 9F-3F provider health-check readback boundary
+
+Patch 9F-3F reads back provider health-check audit/gate state without any provider call.
+
+- It adds `POST /api/daily-content-plans/draft-generation-llm-provider-health-check-readback`.
+- It reports latest dispatch attempt health-check reference/hash fields, target-scoped audit counts, and the current health-check gate shape.
+- Because 9F-3E intentionally did not persist raw provider result data, the readback marks that positive run as transient.
+- It does not create event/artifact rows, call provider health-check endpoints, call completion/chat/generate/responses endpoints, create `llm_call_logs`, store prompts, store raw provider response bodies/headers, mutate `content_items`, create `draftMarkdown`/`draftHtml`, call Blogger, reconnect OAuth, or refresh tokens.
+- Next boundary is `9F-3G — LLM dispatch final preflight`.

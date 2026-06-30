@@ -23,6 +23,7 @@ import type { DailyContentDraftGenerationDryRunPlannerResponse } from "@/lib/dai
 import type { DailyContentDraftGenerationExecutionGatePreviewResponse } from "@/lib/daily-content-plans/draft-generation-execution-gate-preview";
 import type { DailyContentDraftGenerationLlmProviderHealthCheckExecutionResponse } from "@/lib/daily-content-plans/draft-generation-llm-provider-health-check-execution";
 import type { DailyContentDraftGenerationLlmProviderHealthCheckPreviewResponse } from "@/lib/daily-content-plans/draft-generation-llm-provider-health-check-preview";
+import type { DailyContentDraftGenerationLlmProviderHealthCheckReadbackResponse } from "@/lib/daily-content-plans/draft-generation-llm-provider-health-check-readback";
 import type { DailyContentDraftGenerationLlmProviderReadinessResponse } from "@/lib/daily-content-plans/draft-generation-llm-provider-readiness";
 import type { DailyContentDraftGenerationLlmDispatchAuditSchemaDesignResponse } from "@/lib/daily-content-plans/draft-generation-llm-dispatch-audit-schema-design";
 import type { DailyContentDraftGenerationLlmDispatchAuditMigrationApplyReadbackResponse } from "@/lib/daily-content-plans/draft-generation-llm-dispatch-audit-migration-apply-readback";
@@ -107,6 +108,8 @@ export function BloggerSettingsClient() {
     useState<DailyContentDraftGenerationLlmProviderHealthCheckPreviewResponse | null>(null);
   const [draftGenerationLlmProviderHealthCheckExecutionResult, setDraftGenerationLlmProviderHealthCheckExecutionResult] =
     useState<DailyContentDraftGenerationLlmProviderHealthCheckExecutionResponse | null>(null);
+  const [draftGenerationLlmProviderHealthCheckReadbackResult, setDraftGenerationLlmProviderHealthCheckReadbackResult] =
+    useState<DailyContentDraftGenerationLlmProviderHealthCheckReadbackResponse | null>(null);
   const [draftGenerationFinalExecutionChecklistResult, setDraftGenerationFinalExecutionChecklistResult] =
     useState<DailyContentDraftGenerationFinalExecutionChecklistResponse | null>(null);
   const [draftGenerationPromptRenderPreviewResult, setDraftGenerationPromptRenderPreviewResult] =
@@ -152,6 +155,7 @@ export function BloggerSettingsClient() {
   const [loadingDraftGenerationLlmProviderReadinessItemId, setLoadingDraftGenerationLlmProviderReadinessItemId] = useState<string | null>(null);
   const [loadingDraftGenerationLlmProviderHealthCheckPreviewItemId, setLoadingDraftGenerationLlmProviderHealthCheckPreviewItemId] = useState<string | null>(null);
   const [loadingDraftGenerationLlmProviderHealthCheckExecutionItemId, setLoadingDraftGenerationLlmProviderHealthCheckExecutionItemId] = useState<string | null>(null);
+  const [loadingDraftGenerationLlmProviderHealthCheckReadbackItemId, setLoadingDraftGenerationLlmProviderHealthCheckReadbackItemId] = useState<string | null>(null);
   const [loadingDraftGenerationFinalExecutionChecklistItemId, setLoadingDraftGenerationFinalExecutionChecklistItemId] = useState<string | null>(null);
   const [loadingDraftGenerationPromptRenderPreviewItemId, setLoadingDraftGenerationPromptRenderPreviewItemId] = useState<string | null>(null);
   const [loadingDraftGenerationPromptQualityChecklistPreviewItemId, setLoadingDraftGenerationPromptQualityChecklistPreviewItemId] = useState<string | null>(null);
@@ -249,6 +253,7 @@ export function BloggerSettingsClient() {
       setDraftGenerationLlmProviderReadinessResult(null);
       setDraftGenerationLlmProviderHealthCheckPreviewResult(null);
       setDraftGenerationLlmProviderHealthCheckExecutionResult(null);
+      setDraftGenerationLlmProviderHealthCheckReadbackResult(null);
       setDraftGenerationFinalExecutionChecklistResult(null);
       setDraftGenerationPromptRenderPreviewResult(null);
       setDraftGenerationPromptQualityChecklistPreviewResult(null);
@@ -391,6 +396,7 @@ export function BloggerSettingsClient() {
       setDraftGenerationLlmProviderReadinessResult(null);
       setDraftGenerationLlmProviderHealthCheckPreviewResult(null);
       setDraftGenerationLlmProviderHealthCheckExecutionResult(null);
+      setDraftGenerationLlmProviderHealthCheckReadbackResult(null);
       setDraftGenerationFinalExecutionChecklistResult(null);
       setDraftGenerationPromptRenderPreviewResult(null);
       setDraftGenerationPromptQualityChecklistPreviewResult(null);
@@ -704,6 +710,44 @@ export function BloggerSettingsClient() {
       setError(caught instanceof Error ? caught.message : "초안 생성 LLM health-check 실행 게이트 확인에 실패했습니다.");
     } finally {
       setLoadingDraftGenerationLlmProviderHealthCheckExecutionItemId(null);
+    }
+  }
+
+  async function readDraftGenerationLlmProviderHealthCheck(
+    planId: string | null | undefined,
+    planItemId: string | null | undefined,
+    contentItemId: string | null | undefined
+  ) {
+    if (!planId || !planItemId || !contentItemId) {
+      setError("Daily plan id, item id, linked content item id가 필요합니다.");
+      return;
+    }
+
+    setError(null);
+    setNotice(null);
+    setLoadingDraftGenerationLlmProviderHealthCheckReadbackItemId(planItemId);
+
+    try {
+      const result = await requestJson<ApiResult<DailyContentDraftGenerationLlmProviderHealthCheckReadbackResponse>>(
+        "/api/daily-content-plans/draft-generation-llm-provider-health-check-readback",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            mode: "preview",
+            planId,
+            planItemId,
+            contentItemId
+          })
+        }
+      );
+      setDraftGenerationLlmProviderHealthCheckReadbackResult(result.data);
+      setNotice(
+        "초안 생성 LLM provider health-check readback을 확인했습니다. 이 단계는 DB/gate 상태만 읽으며 provider network call, LLM completion, llm_call_logs 생성, content_items 수정은 수행하지 않았습니다."
+      );
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "초안 생성 LLM provider health-check readback 확인에 실패했습니다.");
+    } finally {
+      setLoadingDraftGenerationLlmProviderHealthCheckReadbackItemId(null);
     }
   }
 
@@ -1464,6 +1508,7 @@ export function BloggerSettingsClient() {
                   setDraftGenerationLlmProviderReadinessResult(null);
                   setDraftGenerationLlmProviderHealthCheckPreviewResult(null);
                   setDraftGenerationLlmProviderHealthCheckExecutionResult(null);
+                  setDraftGenerationLlmProviderHealthCheckReadbackResult(null);
                   setDraftGenerationFinalExecutionChecklistResult(null);
                   setDraftGenerationPromptRenderPreviewResult(null);
                   setDraftGenerationPromptQualityChecklistPreviewResult(null);
@@ -2082,6 +2127,25 @@ export function BloggerSettingsClient() {
                         }
                       >
                         {loadingDraftGenerationLlmProviderHealthCheckExecutionItemId === getDailyPlanItemId(item) ? "실행 게이트 확인 중" : "health-check 실행 게이트"}
+                      </button>
+                      <button
+                        className="button small secondary"
+                        type="button"
+                        disabled={
+                          !dailyContentPlanSummary.persistedPlanId ||
+                          !getDailyPlanItemId(item) ||
+                          !getDailyPlanItemContentItemId(item) ||
+                          loadingDraftGenerationLlmProviderHealthCheckReadbackItemId === getDailyPlanItemId(item)
+                        }
+                        onClick={() =>
+                          void readDraftGenerationLlmProviderHealthCheck(
+                            dailyContentPlanSummary.persistedPlanId,
+                            getDailyPlanItemId(item),
+                            getDailyPlanItemContentItemId(item)
+                          )
+                        }
+                      >
+                        {loadingDraftGenerationLlmProviderHealthCheckReadbackItemId === getDailyPlanItemId(item) ? "health-check readback 중" : "health-check readback"}
                       </button>
                       <button
                         className="button small secondary"
@@ -3653,6 +3717,211 @@ export function BloggerSettingsClient() {
                 </>
               ) : (
                 <div className="notice">후보 큐에서 linked content item이 있는 행의 “health-check 실행 게이트”를 실행하세요. 기본 호출은 provider network call 없이 차단 상태만 확인합니다.</div>
+              )}
+            </div>
+
+            <div className="read-block">
+              <h3>초안 생성 LLM health-check readback</h3>
+              <div className="notice">
+                <strong>9F-3F provider health-check readback</strong>
+                <p>이 블록은 9F-3E health-check 이후의 안전한 readback입니다. provider network call을 다시 실행하지 않고 DB/gate 상태만 조회합니다.</p>
+                <p>3E의 positive run 결과는 raw response나 provider body로 저장하지 않았으므로, 여기서는 persisted reference/hash 존재 여부와 현재 gate shape만 확인합니다.</p>
+              </div>
+              {draftGenerationLlmProviderHealthCheckReadbackResult ? (
+                <>
+                  <div className="notice warning">
+                    <strong>Health-check readback 확인됨</strong>
+                    <p>
+                      persisted reference:{" "}
+                      {draftGenerationLlmProviderHealthCheckReadbackResult.draftGenerationLlmProviderHealthCheckReadbackSummary.healthCheckReadbackSummary
+                        .persistedHealthCheckReference.persistedReferenceFound
+                        ? "있음"
+                        : "없음"}{" "}
+                      / transient run:{" "}
+                      {String(
+                        draftGenerationLlmProviderHealthCheckReadbackResult.draftGenerationLlmProviderHealthCheckReadbackSummary.healthCheckReadbackSummary
+                          .transientRunReadback.priorHealthCheckWasTransient
+                      )}{" "}
+                      / provider network call now:{" "}
+                      {String(draftGenerationLlmProviderHealthCheckReadbackResult.draftGenerationLlmProviderHealthCheckReadbackSummary.providerNetworkCallAttempted)}
+                    </p>
+                  </div>
+                  <div className="detail-grid">
+                    <DetailItem label="Patch" value={draftGenerationLlmProviderHealthCheckReadbackResult.draftGenerationLlmProviderHealthCheckReadbackSummary.patchVersion} />
+                    <DetailItem
+                      label="Readback Mode"
+                      value={draftGenerationLlmProviderHealthCheckReadbackResult.draftGenerationLlmProviderHealthCheckReadbackSummary.readbackMode}
+                    />
+                    <DetailItem
+                      label="Plan Item"
+                      value={draftGenerationLlmProviderHealthCheckReadbackResult.draftGenerationLlmProviderHealthCheckReadbackSummary.targetSummary.planItemId}
+                    />
+                    <DetailItem
+                      label="Linked Fixture"
+                      value={draftGenerationLlmProviderHealthCheckReadbackResult.draftGenerationLlmProviderHealthCheckReadbackSummary.targetSummary.contentItemId ?? "-"}
+                    />
+                    <DetailItem
+                      label="Latest Attempt"
+                      value={
+                        draftGenerationLlmProviderHealthCheckReadbackResult.draftGenerationLlmProviderHealthCheckReadbackSummary.healthCheckReadbackSummary
+                          .latestAttemptId ?? "-"
+                      }
+                    />
+                    <DetailItem
+                      label="Attempt Status"
+                      value={
+                        draftGenerationLlmProviderHealthCheckReadbackResult.draftGenerationLlmProviderHealthCheckReadbackSummary.healthCheckReadbackSummary
+                          .latestAttemptStatus ?? "-"
+                      }
+                    />
+                    <DetailItem
+                      label="Health Reference"
+                      value={
+                        draftGenerationLlmProviderHealthCheckReadbackResult.draftGenerationLlmProviderHealthCheckReadbackSummary.healthCheckReadbackSummary
+                          .persistedHealthCheckReference.healthCheckReferenceId ?? "-"
+                      }
+                    />
+                    <DetailItem
+                      label="Health Hash"
+                      value={
+                        draftGenerationLlmProviderHealthCheckReadbackResult.draftGenerationLlmProviderHealthCheckReadbackSummary.healthCheckReadbackSummary
+                          .persistedHealthCheckReference.healthCheckSummaryHash ?? "-"
+                      }
+                    />
+                    <DetailItem
+                      label="Endpoint Category"
+                      value={
+                        draftGenerationLlmProviderHealthCheckReadbackResult.draftGenerationLlmProviderHealthCheckReadbackSummary.healthCheckReadbackSummary
+                          .currentGateReadback.endpointCategory ?? "-"
+                      }
+                    />
+                    <DetailItem
+                      label="Completion Forbidden"
+                      value={String(
+                        draftGenerationLlmProviderHealthCheckReadbackResult.draftGenerationLlmProviderHealthCheckReadbackSummary.healthCheckReadbackSummary
+                          .currentGateReadback.completionEndpointsForbidden
+                      )}
+                    />
+                  </div>
+                  <div className="detail-grid">
+                    <DetailItem
+                      label="Attempts"
+                      value={String(
+                        draftGenerationLlmProviderHealthCheckReadbackResult.draftGenerationLlmProviderHealthCheckReadbackSummary.healthCheckReadbackSummary.auditCounts
+                          .targetScoped.attempts
+                      )}
+                    />
+                    <DetailItem
+                      label="Events"
+                      value={String(
+                        draftGenerationLlmProviderHealthCheckReadbackResult.draftGenerationLlmProviderHealthCheckReadbackSummary.healthCheckReadbackSummary.auditCounts
+                          .targetScoped.events
+                      )}
+                    />
+                    <DetailItem
+                      label="Artifacts"
+                      value={String(
+                        draftGenerationLlmProviderHealthCheckReadbackResult.draftGenerationLlmProviderHealthCheckReadbackSummary.healthCheckReadbackSummary.auditCounts
+                          .targetScoped.artifacts
+                      )}
+                    />
+                    <DetailItem
+                      label="Result Body Returned"
+                      value={String(
+                        draftGenerationLlmProviderHealthCheckReadbackResult.draftGenerationLlmProviderHealthCheckReadbackSummary.healthCheckReadbackSummary
+                          .persistedHealthCheckReference.persistedResultBodyReturned
+                      )}
+                    />
+                    <DetailItem
+                      label="Raw Body Stored"
+                      value={String(
+                        draftGenerationLlmProviderHealthCheckReadbackResult.draftGenerationLlmProviderHealthCheckReadbackSummary.healthCheckReadbackSummary
+                          .persistedHealthCheckReference.rawProviderBodyStoredOrReturned
+                      )}
+                    />
+                    <DetailItem
+                      label="Secret/Token Returned"
+                      value={String(
+                        draftGenerationLlmProviderHealthCheckReadbackResult.draftGenerationLlmProviderHealthCheckReadbackSummary.healthCheckReadbackSummary
+                          .persistedHealthCheckReference.secretOrTokenStoredOrReturned
+                      )}
+                    />
+                    <DetailItem
+                      label="Health Executed Now"
+                      value={String(
+                        draftGenerationLlmProviderHealthCheckReadbackResult.draftGenerationLlmProviderHealthCheckReadbackSummary.healthCheckReadbackSummary
+                          .currentGateReadback.healthCheckExecutedNow
+                      )}
+                    />
+                    <DetailItem
+                      label="Network Call Now"
+                      value={String(
+                        draftGenerationLlmProviderHealthCheckReadbackResult.draftGenerationLlmProviderHealthCheckReadbackSummary.healthCheckReadbackSummary
+                          .currentGateReadback.providerNetworkCallAttemptedNow
+                      )}
+                    />
+                  </div>
+                  <ValidationList
+                    title="Health-check readback blockers"
+                    items={draftGenerationLlmProviderHealthCheckReadbackResult.draftGenerationLlmProviderHealthCheckReadbackSummary.healthCheckReadbackSummary.readbackBlockers.map(
+                      formatLlmHealthCheckReadbackBlocker
+                    )}
+                    emptyText="health-check readback blocker가 없습니다."
+                    isWarning
+                  />
+                  <details className="read-block">
+                    <summary>초안 생성 LLM health-check readback side effects</summary>
+                    <div className="detail-grid">
+                      <DetailItem
+                        label="DB Read"
+                        value={String(draftGenerationLlmProviderHealthCheckReadbackResult.draftGenerationLlmProviderHealthCheckReadbackSummary.currentSideEffectSummary.dbRead)}
+                      />
+                      <DetailItem
+                        label="DB Write"
+                        value={String(draftGenerationLlmProviderHealthCheckReadbackResult.draftGenerationLlmProviderHealthCheckReadbackSummary.currentSideEffectSummary.dbWrite)}
+                      />
+                      <DetailItem
+                        label="Provider Health"
+                        value={String(
+                          draftGenerationLlmProviderHealthCheckReadbackResult.draftGenerationLlmProviderHealthCheckReadbackSummary.currentSideEffectSummary
+                            .providerHealthChecked
+                        )}
+                      />
+                      <DetailItem
+                        label="Provider Network"
+                        value={String(
+                          draftGenerationLlmProviderHealthCheckReadbackResult.draftGenerationLlmProviderHealthCheckReadbackSummary.currentSideEffectSummary.providerNetworkCall
+                        )}
+                      />
+                      <DetailItem
+                        label="LLM Call"
+                        value={String(draftGenerationLlmProviderHealthCheckReadbackResult.draftGenerationLlmProviderHealthCheckReadbackSummary.currentSideEffectSummary.llmCall)}
+                      />
+                      <DetailItem
+                        label="LLM Log Mutation"
+                        value={String(
+                          draftGenerationLlmProviderHealthCheckReadbackResult.draftGenerationLlmProviderHealthCheckReadbackSummary.currentSideEffectSummary
+                            .llmCallLogMutation
+                        )}
+                      />
+                      <DetailItem
+                        label="Content Mutation"
+                        value={String(
+                          draftGenerationLlmProviderHealthCheckReadbackResult.draftGenerationLlmProviderHealthCheckReadbackSummary.currentSideEffectSummary
+                            .contentItemMutation
+                        )}
+                      />
+                      <DetailItem
+                        label="Blogger Write"
+                        value={String(
+                          draftGenerationLlmProviderHealthCheckReadbackResult.draftGenerationLlmProviderHealthCheckReadbackSummary.currentSideEffectSummary.bloggerWrite
+                        )}
+                      />
+                    </div>
+                  </details>
+                </>
+              ) : (
+                <div className="notice">후보 큐에서 linked content item이 있는 행의 “health-check readback”을 실행하세요. 이 버튼은 provider network call 없이 audit/gate 상태만 읽습니다.</div>
               )}
             </div>
 
@@ -6821,6 +7090,17 @@ function formatLlmHealthCheckExecutionBlocker(blocker: string) {
     llm_model_candidate_not_resolved: "LLM model 후보 미확정",
     llm_required_env_missing: "필수 env 존재 확인 실패",
     llm_provider_health_check_not_supported_for_provider_kind: "provider kind의 safe health-check 미지원"
+  };
+  return labels[blocker] ?? blocker;
+}
+
+function formatLlmHealthCheckReadbackBlocker(blocker: string) {
+  const labels: Record<string, string> = {
+    draft_generation_llm_provider_health_check_readback_is_preview_only: "health-check readback은 preview 전용",
+    draft_generation_llm_dispatch_audit_tables_missing: "LLM dispatch audit table 없음",
+    dispatch_attempt_not_found: "대상 dispatch attempt 없음",
+    health_check_reference_not_persisted: "persisted health-check reference/hash 없음",
+    health_check_result_is_transient_until_future_audit_patch: "9F-3E health-check 결과는 현재 transient run이며 raw/persisted result로 저장하지 않음"
   };
   return labels[blocker] ?? blocker;
 }
