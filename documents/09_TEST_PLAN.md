@@ -1942,3 +1942,11 @@ Safety guard:
 - 호출 중 DB write, audit row 생성, provider/LLM call, `llm_call_logs` 생성, content item mutation, Blogger write/publish, OAuth reconnect, token refresh가 없어야 한다.
 - Expected counts after smoke: attempts/events/artifacts `1 / 2 / 2`, `llm_call_logs=23`.
 - linked daily fixture는 계속 `status=planned`, `draftMarkdown` length `0`, `draftHtml` length `0`이어야 한다.
+
+## Patch 9F-3N draftMarkdown mutation gate preview 검증
+
+- `POST /api/daily-content-plans/draft-markdown-mutation-gate-preview`는 read-only mutation preview여야 한다.
+- 현재 candidate Markdown이 없으므로 `proposedDraftMarkdownAvailable=false`, `canPreviewDraftMarkdownMutation=false`가 정상이다.
+- 호출 중 DB write, content item mutation, draftMarkdown mutation, draftHtml mutation, LLM call, Blogger write/publish가 없어야 한다.
+- Expected counts after smoke: attempts/events/artifacts `1 / 2 / 2`, `llm_call_logs=23`.
+- linked daily fixture는 계속 `status=planned`, `draftMarkdown` length `0`, `draftHtml` length `0`이어야 한다.

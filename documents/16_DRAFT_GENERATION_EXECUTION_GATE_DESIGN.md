@@ -760,3 +760,16 @@ Patch 9F-3M determines whether a generated Markdown candidate can proceed toward
 Next candidate gate:
 
 - `9F-3N — draftMarkdown mutation gate preview`
+
+## Patch 9F-3N draftMarkdown Mutation Gate Preview
+
+Patch 9F-3N previews the first future content mutation without performing it.
+
+- Route: `POST /api/daily-content-plans/draft-markdown-mutation-gate-preview`.
+- It reads Markdown candidate acceptance and current content item lengths.
+- It is blocked while no accepted Markdown candidate exists.
+- It does not return the proposed draftMarkdown body and does not mutate content.
+
+Next candidate gate:
+
+- `9F-3O — Gated draftMarkdown persistence`

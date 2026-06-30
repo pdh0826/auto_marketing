@@ -381,3 +381,15 @@ Next patch candidate:
 Next patch candidate:
 
 - `9F-3N — draftMarkdown mutation gate preview`
+
+## Patch 9F-3N draftMarkdown Mutation Preview Audit Semantics
+
+9F-3N is read-only and adds no audit rows.
+
+- It previews whether a `draftMarkdown` mutation can be described.
+- It is currently blocked because no accepted Markdown candidate exists.
+- It keeps `dbWrite=false`, `contentItemMutation=false`, and `draftMarkdownMutation=false`.
+
+Next patch candidate:
+
+- `9F-3O — Gated draftMarkdown persistence`

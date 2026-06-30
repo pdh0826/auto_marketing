@@ -1,5 +1,26 @@
 # 14_NEXT_SESSION_BRIEF
 
+## Current State: Patch 9F-3N Completed
+
+```text
+repo: ~/blog-growth-agent
+branch: master
+expected HEAD after 9F-3N commit: local commit `Add draftMarkdown mutation gate preview` (verify exact hash with `git log --oneline -8`)
+```
+
+9F-3N adds draftMarkdown mutation gate preview:
+
+- Route used: `POST /api/daily-content-plans/draft-markdown-mutation-gate-preview`
+- UI: `/settings/blogger` shows `draftMarkdown mutation gate preview`.
+- Current state blocks mutation preview because no accepted Markdown candidate is available.
+- It does not return a proposed draftMarkdown body and does not mutate content.
+- The linked fixture remains `planned` with empty `draftMarkdown` and `draftHtml`.
+
+Next recommended patch:
+
+- `9F-3O — Gated draftMarkdown persistence`
+- This is the first `content_items.draftMarkdown` mutation and requires explicit user approval before execution.
+
 ## Current State: Patch 9F-3M Completed
 
 ```text

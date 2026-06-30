@@ -1171,3 +1171,13 @@ Patch 9F-3M adds a read-only gate for whether an LLM output can become `draftMar
 - It does not mutate audit rows, create `llm_call_logs`, mutate `content_items`, create `draftMarkdown`/`draftHtml`, call Blogger, reconnect OAuth, or refresh tokens.
 - It returns no raw prompt, raw request body, raw provider response, full generated candidate, secret, token, or encrypted value.
 - Next boundary is `9F-3N — draftMarkdown mutation gate preview`.
+
+## Patch 9F-3N draftMarkdown mutation gate preview boundary
+
+Patch 9F-3N previews the future `draftMarkdown` mutation without writing content.
+
+- It adds `POST /api/daily-content-plans/draft-markdown-mutation-gate-preview`.
+- It reads 9F-3M acceptance status and linked content item lengths.
+- Because no accepted Markdown candidate is available, the mutation preview is blocked.
+- It does not return a proposed draftMarkdown body and does not mutate `content_items`.
+- Next boundary is `9F-3O — Gated draftMarkdown persistence`, the first content mutation, requiring explicit approval before execution.

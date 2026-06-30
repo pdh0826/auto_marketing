@@ -1,5 +1,19 @@
 # 13_CHANGELOG
 
+## Patch 9F-3N draftMarkdown Mutation Gate Preview
+
+Implemented after Patch 9F-3M:
+
+- Added `POST /api/daily-content-plans/draft-markdown-mutation-gate-preview`.
+- Added a `/settings/blogger` UI action and summary block for draftMarkdown mutation preview.
+- Current state blocks mutation preview because no accepted Markdown candidate is available.
+- The preview does not return a proposed draftMarkdown body and does not mutate `content_items`.
+
+Policy:
+
+- 9F-3N does not write DB rows, call a provider, create `llm_call_logs`, mutate content, or write Blogger/OAuth/token state.
+- Recommended next patch is `9F-3O — Gated draftMarkdown persistence`, which is the first content item mutation and requires explicit approval before execution.
+
 ## Patch 9F-3M Markdown Candidate Acceptance Gate
 
 Implemented after Patch 9F-3L:

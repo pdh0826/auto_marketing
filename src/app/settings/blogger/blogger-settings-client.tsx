@@ -36,6 +36,7 @@ import type { DailyContentDraftGenerationLlmDispatchResponseReadbackResponse } f
 import type { DailyContentDraftGenerationLlmOutputQualityValidationPreviewResponse } from "@/lib/daily-content-plans/draft-generation-llm-output-quality-validation-preview";
 import type { DailyContentDraftGenerationLlmOutputValidationPersistenceResponse } from "@/lib/daily-content-plans/draft-generation-llm-output-validation-persistence";
 import type { DailyContentDraftGenerationMarkdownCandidateAcceptanceGateResponse } from "@/lib/daily-content-plans/draft-generation-markdown-candidate-acceptance-gate";
+import type { DailyContentDraftMarkdownMutationGatePreviewResponse } from "@/lib/daily-content-plans/draft-markdown-mutation-gate-preview";
 import type { DailyContentDraftGenerationLlmDispatchAttemptCreationResponse } from "@/lib/daily-content-plans/draft-generation-llm-dispatch-attempt-creation";
 import type { DailyContentDraftGenerationLlmDispatchAttemptCreationGatePreviewResponse } from "@/lib/daily-content-plans/draft-generation-llm-dispatch-attempt-creation-gate-preview";
 import type { DailyContentDraftGenerationLlmDispatchAttemptEventCreationResponse } from "@/lib/daily-content-plans/draft-generation-llm-dispatch-attempt-event-creation";
@@ -161,6 +162,8 @@ export function BloggerSettingsClient() {
     useState<DailyContentDraftGenerationLlmOutputValidationPersistenceResponse | null>(null);
   const [draftGenerationMarkdownCandidateAcceptanceGateResult, setDraftGenerationMarkdownCandidateAcceptanceGateResult] =
     useState<DailyContentDraftGenerationMarkdownCandidateAcceptanceGateResponse | null>(null);
+  const [draftMarkdownMutationGatePreviewResult, setDraftMarkdownMutationGatePreviewResult] =
+    useState<DailyContentDraftMarkdownMutationGatePreviewResponse | null>(null);
   const [oauthDryRun, setOauthDryRun] = useState<BloggerOAuthStartDryRun | null>(null);
   const [blogListResult, setBlogListResult] = useState<BloggerBlogListResult | null>(null);
   const [blogListLoadingId, setBlogListLoadingId] = useState<string | null>(null);
@@ -202,6 +205,7 @@ export function BloggerSettingsClient() {
   const [loadingDraftGenerationLlmOutputQualityValidationPreviewItemId, setLoadingDraftGenerationLlmOutputQualityValidationPreviewItemId] = useState<string | null>(null);
   const [loadingDraftGenerationLlmOutputValidationPersistenceItemId, setLoadingDraftGenerationLlmOutputValidationPersistenceItemId] = useState<string | null>(null);
   const [loadingDraftGenerationMarkdownCandidateAcceptanceGateItemId, setLoadingDraftGenerationMarkdownCandidateAcceptanceGateItemId] = useState<string | null>(null);
+  const [loadingDraftMarkdownMutationGatePreviewItemId, setLoadingDraftMarkdownMutationGatePreviewItemId] = useState<string | null>(null);
   const [selectingBlogId, setSelectingBlogId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -304,6 +308,7 @@ export function BloggerSettingsClient() {
       setDraftGenerationLlmOutputQualityValidationPreviewResult(null);
       setDraftGenerationLlmOutputValidationPersistenceResult(null);
       setDraftGenerationMarkdownCandidateAcceptanceGateResult(null);
+      setDraftMarkdownMutationGatePreviewResult(null);
       setOauthDryRun(null);
       setBlogListResult(null);
       setNotice("Blogger connection을 저장했습니다. Blogger draft/publish는 수행하지 않았습니다.");
@@ -454,6 +459,7 @@ export function BloggerSettingsClient() {
       setDraftGenerationLlmOutputQualityValidationPreviewResult(null);
       setDraftGenerationLlmOutputValidationPersistenceResult(null);
       setDraftGenerationMarkdownCandidateAcceptanceGateResult(null);
+      setDraftMarkdownMutationGatePreviewResult(null);
       setNotice("Daily Content Plan preview를 생성했습니다. Plan row 저장, content generation, LLM call, Blogger write/publish는 수행하지 않았습니다.");
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Daily Content Plan preview에 실패했습니다.");
@@ -1627,6 +1633,31 @@ export function BloggerSettingsClient() {
     }
   }
 
+  async function previewDraftMarkdownMutationGate(planId: string | null | undefined, planItemId: string | null | undefined, contentItemId: string | null | undefined) {
+    if (!planId || !planItemId || !contentItemId) {
+      setError("Daily plan id, item id, linked content item id가 필요합니다.");
+      return;
+    }
+    setError(null);
+    setNotice(null);
+    setLoadingDraftMarkdownMutationGatePreviewItemId(planItemId);
+    try {
+      const result = await requestJson<ApiResult<DailyContentDraftMarkdownMutationGatePreviewResponse>>(
+        "/api/daily-content-plans/draft-markdown-mutation-gate-preview",
+        {
+          method: "POST",
+          body: JSON.stringify({ mode: "preview", planId, planItemId, contentItemId })
+        }
+      );
+      setDraftMarkdownMutationGatePreviewResult(result.data);
+      setNotice("draftMarkdown mutation gate preview를 확인했습니다. 이 단계는 content_items를 변경하지 않습니다.");
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "draftMarkdown mutation gate preview 확인에 실패했습니다.");
+    } finally {
+      setLoadingDraftMarkdownMutationGatePreviewItemId(null);
+    }
+  }
+
   async function createOAuthDryRun(connection: BloggerConnectionAdmin) {
     setError(null);
     setNotice(null);
@@ -1839,6 +1870,7 @@ export function BloggerSettingsClient() {
                   setDraftGenerationLlmOutputQualityValidationPreviewResult(null);
                   setDraftGenerationLlmOutputValidationPersistenceResult(null);
                   setDraftGenerationMarkdownCandidateAcceptanceGateResult(null);
+                  setDraftMarkdownMutationGatePreviewResult(null);
                   setOauthDryRun(null);
                   setBlogListResult(null);
                 }}
@@ -2891,6 +2923,25 @@ export function BloggerSettingsClient() {
                         {loadingDraftGenerationMarkdownCandidateAcceptanceGateItemId === getDailyPlanItemId(item)
                           ? "markdown gate 확인 중"
                           : "markdown acceptance"}
+                      </button>
+                      <button
+                        className="button small secondary"
+                        type="button"
+                        disabled={
+                          !dailyContentPlanSummary.persistedPlanId ||
+                          !getDailyPlanItemId(item) ||
+                          !getDailyPlanItemContentItemId(item) ||
+                          loadingDraftMarkdownMutationGatePreviewItemId === getDailyPlanItemId(item)
+                        }
+                        onClick={() =>
+                          void previewDraftMarkdownMutationGate(
+                            dailyContentPlanSummary.persistedPlanId,
+                            getDailyPlanItemId(item),
+                            getDailyPlanItemContentItemId(item)
+                          )
+                        }
+                      >
+                        {loadingDraftMarkdownMutationGatePreviewItemId === getDailyPlanItemId(item) ? "draftMarkdown preview 중" : "draftMarkdown preview"}
                       </button>
                     </td>
                   </tr>
@@ -7963,6 +8014,54 @@ export function BloggerSettingsClient() {
                 <div className="notice">
                   후보 큐에서 linked content item이 있는 행의 “markdown acceptance”를 실행하세요. 이 단계는 draftMarkdown을 저장하지 않습니다.
                 </div>
+              )}
+            </div>
+
+            <div className="read-block">
+              <h3>draftMarkdown mutation gate preview</h3>
+              <div className="notice">
+                <strong>9F-3N mutation preview · read-only</strong>
+                <p>draftMarkdown에 무엇을 저장할 수 있는지 preview합니다. 현재 단계는 content_items를 변경하지 않습니다.</p>
+              </div>
+              {draftMarkdownMutationGatePreviewResult ? (
+                <>
+                  <div className={draftMarkdownMutationGatePreviewResult.blockingReasons.length > 0 ? "notice warning" : "notice"}>
+                    <strong>
+                      canPreviewMutation=
+                      {String(draftMarkdownMutationGatePreviewResult.draftMarkdownMutationPreviewSummary.canPreviewDraftMarkdownMutation)} / proposedAvailable=
+                      {String(draftMarkdownMutationGatePreviewResult.draftMarkdownMutationPreviewSummary.proposedDraftMarkdownAvailable)}
+                    </strong>
+                    <p>
+                      currentMarkdownLen={String(draftMarkdownMutationGatePreviewResult.draftMarkdownMutationPreviewSummary.currentDraftMarkdownLength ?? "null")} /
+                      currentHtmlLen={String(draftMarkdownMutationGatePreviewResult.draftMarkdownMutationPreviewSummary.currentDraftHtmlLength ?? "null")}
+                    </p>
+                  </div>
+                  <div className="detail-grid">
+                    <DetailItem label="Patch" value={draftMarkdownMutationGatePreviewResult.patchVersion} />
+                    <DetailItem label="Mode" value={draftMarkdownMutationGatePreviewResult.mode} />
+                    <DetailItem label="Plan Item" value={draftMarkdownMutationGatePreviewResult.targetSummary.planItemId} />
+                    <DetailItem label="Content Status" value={draftMarkdownMutationGatePreviewResult.draftMarkdownMutationPreviewSummary.contentItemStatus ?? "null"} />
+                    <DetailItem
+                      label="Proposed Returned"
+                      value={String(draftMarkdownMutationGatePreviewResult.draftMarkdownMutationPreviewSummary.proposedDraftMarkdownReturned)}
+                    />
+                    <DetailItem label="Next Patch" value={draftMarkdownMutationGatePreviewResult.draftMarkdownMutationPreviewSummary.nextSafePatchCandidate} />
+                    <DetailItem label="DB Write" value={String(draftMarkdownMutationGatePreviewResult.currentSideEffectSummary.dbWrite)} />
+                    <DetailItem
+                      label="Draft Markdown Mutation"
+                      value={String(draftMarkdownMutationGatePreviewResult.currentSideEffectSummary.draftMarkdownMutation)}
+                    />
+                  </div>
+                  <ValidationList
+                    title="draftMarkdown mutation blockers"
+                    items={draftMarkdownMutationGatePreviewResult.blockingReasons}
+                    emptyText="draftMarkdown mutation blocker가 없습니다."
+                    isError
+                  />
+                  <ValidationList title="Warnings" items={draftMarkdownMutationGatePreviewResult.warnings} emptyText="warning이 없습니다." isWarning />
+                </>
+              ) : (
+                <div className="notice">후보 큐에서 linked content item이 있는 행의 “draftMarkdown preview”를 실행하세요.</div>
               )}
             </div>
 
