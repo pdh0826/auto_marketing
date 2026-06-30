@@ -1091,3 +1091,13 @@ Patch 9F-3F reads back provider health-check audit/gate state without any provid
 - Because 9F-3E intentionally did not persist raw provider result data, the readback marks that positive run as transient.
 - It does not create event/artifact rows, call provider health-check endpoints, call completion/chat/generate/responses endpoints, create `llm_call_logs`, store prompts, store raw provider response bodies/headers, mutate `content_items`, create `draftMarkdown`/`draftHtml`, call Blogger, reconnect OAuth, or refresh tokens.
 - Next boundary is `9F-3G — LLM dispatch final preflight`.
+
+## Patch 9F-3G LLM dispatch final preflight boundary
+
+Patch 9F-3G aggregates final pre-dispatch readiness without executing dispatch.
+
+- It adds `POST /api/daily-content-plans/draft-generation-llm-dispatch-final-preflight`.
+- It checks audit attempt/event/artifact presence, prompt quality, request envelope readiness, provider route/model readiness, health-check readback, confirmation policy, and idempotency policy.
+- It keeps `dispatchExecutionAllowedInThisPatch=false` and does not create a plan lock.
+- It does not call provider health-check endpoints, call completion/chat/generate/responses endpoints, create `llm_call_logs`, store prompts, store raw provider response bodies/headers, mutate `content_items`, create `draftMarkdown`/`draftHtml`, call Blogger, reconnect OAuth, or refresh tokens.
+- Next boundary is `9F-3H — LLM dispatch execution plan lock`.

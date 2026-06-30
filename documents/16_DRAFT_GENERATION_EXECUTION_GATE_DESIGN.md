@@ -657,3 +657,17 @@ Patch 9F-3F reads provider health-check audit/gate state without executing anoth
 Next candidate gate:
 
 - `9F-3G — LLM dispatch final preflight`
+
+## Patch 9F-3G LLM Dispatch Final Preflight
+
+Patch 9F-3G aggregates the final pre-dispatch checks without executing dispatch.
+
+- It adds `POST /api/daily-content-plans/draft-generation-llm-dispatch-final-preflight`.
+- It reads audit attempt/event/artifact readiness, prompt quality, request envelope readiness, provider readiness, provider health-check readback, idempotency policy, and confirmation policy.
+- It keeps `dispatchExecutionAllowedInThisPatch=false`, `readyForLlmDispatchExecution=false`, and does not create a plan lock.
+- Provider health-check calls, provider network calls, completion/chat/generate/responses calls, `llm_call_logs`, content mutation, draft creation, Blogger write, OAuth reconnect, and token refresh remain disabled.
+- Attempts/events/artifacts counts remain `1 / 1 / 1`.
+
+Next candidate gate:
+
+- `9F-3H — LLM dispatch execution plan lock`

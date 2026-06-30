@@ -1,5 +1,28 @@
 # 14_NEXT_SESSION_BRIEF
 
+## Current State: Patch 9F-3G Completed
+
+```text
+repo: ~/blog-growth-agent
+branch: master
+expected HEAD after 9F-3G commit: local commit `Add draft generation LLM dispatch final preflight` (verify exact hash with `git log --oneline -8`)
+```
+
+9F-3G adds final pre-dispatch readiness aggregation:
+
+- Route used: `POST /api/daily-content-plans/draft-generation-llm-dispatch-final-preflight`
+- UI: `/settings/blogger` shows `초안 생성 LLM dispatch final preflight`.
+- It checks attempt/event/artifact audit rows, prompt quality, request envelope, provider readiness, health-check readback, confirmation policy, and idempotency policy.
+- It keeps `dispatchExecutionAllowedInThisPatch=false` and does not create a plan lock.
+- Audit counts remain attempts/events/artifacts `1 / 1 / 1`.
+- `llm_call_logs` remains `22`.
+- The linked fixture remains `planned` with empty `draftMarkdown` and `draftHtml`.
+- Content mutations, Blogger writes/publish, OAuth reconnect, and token refresh remain disabled.
+
+Next recommended patch:
+
+- `9F-3H — LLM dispatch execution plan lock`
+
 ## Current State: Patch 9F-3F Completed
 
 ```text

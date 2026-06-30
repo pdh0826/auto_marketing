@@ -282,3 +282,17 @@ Next patch candidate:
 Next patch candidate:
 
 - `9F-3G — LLM dispatch final preflight`
+
+## Patch 9F-3G Final Preflight Audit Semantics
+
+9F-3G reads existing audit rows as part of the final pre-dispatch check.
+
+- Route: `POST /api/daily-content-plans/draft-generation-llm-dispatch-final-preflight`.
+- It requires no new schema and inserts no rows.
+- It treats the existing attempt/event/artifact rows as prerequisites for the later plan lock.
+- It returns no raw prompt, raw request body, raw provider response body/header, secret value, token value, full candidate, or generated content.
+- Attempts/events/artifacts counts remain `1 / 1 / 1`.
+
+Next patch candidate:
+
+- `9F-3H — LLM dispatch execution plan lock`

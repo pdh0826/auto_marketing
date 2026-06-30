@@ -1,5 +1,20 @@
 # 13_CHANGELOG
 
+## Patch 9F-3G LLM Dispatch Final Preflight
+
+Implemented after Patch 9F-3F:
+
+- Added `POST /api/daily-content-plans/draft-generation-llm-dispatch-final-preflight`.
+- Added a `/settings/blogger` UI action and summary block for final LLM dispatch preflight.
+- The preflight aggregates attempt/event/artifact audit readiness, prompt quality, request envelope, provider readiness, health-check readback, confirmation policy, and idempotency policy.
+- It keeps `dispatchExecutionAllowedInThisPatch=false` and does not create a plan lock.
+
+Policy:
+
+- 9F-3G does not call provider health-check, completion/chat/generate/responses endpoints, create `llm_call_logs`, mutate `content_items`, write to Blogger, publish, schedule, reconnect OAuth, or refresh tokens.
+- Audit counts remain attempts/events/artifacts `1 / 1 / 1`.
+- Recommended next patch: `9F-3H — LLM dispatch execution plan lock`.
+
 ## Patch 9F-3F Provider Health-Check Readback
 
 Implemented after Patch 9F-3E:

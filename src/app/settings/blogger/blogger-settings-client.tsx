@@ -29,6 +29,7 @@ import type { DailyContentDraftGenerationLlmDispatchAuditSchemaDesignResponse } 
 import type { DailyContentDraftGenerationLlmDispatchAuditMigrationApplyReadbackResponse } from "@/lib/daily-content-plans/draft-generation-llm-dispatch-audit-migration-apply-readback";
 import type { DailyContentDraftGenerationLlmDispatchArtifactCreationResponse } from "@/lib/daily-content-plans/draft-generation-llm-dispatch-artifact-creation";
 import type { DailyContentDraftGenerationLlmDispatchArtifactPreviewResponse } from "@/lib/daily-content-plans/draft-generation-llm-dispatch-artifact-preview";
+import type { DailyContentDraftGenerationLlmDispatchFinalPreflightResponse } from "@/lib/daily-content-plans/draft-generation-llm-dispatch-final-preflight";
 import type { DailyContentDraftGenerationLlmDispatchAttemptCreationResponse } from "@/lib/daily-content-plans/draft-generation-llm-dispatch-attempt-creation";
 import type { DailyContentDraftGenerationLlmDispatchAttemptCreationGatePreviewResponse } from "@/lib/daily-content-plans/draft-generation-llm-dispatch-attempt-creation-gate-preview";
 import type { DailyContentDraftGenerationLlmDispatchAttemptEventCreationResponse } from "@/lib/daily-content-plans/draft-generation-llm-dispatch-attempt-event-creation";
@@ -140,6 +141,8 @@ export function BloggerSettingsClient() {
     useState<DailyContentDraftGenerationLlmDispatchArtifactPreviewResponse | null>(null);
   const [draftGenerationLlmDispatchArtifactCreationResult, setDraftGenerationLlmDispatchArtifactCreationResult] =
     useState<DailyContentDraftGenerationLlmDispatchArtifactCreationResponse | null>(null);
+  const [draftGenerationLlmDispatchFinalPreflightResult, setDraftGenerationLlmDispatchFinalPreflightResult] =
+    useState<DailyContentDraftGenerationLlmDispatchFinalPreflightResponse | null>(null);
   const [oauthDryRun, setOauthDryRun] = useState<BloggerOAuthStartDryRun | null>(null);
   const [blogListResult, setBlogListResult] = useState<BloggerBlogListResult | null>(null);
   const [blogListLoadingId, setBlogListLoadingId] = useState<string | null>(null);
@@ -174,6 +177,7 @@ export function BloggerSettingsClient() {
   const [loadingDraftGenerationLlmDispatchAttemptEventCreationItemId, setLoadingDraftGenerationLlmDispatchAttemptEventCreationItemId] = useState<string | null>(null);
   const [loadingDraftGenerationLlmDispatchArtifactPreviewItemId, setLoadingDraftGenerationLlmDispatchArtifactPreviewItemId] = useState<string | null>(null);
   const [loadingDraftGenerationLlmDispatchArtifactCreationItemId, setLoadingDraftGenerationLlmDispatchArtifactCreationItemId] = useState<string | null>(null);
+  const [loadingDraftGenerationLlmDispatchFinalPreflightItemId, setLoadingDraftGenerationLlmDispatchFinalPreflightItemId] = useState<string | null>(null);
   const [selectingBlogId, setSelectingBlogId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -269,6 +273,7 @@ export function BloggerSettingsClient() {
       setDraftGenerationLlmDispatchAttemptEventCreationResult(null);
       setDraftGenerationLlmDispatchArtifactPreviewResult(null);
       setDraftGenerationLlmDispatchArtifactCreationResult(null);
+      setDraftGenerationLlmDispatchFinalPreflightResult(null);
       setOauthDryRun(null);
       setBlogListResult(null);
       setNotice("Blogger connection을 저장했습니다. Blogger draft/publish는 수행하지 않았습니다.");
@@ -412,6 +417,7 @@ export function BloggerSettingsClient() {
       setDraftGenerationLlmDispatchAttemptEventCreationResult(null);
       setDraftGenerationLlmDispatchArtifactPreviewResult(null);
       setDraftGenerationLlmDispatchArtifactCreationResult(null);
+      setDraftGenerationLlmDispatchFinalPreflightResult(null);
       setNotice("Daily Content Plan preview를 생성했습니다. Plan row 저장, content generation, LLM call, Blogger write/publish는 수행하지 않았습니다.");
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Daily Content Plan preview에 실패했습니다.");
@@ -1319,6 +1325,44 @@ export function BloggerSettingsClient() {
     }
   }
 
+  async function previewDraftGenerationLlmDispatchFinalPreflight(
+    planId: string | null | undefined,
+    planItemId: string | null | undefined,
+    contentItemId: string | null | undefined
+  ) {
+    if (!planId || !planItemId || !contentItemId) {
+      setError("Daily plan id, item id, linked content item id가 필요합니다.");
+      return;
+    }
+
+    setError(null);
+    setNotice(null);
+    setLoadingDraftGenerationLlmDispatchFinalPreflightItemId(planItemId);
+
+    try {
+      const result = await requestJson<ApiResult<DailyContentDraftGenerationLlmDispatchFinalPreflightResponse>>(
+        "/api/daily-content-plans/draft-generation-llm-dispatch-final-preflight",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            mode: "preview",
+            planId,
+            planItemId,
+            contentItemId
+          })
+        }
+      );
+      setDraftGenerationLlmDispatchFinalPreflightResult(result.data);
+      setNotice(
+        "초안 생성 LLM dispatch final preflight를 확인했습니다. 이 단계는 read-only이며 provider/LLM call, llm_call_logs 생성, content_items 수정, Blogger write/publish는 수행하지 않았습니다."
+      );
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "초안 생성 LLM dispatch final preflight 확인에 실패했습니다.");
+    } finally {
+      setLoadingDraftGenerationLlmDispatchFinalPreflightItemId(null);
+    }
+  }
+
   async function createOAuthDryRun(connection: BloggerConnectionAdmin) {
     setError(null);
     setNotice(null);
@@ -1524,6 +1568,7 @@ export function BloggerSettingsClient() {
                   setDraftGenerationLlmDispatchAttemptEventCreationResult(null);
                   setDraftGenerationLlmDispatchArtifactPreviewResult(null);
                   setDraftGenerationLlmDispatchArtifactCreationResult(null);
+                  setDraftGenerationLlmDispatchFinalPreflightResult(null);
                   setOauthDryRun(null);
                   setBlogListResult(null);
                 }}
@@ -2435,6 +2480,25 @@ export function BloggerSettingsClient() {
                         }
                       >
                         {loadingDraftGenerationLlmDispatchArtifactCreationItemId === getDailyPlanItemId(item) ? "artifact 생성 확인 중" : "artifact 생성 preview"}
+                      </button>
+                      <button
+                        className="button small secondary"
+                        type="button"
+                        disabled={
+                          !dailyContentPlanSummary.persistedPlanId ||
+                          !getDailyPlanItemId(item) ||
+                          !getDailyPlanItemContentItemId(item) ||
+                          loadingDraftGenerationLlmDispatchFinalPreflightItemId === getDailyPlanItemId(item)
+                        }
+                        onClick={() =>
+                          void previewDraftGenerationLlmDispatchFinalPreflight(
+                            dailyContentPlanSummary.persistedPlanId,
+                            getDailyPlanItemId(item),
+                            getDailyPlanItemContentItemId(item)
+                          )
+                        }
+                      >
+                        {loadingDraftGenerationLlmDispatchFinalPreflightItemId === getDailyPlanItemId(item) ? "final preflight 확인 중" : "final preflight"}
                       </button>
                     </td>
                   </tr>
@@ -6691,6 +6755,96 @@ export function BloggerSettingsClient() {
               )}
             </div>
 
+            <div className="read-block">
+              <h3>초안 생성 LLM dispatch final preflight</h3>
+              <div className="notice">
+                <strong>9F-3G final preflight · read-only</strong>
+                <p>attempt/event/artifact, prompt quality, request envelope, provider readiness, health-check readback, idempotency policy를 한 번에 확인합니다.</p>
+                <p>이 단계는 provider/LLM call, llm_call_logs 생성, content_items 수정, Blogger write/publish를 수행하지 않습니다.</p>
+              </div>
+              {draftGenerationLlmDispatchFinalPreflightResult ? (
+                <>
+                  <div className="notice warning">
+                    <strong>
+                      planLockReady={String(draftGenerationLlmDispatchFinalPreflightResult.finalPreflightSummary.finalPreflightReadyForPlanLock)} /
+                      dispatchAllowedInPatch={String(draftGenerationLlmDispatchFinalPreflightResult.dispatchExecutionAllowedInThisPatch)}
+                    </strong>
+                    <p>
+                      latestAttempt={draftGenerationLlmDispatchFinalPreflightResult.finalPreflightSummary.latestAttemptId ?? "null"} / blockers=
+                      {draftGenerationLlmDispatchFinalPreflightResult.finalPreflightSummary.blockers.length}
+                    </p>
+                  </div>
+                  <div className="detail-grid">
+                    <DetailItem label="Patch" value={draftGenerationLlmDispatchFinalPreflightResult.patchVersion} />
+                    <DetailItem label="Preflight Version" value={draftGenerationLlmDispatchFinalPreflightResult.finalPreflightSummary.preflightVersion} />
+                    <DetailItem label="Plan Item" value={draftGenerationLlmDispatchFinalPreflightResult.targetSummary.planItemId} />
+                    <DetailItem label="Linked Fixture" value={draftGenerationLlmDispatchFinalPreflightResult.targetSummary.contentItemId ?? "-"} />
+                    <DetailItem label="Attempt Ready" value={String(draftGenerationLlmDispatchFinalPreflightResult.finalPreflightSummary.attemptAuditReady)} />
+                    <DetailItem label="Event Ready" value={String(draftGenerationLlmDispatchFinalPreflightResult.finalPreflightSummary.eventAuditReady)} />
+                    <DetailItem label="Artifact Ready" value={String(draftGenerationLlmDispatchFinalPreflightResult.finalPreflightSummary.artifactAuditReady)} />
+                    <DetailItem label="Prompt Ready" value={String(draftGenerationLlmDispatchFinalPreflightResult.finalPreflightSummary.promptQualityReady)} />
+                    <DetailItem label="Envelope Ready" value={String(draftGenerationLlmDispatchFinalPreflightResult.finalPreflightSummary.requestEnvelopeReady)} />
+                    <DetailItem label="Provider Ready" value={String(draftGenerationLlmDispatchFinalPreflightResult.finalPreflightSummary.providerRouteReady)} />
+                    <DetailItem
+                      label="Health Reference"
+                      value={String(draftGenerationLlmDispatchFinalPreflightResult.finalPreflightSummary.providerHealthCheckReferenceFound)}
+                    />
+                    <DetailItem
+                      label="Health Result Transient"
+                      value={String(draftGenerationLlmDispatchFinalPreflightResult.finalPreflightSummary.providerHealthCheckResultStillTransient)}
+                    />
+                  </div>
+                  <ValidationList
+                    title="Final preflight checks"
+                    items={draftGenerationLlmDispatchFinalPreflightResult.finalPreflightSummary.checks.map(formatFinalPreflightCheck)}
+                    emptyText="check가 없습니다."
+                    isWarning
+                  />
+                  <ValidationList
+                    title="Final preflight blockers"
+                    items={draftGenerationLlmDispatchFinalPreflightResult.finalPreflightSummary.blockers}
+                    emptyText="blocker가 없습니다."
+                    isError
+                  />
+                  <ValidationList
+                    title="Next required inputs"
+                    items={draftGenerationLlmDispatchFinalPreflightResult.finalPreflightSummary.nextRequiredInputs}
+                    emptyText="추가 입력이 없습니다."
+                    isWarning
+                  />
+                  <details className="read-block">
+                    <summary>Final preflight side-effect 상세</summary>
+                    <div className="detail-grid">
+                      <DetailItem label="DB Read" value={String(draftGenerationLlmDispatchFinalPreflightResult.currentSideEffectSummary.dbRead)} />
+                      <DetailItem label="DB Write" value={String(draftGenerationLlmDispatchFinalPreflightResult.currentSideEffectSummary.dbWrite)} />
+                      <DetailItem
+                        label="Prompt Rendered"
+                        value={String(draftGenerationLlmDispatchFinalPreflightResult.currentSideEffectSummary.promptRenderedForPreflight)}
+                      />
+                      <DetailItem
+                        label="Provider Network"
+                        value={String(draftGenerationLlmDispatchFinalPreflightResult.currentSideEffectSummary.providerNetworkCall)}
+                      />
+                      <DetailItem label="LLM Call" value={String(draftGenerationLlmDispatchFinalPreflightResult.currentSideEffectSummary.llmCall)} />
+                      <DetailItem
+                        label="LLM Log Mutation"
+                        value={String(draftGenerationLlmDispatchFinalPreflightResult.currentSideEffectSummary.llmCallLogMutation)}
+                      />
+                      <DetailItem
+                        label="Content Mutation"
+                        value={String(draftGenerationLlmDispatchFinalPreflightResult.currentSideEffectSummary.contentItemMutation)}
+                      />
+                      <DetailItem label="Blogger Write" value={String(draftGenerationLlmDispatchFinalPreflightResult.currentSideEffectSummary.bloggerWrite)} />
+                    </div>
+                  </details>
+                </>
+              ) : (
+                <div className="notice">
+                  후보 큐에서 linked content item이 있는 행의 “final preflight”를 실행하세요. 이 단계는 모든 dispatch 전제조건을 읽기만 합니다.
+                </div>
+              )}
+            </div>
+
             <details className="read-block">
               <summary>기술 상세</summary>
               <div className="detail-grid">
@@ -7117,6 +7271,10 @@ function formatDispatchGateCheck(item: { key: string; status: string; severity: 
   return `${item.status}/${item.severity}: ${item.label} - ${item.detail}${item.blockerCode ? ` · blocker: ${item.blockerCode}` : ""}${
     item.remediation ? ` · remediation: ${item.remediation}` : ""
   }`;
+}
+
+function formatFinalPreflightCheck(item: { key: string; status: string; label: string; detail: string; blockerCode?: string }) {
+  return `${item.status}: ${item.label} - ${item.detail}${item.blockerCode ? ` · blocker: ${item.blockerCode}` : ""}`;
 }
 
 function formatAttemptCreationGateCheck(item: { key: string; status: string; severity: string; label: string; detail: string; blockerCode?: string; remediation?: string }) {
