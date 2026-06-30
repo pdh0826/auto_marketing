@@ -1135,3 +1135,15 @@ Patch 9F-3J reads back the 9F-3I dispatch result without another provider call.
 - It does not call provider health-check endpoints, call completion/chat/generate/responses endpoints, create `llm_call_logs`, store prompts, store raw provider response bodies/headers, mutate `content_items`, create `draftMarkdown`/`draftHtml`, call Blogger, reconnect OAuth, or refresh tokens.
 - It returns no raw prompt, raw request body, raw provider response, full generated candidate, secret, token, or encrypted value.
 - Next boundary is `9F-3K — LLM output quality validation preview`.
+
+## Patch 9F-3K LLM output quality validation preview boundary
+
+Patch 9F-3K adds deterministic output validation readiness without fabricating a content validation result.
+
+- It adds `POST /api/daily-content-plans/draft-generation-llm-output-quality-validation-preview`.
+- It reads 9F-3J response metadata and reports that full Markdown candidate validation is blocked because 9F-3I stored only hash/length metadata.
+- Markdown structure, Korean readability, SEO headings, policy forbidden phrases, CTA/FAQ, and Blogger compatibility checks remain blocked until an explicitly approved candidate text artifact policy exists.
+- It performs no LLM judge call and no provider call.
+- It does not create `llm_call_logs`, mutate audit rows, mutate `content_items`, create `draftMarkdown`/`draftHtml`, call Blogger, reconnect OAuth, or refresh tokens.
+- It returns no raw prompt, raw request body, raw provider response, full generated candidate, secret, token, or encrypted value.
+- Next boundary is `9F-3L — Gated output validation persistence`.

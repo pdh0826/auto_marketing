@@ -1914,3 +1914,13 @@ Safety guard:
 - 호출 중 provider health-check, provider network call, completion/chat/generate/responses endpoint, LLM call, `llm_call_logs` 생성이 없어야 한다.
 - Expected counts after smoke: attempts/events/artifacts `1 / 2 / 2`, `llm_call_logs=23`.
 - linked daily fixture는 계속 `status=planned`, `draftMarkdown` length `0`, `draftHtml` length `0`, `publishedAt=null`, `scheduledAt=null`이어야 한다.
+
+## Patch 9F-3K LLM output quality validation preview 검증
+
+- `POST /api/daily-content-plans/draft-generation-llm-output-quality-validation-preview`는 deterministic/read-only validation preview여야 한다.
+- 현재 9F-3I 정책상 full Markdown candidate가 저장되지 않았으므로 `candidateMarkdownAvailable=false`, `canRunFullMarkdownValidation=false`, `validationReady=false`가 정상이다.
+- Markdown structure, Korean readability, SEO headings, forbidden phrases, CTA/FAQ, Blogger compatibility checks는 candidate text unavailable blocker로 표시되어야 한다.
+- Redaction boundary check는 pass여야 하며 raw prompt/raw response/full candidate/secret/token/encrypted value를 반환하지 않아야 한다.
+- 호출 중 provider health-check, provider network call, completion/chat/generate/responses endpoint, LLM call, `llm_call_logs` 생성, audit row 생성이 없어야 한다.
+- Expected counts after smoke: attempts/events/artifacts `1 / 2 / 2`, `llm_call_logs=23`.
+- linked daily fixture는 계속 `status=planned`, `draftMarkdown` length `0`, `draftHtml` length `0`, `publishedAt=null`, `scheduledAt=null`이어야 한다.

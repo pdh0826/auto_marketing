@@ -339,3 +339,17 @@ Next patch candidate:
 Next patch candidate:
 
 - `9F-3K — LLM output quality validation preview`
+
+## Patch 9F-3K Output Validation Preview Audit Semantics
+
+9F-3K is a read-only validation preview and does not add rows.
+
+- It reads 9F-3J safe response metadata and produces a validation readiness summary.
+- Because no full Markdown candidate is stored, content-based checks are blocked rather than fabricated.
+- It keeps `dbWrite=false`, `auditEventMutation=false`, `auditArtifactMutation=false`, `llmCallLogMutation=false`, and `validationArtifactPersistedNow=false`.
+- A future 9F-3L patch may persist this blocked validation preview as audit metadata, but 9F-3K itself only reads.
+- It returns no raw prompt, raw request body, raw provider response body/header, full generated candidate, secret, token, or encrypted value.
+
+Next patch candidate:
+
+- `9F-3L — Gated output validation persistence`

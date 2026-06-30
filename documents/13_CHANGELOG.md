@@ -1,5 +1,20 @@
 # 13_CHANGELOG
 
+## Patch 9F-3K LLM Output Quality Validation Preview
+
+Implemented after Patch 9F-3J:
+
+- Added `POST /api/daily-content-plans/draft-generation-llm-output-quality-validation-preview`.
+- Added a `/settings/blogger` UI action and summary block for deterministic output validation preview.
+- The preview reads 9F-3J response metadata and reports that full Markdown validation is blocked because the 9F-3I dispatch stored only hash/length metadata.
+- Markdown structure, Korean readability, SEO headings, forbidden phrase, CTA/FAQ, and Blogger compatibility checks are surfaced as blocked until a candidate text artifact policy exists.
+
+Policy:
+
+- 9F-3K does not call a provider, use an LLM judge, create `llm_call_logs`, mutate audit rows, mutate content, or write Blogger/OAuth/token state.
+- 9F-3K does not return raw prompt, raw provider response, full generated candidate, request body, API key, token, secret, or encrypted value.
+- Recommended next patch: `9F-3L — Gated output validation persistence`.
+
 ## Patch 9F-3J LLM Response Readback
 
 Implemented after Patch 9F-3I:

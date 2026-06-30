@@ -1,5 +1,28 @@
 # 14_NEXT_SESSION_BRIEF
 
+## Current State: Patch 9F-3K Completed
+
+```text
+repo: ~/blog-growth-agent
+branch: master
+expected HEAD after 9F-3K commit: local commit `Add draft generation LLM output quality validation preview` (verify exact hash with `git log --oneline -8`)
+```
+
+9F-3K adds deterministic output validation preview:
+
+- Route used: `POST /api/daily-content-plans/draft-generation-llm-output-quality-validation-preview`
+- UI: `/settings/blogger` shows `초안 생성 LLM output quality validation preview`.
+- It reads 9F-3J response metadata and reports validation readiness.
+- Because 9F-3I stored only hash/length metadata, `candidateMarkdownAvailable=false`, `canRunFullMarkdownValidation=false`, and `validationReady=false` are expected.
+- Markdown structure, Korean readability, SEO headings, forbidden phrases, CTA/FAQ, and Blogger compatibility checks are blocked until a candidate text artifact policy exists.
+- It does not call provider/LLM endpoints, use an LLM judge, create `llm_call_logs`, mutate audit rows, or mutate content.
+- The linked fixture must remain `planned` with unchanged `draftMarkdown` and `draftHtml`.
+- Blogger write/publish, OAuth reconnect, and token refresh remain disabled.
+
+Next recommended patch:
+
+- `9F-3L — Gated output validation persistence`
+
 ## Current State: Patch 9F-3J Completed
 
 ```text

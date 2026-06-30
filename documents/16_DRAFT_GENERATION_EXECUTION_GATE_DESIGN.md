@@ -715,3 +715,18 @@ Patch 9F-3J verifies the 9F-3I result through safe audit readback only.
 Next candidate gate:
 
 - `9F-3K — LLM output quality validation preview`
+
+## Patch 9F-3K LLM Output Quality Validation Preview
+
+Patch 9F-3K introduces deterministic output validation readiness without claiming to validate unavailable content.
+
+- Route: `POST /api/daily-content-plans/draft-generation-llm-output-quality-validation-preview`.
+- It reads the 9F-3J response readback and reports whether full Markdown candidate validation can run.
+- Since 9F-3I stores only hash/length metadata, full Markdown candidate text is unavailable and the content checks are blocked.
+- It surfaces Markdown structure, Korean readability, SEO headings, policy forbidden phrases, CTA/FAQ, and Blogger compatibility checks as blocked until candidate text artifact policy is approved.
+- It does not call the provider, use an LLM judge, create `llm_call_logs`, mutate audit rows, mutate content, write Blogger, reconnect OAuth, or refresh tokens.
+- It returns no raw prompt, raw response body/header, full generated candidate, request body, API key, token, secret, or encrypted value.
+
+Next candidate gate:
+
+- `9F-3L — Gated output validation persistence`
