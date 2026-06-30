@@ -1,5 +1,27 @@
 # 13_CHANGELOG
 
+## Patch 9F-2W-APPLY LLM Dispatch Audit Migration Apply
+
+Implemented after Patch 9F-2W:
+
+- Applied Prisma migration `20260620000300_add_llm_dispatch_audit_schema` with `npx prisma migrate deploy`.
+- Created DB tables `blog_daily_content_llm_dispatch_attempts`, `blog_daily_content_llm_dispatch_events`, and `blog_daily_content_llm_dispatch_artifacts`.
+- Added read-only helper `src/lib/daily-content-plans/draft-generation-llm-dispatch-audit-migration-apply-readback.ts`.
+- Added route `POST /api/daily-content-plans/draft-generation-llm-dispatch-audit-migration-apply-readback`.
+- Added `/settings/blogger` `초안 생성 LLM dispatch audit migration 적용 상태` UI readback.
+- The readback reports `patchVersion=9F-2W-APPLY`, `previewMode=read_only_llm_dispatch_audit_migration_apply_readback`, `migrationApplyOnly=true`, `migrationApplied=true`, `schemaTablesCreated=true`, `rowsCreatedByMigration=false`, `providerNetworkCallAttempted=false`, `llmCallAttempted=false`, and `contentMutationAttempted=false`.
+- Non-preview modes are blocked with `draft_generation_llm_dispatch_audit_migration_apply_readback_is_preview_only`.
+
+Policy:
+
+- 9F-2W-APPLY did not rerun 9F-2B apply, 9F-2D apply, 9F-2I-APPLY, or 9F-2K approval apply.
+- 9F-2W-APPLY did not create audit table rows, store request envelopes, store prompts, run provider health checks, make provider network calls, call LLM providers, create `llm_call_logs`, mutate `content_items`, write to Blogger, publish, schedule, reconnect OAuth, refresh tokens, mutate publish approvals, or mutate publish attempts.
+- Audit table row counts remain `0 / 0 / 0`.
+- Daily plan rows remain `1`, daily plan item rows remain `3`, `content_items` count remains `2`, and operator approvals/events remain `1 / 1`.
+- Publish milestone counts remain `1 / 1 / 1 / 1 / 22`, and `llm_call_logs` remains `22`.
+- The linked fixture remains `planned` with empty `draftMarkdown` and `draftHtml`.
+- Recommended next patch: `9F-2X — LLM dispatch attempt readback scaffold, no provider call/no content mutation`.
+
 ## Patch 9F-2W LLM Dispatch Audit Schema Scaffold
 
 Implemented after Patch 9F-2V:

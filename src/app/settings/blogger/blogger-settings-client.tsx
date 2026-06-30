@@ -25,6 +25,7 @@ import type { DailyContentDraftGenerationLlmProviderHealthCheckExecutionResponse
 import type { DailyContentDraftGenerationLlmProviderHealthCheckPreviewResponse } from "@/lib/daily-content-plans/draft-generation-llm-provider-health-check-preview";
 import type { DailyContentDraftGenerationLlmProviderReadinessResponse } from "@/lib/daily-content-plans/draft-generation-llm-provider-readiness";
 import type { DailyContentDraftGenerationLlmDispatchAuditSchemaDesignResponse } from "@/lib/daily-content-plans/draft-generation-llm-dispatch-audit-schema-design";
+import type { DailyContentDraftGenerationLlmDispatchAuditMigrationApplyReadbackResponse } from "@/lib/daily-content-plans/draft-generation-llm-dispatch-audit-migration-apply-readback";
 import type { DailyContentDraftGenerationLlmDispatchAuditSchemaScaffoldPreviewResponse } from "@/lib/daily-content-plans/draft-generation-llm-dispatch-audit-schema-scaffold-preview";
 import type { DailyContentDraftGenerationLlmDispatchGatePreviewResponse } from "@/lib/daily-content-plans/draft-generation-llm-dispatch-gate-preview";
 import type { DailyContentDraftGenerationLlmRequestEnvelopePreviewResponse } from "@/lib/daily-content-plans/draft-generation-llm-request-envelope-preview";
@@ -113,6 +114,8 @@ export function BloggerSettingsClient() {
     useState<DailyContentDraftGenerationLlmDispatchAuditSchemaDesignResponse | null>(null);
   const [draftGenerationLlmDispatchAuditSchemaScaffoldPreviewResult, setDraftGenerationLlmDispatchAuditSchemaScaffoldPreviewResult] =
     useState<DailyContentDraftGenerationLlmDispatchAuditSchemaScaffoldPreviewResponse | null>(null);
+  const [draftGenerationLlmDispatchAuditMigrationApplyReadbackResult, setDraftGenerationLlmDispatchAuditMigrationApplyReadbackResult] =
+    useState<DailyContentDraftGenerationLlmDispatchAuditMigrationApplyReadbackResponse | null>(null);
   const [oauthDryRun, setOauthDryRun] = useState<BloggerOAuthStartDryRun | null>(null);
   const [blogListResult, setBlogListResult] = useState<BloggerBlogListResult | null>(null);
   const [blogListLoadingId, setBlogListLoadingId] = useState<string | null>(null);
@@ -135,6 +138,8 @@ export function BloggerSettingsClient() {
   const [loadingDraftGenerationLlmDispatchGatePreviewItemId, setLoadingDraftGenerationLlmDispatchGatePreviewItemId] = useState<string | null>(null);
   const [loadingDraftGenerationLlmDispatchAuditSchemaDesignItemId, setLoadingDraftGenerationLlmDispatchAuditSchemaDesignItemId] = useState<string | null>(null);
   const [loadingDraftGenerationLlmDispatchAuditSchemaScaffoldPreviewItemId, setLoadingDraftGenerationLlmDispatchAuditSchemaScaffoldPreviewItemId] =
+    useState<string | null>(null);
+  const [loadingDraftGenerationLlmDispatchAuditMigrationApplyReadbackItemId, setLoadingDraftGenerationLlmDispatchAuditMigrationApplyReadbackItemId] =
     useState<string | null>(null);
   const [selectingBlogId, setSelectingBlogId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -222,6 +227,7 @@ export function BloggerSettingsClient() {
       setDraftGenerationLlmDispatchGatePreviewResult(null);
       setDraftGenerationLlmDispatchAuditSchemaDesignResult(null);
       setDraftGenerationLlmDispatchAuditSchemaScaffoldPreviewResult(null);
+      setDraftGenerationLlmDispatchAuditMigrationApplyReadbackResult(null);
       setOauthDryRun(null);
       setBlogListResult(null);
       setNotice("Blogger connection을 저장했습니다. Blogger draft/publish는 수행하지 않았습니다.");
@@ -356,6 +362,7 @@ export function BloggerSettingsClient() {
       setDraftGenerationLlmDispatchGatePreviewResult(null);
       setDraftGenerationLlmDispatchAuditSchemaDesignResult(null);
       setDraftGenerationLlmDispatchAuditSchemaScaffoldPreviewResult(null);
+      setDraftGenerationLlmDispatchAuditMigrationApplyReadbackResult(null);
       setNotice("Daily Content Plan preview를 생성했습니다. Plan row 저장, content generation, LLM call, Blogger write/publish는 수행하지 않았습니다.");
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Daily Content Plan preview에 실패했습니다.");
@@ -921,6 +928,44 @@ export function BloggerSettingsClient() {
     }
   }
 
+  async function previewDraftGenerationLlmDispatchAuditMigrationApplyReadback(
+    planId: string | null | undefined,
+    planItemId: string | null | undefined,
+    contentItemId: string | null | undefined
+  ) {
+    if (!planId || !planItemId || !contentItemId) {
+      setError("Daily plan id, item id, linked content item id가 필요합니다.");
+      return;
+    }
+
+    setError(null);
+    setNotice(null);
+    setLoadingDraftGenerationLlmDispatchAuditMigrationApplyReadbackItemId(planItemId);
+
+    try {
+      const result = await requestJson<ApiResult<DailyContentDraftGenerationLlmDispatchAuditMigrationApplyReadbackResponse>>(
+        "/api/daily-content-plans/draft-generation-llm-dispatch-audit-migration-apply-readback",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            mode: "preview",
+            planId,
+            planItemId,
+            contentItemId
+          })
+        }
+      );
+      setDraftGenerationLlmDispatchAuditMigrationApplyReadbackResult(result.data);
+      setNotice(
+        "초안 생성 LLM dispatch audit migration 적용 상태를 확인했습니다. 이 readback은 DB read만 수행하며 provider network call, LLM call, content_items 수정, Blogger write/publish는 수행하지 않았습니다."
+      );
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "초안 생성 LLM dispatch audit migration 적용 상태 확인에 실패했습니다.");
+    } finally {
+      setLoadingDraftGenerationLlmDispatchAuditMigrationApplyReadbackItemId(null);
+    }
+  }
+
   async function createOAuthDryRun(connection: BloggerConnectionAdmin) {
     setError(null);
     setNotice(null);
@@ -1117,6 +1162,7 @@ export function BloggerSettingsClient() {
                   setDraftGenerationLlmDispatchGatePreviewResult(null);
                   setDraftGenerationLlmDispatchAuditSchemaDesignResult(null);
                   setDraftGenerationLlmDispatchAuditSchemaScaffoldPreviewResult(null);
+                  setDraftGenerationLlmDispatchAuditMigrationApplyReadbackResult(null);
                   setOauthDryRun(null);
                   setBlogListResult(null);
                 }}
@@ -1855,6 +1901,27 @@ export function BloggerSettingsClient() {
                         {loadingDraftGenerationLlmDispatchAuditSchemaScaffoldPreviewItemId === getDailyPlanItemId(item)
                           ? "audit scaffold 확인 중"
                           : "audit scaffold"}
+                      </button>
+                      <button
+                        className="button small secondary"
+                        type="button"
+                        disabled={
+                          !dailyContentPlanSummary.persistedPlanId ||
+                          !getDailyPlanItemId(item) ||
+                          !getDailyPlanItemContentItemId(item) ||
+                          loadingDraftGenerationLlmDispatchAuditMigrationApplyReadbackItemId === getDailyPlanItemId(item)
+                        }
+                        onClick={() =>
+                          void previewDraftGenerationLlmDispatchAuditMigrationApplyReadback(
+                            dailyContentPlanSummary.persistedPlanId,
+                            getDailyPlanItemId(item),
+                            getDailyPlanItemContentItemId(item)
+                          )
+                        }
+                      >
+                        {loadingDraftGenerationLlmDispatchAuditMigrationApplyReadbackItemId === getDailyPlanItemId(item)
+                          ? "audit 적용 확인 중"
+                          : "audit apply readback"}
                       </button>
                     </td>
                   </tr>
@@ -4657,6 +4724,215 @@ export function BloggerSettingsClient() {
               ) : (
                 <div className="notice">
                   후보 큐에서 linked content item이 있는 행의 “audit scaffold”를 실행하세요. 이 단계는 schema/migration 파일 scaffold 상태만 확인하고 DB에는 적용하지 않습니다.
+                </div>
+              )}
+            </div>
+
+            <div className="read-block">
+              <h3>초안 생성 LLM dispatch audit migration 적용 상태</h3>
+              <div className="notice">
+                <strong>LLM dispatch audit migration 적용 상태를 read-only로 확인합니다.</strong>
+                <p>이 섹션은 audit table 존재 여부와 row count만 읽습니다. provider/LLM/content/Blogger side effect는 수행하지 않습니다.</p>
+              </div>
+              <div className="button-row">
+                <button className="button small secondary" type="button" disabled>
+                  Migration apply - 비활성
+                </button>
+                <button className="button small secondary" type="button" disabled>
+                  DB push - 비활성
+                </button>
+                <button className="button small secondary" type="button" disabled>
+                  LLM dispatch - 비활성
+                </button>
+              </div>
+              {draftGenerationLlmDispatchAuditMigrationApplyReadbackResult ? (
+                <>
+                  <div className="notice">
+                    <strong>
+                      migrationApplied={String(draftGenerationLlmDispatchAuditMigrationApplyReadbackResult.migrationApplied)} / schemaTablesCreated=
+                      {String(draftGenerationLlmDispatchAuditMigrationApplyReadbackResult.schemaTablesCreated)}
+                    </strong>
+                    <p>
+                      audit row counts: attempts={draftGenerationLlmDispatchAuditMigrationApplyReadbackResult.auditMigrationApplySummary.attemptsCount}, events=
+                      {draftGenerationLlmDispatchAuditMigrationApplyReadbackResult.auditMigrationApplySummary.eventsCount}, artifacts=
+                      {draftGenerationLlmDispatchAuditMigrationApplyReadbackResult.auditMigrationApplySummary.artifactsCount}
+                    </p>
+                  </div>
+                  <div className="detail-grid">
+                    <DetailItem label="Patch" value={draftGenerationLlmDispatchAuditMigrationApplyReadbackResult.patchVersion} />
+                    <DetailItem label="Preview Mode" value={draftGenerationLlmDispatchAuditMigrationApplyReadbackResult.previewMode} />
+                    <DetailItem label="Migration Expected" value={draftGenerationLlmDispatchAuditMigrationApplyReadbackResult.migrationExpected} />
+                    <DetailItem label="Migration Apply Only" value={String(draftGenerationLlmDispatchAuditMigrationApplyReadbackResult.migrationApplyOnly)} />
+                    <DetailItem label="Dry Run Only" value={String(draftGenerationLlmDispatchAuditMigrationApplyReadbackResult.dryRunOnly)} />
+                    <DetailItem label="Migration Applied" value={String(draftGenerationLlmDispatchAuditMigrationApplyReadbackResult.migrationApplied)} />
+                    <DetailItem label="Tables Created" value={String(draftGenerationLlmDispatchAuditMigrationApplyReadbackResult.schemaTablesCreated)} />
+                    <DetailItem label="Rows Created By Migration" value={String(draftGenerationLlmDispatchAuditMigrationApplyReadbackResult.rowsCreatedByMigration)} />
+                    <DetailItem label="Provider Network Attempted" value={String(draftGenerationLlmDispatchAuditMigrationApplyReadbackResult.providerNetworkCallAttempted)} />
+                    <DetailItem label="LLM Call Attempted" value={String(draftGenerationLlmDispatchAuditMigrationApplyReadbackResult.llmCallAttempted)} />
+                    <DetailItem label="Content Mutation Attempted" value={String(draftGenerationLlmDispatchAuditMigrationApplyReadbackResult.contentMutationAttempted)} />
+                    <DetailItem label="Blogger Write Attempted" value={String(draftGenerationLlmDispatchAuditMigrationApplyReadbackResult.bloggerWriteAttempted)} />
+                  </div>
+                  <div className="detail-grid">
+                    <DetailItem label="Plan ID" value={draftGenerationLlmDispatchAuditMigrationApplyReadbackResult.targetSummary.planId ?? "-"} />
+                    <DetailItem label="Plan Item" value={draftGenerationLlmDispatchAuditMigrationApplyReadbackResult.targetSummary.planItemId} />
+                    <DetailItem label="Content Item" value={draftGenerationLlmDispatchAuditMigrationApplyReadbackResult.targetSummary.contentItemId ?? "-"} />
+                    <DetailItem label="Fixture Status" value={draftGenerationLlmDispatchAuditMigrationApplyReadbackResult.targetSummary.fixtureStatus ?? "-"} />
+                    <DetailItem
+                      label="Approval Satisfied"
+                      value={String(draftGenerationLlmDispatchAuditMigrationApplyReadbackResult.persistedApprovalSummary.operatorApprovalSatisfied)}
+                    />
+                    <DetailItem label="Execution Allowed" value={String(draftGenerationLlmDispatchAuditMigrationApplyReadbackResult.executionGateSummary.executionAllowed)} />
+                    <DetailItem
+                      label="Final Draft Allowed"
+                      value={String(draftGenerationLlmDispatchAuditMigrationApplyReadbackResult.executionGateSummary.finalDraftGenerationAllowed)}
+                    />
+                    <DetailItem
+                      label="Next Patch"
+                      value="9F-2X - LLM dispatch attempt readback scaffold"
+                    />
+                  </div>
+                  <div className="detail-grid">
+                    <DetailItem
+                      label="Attempts Table Exists"
+                      value={String(draftGenerationLlmDispatchAuditMigrationApplyReadbackResult.auditMigrationApplySummary.attemptsTableExists)}
+                    />
+                    <DetailItem
+                      label="Events Table Exists"
+                      value={String(draftGenerationLlmDispatchAuditMigrationApplyReadbackResult.auditMigrationApplySummary.eventsTableExists)}
+                    />
+                    <DetailItem
+                      label="Artifacts Table Exists"
+                      value={String(draftGenerationLlmDispatchAuditMigrationApplyReadbackResult.auditMigrationApplySummary.artifactsTableExists)}
+                    />
+                    <DetailItem
+                      label="Attempts Count"
+                      value={String(draftGenerationLlmDispatchAuditMigrationApplyReadbackResult.auditMigrationApplySummary.attemptsCount)}
+                    />
+                    <DetailItem
+                      label="Events Count"
+                      value={String(draftGenerationLlmDispatchAuditMigrationApplyReadbackResult.auditMigrationApplySummary.eventsCount)}
+                    />
+                    <DetailItem
+                      label="Artifacts Count"
+                      value={String(draftGenerationLlmDispatchAuditMigrationApplyReadbackResult.auditMigrationApplySummary.artifactsCount)}
+                    />
+                    <DetailItem
+                      label="Migration Created Rows"
+                      value={String(draftGenerationLlmDispatchAuditMigrationApplyReadbackResult.auditMigrationApplySummary.migrationCreatedRows)}
+                    />
+                    <DetailItem
+                      label="Separated From Provider Call"
+                      value={String(draftGenerationLlmDispatchAuditMigrationApplyReadbackResult.auditMigrationApplySummary.migrationApplySeparatedFromProviderCall)}
+                    />
+                  </div>
+                  <details className="read-block">
+                    <summary>Baseline counts / fixture 상세</summary>
+                    <div className="detail-grid">
+                      <DetailItem
+                        label="Daily Plans"
+                        value={String(draftGenerationLlmDispatchAuditMigrationApplyReadbackResult.baselineSummary.blogDailyContentPlans)}
+                      />
+                      <DetailItem
+                        label="Daily Plan Items"
+                        value={String(draftGenerationLlmDispatchAuditMigrationApplyReadbackResult.baselineSummary.blogDailyContentPlanItems)}
+                      />
+                      <DetailItem label="Content Items" value={String(draftGenerationLlmDispatchAuditMigrationApplyReadbackResult.baselineSummary.contentItems)} />
+                      <DetailItem
+                        label="Operator Approvals"
+                        value={String(draftGenerationLlmDispatchAuditMigrationApplyReadbackResult.baselineSummary.operatorApprovals)}
+                      />
+                      <DetailItem
+                        label="Operator Events"
+                        value={String(draftGenerationLlmDispatchAuditMigrationApplyReadbackResult.baselineSummary.operatorApprovalEvents)}
+                      />
+                      <DetailItem label="Draft Saves" value={String(draftGenerationLlmDispatchAuditMigrationApplyReadbackResult.baselineSummary.bloggerDraftSaves)} />
+                      <DetailItem
+                        label="Draft Approvals"
+                        value={String(draftGenerationLlmDispatchAuditMigrationApplyReadbackResult.baselineSummary.bloggerDraftApprovals)}
+                      />
+                      <DetailItem
+                        label="Publish Approvals"
+                        value={String(draftGenerationLlmDispatchAuditMigrationApplyReadbackResult.baselineSummary.bloggerPublishApprovals)}
+                      />
+                      <DetailItem
+                        label="Publish Attempts"
+                        value={String(draftGenerationLlmDispatchAuditMigrationApplyReadbackResult.baselineSummary.bloggerPublishExecutionAttempts)}
+                      />
+                      <DetailItem label="LLM Call Logs" value={String(draftGenerationLlmDispatchAuditMigrationApplyReadbackResult.baselineSummary.llmCallLogs)} />
+                      <DetailItem label="Fixture ID" value={draftGenerationLlmDispatchAuditMigrationApplyReadbackResult.baselineSummary.targetFixture.id ?? "-"} />
+                      <DetailItem label="Fixture Status" value={draftGenerationLlmDispatchAuditMigrationApplyReadbackResult.baselineSummary.targetFixture.status ?? "-"} />
+                      <DetailItem
+                        label="PublishedAt Null"
+                        value={String(draftGenerationLlmDispatchAuditMigrationApplyReadbackResult.baselineSummary.targetFixture.publishedAtIsNull)}
+                      />
+                      <DetailItem
+                        label="ScheduledAt Null"
+                        value={String(draftGenerationLlmDispatchAuditMigrationApplyReadbackResult.baselineSummary.targetFixture.scheduledAtIsNull)}
+                      />
+                      <DetailItem
+                        label="Draft Markdown Length"
+                        value={String(draftGenerationLlmDispatchAuditMigrationApplyReadbackResult.baselineSummary.targetFixture.draftMarkdownLength)}
+                      />
+                      <DetailItem
+                        label="Draft HTML Length"
+                        value={String(draftGenerationLlmDispatchAuditMigrationApplyReadbackResult.baselineSummary.targetFixture.draftHtmlLength)}
+                      />
+                    </div>
+                  </details>
+                  <details className="read-block">
+                    <summary>Migration apply readback side-effect 상세</summary>
+                    <div className="detail-grid">
+                      <DetailItem label="DB Read" value={String(draftGenerationLlmDispatchAuditMigrationApplyReadbackResult.currentSideEffectSummary.dbRead)} />
+                      <DetailItem label="DB Write" value={String(draftGenerationLlmDispatchAuditMigrationApplyReadbackResult.currentSideEffectSummary.dbWrite)} />
+                      <DetailItem
+                        label="Migration Already Applied"
+                        value={String(draftGenerationLlmDispatchAuditMigrationApplyReadbackResult.currentSideEffectSummary.migrationAlreadyApplied)}
+                      />
+                      <DetailItem
+                        label="Audit Rows Created"
+                        value={String(draftGenerationLlmDispatchAuditMigrationApplyReadbackResult.currentSideEffectSummary.auditRowsCreated)}
+                      />
+                      <DetailItem
+                        label="Provider Health Checked"
+                        value={String(draftGenerationLlmDispatchAuditMigrationApplyReadbackResult.currentSideEffectSummary.providerHealthChecked)}
+                      />
+                      <DetailItem
+                        label="Provider Network"
+                        value={String(draftGenerationLlmDispatchAuditMigrationApplyReadbackResult.currentSideEffectSummary.providerNetworkCall)}
+                      />
+                      <DetailItem label="LLM Call" value={String(draftGenerationLlmDispatchAuditMigrationApplyReadbackResult.currentSideEffectSummary.llmCall)} />
+                      <DetailItem
+                        label="LLM Evaluator Call"
+                        value={String(draftGenerationLlmDispatchAuditMigrationApplyReadbackResult.currentSideEffectSummary.llmEvaluatorCall)}
+                      />
+                      <DetailItem
+                        label="LLM Log Mutation"
+                        value={String(draftGenerationLlmDispatchAuditMigrationApplyReadbackResult.currentSideEffectSummary.llmCallLogMutation)}
+                      />
+                      <DetailItem
+                        label="Content Mutation"
+                        value={String(draftGenerationLlmDispatchAuditMigrationApplyReadbackResult.currentSideEffectSummary.contentItemMutation)}
+                      />
+                      <DetailItem
+                        label="Draft Markdown"
+                        value={String(draftGenerationLlmDispatchAuditMigrationApplyReadbackResult.currentSideEffectSummary.draftMarkdownMutation)}
+                      />
+                      <DetailItem label="Draft HTML" value={String(draftGenerationLlmDispatchAuditMigrationApplyReadbackResult.currentSideEffectSummary.draftHtmlMutation)} />
+                      <DetailItem label="Blogger Write" value={String(draftGenerationLlmDispatchAuditMigrationApplyReadbackResult.currentSideEffectSummary.bloggerWrite)} />
+                      <DetailItem
+                        label="Blogger Draft Save"
+                        value={String(draftGenerationLlmDispatchAuditMigrationApplyReadbackResult.currentSideEffectSummary.bloggerDraftSave)}
+                      />
+                      <DetailItem label="Blogger Publish" value={String(draftGenerationLlmDispatchAuditMigrationApplyReadbackResult.currentSideEffectSummary.bloggerPublish)} />
+                      <DetailItem label="Scheduled Publish" value={String(draftGenerationLlmDispatchAuditMigrationApplyReadbackResult.currentSideEffectSummary.scheduledPublish)} />
+                      <DetailItem label="OAuth Reconnect" value={String(draftGenerationLlmDispatchAuditMigrationApplyReadbackResult.currentSideEffectSummary.oauthReconnect)} />
+                      <DetailItem label="Token Refresh" value={String(draftGenerationLlmDispatchAuditMigrationApplyReadbackResult.currentSideEffectSummary.tokenRefresh)} />
+                    </div>
+                  </details>
+                </>
+              ) : (
+                <div className="notice">
+                  후보 큐에서 linked content item이 있는 행의 “audit apply readback”을 실행하세요. 이 단계는 적용된 migration과 빈 audit tables만 읽습니다.
                 </div>
               )}
             </div>

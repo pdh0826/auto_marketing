@@ -106,3 +106,42 @@ The route is read-only and reports:
 - `contentMutationAttempted=false`
 
 `9F-2W-APPLY` must remain separate from provider dispatch. Applying the migration must not create attempt/event/artifact rows, store prompts, store request envelopes, call providers, create `llm_call_logs`, mutate `content_items`, or call Blogger.
+
+## Patch 9F-2W-APPLY Apply Result
+
+Patch 9F-2W-APPLY applies the scaffolded migration only.
+
+Applied migration:
+
+- `20260620000300_add_llm_dispatch_audit_schema`
+
+Created DB tables:
+
+- `blog_daily_content_llm_dispatch_attempts`
+- `blog_daily_content_llm_dispatch_events`
+- `blog_daily_content_llm_dispatch_artifacts`
+
+Expected row counts immediately after apply:
+
+- attempts: `0`
+- events: `0`
+- artifacts: `0`
+
+Readback route:
+
+- `POST /api/daily-content-plans/draft-generation-llm-dispatch-audit-migration-apply-readback`
+
+The route is read-only and reports:
+
+- `migrationApplyOnly=true`
+- `migrationApplied=true`
+- `schemaTablesCreated=true`
+- `rowsCreatedByMigration=false`
+- `providerNetworkCallAttempted=false`
+- `llmCallAttempted=false`
+- `contentMutationAttempted=false`
+- `bloggerWriteAttempted=false`
+
+Next recommended patch:
+
+- `9F-2X — LLM dispatch attempt readback scaffold, no provider call/no content mutation`

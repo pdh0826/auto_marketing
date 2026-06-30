@@ -510,3 +510,19 @@ Patch 9F-2W is the file-level scaffold step after the dispatch audit schema desi
 Next candidate gate:
 
 - `9F-2W-APPLY — Apply LLM dispatch audit migration only, no rows/no provider call/no content mutation`
+
+## Patch 9F-2W-APPLY Dispatch Audit Migration Apply
+
+Patch 9F-2W-APPLY applies only the 9F-2W migration scaffold.
+
+- It applies migration `20260620000300_add_llm_dispatch_audit_schema` with Prisma migrate deploy.
+- It creates the dispatch audit attempt/event/artifact tables in the local DB.
+- It keeps all three audit tables empty after migration apply.
+- It adds `POST /api/daily-content-plans/draft-generation-llm-dispatch-audit-migration-apply-readback` for read-only applied-state verification.
+- It keeps `executionAllowed=false`, `finalDraftGenerationAllowed=false`, `providerNetworkCallAttempted=false`, `llmCallAttempted=false`, `contentMutationAttempted=false`, and `bloggerWriteAttempted=false`.
+- It does not create audit rows, store request envelopes, store prompts, call providers, run health checks, call any LLM, create `llm_call_logs`, mutate `content_items`, create drafts, or call Blogger.
+- Non-preview modes are blocked with `draft_generation_llm_dispatch_audit_migration_apply_readback_is_preview_only`.
+
+Next candidate gate:
+
+- `9F-2X — LLM dispatch attempt readback scaffold, no provider call/no content mutation`

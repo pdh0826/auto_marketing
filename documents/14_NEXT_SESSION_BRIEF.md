@@ -1,17 +1,17 @@
 # 14_NEXT_SESSION_BRIEF
 
-## Current State: Patch 9F-2W Completed
+## Current State: Patch 9F-2W-APPLY Completed
 
 ```text
 repo: ~/blog-growth-agent
 branch: master
 previous HEAD before 9F-2D apply closeout: b3cf210 Link daily plan item to content fixture
-expected HEAD after 9F-2W commit: local commit `Scaffold draft generation LLM dispatch audit schema` (verify exact hash with `git log --oneline -8`)
-current DB schema state: operator approval persistence migration applied; LLM dispatch audit schema migration scaffold exists but is not applied
+expected HEAD after 9F-2W-APPLY commit: local commit `Apply draft generation LLM dispatch audit migration` (verify exact hash with `git log --oneline -8`)
+current DB schema state: operator approval persistence migration applied; LLM dispatch audit schema migration applied
 operator approval tables in DB: created
 operator approval rows/events: 1 / 1
 operator approval apply state: completed exactly once
-draft-generation execution gate: post-approval preview polished, dry-run planner implemented, LLM provider readiness preview implemented, LLM provider health-check preview implemented, gated health-check execution route implemented, final execution checklist/runbook implemented, prompt render preview implemented, prompt quality checklist preview implemented, request envelope preview implemented, dispatch gate preview implemented, dispatch audit schema design implemented, dispatch audit schema scaffold implemented but not applied, draft generation execution still blocked
+draft-generation execution gate: post-approval preview polished, dry-run planner implemented, LLM provider readiness preview implemented, LLM provider health-check preview implemented, gated health-check execution route implemented, final execution checklist/runbook implemented, prompt render preview implemented, prompt quality checklist preview implemented, request envelope preview implemented, dispatch gate preview implemented, dispatch audit schema design implemented, dispatch audit schema scaffold implemented, dispatch audit migration applied with empty tables, draft generation execution still blocked
 milestone: 9E first end-to-end Blogger publish completed; 9F operation automation foundation started
 ```
 
@@ -229,6 +229,13 @@ Current baseline:
 - 9F-2W keeps `schemaModified=true`, `migrationCreated=true`, `migrationApplied=false`, `dbWrite=false`, `providerNetworkCallAttempted=false`, `llmCallAttempted=false`, `contentMutationAttempted=false`, `executionAllowed=false`, and `finalDraftGenerationAllowed=false`.
 - 9F-2W did not rerun 9F-2B apply, 9F-2D apply, 9F-2I-APPLY, or 9F-2K approval apply.
 - 9F-2W did not apply the migration, create audit tables in the DB, create rows, store request envelopes, store prompts, run LLM evaluator/judge calls, run provider health checks, make provider network calls, call LLM providers, create `llm_call_logs`, mutate `content_items`, write to Blogger, publish, schedule, reconnect OAuth, refresh tokens, mutate publish approvals, or mutate publish attempts.
+- 9F-2W-APPLY applied migration `20260620000300_add_llm_dispatch_audit_schema` with `npx prisma migrate deploy`.
+- 9F-2W-APPLY created DB tables `blog_daily_content_llm_dispatch_attempts`, `blog_daily_content_llm_dispatch_events`, and `blog_daily_content_llm_dispatch_artifacts`.
+- 9F-2W-APPLY added helper `src/lib/daily-content-plans/draft-generation-llm-dispatch-audit-migration-apply-readback.ts`.
+- 9F-2W-APPLY added route `POST /api/daily-content-plans/draft-generation-llm-dispatch-audit-migration-apply-readback`.
+- 9F-2W-APPLY added `/settings/blogger` `초안 생성 LLM dispatch audit migration 적용 상태` readback.
+- 9F-2W-APPLY keeps audit row counts `0 / 0 / 0`, `llm_call_logs=22`, and target fixture draft lengths `0 / 0`.
+- 9F-2W-APPLY did not create audit rows, store request envelopes, store prompts, run LLM evaluator/judge calls, run provider health checks, make provider network calls, call LLM providers, create `llm_call_logs`, mutate `content_items`, write to Blogger, publish, schedule, reconnect OAuth, refresh tokens, mutate publish approvals, or mutate publish attempts.
 
 9E first end-to-end publish path:
 
@@ -240,13 +247,13 @@ Current baseline:
 6. `9E-9C` read back `https://mathlearningappl.blogspot.com/2026/06/blog-post.html`.
 7. `9E-9D-APPLY` reconciled internal DB state from `planned`/`planned_only` to `published`/`success`.
 
-Recommended next after 9F-2W:
+Recommended next after 9F-2W-APPLY:
 
-**9F-2W-APPLY — Apply LLM dispatch audit migration only, no rows/no provider call/no content mutation**
+**9F-2X — LLM dispatch attempt readback scaffold, no provider call/no content mutation**
 
 Goal:
 
-- Apply only the scaffolded `20260620000300_add_llm_dispatch_audit_schema` migration after explicit operator approval. Do not create rows, call providers, create `llm_call_logs`, or mutate `content_items`.
+- Add read-only APIs/UI around the empty dispatch audit tables and future attempt lifecycle. Do not create rows, call providers, create `llm_call_logs`, or mutate `content_items`.
 
 Alternative:
 
@@ -293,6 +300,7 @@ Goal:
 | 9F-2V | Draft-generation LLM dispatch audit schema design, no migration/no provider call/no content mutation |
 | 9F-2W | LLM dispatch audit schema scaffold, no apply/no provider call/no content mutation |
 | 9F-2W-APPLY | Apply LLM dispatch audit migration only, no rows/no provider call/no content mutation |
+| 9F-2X | LLM dispatch attempt readback scaffold, no provider call/no content mutation |
 | 9F-3A | Alert & Recovery Center |
 
 Core operation principles:

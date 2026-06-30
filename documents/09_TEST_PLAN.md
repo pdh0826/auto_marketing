@@ -118,6 +118,29 @@ npm run build
 - DB baseline should remain: daily plan rows `1`, daily plan item rows `3`, `content_items` count `2`, operator approvals/events `1 / 1`, publish milestone counts `1 / 1 / 1 / 1 / 22`, and `llm_call_logs=22`.
 - Target fixture `daily_fixture_cmqlr1v1y0001iwj2gpv2875r` should remain `status=planned`, `publishedAt=null`, `scheduledAt=null`, and draft Markdown/HTML lengths `0 / 0`.
 
+## Patch 9F-2W-APPLY LLM Dispatch Audit Migration Apply
+
+- `DATABASE_URL=... npx prisma migrate deploy` should apply only `20260620000300_add_llm_dispatch_audit_schema`.
+- `DATABASE_URL=... npx prisma migrate status` should report `Database schema is up to date!`.
+- `POST /api/daily-content-plans/draft-generation-llm-dispatch-audit-migration-apply-readback` should return `patchVersion=9F-2W-APPLY`.
+- `previewMode=read_only_llm_dispatch_audit_migration_apply_readback`.
+- `migrationApplyOnly=true`.
+- `migrationApplied=true`.
+- `schemaTablesCreated=true`.
+- `rowsCreatedByMigration=false`.
+- `providerNetworkCallAttempted=false`.
+- `llmCallAttempted=false`.
+- `contentMutationAttempted=false`.
+- `bloggerWriteAttempted=false`.
+- Audit tables should exist: `blog_daily_content_llm_dispatch_attempts`, `blog_daily_content_llm_dispatch_events`, and `blog_daily_content_llm_dispatch_artifacts`.
+- Audit row counts should remain `0 / 0 / 0`.
+- `executionGateSummary.executionAllowed=false`.
+- `executionGateSummary.finalDraftGenerationAllowed=false`.
+- Non-preview mode such as `migrate` should include `draft_generation_llm_dispatch_audit_migration_apply_readback_is_preview_only`.
+- Side effects should remain false for provider health check, provider network call, LLM call, LLM evaluator call, `llm_call_logs` mutation, content mutation, draft Markdown/HTML mutation, Blogger write, publish, schedule, OAuth reconnect, token refresh, publish approval mutation, and publish attempt mutation.
+- DB baseline should remain: daily plan rows `1`, daily plan item rows `3`, `content_items` count `2`, operator approvals/events `1 / 1`, publish milestone counts `1 / 1 / 1 / 1 / 22`, and `llm_call_logs=22`.
+- Target fixture `daily_fixture_cmqlr1v1y0001iwj2gpv2875r` should remain `status=planned`, `publishedAt=null`, `scheduledAt=null`, and draft Markdown/HTML lengths `0 / 0`.
+
 ## 9E Publish Milestone Closeout Baseline
 
 Expected current state after `9E-9D-APPLY`:
