@@ -1000,3 +1000,14 @@ Patch 9F-2X adds a read-only readback scaffold for the empty dispatch attempt/ev
 - The route exposes a future lifecycle/readback shape for operator visibility, but keeps `canCreateAttemptNow=false` and `canDispatchNow=false`.
 - It does not create audit rows, insert events, store artifacts, store request envelopes, store prompts, call providers, run provider health checks, call LLM providers, create `llm_call_logs`, mutate `content_items`, or create `draftMarkdown`/`draftHtml`.
 - Non-preview modes remain blocked with `draft_generation_llm_dispatch_attempt_readback_is_preview_only`.
+
+## Patch 9F-2Y draft-generation dispatch attempt creation gate boundary
+
+Patch 9F-2Y adds a read-only creation gate preview for a future dispatch attempt row.
+
+- `POST /api/daily-content-plans/draft-generation-llm-dispatch-attempt-creation-gate-preview` evaluates whether a future attempt row could be created.
+- The preview reuses the 9F-2X readback and 9F-2U dispatch gate metadata.
+- It keeps `canCreateAttemptNow=false`, `attemptCreationAllowedInThisPatch=false`, `targetScopedExistingAttempts=0`, and `latestTargetAttempt=null`.
+- It reports future attempt field planning with hash-only idempotency/confirmation policy and no raw secret/token/request/response body storage by default.
+- It does not create audit rows, insert events, store artifacts, store request envelopes, store prompts, call providers, run provider health checks, call LLM providers, create `llm_call_logs`, mutate `content_items`, or create `draftMarkdown`/`draftHtml`.
+- Non-preview modes remain blocked with `draft_generation_llm_dispatch_attempt_creation_gate_preview_is_preview_only`.

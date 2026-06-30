@@ -176,6 +176,26 @@ npm run build
 - Publish milestone counts should remain `1 / 1 / 1 / 1 / 22`.
 - Side effects should remain false for audit attempt/event/artifact mutation, provider health check, provider network call, LLM call, LLM evaluator call, `llm_call_logs` mutation, content mutation, draft Markdown/HTML mutation, Blogger write, publish, schedule, OAuth reconnect, token refresh, publish approval mutation, and publish attempt mutation.
 
+## Patch 9F-2Y LLM Dispatch Attempt Creation Gate Preview
+
+- `POST /api/daily-content-plans/draft-generation-llm-dispatch-attempt-creation-gate-preview` should return `patchVersion=9F-2Y`.
+- `previewMode=read_only_draft_generation_llm_dispatch_attempt_creation_gate_preview`.
+- `gatePreviewOnly=true`.
+- `dryRunOnly=true`.
+- `attemptCreationGateEvaluated=true`.
+- `canCreateAttemptNow=false`.
+- `attemptCreationAllowedInThisPatch=false`.
+- `auditRowsCreatedNow=false`.
+- `auditRowsMutatedNow=false`.
+- `attemptCreationGatePreviewSummary.targetScopedExistingAttempts=0`.
+- `attemptCreationGatePreviewSummary.latestTargetAttempt=null`.
+- Creation blockers should include `llm_execution_feature_flag_disabled`, `content_mutation_feature_flag_disabled`, `draft_generation_write_feature_flag_disabled`, `confirmation_phrase_missing`, `idempotency_key_missing`, `provider_health_check_not_satisfied`, and `attempt_creation_disabled_by_patch_policy`.
+- Future attempt field plan should keep `attemptPurpose=draft_generation_execution`, `attemptStatus=not_created_preview_only`, `idempotencyKeyHashFutureRequired=true`, `rawIdempotencyKeyStoredNow=false`, `rawConfirmationPhraseStoredNow=false`, `rawSecretStored=false`, `rawTokenStored=false`, `requestBodyStoredDefault=false`, and `responseBodyStoredDefault=false`.
+- Non-preview mode should include `draft_generation_llm_dispatch_attempt_creation_gate_preview_is_preview_only`.
+- Side effects should remain false for audit attempt/event/artifact mutation, provider health check, provider network call, LLM call, LLM evaluator call, `llm_call_logs` mutation, content mutation, draft Markdown/HTML mutation, Blogger write, publish, schedule, OAuth reconnect, token refresh, publish approval mutation, and publish attempt mutation.
+- DB baseline should remain: daily plan rows `1`, daily plan item rows `3`, `content_items` count `2`, operator approvals/events `1 / 1`, publish milestone counts `1 / 1 / 1 / 1 / 22`, audit attempt/event/artifact counts `0 / 0 / 0`, and `llm_call_logs=22`.
+- Target fixture `daily_fixture_cmqlr1v1y0001iwj2gpv2875r` should remain `status=planned`, `publishedAt=null`, `scheduledAt=null`, and draft Markdown/HTML lengths `0 / 0`.
+
 ## 9E Publish Milestone Closeout Baseline
 
 Expected current state after `9E-9D-APPLY`:

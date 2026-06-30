@@ -26,6 +26,7 @@ import type { DailyContentDraftGenerationLlmProviderHealthCheckPreviewResponse }
 import type { DailyContentDraftGenerationLlmProviderReadinessResponse } from "@/lib/daily-content-plans/draft-generation-llm-provider-readiness";
 import type { DailyContentDraftGenerationLlmDispatchAuditSchemaDesignResponse } from "@/lib/daily-content-plans/draft-generation-llm-dispatch-audit-schema-design";
 import type { DailyContentDraftGenerationLlmDispatchAuditMigrationApplyReadbackResponse } from "@/lib/daily-content-plans/draft-generation-llm-dispatch-audit-migration-apply-readback";
+import type { DailyContentDraftGenerationLlmDispatchAttemptCreationGatePreviewResponse } from "@/lib/daily-content-plans/draft-generation-llm-dispatch-attempt-creation-gate-preview";
 import type { DailyContentDraftGenerationLlmDispatchAttemptReadbackResponse } from "@/lib/daily-content-plans/draft-generation-llm-dispatch-attempt-readback";
 import type { DailyContentDraftGenerationLlmDispatchAuditSchemaScaffoldPreviewResponse } from "@/lib/daily-content-plans/draft-generation-llm-dispatch-audit-schema-scaffold-preview";
 import type { DailyContentDraftGenerationLlmDispatchGatePreviewResponse } from "@/lib/daily-content-plans/draft-generation-llm-dispatch-gate-preview";
@@ -119,6 +120,8 @@ export function BloggerSettingsClient() {
     useState<DailyContentDraftGenerationLlmDispatchAuditMigrationApplyReadbackResponse | null>(null);
   const [draftGenerationLlmDispatchAttemptReadbackResult, setDraftGenerationLlmDispatchAttemptReadbackResult] =
     useState<DailyContentDraftGenerationLlmDispatchAttemptReadbackResponse | null>(null);
+  const [draftGenerationLlmDispatchAttemptCreationGatePreviewResult, setDraftGenerationLlmDispatchAttemptCreationGatePreviewResult] =
+    useState<DailyContentDraftGenerationLlmDispatchAttemptCreationGatePreviewResponse | null>(null);
   const [oauthDryRun, setOauthDryRun] = useState<BloggerOAuthStartDryRun | null>(null);
   const [blogListResult, setBlogListResult] = useState<BloggerBlogListResult | null>(null);
   const [blogListLoadingId, setBlogListLoadingId] = useState<string | null>(null);
@@ -145,6 +148,8 @@ export function BloggerSettingsClient() {
   const [loadingDraftGenerationLlmDispatchAuditMigrationApplyReadbackItemId, setLoadingDraftGenerationLlmDispatchAuditMigrationApplyReadbackItemId] =
     useState<string | null>(null);
   const [loadingDraftGenerationLlmDispatchAttemptReadbackItemId, setLoadingDraftGenerationLlmDispatchAttemptReadbackItemId] = useState<string | null>(null);
+  const [loadingDraftGenerationLlmDispatchAttemptCreationGatePreviewItemId, setLoadingDraftGenerationLlmDispatchAttemptCreationGatePreviewItemId] =
+    useState<string | null>(null);
   const [selectingBlogId, setSelectingBlogId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -233,6 +238,7 @@ export function BloggerSettingsClient() {
       setDraftGenerationLlmDispatchAuditSchemaScaffoldPreviewResult(null);
       setDraftGenerationLlmDispatchAuditMigrationApplyReadbackResult(null);
       setDraftGenerationLlmDispatchAttemptReadbackResult(null);
+      setDraftGenerationLlmDispatchAttemptCreationGatePreviewResult(null);
       setOauthDryRun(null);
       setBlogListResult(null);
       setNotice("Blogger connection을 저장했습니다. Blogger draft/publish는 수행하지 않았습니다.");
@@ -369,6 +375,7 @@ export function BloggerSettingsClient() {
       setDraftGenerationLlmDispatchAuditSchemaScaffoldPreviewResult(null);
       setDraftGenerationLlmDispatchAuditMigrationApplyReadbackResult(null);
       setDraftGenerationLlmDispatchAttemptReadbackResult(null);
+      setDraftGenerationLlmDispatchAttemptCreationGatePreviewResult(null);
       setNotice("Daily Content Plan preview를 생성했습니다. Plan row 저장, content generation, LLM call, Blogger write/publish는 수행하지 않았습니다.");
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Daily Content Plan preview에 실패했습니다.");
@@ -1010,6 +1017,44 @@ export function BloggerSettingsClient() {
     }
   }
 
+  async function previewDraftGenerationLlmDispatchAttemptCreationGate(
+    planId: string | null | undefined,
+    planItemId: string | null | undefined,
+    contentItemId: string | null | undefined
+  ) {
+    if (!planId || !planItemId || !contentItemId) {
+      setError("Daily plan id, item id, linked content item id가 필요합니다.");
+      return;
+    }
+
+    setError(null);
+    setNotice(null);
+    setLoadingDraftGenerationLlmDispatchAttemptCreationGatePreviewItemId(planItemId);
+
+    try {
+      const result = await requestJson<ApiResult<DailyContentDraftGenerationLlmDispatchAttemptCreationGatePreviewResponse>>(
+        "/api/daily-content-plans/draft-generation-llm-dispatch-attempt-creation-gate-preview",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            mode: "preview",
+            planId,
+            planItemId,
+            contentItemId
+          })
+        }
+      );
+      setDraftGenerationLlmDispatchAttemptCreationGatePreviewResult(result.data);
+      setNotice(
+        "초안 생성 LLM dispatch attempt 생성 gate preview를 확인했습니다. 이 단계는 생성 가능성만 평가하며 attempt/event/artifact 생성, provider network call, LLM call, content_items 수정, Blogger write/publish는 수행하지 않았습니다."
+      );
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "초안 생성 LLM dispatch attempt 생성 gate preview 확인에 실패했습니다.");
+    } finally {
+      setLoadingDraftGenerationLlmDispatchAttemptCreationGatePreviewItemId(null);
+    }
+  }
+
   async function createOAuthDryRun(connection: BloggerConnectionAdmin) {
     setError(null);
     setNotice(null);
@@ -1208,6 +1253,7 @@ export function BloggerSettingsClient() {
                   setDraftGenerationLlmDispatchAuditSchemaScaffoldPreviewResult(null);
                   setDraftGenerationLlmDispatchAuditMigrationApplyReadbackResult(null);
                   setDraftGenerationLlmDispatchAttemptReadbackResult(null);
+                  setDraftGenerationLlmDispatchAttemptCreationGatePreviewResult(null);
                   setOauthDryRun(null);
                   setBlogListResult(null);
                 }}
@@ -1986,6 +2032,25 @@ export function BloggerSettingsClient() {
                         }
                       >
                         {loadingDraftGenerationLlmDispatchAttemptReadbackItemId === getDailyPlanItemId(item) ? "attempt 조회 중" : "attempt readback"}
+                      </button>
+                      <button
+                        className="button small secondary"
+                        type="button"
+                        disabled={
+                          !dailyContentPlanSummary.persistedPlanId ||
+                          !getDailyPlanItemId(item) ||
+                          !getDailyPlanItemContentItemId(item) ||
+                          loadingDraftGenerationLlmDispatchAttemptCreationGatePreviewItemId === getDailyPlanItemId(item)
+                        }
+                        onClick={() =>
+                          void previewDraftGenerationLlmDispatchAttemptCreationGate(
+                            dailyContentPlanSummary.persistedPlanId,
+                            getDailyPlanItemId(item),
+                            getDailyPlanItemContentItemId(item)
+                          )
+                        }
+                      >
+                        {loadingDraftGenerationLlmDispatchAttemptCreationGatePreviewItemId === getDailyPlanItemId(item) ? "attempt gate 확인 중" : "attempt gate"}
                       </button>
                     </td>
                   </tr>
@@ -5219,6 +5284,257 @@ export function BloggerSettingsClient() {
               )}
             </div>
 
+            <div className="read-block">
+              <h3>초안 생성 LLM dispatch attempt 생성 gate preview</h3>
+              <div className="notice">
+                <strong>dispatch attempt row를 만들 수 있는지 read-only로 평가합니다.</strong>
+                <p>이번 단계는 생성 가능성만 확인합니다. attempt/event/artifact insert, dispatch, provider/LLM call, content mutation, Blogger write 버튼은 제공하지 않습니다.</p>
+              </div>
+              <div className="button-row">
+                <button className="button small secondary" type="button" disabled>
+                  Create attempt - 비활성
+                </button>
+                <button className="button small secondary" type="button" disabled>
+                  Provider call - 비활성
+                </button>
+                <button className="button small secondary" type="button" disabled>
+                  Content mutation - 비활성
+                </button>
+              </div>
+              {draftGenerationLlmDispatchAttemptCreationGatePreviewResult ? (
+                <>
+                  <div className="notice">
+                    <strong>
+                      canCreateAttemptNow={String(draftGenerationLlmDispatchAttemptCreationGatePreviewResult.canCreateAttemptNow)} /
+                      attemptCreationAllowedInThisPatch={String(draftGenerationLlmDispatchAttemptCreationGatePreviewResult.attemptCreationAllowedInThisPatch)}
+                    </strong>
+                    <p>
+                      target attempts={draftGenerationLlmDispatchAttemptCreationGatePreviewResult.attemptCreationGatePreviewSummary.targetScopedExistingAttempts} /
+                      latestTargetAttempt=
+                      {draftGenerationLlmDispatchAttemptCreationGatePreviewResult.attemptCreationGatePreviewSummary.latestTargetAttempt?.id ?? "null"}
+                    </p>
+                  </div>
+                  <div className="detail-grid">
+                    <DetailItem label="Patch" value={draftGenerationLlmDispatchAttemptCreationGatePreviewResult.patchVersion} />
+                    <DetailItem label="Preview Mode" value={draftGenerationLlmDispatchAttemptCreationGatePreviewResult.previewMode} />
+                    <DetailItem label="Gate Preview Only" value={String(draftGenerationLlmDispatchAttemptCreationGatePreviewResult.gatePreviewOnly)} />
+                    <DetailItem label="Dry Run Only" value={String(draftGenerationLlmDispatchAttemptCreationGatePreviewResult.dryRunOnly)} />
+                    <DetailItem label="Gate Evaluated" value={String(draftGenerationLlmDispatchAttemptCreationGatePreviewResult.attemptCreationGateEvaluated)} />
+                    <DetailItem label="Can Create Attempt" value={String(draftGenerationLlmDispatchAttemptCreationGatePreviewResult.canCreateAttemptNow)} />
+                    <DetailItem
+                      label="Creation In This Patch"
+                      value={String(draftGenerationLlmDispatchAttemptCreationGatePreviewResult.attemptCreationAllowedInThisPatch)}
+                    />
+                    <DetailItem label="Audit Rows Created Now" value={String(draftGenerationLlmDispatchAttemptCreationGatePreviewResult.auditRowsCreatedNow)} />
+                    <DetailItem label="Audit Rows Mutated Now" value={String(draftGenerationLlmDispatchAttemptCreationGatePreviewResult.auditRowsMutatedNow)} />
+                    <DetailItem label="Provider Network Attempted" value={String(draftGenerationLlmDispatchAttemptCreationGatePreviewResult.providerNetworkCallAttempted)} />
+                    <DetailItem label="LLM Call Attempted" value={String(draftGenerationLlmDispatchAttemptCreationGatePreviewResult.llmCallAttempted)} />
+                    <DetailItem label="Content Mutation Attempted" value={String(draftGenerationLlmDispatchAttemptCreationGatePreviewResult.contentMutationAttempted)} />
+                  </div>
+                  <div className="detail-grid">
+                    <DetailItem label="Plan ID" value={draftGenerationLlmDispatchAttemptCreationGatePreviewResult.targetSummary.planId ?? "-"} />
+                    <DetailItem label="Plan Item" value={draftGenerationLlmDispatchAttemptCreationGatePreviewResult.targetSummary.planItemId} />
+                    <DetailItem label="Content Item" value={draftGenerationLlmDispatchAttemptCreationGatePreviewResult.targetSummary.contentItemId ?? "-"} />
+                    <DetailItem label="Fixture Status" value={draftGenerationLlmDispatchAttemptCreationGatePreviewResult.targetSummary.fixtureStatus ?? "-"} />
+                    <DetailItem
+                      label="Approval Satisfied"
+                      value={String(draftGenerationLlmDispatchAttemptCreationGatePreviewResult.persistedApprovalSummary.operatorApprovalSatisfied)}
+                    />
+                    <DetailItem label="Execution Allowed" value={String(draftGenerationLlmDispatchAttemptCreationGatePreviewResult.executionGateSummary.executionAllowed)} />
+                    <DetailItem
+                      label="Final Draft Allowed"
+                      value={String(draftGenerationLlmDispatchAttemptCreationGatePreviewResult.executionGateSummary.finalDraftGenerationAllowed)}
+                    />
+                    <DetailItem
+                      label="Audit Tables Exist"
+                      value={String(draftGenerationLlmDispatchAttemptCreationGatePreviewResult.attemptCreationGatePreviewSummary.auditTablesExist)}
+                    />
+                    <DetailItem
+                      label="Target Events"
+                      value={String(draftGenerationLlmDispatchAttemptCreationGatePreviewResult.attemptCreationGatePreviewSummary.targetScopedExistingEvents)}
+                    />
+                    <DetailItem
+                      label="Target Artifacts"
+                      value={String(draftGenerationLlmDispatchAttemptCreationGatePreviewResult.attemptCreationGatePreviewSummary.targetScopedExistingArtifacts)}
+                    />
+                  </div>
+                  <div className="detail-grid">
+                    <DetailItem
+                      label="Gate Version"
+                      value={draftGenerationLlmDispatchAttemptCreationGatePreviewResult.attemptCreationGatePreviewSummary.gateVersion}
+                    />
+                    <DetailItem
+                      label="Source Readback"
+                      value={draftGenerationLlmDispatchAttemptCreationGatePreviewResult.attemptCreationGatePreviewSummary.sourceReadbackPatchVersion}
+                    />
+                    <DetailItem
+                      label="Duplicate Idempotency Collision"
+                      value={String(draftGenerationLlmDispatchAttemptCreationGatePreviewResult.attemptCreationGatePreviewSummary.duplicateIdempotencyCollisionDetected)}
+                    />
+                    <DetailItem
+                      label="Idempotency Required"
+                      value={String(draftGenerationLlmDispatchAttemptCreationGatePreviewResult.attemptCreationGatePreviewSummary.idempotencyKeyRequired)}
+                    />
+                    <DetailItem
+                      label="Idempotency Present Now"
+                      value={String(draftGenerationLlmDispatchAttemptCreationGatePreviewResult.attemptCreationGatePreviewSummary.idempotencyKeyPresentNow)}
+                    />
+                    <DetailItem
+                      label="Raw Idempotency Stored"
+                      value={String(draftGenerationLlmDispatchAttemptCreationGatePreviewResult.attemptCreationGatePreviewSummary.rawIdempotencyKeyStoredNow)}
+                    />
+                    <DetailItem
+                      label="Idempotency Hash Future"
+                      value={String(draftGenerationLlmDispatchAttemptCreationGatePreviewResult.attemptCreationGatePreviewSummary.idempotencyKeyHashWouldBeStored)}
+                    />
+                    <DetailItem
+                      label="Confirmation Present Now"
+                      value={String(draftGenerationLlmDispatchAttemptCreationGatePreviewResult.attemptCreationGatePreviewSummary.confirmationPhrasePresentNow)}
+                    />
+                    <DetailItem
+                      label="Raw Confirmation Stored"
+                      value={String(draftGenerationLlmDispatchAttemptCreationGatePreviewResult.attemptCreationGatePreviewSummary.rawConfirmationPhraseStoredNow)}
+                    />
+                    <DetailItem
+                      label="Provider Health Satisfied"
+                      value={String(draftGenerationLlmDispatchAttemptCreationGatePreviewResult.attemptCreationGatePreviewSummary.providerHealthCheckSatisfiedNow)}
+                    />
+                    <DetailItem
+                      label="Next Safe Patch"
+                      value={draftGenerationLlmDispatchAttemptCreationGatePreviewResult.attemptCreationGatePreviewSummary.nextSafePatchCandidate}
+                    />
+                  </div>
+                  <ValidationList
+                    title="Creation blockers"
+                    items={draftGenerationLlmDispatchAttemptCreationGatePreviewResult.attemptCreationGatePreviewSummary.creationBlockers}
+                    emptyText="creation blocker가 없습니다."
+                    isError
+                  />
+                  <ValidationList
+                    title="Missing feature flags"
+                    items={draftGenerationLlmDispatchAttemptCreationGatePreviewResult.attemptCreationGatePreviewSummary.missingFeatureFlags}
+                    emptyText="missing feature flag가 없습니다."
+                    isWarning
+                  />
+                  <details className="read-block">
+                    <summary>Future attempt field plan</summary>
+                    <div className="detail-grid">
+                      <DetailItem
+                        label="Attempt Purpose"
+                        value={draftGenerationLlmDispatchAttemptCreationGatePreviewResult.attemptCreationGatePreviewSummary.futureAttemptFieldPlan.attemptPurpose}
+                      />
+                      <DetailItem
+                        label="Attempt Status"
+                        value={draftGenerationLlmDispatchAttemptCreationGatePreviewResult.attemptCreationGatePreviewSummary.futureAttemptFieldPlan.attemptStatus}
+                      />
+                      <DetailItem
+                        label="Operator Approval Future"
+                        value={String(draftGenerationLlmDispatchAttemptCreationGatePreviewResult.attemptCreationGatePreviewSummary.futureAttemptFieldPlan.operatorApprovalIdFuturePopulated)}
+                      />
+                      <DetailItem
+                        label="Idempotency Hash Required"
+                        value={String(draftGenerationLlmDispatchAttemptCreationGatePreviewResult.attemptCreationGatePreviewSummary.futureAttemptFieldPlan.idempotencyKeyHashFutureRequired)}
+                      />
+                      <DetailItem
+                        label="Raw Secret Stored"
+                        value={String(draftGenerationLlmDispatchAttemptCreationGatePreviewResult.attemptCreationGatePreviewSummary.futureAttemptFieldPlan.rawSecretStored)}
+                      />
+                      <DetailItem
+                        label="Raw Token Stored"
+                        value={String(draftGenerationLlmDispatchAttemptCreationGatePreviewResult.attemptCreationGatePreviewSummary.futureAttemptFieldPlan.rawTokenStored)}
+                      />
+                      <DetailItem
+                        label="Request Body Stored Default"
+                        value={String(draftGenerationLlmDispatchAttemptCreationGatePreviewResult.attemptCreationGatePreviewSummary.futureAttemptFieldPlan.requestBodyStoredDefault)}
+                      />
+                      <DetailItem
+                        label="Response Body Stored Default"
+                        value={String(draftGenerationLlmDispatchAttemptCreationGatePreviewResult.attemptCreationGatePreviewSummary.futureAttemptFieldPlan.responseBodyStoredDefault)}
+                      />
+                      <DetailItem
+                        label="Provider Network Initial"
+                        value={String(draftGenerationLlmDispatchAttemptCreationGatePreviewResult.attemptCreationGatePreviewSummary.futureAttemptFieldPlan.providerNetworkCallAttemptedInitial)}
+                      />
+                      <DetailItem
+                        label="LLM Call Initial"
+                        value={String(draftGenerationLlmDispatchAttemptCreationGatePreviewResult.attemptCreationGatePreviewSummary.futureAttemptFieldPlan.llmCallAttemptedInitial)}
+                      />
+                      <DetailItem
+                        label="Content Mutation Initial"
+                        value={String(draftGenerationLlmDispatchAttemptCreationGatePreviewResult.attemptCreationGatePreviewSummary.futureAttemptFieldPlan.contentMutationAttemptedInitial)}
+                      />
+                      <DetailItem
+                        label="Blogger Write Initial"
+                        value={String(draftGenerationLlmDispatchAttemptCreationGatePreviewResult.attemptCreationGatePreviewSummary.futureAttemptFieldPlan.bloggerWriteAttemptedInitial)}
+                      />
+                    </div>
+                  </details>
+                  <details className="read-block">
+                    <summary>Gate checks / side-effect 상세</summary>
+                    <ValidationList
+                      title="Gate checks"
+                      items={draftGenerationLlmDispatchAttemptCreationGatePreviewResult.attemptCreationGatePreviewSummary.checks.map(formatAttemptCreationGateCheck)}
+                      emptyText="gate check가 없습니다."
+                    />
+                    <div className="detail-grid">
+                      <DetailItem label="DB Read" value={String(draftGenerationLlmDispatchAttemptCreationGatePreviewResult.currentSideEffectSummary.dbRead)} />
+                      <DetailItem label="DB Write" value={String(draftGenerationLlmDispatchAttemptCreationGatePreviewResult.currentSideEffectSummary.dbWrite)} />
+                      <DetailItem
+                        label="Audit Attempt Mutation"
+                        value={String(draftGenerationLlmDispatchAttemptCreationGatePreviewResult.currentSideEffectSummary.auditAttemptMutation)}
+                      />
+                      <DetailItem
+                        label="Audit Event Mutation"
+                        value={String(draftGenerationLlmDispatchAttemptCreationGatePreviewResult.currentSideEffectSummary.auditEventMutation)}
+                      />
+                      <DetailItem
+                        label="Audit Artifact Mutation"
+                        value={String(draftGenerationLlmDispatchAttemptCreationGatePreviewResult.currentSideEffectSummary.auditArtifactMutation)}
+                      />
+                      <DetailItem
+                        label="Audit Rows Created"
+                        value={String(draftGenerationLlmDispatchAttemptCreationGatePreviewResult.currentSideEffectSummary.auditRowsCreated)}
+                      />
+                      <DetailItem
+                        label="Request Sent"
+                        value={String(draftGenerationLlmDispatchAttemptCreationGatePreviewResult.currentSideEffectSummary.requestSentToProvider)}
+                      />
+                      <DetailItem
+                        label="Provider Health Checked"
+                        value={String(draftGenerationLlmDispatchAttemptCreationGatePreviewResult.currentSideEffectSummary.providerHealthChecked)}
+                      />
+                      <DetailItem
+                        label="Provider Network"
+                        value={String(draftGenerationLlmDispatchAttemptCreationGatePreviewResult.currentSideEffectSummary.providerNetworkCall)}
+                      />
+                      <DetailItem label="LLM Call" value={String(draftGenerationLlmDispatchAttemptCreationGatePreviewResult.currentSideEffectSummary.llmCall)} />
+                      <DetailItem
+                        label="LLM Log Mutation"
+                        value={String(draftGenerationLlmDispatchAttemptCreationGatePreviewResult.currentSideEffectSummary.llmCallLogMutation)}
+                      />
+                      <DetailItem
+                        label="Content Mutation"
+                        value={String(draftGenerationLlmDispatchAttemptCreationGatePreviewResult.currentSideEffectSummary.contentItemMutation)}
+                      />
+                      <DetailItem
+                        label="Draft Markdown"
+                        value={String(draftGenerationLlmDispatchAttemptCreationGatePreviewResult.currentSideEffectSummary.draftMarkdownMutation)}
+                      />
+                      <DetailItem label="Draft HTML" value={String(draftGenerationLlmDispatchAttemptCreationGatePreviewResult.currentSideEffectSummary.draftHtmlMutation)} />
+                      <DetailItem label="Blogger Write" value={String(draftGenerationLlmDispatchAttemptCreationGatePreviewResult.currentSideEffectSummary.bloggerWrite)} />
+                      <DetailItem label="Blogger Publish" value={String(draftGenerationLlmDispatchAttemptCreationGatePreviewResult.currentSideEffectSummary.bloggerPublish)} />
+                      <DetailItem label="OAuth Reconnect" value={String(draftGenerationLlmDispatchAttemptCreationGatePreviewResult.currentSideEffectSummary.oauthReconnect)} />
+                      <DetailItem label="Token Refresh" value={String(draftGenerationLlmDispatchAttemptCreationGatePreviewResult.currentSideEffectSummary.tokenRefresh)} />
+                    </div>
+                  </details>
+                </>
+              ) : (
+                <div className="notice">
+                  후보 큐에서 linked content item이 있는 행의 “attempt gate”를 실행하세요. 이 단계는 future attempt row 생성 가능성만 평가하고 row를 만들지 않습니다.
+                </div>
+              )}
+            </div>
+
             <details className="read-block">
               <summary>기술 상세</summary>
               <div className="detail-grid">
@@ -5631,6 +5947,12 @@ function formatPromptQualityCheck(item: { key: string; status: string; severity:
 }
 
 function formatDispatchGateCheck(item: { key: string; status: string; severity: string; label: string; detail: string; blockerCode?: string; remediation?: string }) {
+  return `${item.status}/${item.severity}: ${item.label} - ${item.detail}${item.blockerCode ? ` · blocker: ${item.blockerCode}` : ""}${
+    item.remediation ? ` · remediation: ${item.remediation}` : ""
+  }`;
+}
+
+function formatAttemptCreationGateCheck(item: { key: string; status: string; severity: string; label: string; detail: string; blockerCode?: string; remediation?: string }) {
   return `${item.status}/${item.severity}: ${item.label} - ${item.detail}${item.blockerCode ? ` · blocker: ${item.blockerCode}` : ""}${
     item.remediation ? ` · remediation: ${item.remediation}` : ""
   }`;

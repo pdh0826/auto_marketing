@@ -163,3 +163,19 @@ Next recommended patch:
 Next patch candidate:
 
 - `9F-2Y — LLM dispatch attempt creation gate preview, no rows/no provider call/no content mutation`
+
+## Patch 9F-2Y Attempt Creation Gate Semantics
+
+9F-2Y adds a read-only gate preview before any future dispatch attempt row can be persisted.
+
+- Route: `POST /api/daily-content-plans/draft-generation-llm-dispatch-attempt-creation-gate-preview`.
+- Expected first state: `targetScopedExistingAttempts=0`, `latestTargetAttempt=null`, and attempts/events/artifacts counts `0 / 0 / 0`.
+- Attempt creation remains blocked by feature flags, confirmation phrase, idempotency key, provider health check, and patch policy.
+- Future attempt persistence must store `idempotencyKeyHash`, not raw idempotency keys.
+- Future confirmation material should be hash-only if persisted.
+- Raw prompts, raw request bodies, raw response bodies, full generated candidates, secret values, token values, and raw env values must not be returned by the API or UI.
+- 9F-2Y does not create attempt/event/artifact rows and does not store request envelopes or prompts.
+
+Next patch candidate:
+
+- `9F-2Z — Gated LLM dispatch attempt creation persistence, no provider call/no content mutation`

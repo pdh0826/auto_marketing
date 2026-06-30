@@ -1,5 +1,25 @@
 # 13_CHANGELOG
 
+## Patch 9F-2Y LLM Dispatch Attempt Creation Gate Preview
+
+Implemented after Patch 9F-2X:
+
+- Added read-only helper `src/lib/daily-content-plans/draft-generation-llm-dispatch-attempt-creation-gate-preview.ts`.
+- Added route `POST /api/daily-content-plans/draft-generation-llm-dispatch-attempt-creation-gate-preview`.
+- Added `/settings/blogger` `초안 생성 LLM dispatch attempt 생성 gate preview` UI readback.
+- The gate preview reports `patchVersion=9F-2Y`, `previewMode=read_only_draft_generation_llm_dispatch_attempt_creation_gate_preview`, `gatePreviewOnly=true`, `attemptCreationGateEvaluated=true`, `canCreateAttemptNow=false`, `attemptCreationAllowedInThisPatch=false`, `targetScopedExistingAttempts=0`, `latestTargetAttempt=null`, and safe future attempt field planning.
+- Non-preview modes are blocked with `draft_generation_llm_dispatch_attempt_creation_gate_preview_is_preview_only`.
+
+Policy:
+
+- 9F-2Y did not rerun 9F-2B apply, 9F-2D apply, 9F-2I-APPLY, 9F-2K approval apply, or 9F-2W migration apply.
+- 9F-2Y did not create audit attempt rows, create audit event rows, create audit artifact rows, store request envelopes, store prompts, run provider health checks, make provider network calls, call LLM providers, create `llm_call_logs`, mutate `content_items`, write to Blogger, publish, schedule, reconnect OAuth, refresh tokens, mutate publish approvals, or mutate publish attempts.
+- Audit table row counts remain `0 / 0 / 0`.
+- Daily plan rows remain `1`, daily plan item rows remain `3`, `content_items` count remains `2`, and operator approvals/events remain `1 / 1`.
+- Publish milestone counts remain `1 / 1 / 1 / 1 / 22`, and `llm_call_logs` remains `22`.
+- The linked fixture remains `planned` with empty `draftMarkdown` and `draftHtml`.
+- Recommended next patch: `9F-2Z — Gated LLM dispatch attempt creation persistence, no provider call/no content mutation`.
+
 ## Patch 9F-2X LLM Dispatch Attempt Readback
 
 Implemented after Patch 9F-2W-APPLY:

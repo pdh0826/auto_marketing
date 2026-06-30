@@ -541,3 +541,18 @@ Patch 9F-2X is the first readback layer after the dispatch audit migration is ap
 Next candidate gate:
 
 - `9F-2Y — LLM dispatch attempt creation gate preview, no rows/no provider call/no content mutation`
+
+## Patch 9F-2Y Dispatch Attempt Creation Gate Preview
+
+Patch 9F-2Y evaluates whether a future dispatch attempt row could be created, without creating one.
+
+- It adds `POST /api/daily-content-plans/draft-generation-llm-dispatch-attempt-creation-gate-preview`.
+- It reuses 9F-2X readback and 9F-2U dispatch gate metadata.
+- It verifies target fixture, audit tables, empty target readback, persisted operator approval, request envelope readiness, feature flags, confirmation phrase, idempotency key, provider health, and side-effect policy.
+- It keeps `canCreateAttemptNow=false`, `attemptCreationAllowedInThisPatch=false`, `targetScopedExistingAttempts=0`, `latestTargetAttempt=null`, `providerNetworkCallAttempted=false`, `llmCallAttempted=false`, and `contentMutationAttempted=false`.
+- It does not create attempt rows, create event rows, create artifact rows, store request envelopes, store prompts, call providers, run health checks, call any LLM, create `llm_call_logs`, mutate `content_items`, create drafts, or call Blogger.
+- Non-preview modes remain blocked with `draft_generation_llm_dispatch_attempt_creation_gate_preview_is_preview_only`.
+
+Next candidate gate:
+
+- `9F-2Z — Gated LLM dispatch attempt creation persistence, no provider call/no content mutation`

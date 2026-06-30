@@ -242,6 +242,12 @@ Current baseline:
 - 9F-2X confirms audit tables exist while global and target-scoped attempt/event/artifact counts remain `0 / 0 / 0`.
 - 9F-2X keeps `emptyState=true`, `latestTargetAttempt=null`, `canCreateAttemptNow=false`, `canDispatchNow=false`, `executionAllowed=false`, and `finalDraftGenerationAllowed=false`.
 - 9F-2X did not create audit rows, store request envelopes, store prompts, run provider health checks, make provider network calls, call LLM providers, create `llm_call_logs`, mutate `content_items`, write to Blogger, publish, schedule, reconnect OAuth, refresh tokens, mutate publish approvals, or mutate publish attempts.
+- 9F-2Y added read-only helper `src/lib/daily-content-plans/draft-generation-llm-dispatch-attempt-creation-gate-preview.ts`.
+- 9F-2Y added route `POST /api/daily-content-plans/draft-generation-llm-dispatch-attempt-creation-gate-preview`.
+- 9F-2Y added `/settings/blogger` `초안 생성 LLM dispatch attempt 생성 gate preview` readback.
+- 9F-2Y evaluates future attempt creation readiness while keeping `canCreateAttemptNow=false`, `attemptCreationAllowedInThisPatch=false`, `targetScopedExistingAttempts=0`, `latestTargetAttempt=null`, and audit rows `0 / 0 / 0`.
+- 9F-2Y keeps blockers for feature flags, confirmation phrase, idempotency key, provider health check, and patch policy.
+- 9F-2Y did not create audit rows, store request envelopes, store prompts, run provider health checks, make provider network calls, call LLM providers, create `llm_call_logs`, mutate `content_items`, write to Blogger, publish, schedule, reconnect OAuth, refresh tokens, mutate publish approvals, or mutate publish attempts.
 
 9E first end-to-end publish path:
 
@@ -253,13 +259,13 @@ Current baseline:
 6. `9E-9C` read back `https://mathlearningappl.blogspot.com/2026/06/blog-post.html`.
 7. `9E-9D-APPLY` reconciled internal DB state from `planned`/`planned_only` to `published`/`success`.
 
-Recommended next after 9F-2X:
+Recommended next after 9F-2Y:
 
-**9F-2Y — LLM dispatch attempt creation gate preview, no rows/no provider call/no content mutation**
+**9F-2Z — Gated LLM dispatch attempt creation persistence, no provider call/no content mutation**
 
 Goal:
 
-- Add a read-only gate preview for future dispatch attempt creation. Do not create attempt/event/artifact rows, call providers, create `llm_call_logs`, or mutate `content_items`.
+- Add explicitly gated persistence for one future dispatch attempt row while still avoiding provider calls and content mutation.
 
 Alternative:
 
@@ -308,6 +314,7 @@ Goal:
 | 9F-2W-APPLY | Apply LLM dispatch audit migration only, no rows/no provider call/no content mutation |
 | 9F-2X | LLM dispatch attempt readback scaffold, no provider call/no content mutation |
 | 9F-2Y | LLM dispatch attempt creation gate preview, no rows/no provider call/no content mutation |
+| 9F-2Z | Gated LLM dispatch attempt creation persistence, no provider call/no content mutation |
 | 9F-3A | Alert & Recovery Center |
 
 Core operation principles:
