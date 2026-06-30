@@ -600,3 +600,17 @@ Patch 9F-3B persists the first audit event row for the existing dispatch attempt
 Next candidate gate:
 
 - `9F-3C — LLM dispatch audit artifact preview, no provider call/no content mutation`
+
+## Patch 9F-3C Dispatch Audit Artifact Preview
+
+Patch 9F-3C previews a hash-only artifact for the existing dispatch attempt.
+
+- It adds `POST /api/daily-content-plans/draft-generation-llm-dispatch-artifact-preview`.
+- It reads latest attempt/event metadata and constructs a `prompt_request_hash_bundle` candidate artifact.
+- It keeps `artifactCreationAllowedInThisPatch=false`, `artifactInsertAttempted=false`, `auditRowsCreatedNow=false`, and `auditRowsMutatedNow=false`.
+- Attempts/events/artifacts counts remain `1 / 1 / 0`.
+- Artifact persistence, provider calls, LLM calls, `llm_call_logs`, content mutation, draft creation, Blogger write, OAuth reconnect, and token refresh remain disabled.
+
+Next candidate gate:
+
+- `9F-3D — Gated LLM dispatch audit artifact persistence, no provider call/no content mutation`

@@ -1,5 +1,26 @@
 # 14_NEXT_SESSION_BRIEF
 
+## Current State: Patch 9F-3C Completed
+
+```text
+repo: ~/blog-growth-agent
+branch: master
+expected HEAD after 9F-3C commit: local commit `Add draft generation LLM dispatch artifact preview` (verify exact hash with `git log --oneline -8`)
+```
+
+9F-3C adds read-only artifact preview for the existing draft-generation LLM dispatch attempt:
+
+- Route: `POST /api/daily-content-plans/draft-generation-llm-dispatch-artifact-preview`
+- UI: `/settings/blogger` shows `초안 생성 LLM dispatch artifact preview`
+- Candidate artifact: `artifactKind=prompt_request_hash_bundle`, `artifactStorageMode=hash_only`, `artifactRedactionStatus=redacted_or_hash_only`.
+- No artifact row is inserted in 9F-3C.
+- Audit counts remain attempts/events/artifacts `1 / 1 / 0`.
+- Provider health checks, provider network calls, LLM calls, `llm_call_logs`, content mutations, Blogger writes/publish, OAuth reconnect, and token refresh remain disabled.
+
+Next recommended patch:
+
+- `9F-3D — Gated LLM dispatch audit artifact persistence, no provider call/no content mutation`
+
 ## Current State: Patch 9F-3B Completed
 
 ```text

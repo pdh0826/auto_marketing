@@ -1,5 +1,22 @@
 # 13_CHANGELOG
 
+## Patch 9F-3C LLM Dispatch Audit Artifact Preview
+
+Implemented after Patch 9F-3B:
+
+- Added read-only helper `src/lib/daily-content-plans/draft-generation-llm-dispatch-artifact-preview.ts`.
+- Added route `POST /api/daily-content-plans/draft-generation-llm-dispatch-artifact-preview`.
+- Added `/settings/blogger` `초안 생성 LLM dispatch artifact preview` UI readback.
+- The preview reads the latest target attempt/event and constructs a hash-only candidate artifact with `artifactKind=prompt_request_hash_bundle`.
+- The candidate artifact uses `artifactStorageMode=hash_only`, `artifactRedactionStatus=redacted_or_hash_only`, and safe prompt/request-envelope hash metadata only.
+
+Policy:
+
+- 9F-3C does not insert artifact rows.
+- 9F-3C does not call providers, run provider health checks, call LLMs, create `llm_call_logs`, mutate `content_items`, create `draftMarkdown`/`draftHtml`, write to Blogger, publish, schedule, reconnect OAuth, or refresh tokens.
+- Audit row counts remain attempts/events/artifacts `1 / 1 / 0`.
+- Recommended next patch: `9F-3D — Gated LLM dispatch audit artifact persistence, no provider call/no content mutation`.
+
 ## Patch 9F-3B Gated LLM Dispatch Attempt Event Creation Persistence
 
 Implemented after Patch 9F-3A:

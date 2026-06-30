@@ -26,6 +26,7 @@ import type { DailyContentDraftGenerationLlmProviderHealthCheckPreviewResponse }
 import type { DailyContentDraftGenerationLlmProviderReadinessResponse } from "@/lib/daily-content-plans/draft-generation-llm-provider-readiness";
 import type { DailyContentDraftGenerationLlmDispatchAuditSchemaDesignResponse } from "@/lib/daily-content-plans/draft-generation-llm-dispatch-audit-schema-design";
 import type { DailyContentDraftGenerationLlmDispatchAuditMigrationApplyReadbackResponse } from "@/lib/daily-content-plans/draft-generation-llm-dispatch-audit-migration-apply-readback";
+import type { DailyContentDraftGenerationLlmDispatchArtifactPreviewResponse } from "@/lib/daily-content-plans/draft-generation-llm-dispatch-artifact-preview";
 import type { DailyContentDraftGenerationLlmDispatchAttemptCreationResponse } from "@/lib/daily-content-plans/draft-generation-llm-dispatch-attempt-creation";
 import type { DailyContentDraftGenerationLlmDispatchAttemptCreationGatePreviewResponse } from "@/lib/daily-content-plans/draft-generation-llm-dispatch-attempt-creation-gate-preview";
 import type { DailyContentDraftGenerationLlmDispatchAttemptEventCreationResponse } from "@/lib/daily-content-plans/draft-generation-llm-dispatch-attempt-event-creation";
@@ -131,6 +132,8 @@ export function BloggerSettingsClient() {
     useState<DailyContentDraftGenerationLlmDispatchAttemptEventPreviewResponse | null>(null);
   const [draftGenerationLlmDispatchAttemptEventCreationResult, setDraftGenerationLlmDispatchAttemptEventCreationResult] =
     useState<DailyContentDraftGenerationLlmDispatchAttemptEventCreationResponse | null>(null);
+  const [draftGenerationLlmDispatchArtifactPreviewResult, setDraftGenerationLlmDispatchArtifactPreviewResult] =
+    useState<DailyContentDraftGenerationLlmDispatchArtifactPreviewResponse | null>(null);
   const [oauthDryRun, setOauthDryRun] = useState<BloggerOAuthStartDryRun | null>(null);
   const [blogListResult, setBlogListResult] = useState<BloggerBlogListResult | null>(null);
   const [blogListLoadingId, setBlogListLoadingId] = useState<string | null>(null);
@@ -162,6 +165,7 @@ export function BloggerSettingsClient() {
   const [loadingDraftGenerationLlmDispatchAttemptCreationItemId, setLoadingDraftGenerationLlmDispatchAttemptCreationItemId] = useState<string | null>(null);
   const [loadingDraftGenerationLlmDispatchAttemptEventPreviewItemId, setLoadingDraftGenerationLlmDispatchAttemptEventPreviewItemId] = useState<string | null>(null);
   const [loadingDraftGenerationLlmDispatchAttemptEventCreationItemId, setLoadingDraftGenerationLlmDispatchAttemptEventCreationItemId] = useState<string | null>(null);
+  const [loadingDraftGenerationLlmDispatchArtifactPreviewItemId, setLoadingDraftGenerationLlmDispatchArtifactPreviewItemId] = useState<string | null>(null);
   const [selectingBlogId, setSelectingBlogId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -254,6 +258,7 @@ export function BloggerSettingsClient() {
       setDraftGenerationLlmDispatchAttemptCreationResult(null);
       setDraftGenerationLlmDispatchAttemptEventPreviewResult(null);
       setDraftGenerationLlmDispatchAttemptEventCreationResult(null);
+      setDraftGenerationLlmDispatchArtifactPreviewResult(null);
       setOauthDryRun(null);
       setBlogListResult(null);
       setNotice("Blogger connection을 저장했습니다. Blogger draft/publish는 수행하지 않았습니다.");
@@ -394,6 +399,7 @@ export function BloggerSettingsClient() {
       setDraftGenerationLlmDispatchAttemptCreationResult(null);
       setDraftGenerationLlmDispatchAttemptEventPreviewResult(null);
       setDraftGenerationLlmDispatchAttemptEventCreationResult(null);
+      setDraftGenerationLlmDispatchArtifactPreviewResult(null);
       setNotice("Daily Content Plan preview를 생성했습니다. Plan row 저장, content generation, LLM call, Blogger write/publish는 수행하지 않았습니다.");
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Daily Content Plan preview에 실패했습니다.");
@@ -1187,6 +1193,44 @@ export function BloggerSettingsClient() {
     }
   }
 
+  async function previewDraftGenerationLlmDispatchArtifact(
+    planId: string | null | undefined,
+    planItemId: string | null | undefined,
+    contentItemId: string | null | undefined
+  ) {
+    if (!planId || !planItemId || !contentItemId) {
+      setError("Daily plan id, item id, linked content item id가 필요합니다.");
+      return;
+    }
+
+    setError(null);
+    setNotice(null);
+    setLoadingDraftGenerationLlmDispatchArtifactPreviewItemId(planItemId);
+
+    try {
+      const result = await requestJson<ApiResult<DailyContentDraftGenerationLlmDispatchArtifactPreviewResponse>>(
+        "/api/daily-content-plans/draft-generation-llm-dispatch-artifact-preview",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            mode: "preview",
+            planId,
+            planItemId,
+            contentItemId
+          })
+        }
+      );
+      setDraftGenerationLlmDispatchArtifactPreviewResult(result.data);
+      setNotice(
+        "초안 생성 LLM dispatch artifact preview를 확인했습니다. 이 단계는 hash-only artifact 후보만 구성하며 artifact insert, provider/LLM call, content_items 수정, Blogger write/publish는 수행하지 않았습니다."
+      );
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "초안 생성 LLM dispatch artifact preview 확인에 실패했습니다.");
+    } finally {
+      setLoadingDraftGenerationLlmDispatchArtifactPreviewItemId(null);
+    }
+  }
+
   async function createOAuthDryRun(connection: BloggerConnectionAdmin) {
     setError(null);
     setNotice(null);
@@ -1389,6 +1433,7 @@ export function BloggerSettingsClient() {
                   setDraftGenerationLlmDispatchAttemptCreationResult(null);
                   setDraftGenerationLlmDispatchAttemptEventPreviewResult(null);
                   setDraftGenerationLlmDispatchAttemptEventCreationResult(null);
+                  setDraftGenerationLlmDispatchArtifactPreviewResult(null);
                   setOauthDryRun(null);
                   setBlogListResult(null);
                 }}
@@ -2243,6 +2288,25 @@ export function BloggerSettingsClient() {
                         }
                       >
                         {loadingDraftGenerationLlmDispatchAttemptEventCreationItemId === getDailyPlanItemId(item) ? "event 생성 확인 중" : "event 생성 preview"}
+                      </button>
+                      <button
+                        className="button small secondary"
+                        type="button"
+                        disabled={
+                          !dailyContentPlanSummary.persistedPlanId ||
+                          !getDailyPlanItemId(item) ||
+                          !getDailyPlanItemContentItemId(item) ||
+                          loadingDraftGenerationLlmDispatchArtifactPreviewItemId === getDailyPlanItemId(item)
+                        }
+                        onClick={() =>
+                          void previewDraftGenerationLlmDispatchArtifact(
+                            dailyContentPlanSummary.persistedPlanId,
+                            getDailyPlanItemId(item),
+                            getDailyPlanItemContentItemId(item)
+                          )
+                        }
+                      >
+                        {loadingDraftGenerationLlmDispatchArtifactPreviewItemId === getDailyPlanItemId(item) ? "artifact preview 확인 중" : "artifact preview"}
                       </button>
                     </td>
                   </tr>
@@ -6109,6 +6173,103 @@ export function BloggerSettingsClient() {
               ) : (
                 <div className="notice">
                   후보 큐에서 linked content item이 있는 행의 “event 생성 preview”를 실행하세요. 이 UI 동작은 preview only이며 event row를 만들지 않습니다.
+                </div>
+              )}
+            </div>
+
+            <div className="read-block">
+              <h3>초안 생성 LLM dispatch artifact preview</h3>
+              <div className="notice">
+                <strong>prompt/request hash bundle artifact 후보만 구성합니다.</strong>
+                <p>이번 단계는 read-only입니다. artifact insert, provider/LLM call, content mutation, Blogger write는 수행하지 않습니다.</p>
+              </div>
+              <div className="button-row">
+                <button className="button small secondary" type="button" disabled>
+                  Insert artifact - 비활성
+                </button>
+                <button className="button small secondary" type="button" disabled>
+                  Provider call - 비활성
+                </button>
+                <button className="button small secondary" type="button" disabled>
+                  Content mutation - 비활성
+                </button>
+              </div>
+              {draftGenerationLlmDispatchArtifactPreviewResult ? (
+                <>
+                  <div className="notice">
+                    <strong>
+                      candidateReady={String(draftGenerationLlmDispatchArtifactPreviewResult.artifactPreviewSummary.artifactCandidateReady)} /
+                      artifactCreationAllowedInThisPatch=
+                      {String(draftGenerationLlmDispatchArtifactPreviewResult.artifactPreviewSummary.artifactCreationAllowedInThisPatch)}
+                    </strong>
+                    <p>
+                      attempt={draftGenerationLlmDispatchArtifactPreviewResult.artifactPreviewSummary.latestAttemptId ?? "null"} / artifacts=
+                      {draftGenerationLlmDispatchArtifactPreviewResult.artifactPreviewSummary.targetScopedCountsBefore.artifacts}
+                    </p>
+                  </div>
+                  <div className="detail-grid">
+                    <DetailItem label="Patch" value={draftGenerationLlmDispatchArtifactPreviewResult.patchVersion} />
+                    <DetailItem label="Preview Mode" value={draftGenerationLlmDispatchArtifactPreviewResult.previewMode} />
+                    <DetailItem label="Dry Run Only" value={String(draftGenerationLlmDispatchArtifactPreviewResult.dryRunOnly)} />
+                    <DetailItem label="Artifact Insert Attempted" value={String(draftGenerationLlmDispatchArtifactPreviewResult.artifactInsertAttempted)} />
+                    <DetailItem label="Latest Attempt Found" value={String(draftGenerationLlmDispatchArtifactPreviewResult.artifactPreviewSummary.latestAttemptFound)} />
+                    <DetailItem label="Latest Event Found" value={String(draftGenerationLlmDispatchArtifactPreviewResult.artifactPreviewSummary.latestEventFound)} />
+                    <DetailItem label="Duplicate Artifact" value={String(draftGenerationLlmDispatchArtifactPreviewResult.artifactPreviewSummary.duplicateArtifactDetected)} />
+                    <DetailItem label="Next Safe Patch" value={draftGenerationLlmDispatchArtifactPreviewResult.artifactPreviewSummary.nextSafePatchCandidate} />
+                  </div>
+                  <div className="detail-grid">
+                    <DetailItem
+                      label="Global Counts"
+                      value={`${draftGenerationLlmDispatchArtifactPreviewResult.artifactPreviewSummary.globalCountsBefore.attempts}/${draftGenerationLlmDispatchArtifactPreviewResult.artifactPreviewSummary.globalCountsBefore.events}/${draftGenerationLlmDispatchArtifactPreviewResult.artifactPreviewSummary.globalCountsBefore.artifacts}`}
+                    />
+                    <DetailItem
+                      label="Target Counts"
+                      value={`${draftGenerationLlmDispatchArtifactPreviewResult.artifactPreviewSummary.targetScopedCountsBefore.attempts}/${draftGenerationLlmDispatchArtifactPreviewResult.artifactPreviewSummary.targetScopedCountsBefore.events}/${draftGenerationLlmDispatchArtifactPreviewResult.artifactPreviewSummary.targetScopedCountsBefore.artifacts}`}
+                    />
+                    <DetailItem
+                      label="Artifact Kind"
+                      value={draftGenerationLlmDispatchArtifactPreviewResult.artifactPreviewSummary.candidateArtifact?.artifactKind ?? "null"}
+                    />
+                    <DetailItem
+                      label="Storage Mode"
+                      value={draftGenerationLlmDispatchArtifactPreviewResult.artifactPreviewSummary.candidateArtifact?.artifactStorageMode ?? "null"}
+                    />
+                    <DetailItem
+                      label="Redaction"
+                      value={draftGenerationLlmDispatchArtifactPreviewResult.artifactPreviewSummary.candidateArtifact?.artifactRedactionStatus ?? "null"}
+                    />
+                    <DetailItem
+                      label="Artifact Hash"
+                      value={draftGenerationLlmDispatchArtifactPreviewResult.artifactPreviewSummary.candidateArtifact?.artifactHash.slice(0, 16) ?? "null"}
+                    />
+                    <DetailItem
+                      label="Raw Prompt/Body Stored"
+                      value={`${String(draftGenerationLlmDispatchArtifactPreviewResult.artifactPreviewSummary.candidateArtifact?.rawPromptStored ?? false)} / ${String(
+                        draftGenerationLlmDispatchArtifactPreviewResult.artifactPreviewSummary.candidateArtifact?.rawRequestBodyStored ?? false
+                      )}`}
+                    />
+                    <DetailItem label="DB Write" value={String(draftGenerationLlmDispatchArtifactPreviewResult.currentSideEffectSummary.dbWrite)} />
+                    <DetailItem label="Provider Network" value={String(draftGenerationLlmDispatchArtifactPreviewResult.currentSideEffectSummary.providerNetworkCall)} />
+                    <DetailItem label="LLM Call" value={String(draftGenerationLlmDispatchArtifactPreviewResult.currentSideEffectSummary.llmCall)} />
+                    <DetailItem label="Content Mutation" value={String(draftGenerationLlmDispatchArtifactPreviewResult.currentSideEffectSummary.contentItemMutation)} />
+                    <DetailItem label="Blogger Write" value={String(draftGenerationLlmDispatchArtifactPreviewResult.currentSideEffectSummary.bloggerWrite)} />
+                  </div>
+                  <ValidationList
+                    title="Artifact preview blockers"
+                    items={draftGenerationLlmDispatchArtifactPreviewResult.artifactPreviewSummary.artifactPreviewBlockers}
+                    emptyText="artifact preview blocker가 없습니다."
+                    isError
+                  />
+                  <ValidationList
+                    title="Warnings"
+                    items={draftGenerationLlmDispatchArtifactPreviewResult.warnings}
+                    emptyText="warning이 없습니다."
+                    isWarning
+                  />
+                </>
+              ) : (
+                <div className="notice">
+                  후보 큐에서 linked content item이 있는 행의 “artifact preview”를 실행하세요. 이 단계는 hash-only artifact 후보만 만들고 DB row를 만들지 않습니다.
                 </div>
               )}
             </div>

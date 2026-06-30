@@ -227,3 +227,17 @@ Next patch candidate:
 Next patch candidate:
 
 - `9F-3C — LLM dispatch audit artifact preview, no provider call/no content mutation`
+
+## Patch 9F-3C Artifact Preview Semantics
+
+9F-3C previews the first artifact row without inserting it.
+
+- Route: `POST /api/daily-content-plans/draft-generation-llm-dispatch-artifact-preview`.
+- Expected counts: attempts/events/artifacts `1 / 1 / 0`.
+- Candidate artifact fields: `attemptId`, `artifactKind=prompt_request_hash_bundle`, `artifactHash`, `artifactStorageMode=hash_only`, `artifactRedactionStatus=redacted_or_hash_only`, bounded safe preview, `rawSecretStored=false`, `rawTokenStored=false`.
+- The preview must not include raw prompts, raw request bodies, raw response bodies, full generated candidates, secret values, token values, or raw env values.
+- Artifact insert remains disabled until 9F-3D.
+
+Next patch candidate:
+
+- `9F-3D — Gated LLM dispatch audit artifact persistence, no provider call/no content mutation`

@@ -1047,3 +1047,14 @@ Patch 9F-3B persists the first audit event for the existing dispatch attempt.
 - Duplicate apply returns the existing event and creates no additional row.
 - It does not create artifacts, run provider health checks, call providers, create `llm_call_logs`, store prompts, store raw request/response bodies, mutate `content_items`, create `draftMarkdown`/`draftHtml`, call Blogger, reconnect OAuth, or refresh tokens.
 - Next boundary is `9F-3C — LLM dispatch audit artifact preview, no provider call/no content mutation`.
+
+## Patch 9F-3C draft-generation dispatch artifact preview boundary
+
+Patch 9F-3C previews the first hash-only artifact for the existing dispatch attempt.
+
+- `POST /api/daily-content-plans/draft-generation-llm-dispatch-artifact-preview` reads latest target attempt/event metadata.
+- It builds a candidate artifact with `artifactKind=prompt_request_hash_bundle`, `artifactStorageMode=hash_only`, and `artifactRedactionStatus=redacted_or_hash_only`.
+- It keeps raw prompt text, raw request bodies, raw response bodies, full candidates, secrets, tokens, and raw env values out of API/UI output.
+- It keeps attempts/events/artifacts counts unchanged at `1 / 1 / 0`.
+- It does not insert artifacts, run provider health checks, call providers, create `llm_call_logs`, mutate `content_items`, create `draftMarkdown`/`draftHtml`, call Blogger, reconnect OAuth, or refresh tokens.
+- Next boundary is `9F-3D — Gated LLM dispatch audit artifact persistence, no provider call/no content mutation`.
