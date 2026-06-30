@@ -67,3 +67,42 @@ Recommended sequence:
 2. `9F-2W-APPLY — Apply LLM dispatch audit migration only, no rows/no provider call/no content mutation`
 
 Schema scaffolding and migration apply must remain separate from provider dispatch, LLM calls, and content mutation.
+
+## Patch 9F-2W Scaffold Result
+
+Patch 9F-2W moves the 9F-2V design into file-level scaffold only.
+
+Scaffolded Prisma models:
+
+- `BlogDailyContentLlmDispatchAttempt`
+- `BlogDailyContentLlmDispatchEvent`
+- `BlogDailyContentLlmDispatchArtifact`
+
+Scaffolded tables:
+
+- `blog_daily_content_llm_dispatch_attempts`
+- `blog_daily_content_llm_dispatch_events`
+- `blog_daily_content_llm_dispatch_artifacts`
+
+Migration scaffold:
+
+- `prisma/migrations/20260620000300_add_llm_dispatch_audit_schema/migration.sql`
+
+9F-2W intentionally does not apply this migration. The DB tables should remain absent until an explicit `9F-2W-APPLY` patch.
+
+The scaffold preview route is:
+
+- `POST /api/daily-content-plans/draft-generation-llm-dispatch-audit-schema-scaffold-preview`
+
+The route is read-only and reports:
+
+- `scaffoldOnly=true`
+- `schemaModified=true`
+- `migrationCreated=true`
+- `migrationApplied=false`
+- `dbWrite=false`
+- `providerNetworkCallAttempted=false`
+- `llmCallAttempted=false`
+- `contentMutationAttempted=false`
+
+`9F-2W-APPLY` must remain separate from provider dispatch. Applying the migration must not create attempt/event/artifact rows, store prompts, store request envelopes, call providers, create `llm_call_logs`, mutate `content_items`, or call Blogger.

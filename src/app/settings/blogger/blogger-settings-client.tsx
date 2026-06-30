@@ -25,6 +25,7 @@ import type { DailyContentDraftGenerationLlmProviderHealthCheckExecutionResponse
 import type { DailyContentDraftGenerationLlmProviderHealthCheckPreviewResponse } from "@/lib/daily-content-plans/draft-generation-llm-provider-health-check-preview";
 import type { DailyContentDraftGenerationLlmProviderReadinessResponse } from "@/lib/daily-content-plans/draft-generation-llm-provider-readiness";
 import type { DailyContentDraftGenerationLlmDispatchAuditSchemaDesignResponse } from "@/lib/daily-content-plans/draft-generation-llm-dispatch-audit-schema-design";
+import type { DailyContentDraftGenerationLlmDispatchAuditSchemaScaffoldPreviewResponse } from "@/lib/daily-content-plans/draft-generation-llm-dispatch-audit-schema-scaffold-preview";
 import type { DailyContentDraftGenerationLlmDispatchGatePreviewResponse } from "@/lib/daily-content-plans/draft-generation-llm-dispatch-gate-preview";
 import type { DailyContentDraftGenerationLlmRequestEnvelopePreviewResponse } from "@/lib/daily-content-plans/draft-generation-llm-request-envelope-preview";
 import type { DailyContentDraftGenerationReadinessResponse } from "@/lib/daily-content-plans/draft-generation-readiness";
@@ -110,6 +111,8 @@ export function BloggerSettingsClient() {
     useState<DailyContentDraftGenerationLlmDispatchGatePreviewResponse | null>(null);
   const [draftGenerationLlmDispatchAuditSchemaDesignResult, setDraftGenerationLlmDispatchAuditSchemaDesignResult] =
     useState<DailyContentDraftGenerationLlmDispatchAuditSchemaDesignResponse | null>(null);
+  const [draftGenerationLlmDispatchAuditSchemaScaffoldPreviewResult, setDraftGenerationLlmDispatchAuditSchemaScaffoldPreviewResult] =
+    useState<DailyContentDraftGenerationLlmDispatchAuditSchemaScaffoldPreviewResponse | null>(null);
   const [oauthDryRun, setOauthDryRun] = useState<BloggerOAuthStartDryRun | null>(null);
   const [blogListResult, setBlogListResult] = useState<BloggerBlogListResult | null>(null);
   const [blogListLoadingId, setBlogListLoadingId] = useState<string | null>(null);
@@ -131,6 +134,8 @@ export function BloggerSettingsClient() {
   const [loadingDraftGenerationLlmRequestEnvelopePreviewItemId, setLoadingDraftGenerationLlmRequestEnvelopePreviewItemId] = useState<string | null>(null);
   const [loadingDraftGenerationLlmDispatchGatePreviewItemId, setLoadingDraftGenerationLlmDispatchGatePreviewItemId] = useState<string | null>(null);
   const [loadingDraftGenerationLlmDispatchAuditSchemaDesignItemId, setLoadingDraftGenerationLlmDispatchAuditSchemaDesignItemId] = useState<string | null>(null);
+  const [loadingDraftGenerationLlmDispatchAuditSchemaScaffoldPreviewItemId, setLoadingDraftGenerationLlmDispatchAuditSchemaScaffoldPreviewItemId] =
+    useState<string | null>(null);
   const [selectingBlogId, setSelectingBlogId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -216,6 +221,7 @@ export function BloggerSettingsClient() {
       setDraftGenerationLlmRequestEnvelopePreviewResult(null);
       setDraftGenerationLlmDispatchGatePreviewResult(null);
       setDraftGenerationLlmDispatchAuditSchemaDesignResult(null);
+      setDraftGenerationLlmDispatchAuditSchemaScaffoldPreviewResult(null);
       setOauthDryRun(null);
       setBlogListResult(null);
       setNotice("Blogger connection을 저장했습니다. Blogger draft/publish는 수행하지 않았습니다.");
@@ -349,6 +355,7 @@ export function BloggerSettingsClient() {
       setDraftGenerationLlmRequestEnvelopePreviewResult(null);
       setDraftGenerationLlmDispatchGatePreviewResult(null);
       setDraftGenerationLlmDispatchAuditSchemaDesignResult(null);
+      setDraftGenerationLlmDispatchAuditSchemaScaffoldPreviewResult(null);
       setNotice("Daily Content Plan preview를 생성했습니다. Plan row 저장, content generation, LLM call, Blogger write/publish는 수행하지 않았습니다.");
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Daily Content Plan preview에 실패했습니다.");
@@ -876,6 +883,44 @@ export function BloggerSettingsClient() {
     }
   }
 
+  async function previewDraftGenerationLlmDispatchAuditSchemaScaffold(
+    planId: string | null | undefined,
+    planItemId: string | null | undefined,
+    contentItemId: string | null | undefined
+  ) {
+    if (!planId || !planItemId || !contentItemId) {
+      setError("Daily plan id, item id, linked content item id가 필요합니다.");
+      return;
+    }
+
+    setError(null);
+    setNotice(null);
+    setLoadingDraftGenerationLlmDispatchAuditSchemaScaffoldPreviewItemId(planItemId);
+
+    try {
+      const result = await requestJson<ApiResult<DailyContentDraftGenerationLlmDispatchAuditSchemaScaffoldPreviewResponse>>(
+        "/api/daily-content-plans/draft-generation-llm-dispatch-audit-schema-scaffold-preview",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            mode: "preview",
+            planId,
+            planItemId,
+            contentItemId
+          })
+        }
+      );
+      setDraftGenerationLlmDispatchAuditSchemaScaffoldPreviewResult(result.data);
+      setNotice(
+        "초안 생성 LLM dispatch audit schema scaffold를 확인했습니다. schema/migration 파일만 준비된 상태이며 DB migration 적용, provider network call, LLM call, content_items 수정, Blogger write/publish는 수행하지 않았습니다."
+      );
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "초안 생성 LLM dispatch audit schema scaffold 확인에 실패했습니다.");
+    } finally {
+      setLoadingDraftGenerationLlmDispatchAuditSchemaScaffoldPreviewItemId(null);
+    }
+  }
+
   async function createOAuthDryRun(connection: BloggerConnectionAdmin) {
     setError(null);
     setNotice(null);
@@ -1071,6 +1116,7 @@ export function BloggerSettingsClient() {
                   setDraftGenerationLlmRequestEnvelopePreviewResult(null);
                   setDraftGenerationLlmDispatchGatePreviewResult(null);
                   setDraftGenerationLlmDispatchAuditSchemaDesignResult(null);
+                  setDraftGenerationLlmDispatchAuditSchemaScaffoldPreviewResult(null);
                   setOauthDryRun(null);
                   setBlogListResult(null);
                 }}
@@ -1788,6 +1834,27 @@ export function BloggerSettingsClient() {
                         }
                       >
                         {loadingDraftGenerationLlmDispatchAuditSchemaDesignItemId === getDailyPlanItemId(item) ? "audit 설계 확인 중" : "audit schema"}
+                      </button>
+                      <button
+                        className="button small secondary"
+                        type="button"
+                        disabled={
+                          !dailyContentPlanSummary.persistedPlanId ||
+                          !getDailyPlanItemId(item) ||
+                          !getDailyPlanItemContentItemId(item) ||
+                          loadingDraftGenerationLlmDispatchAuditSchemaScaffoldPreviewItemId === getDailyPlanItemId(item)
+                        }
+                        onClick={() =>
+                          void previewDraftGenerationLlmDispatchAuditSchemaScaffold(
+                            dailyContentPlanSummary.persistedPlanId,
+                            getDailyPlanItemId(item),
+                            getDailyPlanItemContentItemId(item)
+                          )
+                        }
+                      >
+                        {loadingDraftGenerationLlmDispatchAuditSchemaScaffoldPreviewItemId === getDailyPlanItemId(item)
+                          ? "audit scaffold 확인 중"
+                          : "audit scaffold"}
                       </button>
                     </td>
                   </tr>
@@ -4301,6 +4368,295 @@ export function BloggerSettingsClient() {
               ) : (
                 <div className="notice">
                   후보 큐에서 linked content item이 있는 행의 “audit schema”를 실행하세요. 이 단계는 audit persistence 구조만 설계하고 schema/migration을 적용하지 않습니다.
+                </div>
+              )}
+            </div>
+
+            <div className="read-block">
+              <h3>초안 생성 LLM dispatch audit schema scaffold</h3>
+              <div className="notice">
+                <strong>미래 LLM dispatch 감사 기록용 schema와 migration 파일을 준비했습니다.</strong>
+                <p>아직 DB에는 적용하지 않았습니다. 이 preview는 provider call, LLM call, content mutation, Blogger write를 수행하지 않습니다.</p>
+              </div>
+              <div className="button-row">
+                <button className="button small secondary" type="button" disabled>
+                  Migration apply - 비활성
+                </button>
+                <button className="button small secondary" type="button" disabled>
+                  DB push - 비활성
+                </button>
+                <button className="button small secondary" type="button" disabled>
+                  LLM dispatch - 비활성
+                </button>
+              </div>
+              {draftGenerationLlmDispatchAuditSchemaScaffoldPreviewResult ? (
+                <>
+                  <div className="notice warning">
+                    <strong>Scaffold only: {String(draftGenerationLlmDispatchAuditSchemaScaffoldPreviewResult.scaffoldOnly)}</strong>
+                    <p>
+                      schemaModified={String(draftGenerationLlmDispatchAuditSchemaScaffoldPreviewResult.schemaModified)}, migrationCreated=
+                      {String(draftGenerationLlmDispatchAuditSchemaScaffoldPreviewResult.migrationCreated)}, migrationApplied=
+                      {String(draftGenerationLlmDispatchAuditSchemaScaffoldPreviewResult.migrationApplied)}, dbWrite=
+                      {String(draftGenerationLlmDispatchAuditSchemaScaffoldPreviewResult.dbWrite)}입니다.
+                    </p>
+                  </div>
+                  <div className="detail-grid">
+                    <DetailItem label="Patch" value={draftGenerationLlmDispatchAuditSchemaScaffoldPreviewResult.patchVersion} />
+                    <DetailItem label="Preview Mode" value={draftGenerationLlmDispatchAuditSchemaScaffoldPreviewResult.previewMode} />
+                    <DetailItem label="Plan ID" value={draftGenerationLlmDispatchAuditSchemaScaffoldPreviewResult.targetSummary.planId ?? "-"} />
+                    <DetailItem label="Plan Item" value={draftGenerationLlmDispatchAuditSchemaScaffoldPreviewResult.targetSummary.planItemId} />
+                    <DetailItem label="Content Item" value={draftGenerationLlmDispatchAuditSchemaScaffoldPreviewResult.targetSummary.contentItemId ?? "-"} />
+                    <DetailItem label="Fixture Status" value={draftGenerationLlmDispatchAuditSchemaScaffoldPreviewResult.targetSummary.fixtureStatus ?? "-"} />
+                    <DetailItem
+                      label="Approval Persisted"
+                      value={String(draftGenerationLlmDispatchAuditSchemaScaffoldPreviewResult.persistedApprovalSummary.operatorApprovalPersisted)}
+                    />
+                    <DetailItem
+                      label="Approval Satisfied"
+                      value={String(draftGenerationLlmDispatchAuditSchemaScaffoldPreviewResult.persistedApprovalSummary.operatorApprovalSatisfied)}
+                    />
+                    <DetailItem
+                      label="Execution Allowed"
+                      value={String(draftGenerationLlmDispatchAuditSchemaScaffoldPreviewResult.executionGateSummary.executionAllowed)}
+                    />
+                    <DetailItem
+                      label="Final Draft Allowed"
+                      value={String(draftGenerationLlmDispatchAuditSchemaScaffoldPreviewResult.executionGateSummary.finalDraftGenerationAllowed)}
+                    />
+                  </div>
+                  <div className="detail-grid">
+                    <DetailItem
+                      label="Scaffold Version"
+                      value={draftGenerationLlmDispatchAuditSchemaScaffoldPreviewResult.auditSchemaScaffoldSummary.scaffoldVersion}
+                    />
+                    <DetailItem
+                      label="Source Design Patch"
+                      value={draftGenerationLlmDispatchAuditSchemaScaffoldPreviewResult.auditSchemaScaffoldSummary.sourceDesignPatchVersion}
+                    />
+                    <DetailItem
+                      label="Prisma Changed Now"
+                      value={String(draftGenerationLlmDispatchAuditSchemaScaffoldPreviewResult.auditSchemaScaffoldSummary.prismaSchemaChangedNow)}
+                    />
+                    <DetailItem
+                      label="Migration Created Now"
+                      value={String(draftGenerationLlmDispatchAuditSchemaScaffoldPreviewResult.auditSchemaScaffoldSummary.migrationCreatedNow)}
+                    />
+                    <DetailItem
+                      label="Migration Applied Now"
+                      value={String(draftGenerationLlmDispatchAuditSchemaScaffoldPreviewResult.auditSchemaScaffoldSummary.migrationAppliedNow)}
+                    />
+                    <DetailItem
+                      label="DB Tables Created Now"
+                      value={String(draftGenerationLlmDispatchAuditSchemaScaffoldPreviewResult.auditSchemaScaffoldSummary.dbTablesCreatedNow)}
+                    />
+                    <DetailItem
+                      label="DB Rows Created Now"
+                      value={String(draftGenerationLlmDispatchAuditSchemaScaffoldPreviewResult.auditSchemaScaffoldSummary.dbRowsCreatedNow)}
+                    />
+                    <DetailItem
+                      label="Next Apply Patch"
+                      value={draftGenerationLlmDispatchAuditSchemaScaffoldPreviewResult.auditSchemaScaffoldSummary.proposedApplyPatchCandidate}
+                    />
+                  </div>
+                  <ValidationList
+                    title="Scaffolded models"
+                    items={draftGenerationLlmDispatchAuditSchemaScaffoldPreviewResult.auditSchemaScaffoldSummary.schemaModels}
+                    emptyText="scaffolded model이 없습니다."
+                  />
+                  <ValidationList
+                    title="Scaffolded tables"
+                    items={draftGenerationLlmDispatchAuditSchemaScaffoldPreviewResult.auditSchemaScaffoldSummary.scaffoldedTables}
+                    emptyText="scaffolded table이 없습니다."
+                  />
+                  <ValidationList
+                    title="Migration files"
+                    items={draftGenerationLlmDispatchAuditSchemaScaffoldPreviewResult.auditSchemaScaffoldSummary.migrationFiles}
+                    emptyText="migration file이 없습니다."
+                  />
+                  <div className="detail-grid">
+                    <DetailItem
+                      label="Attempt Model Present"
+                      value={String(draftGenerationLlmDispatchAuditSchemaScaffoldPreviewResult.auditSchemaScaffoldSummary.schemaModelPresence.attemptModelPresent)}
+                    />
+                    <DetailItem
+                      label="Event Model Present"
+                      value={String(draftGenerationLlmDispatchAuditSchemaScaffoldPreviewResult.auditSchemaScaffoldSummary.schemaModelPresence.eventModelPresent)}
+                    />
+                    <DetailItem
+                      label="Artifact Model Present"
+                      value={String(draftGenerationLlmDispatchAuditSchemaScaffoldPreviewResult.auditSchemaScaffoldSummary.schemaModelPresence.artifactModelPresent)}
+                    />
+                    <DetailItem
+                      label="Migration File Exists"
+                      value={String(
+                        draftGenerationLlmDispatchAuditSchemaScaffoldPreviewResult.auditSchemaScaffoldSummary.migrationFilePresence.expectedMigrationFileExists
+                      )}
+                    />
+                    <DetailItem
+                      label="Attempts Table In DB"
+                      value={String(draftGenerationLlmDispatchAuditSchemaScaffoldPreviewResult.auditSchemaScaffoldSummary.dbTablePresence.attemptsTableExistsInDbNow)}
+                    />
+                    <DetailItem
+                      label="Events Table In DB"
+                      value={String(draftGenerationLlmDispatchAuditSchemaScaffoldPreviewResult.auditSchemaScaffoldSummary.dbTablePresence.eventsTableExistsInDbNow)}
+                    />
+                    <DetailItem
+                      label="Artifacts Table In DB"
+                      value={String(draftGenerationLlmDispatchAuditSchemaScaffoldPreviewResult.auditSchemaScaffoldSummary.dbTablePresence.artifactsTableExistsInDbNow)}
+                    />
+                  </div>
+                  <details className="read-block">
+                    <summary>Idempotency / redaction / migration safety 상세</summary>
+                    <div className="detail-grid">
+                      <DetailItem
+                        label="Raw Idempotency Stored"
+                        value={String(draftGenerationLlmDispatchAuditSchemaScaffoldPreviewResult.auditSchemaScaffoldSummary.idempotencyPolicy.rawIdempotencyKeyStored)}
+                      />
+                      <DetailItem
+                        label="Idempotency Hash Stored"
+                        value={String(draftGenerationLlmDispatchAuditSchemaScaffoldPreviewResult.auditSchemaScaffoldSummary.idempotencyPolicy.idempotencyKeyHashStored)}
+                      />
+                      <DetailItem
+                        label="Unique Constraint Scaffolded"
+                        value={String(draftGenerationLlmDispatchAuditSchemaScaffoldPreviewResult.auditSchemaScaffoldSummary.idempotencyPolicy.uniqueConstraintScaffolded)}
+                      />
+                      <DetailItem
+                        label="Raw Secrets Default"
+                        value={String(draftGenerationLlmDispatchAuditSchemaScaffoldPreviewResult.auditSchemaScaffoldSummary.redactionPolicy.rawSecretsStoredDefault)}
+                      />
+                      <DetailItem
+                        label="Raw Tokens Default"
+                        value={String(draftGenerationLlmDispatchAuditSchemaScaffoldPreviewResult.auditSchemaScaffoldSummary.redactionPolicy.rawTokensStoredDefault)}
+                      />
+                      <DetailItem
+                        label="Raw Provider Request Default"
+                        value={String(
+                          draftGenerationLlmDispatchAuditSchemaScaffoldPreviewResult.auditSchemaScaffoldSummary.redactionPolicy
+                            .rawProviderRequestStoredByDefault
+                        )}
+                      />
+                      <DetailItem
+                        label="Raw Provider Response Default"
+                        value={String(
+                          draftGenerationLlmDispatchAuditSchemaScaffoldPreviewResult.auditSchemaScaffoldSummary.redactionPolicy
+                            .rawProviderResponseStoredByDefault
+                        )}
+                      />
+                      <DetailItem
+                        label="Auth Header Stored"
+                        value={String(draftGenerationLlmDispatchAuditSchemaScaffoldPreviewResult.auditSchemaScaffoldSummary.redactionPolicy.authorizationHeaderValueStored)}
+                      />
+                      <DetailItem
+                        label="Contains CREATE TABLE"
+                        value={String(draftGenerationLlmDispatchAuditSchemaScaffoldPreviewResult.auditSchemaScaffoldSummary.migrationSafetySummary.containsCreateTable)}
+                      />
+                      <DetailItem
+                        label="Contains CREATE INDEX"
+                        value={String(draftGenerationLlmDispatchAuditSchemaScaffoldPreviewResult.auditSchemaScaffoldSummary.migrationSafetySummary.containsCreateIndex)}
+                      />
+                      <DetailItem
+                        label="Contains ALTER TABLE"
+                        value={String(draftGenerationLlmDispatchAuditSchemaScaffoldPreviewResult.auditSchemaScaffoldSummary.migrationSafetySummary.containsAlterTable)}
+                      />
+                      <DetailItem
+                        label="Contains DROP TABLE"
+                        value={String(draftGenerationLlmDispatchAuditSchemaScaffoldPreviewResult.auditSchemaScaffoldSummary.migrationSafetySummary.containsDropTable)}
+                      />
+                      <DetailItem
+                        label="Contains DROP COLUMN"
+                        value={String(draftGenerationLlmDispatchAuditSchemaScaffoldPreviewResult.auditSchemaScaffoldSummary.migrationSafetySummary.containsDropColumn)}
+                      />
+                      <DetailItem
+                        label="Contains DELETE"
+                        value={String(draftGenerationLlmDispatchAuditSchemaScaffoldPreviewResult.auditSchemaScaffoldSummary.migrationSafetySummary.containsDelete)}
+                      />
+                      <DetailItem
+                        label="Contains UPDATE"
+                        value={String(draftGenerationLlmDispatchAuditSchemaScaffoldPreviewResult.auditSchemaScaffoldSummary.migrationSafetySummary.containsUpdate)}
+                      />
+                      <DetailItem
+                        label="Contains INSERT"
+                        value={String(draftGenerationLlmDispatchAuditSchemaScaffoldPreviewResult.auditSchemaScaffoldSummary.migrationSafetySummary.containsInsert)}
+                      />
+                      <DetailItem
+                        label="Contains TRUNCATE"
+                        value={String(draftGenerationLlmDispatchAuditSchemaScaffoldPreviewResult.auditSchemaScaffoldSummary.migrationSafetySummary.containsTruncate)}
+                      />
+                    </div>
+                  </details>
+                  <details className="read-block">
+                    <summary>Audit schema scaffold side-effect 상세</summary>
+                    <div className="detail-grid">
+                      <DetailItem label="DB Read" value={String(draftGenerationLlmDispatchAuditSchemaScaffoldPreviewResult.currentSideEffectSummary.dbRead)} />
+                      <DetailItem label="DB Write" value={String(draftGenerationLlmDispatchAuditSchemaScaffoldPreviewResult.currentSideEffectSummary.dbWrite)} />
+                      <DetailItem
+                        label="Schema File Modified"
+                        value={String(draftGenerationLlmDispatchAuditSchemaScaffoldPreviewResult.currentSideEffectSummary.schemaFileModified)}
+                      />
+                      <DetailItem
+                        label="Migration File Created"
+                        value={String(draftGenerationLlmDispatchAuditSchemaScaffoldPreviewResult.currentSideEffectSummary.migrationFileCreated)}
+                      />
+                      <DetailItem
+                        label="Migration Applied"
+                        value={String(draftGenerationLlmDispatchAuditSchemaScaffoldPreviewResult.currentSideEffectSummary.migrationApplied)}
+                      />
+                      <DetailItem
+                        label="DB Tables Created"
+                        value={String(draftGenerationLlmDispatchAuditSchemaScaffoldPreviewResult.currentSideEffectSummary.dbTablesCreated)}
+                      />
+                      <DetailItem
+                        label="DB Rows Created"
+                        value={String(draftGenerationLlmDispatchAuditSchemaScaffoldPreviewResult.currentSideEffectSummary.dbRowsCreated)}
+                      />
+                      <DetailItem label="Env Read" value={String(draftGenerationLlmDispatchAuditSchemaScaffoldPreviewResult.currentSideEffectSummary.envRead)} />
+                      <DetailItem label="Secret Exposed" value={String(draftGenerationLlmDispatchAuditSchemaScaffoldPreviewResult.currentSideEffectSummary.secretValueExposed)} />
+                      <DetailItem
+                        label="Request Sent"
+                        value={String(draftGenerationLlmDispatchAuditSchemaScaffoldPreviewResult.currentSideEffectSummary.requestSentToProvider)}
+                      />
+                      <DetailItem
+                        label="Provider Health Checked"
+                        value={String(draftGenerationLlmDispatchAuditSchemaScaffoldPreviewResult.currentSideEffectSummary.providerHealthChecked)}
+                      />
+                      <DetailItem
+                        label="Provider Network"
+                        value={String(draftGenerationLlmDispatchAuditSchemaScaffoldPreviewResult.currentSideEffectSummary.providerNetworkCall)}
+                      />
+                      <DetailItem label="LLM Call" value={String(draftGenerationLlmDispatchAuditSchemaScaffoldPreviewResult.currentSideEffectSummary.llmCall)} />
+                      <DetailItem
+                        label="LLM Evaluator Call"
+                        value={String(draftGenerationLlmDispatchAuditSchemaScaffoldPreviewResult.currentSideEffectSummary.llmEvaluatorCall)}
+                      />
+                      <DetailItem
+                        label="LLM Log Mutation"
+                        value={String(draftGenerationLlmDispatchAuditSchemaScaffoldPreviewResult.currentSideEffectSummary.llmCallLogMutation)}
+                      />
+                      <DetailItem
+                        label="Content Mutation"
+                        value={String(draftGenerationLlmDispatchAuditSchemaScaffoldPreviewResult.currentSideEffectSummary.contentItemMutation)}
+                      />
+                      <DetailItem
+                        label="Draft Markdown"
+                        value={String(draftGenerationLlmDispatchAuditSchemaScaffoldPreviewResult.currentSideEffectSummary.draftMarkdownMutation)}
+                      />
+                      <DetailItem
+                        label="Draft HTML"
+                        value={String(draftGenerationLlmDispatchAuditSchemaScaffoldPreviewResult.currentSideEffectSummary.draftHtmlMutation)}
+                      />
+                      <DetailItem label="Blogger Write" value={String(draftGenerationLlmDispatchAuditSchemaScaffoldPreviewResult.currentSideEffectSummary.bloggerWrite)} />
+                      <DetailItem
+                        label="Blogger Draft Save"
+                        value={String(draftGenerationLlmDispatchAuditSchemaScaffoldPreviewResult.currentSideEffectSummary.bloggerDraftSave)}
+                      />
+                      <DetailItem label="Blogger Publish" value={String(draftGenerationLlmDispatchAuditSchemaScaffoldPreviewResult.currentSideEffectSummary.bloggerPublish)} />
+                      <DetailItem label="Token Refresh" value={String(draftGenerationLlmDispatchAuditSchemaScaffoldPreviewResult.currentSideEffectSummary.tokenRefresh)} />
+                    </div>
+                  </details>
+                </>
+              ) : (
+                <div className="notice">
+                  후보 큐에서 linked content item이 있는 행의 “audit scaffold”를 실행하세요. 이 단계는 schema/migration 파일 scaffold 상태만 확인하고 DB에는 적용하지 않습니다.
                 </div>
               )}
             </div>

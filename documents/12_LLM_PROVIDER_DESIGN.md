@@ -968,3 +968,14 @@ Patch 9F-2V adds a design-only audit schema preview before any future dispatch p
 - It keeps `schemaModified=false`, `migrationCreated=false`, `migrationApplied=false`, `dbWrite=false`, `providerNetworkCall=false`, `llmCall=false`, and `contentItemMutation=false`.
 - It does not modify `prisma/schema.prisma`, create migrations, apply migrations, create rows, store request envelopes, store prompts, call providers, create `llm_call_logs`, mutate `content_items`, or create `draftMarkdown`/`draftHtml`.
 - Non-preview modes remain blocked with `draft_generation_llm_dispatch_audit_schema_design_is_preview_only`.
+
+## Patch 9F-2W draft-generation dispatch audit schema scaffold boundary
+
+Patch 9F-2W adds the file-level Prisma schema and migration scaffold for future dispatch audit persistence.
+
+- `POST /api/daily-content-plans/draft-generation-llm-dispatch-audit-schema-scaffold-preview` reports scaffold state only.
+- The scaffold adds `BlogDailyContentLlmDispatchAttempt`, `BlogDailyContentLlmDispatchEvent`, and `BlogDailyContentLlmDispatchArtifact` models plus a migration SQL file.
+- The migration is not applied in this patch; DB audit tables remain absent until `9F-2W-APPLY`.
+- The scaffold keeps raw idempotency keys out of storage, stores only hashes, and keeps raw secrets/tokens/provider request/response payloads out of default persistence.
+- It does not create rows, store request envelopes, store prompts, call providers, run provider health checks, call LLM providers, create `llm_call_logs`, mutate `content_items`, or create `draftMarkdown`/`draftHtml`.
+- Non-preview modes remain blocked with `draft_generation_llm_dispatch_audit_schema_scaffold_preview_is_preview_only`.

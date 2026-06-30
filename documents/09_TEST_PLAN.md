@@ -91,6 +91,33 @@ npm run build
 - DB baseline should remain: daily plan rows `1`, daily plan item rows `3`, `content_items` count `2`, operator approvals/events `1 / 1`, publish milestone counts `1 / 1 / 1 / 1 / 22`, and `llm_call_logs=22`.
 - Target fixture `daily_fixture_cmqlr1v1y0001iwj2gpv2875r` should remain `status=planned`, `publishedAt=null`, `scheduledAt=null`, and draft Markdown/HTML lengths `0 / 0`.
 
+## Patch 9F-2W LLM Dispatch Audit Schema Scaffold
+
+- `POST /api/daily-content-plans/draft-generation-llm-dispatch-audit-schema-scaffold-preview` should return `patchVersion=9F-2W`.
+- `previewMode=read_only_draft_generation_llm_dispatch_audit_schema_scaffold_preview`.
+- `scaffoldOnly=true`.
+- `schemaModified=true`.
+- `migrationCreated=true`.
+- `migrationApplied=false`.
+- `dbWrite=false`.
+- `providerNetworkCallAttempted=false`.
+- `llmCallAttempted=false`.
+- `contentMutationAttempted=false`.
+- `persistedApprovalSummary.operatorApprovalSatisfied=true` for fixture item `cmqlr1v1y0001iwj2gpv2875r`.
+- `executionGateSummary.executionAllowed=false`.
+- `executionGateSummary.finalDraftGenerationAllowed=false`.
+- The existing execution blockers should remain feature flag, confirmation phrase, idempotency key, and provider health-check blockers.
+- Schema models should include `BlogDailyContentLlmDispatchAttempt`, `BlogDailyContentLlmDispatchEvent`, and `BlogDailyContentLlmDispatchArtifact`.
+- Migration file `prisma/migrations/20260620000300_add_llm_dispatch_audit_schema/migration.sql` should exist.
+- Migration SQL should contain `CREATE TABLE` for `blog_daily_content_llm_dispatch_attempts`, `blog_daily_content_llm_dispatch_events`, and `blog_daily_content_llm_dispatch_artifacts`.
+- Migration SQL should contain no `DROP TABLE`, `DROP COLUMN`, `DELETE FROM`, `UPDATE `, `INSERT INTO`, or `TRUNCATE`.
+- DB `to_regclass` checks for the three audit tables should remain `null`; the migration scaffold is not applied in 9F-2W.
+- Redaction policy should keep raw secrets/tokens, raw provider request/response bodies, and authorization header values out of default storage.
+- Idempotency policy should keep raw idempotency keys out of storage and use `idempotencyKeyHash` with the scaffolded unique constraint.
+- Non-preview mode such as `migrate` should include `draft_generation_llm_dispatch_audit_schema_scaffold_preview_is_preview_only`.
+- DB baseline should remain: daily plan rows `1`, daily plan item rows `3`, `content_items` count `2`, operator approvals/events `1 / 1`, publish milestone counts `1 / 1 / 1 / 1 / 22`, and `llm_call_logs=22`.
+- Target fixture `daily_fixture_cmqlr1v1y0001iwj2gpv2875r` should remain `status=planned`, `publishedAt=null`, `scheduledAt=null`, and draft Markdown/HTML lengths `0 / 0`.
+
 ## 9E Publish Milestone Closeout Baseline
 
 Expected current state after `9E-9D-APPLY`:

@@ -494,3 +494,19 @@ Patch 9F-2V is the design-only audit schema step after the dispatch gate preview
 Next candidate gate:
 
 - `9F-2W — LLM dispatch audit schema scaffold, no apply/no provider call/no content mutation`
+
+## Patch 9F-2W Dispatch Audit Schema Scaffold
+
+Patch 9F-2W is the file-level scaffold step after the dispatch audit schema design.
+
+- It adds Prisma schema models for future dispatch attempts, events, and redacted/hash-only artifacts.
+- It adds migration scaffold `prisma/migrations/20260620000300_add_llm_dispatch_audit_schema/migration.sql`.
+- It adds `POST /api/daily-content-plans/draft-generation-llm-dispatch-audit-schema-scaffold-preview` for read-only scaffold status.
+- It keeps the migration unapplied; DB `to_regclass` checks for the three audit tables should remain null during 9F-2W.
+- It keeps `executionAllowed=false`, `finalDraftGenerationAllowed=false`, `migrationApplied=false`, `dbWrite=false`, `providerNetworkCallAttempted=false`, `llmCallAttempted=false`, and `contentMutationAttempted=false`.
+- It does not create audit rows, store request envelopes, store prompts, call providers, run health checks, call any LLM, create `llm_call_logs`, mutate `content_items`, create drafts, or call Blogger.
+- Non-preview modes are blocked with `draft_generation_llm_dispatch_audit_schema_scaffold_preview_is_preview_only`.
+
+Next candidate gate:
+
+- `9F-2W-APPLY — Apply LLM dispatch audit migration only, no rows/no provider call/no content mutation`

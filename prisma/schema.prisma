@@ -242,6 +242,7 @@ model ContentItem {
   draftGenerationRuns                ContentDraftGenerationRun[]
   dailyContentOperatorApprovals      BlogDailyContentOperatorApproval[]
   dailyContentOperatorApprovalEvents BlogDailyContentOperatorApprovalEvent[]
+  dailyContentLlmDispatchAttempts    BlogDailyContentLlmDispatchAttempt[]
 
   @@index([blogId])
   @@index([brandProfileId])
@@ -718,6 +719,7 @@ model BlogDailyContentPlan {
   items                  BlogDailyContentPlanItem[]
   operatorApprovals      BlogDailyContentOperatorApproval[]
   operatorApprovalEvents BlogDailyContentOperatorApprovalEvent[]
+  llmDispatchAttempts    BlogDailyContentLlmDispatchAttempt[]
 
   @@unique([targetBloggerBlogId, planDateLocal])
   @@index([targetBloggerBlogId])
@@ -752,6 +754,7 @@ model BlogDailyContentPlanItem {
   plan                   BlogDailyContentPlan                    @relation(fields: [planId], references: [id], onDelete: Cascade)
   operatorApprovals      BlogDailyContentOperatorApproval[]
   operatorApprovalEvents BlogDailyContentOperatorApprovalEvent[]
+  llmDispatchAttempts    BlogDailyContentLlmDispatchAttempt[]
 
   @@index([planId])
   @@index([status])
@@ -797,10 +800,11 @@ model BlogDailyContentOperatorApproval {
 
   idempotencyKey String
 
-  plan        BlogDailyContentPlan                    @relation(fields: [planId], references: [id])
-  planItem    BlogDailyContentPlanItem                @relation(fields: [planItemId], references: [id])
-  contentItem ContentItem                             @relation(fields: [contentItemId], references: [id])
-  events      BlogDailyContentOperatorApprovalEvent[]
+  plan                BlogDailyContentPlan                    @relation(fields: [planId], references: [id])
+  planItem            BlogDailyContentPlanItem                @relation(fields: [planItemId], references: [id])
+  contentItem         ContentItem                             @relation(fields: [contentItemId], references: [id])
+  events              BlogDailyContentOperatorApprovalEvent[]
+  llmDispatchAttempts BlogDailyContentLlmDispatchAttempt[]
 
   @@unique([idempotencyKey])
   @@index([planId, createdAt])
@@ -847,6 +851,113 @@ model BlogDailyContentOperatorApprovalEvent {
   @@index([contentItemId, createdAt])
   @@index([eventType, createdAt])
   @@map("blog_daily_content_operator_approval_events")
+}
+
+model BlogDailyContentLlmDispatchAttempt {
+  id String @id @default(cuid())
+
+  planId             String
+  planItemId         String
+  contentItemId      String
+  operatorApprovalId String
+
+  idempotencyKeyHash String
+  attemptPurpose     String @default("daily_content_draft_generation")
+  attemptStatus      String @default("planned")
+
+  providerKey      String?
+  providerKind     String?
+  modelKey         String?
+  modelDisplayName String?
+
+  requestEnvelopeHash           String
+  promptSha256                  String
+  promptVersion                 String
+  promptQualityChecklistVersion String
+  dispatchGateVersion           String
+  healthCheckReferenceId        String?
+  healthCheckSummaryHash        String?
+  confirmationPhraseHash        String
+  requestBodyStored             Boolean   @default(false)
+  requestBodyRedacted           Boolean   @default(true)
+  responseBodyStored            Boolean   @default(false)
+  responseBodyRedacted          Boolean   @default(true)
+  rawSecretStored               Boolean   @default(false)
+  rawTokenStored                Boolean   @default(false)
+  providerNetworkCallAttempted  Boolean   @default(false)
+  llmCallAttempted              Boolean   @default(false)
+  llmCompletionReceived         Boolean   @default(false)
+  contentMutationAttempted      Boolean   @default(false)
+  draftMutationAttempted        Boolean   @default(false)
+  bloggerWriteAttempted         Boolean   @default(false)
+  errorCode                     String?
+  errorCategory                 String?
+  errorMessageRedacted          String?
+  metadata                      Json?
+  startedAt                     DateTime?
+  finishedAt                    DateTime?
+  createdAt                     DateTime  @default(now())
+  updatedAt                     DateTime  @updatedAt
+
+  plan             BlogDailyContentPlan                  @relation(fields: [planId], references: [id])
+  planItem         BlogDailyContentPlanItem              @relation(fields: [planItemId], references: [id])
+  contentItem      ContentItem                           @relation(fields: [contentItemId], references: [id])
+  operatorApproval BlogDailyContentOperatorApproval      @relation(fields: [operatorApprovalId], references: [id])
+  events           BlogDailyContentLlmDispatchEvent[]
+  artifacts        BlogDailyContentLlmDispatchArtifact[]
+
+  @@unique([planItemId, contentItemId, attemptPurpose, idempotencyKeyHash], map: "uq_bdc_llm_dispatch_idempotency")
+  @@index([planId, createdAt], map: "idx_bdc_llm_dispatch_attempts_plan_created")
+  @@index([planItemId, createdAt], map: "idx_bdc_llm_dispatch_attempts_item_created")
+  @@index([contentItemId, createdAt], map: "idx_bdc_llm_dispatch_attempts_content_created")
+  @@index([attemptStatus, createdAt], map: "idx_bdc_llm_dispatch_attempts_status_created")
+  @@index([providerKey, modelKey, createdAt], map: "idx_bdc_llm_dispatch_attempts_provider_model_created")
+  @@index([requestEnvelopeHash], map: "idx_bdc_llm_dispatch_attempts_envelope_hash")
+  @@index([promptSha256], map: "idx_bdc_llm_dispatch_attempts_prompt_hash")
+  @@map("blog_daily_content_llm_dispatch_attempts")
+}
+
+model BlogDailyContentLlmDispatchEvent {
+  id String @id @default(cuid())
+
+  attemptId String
+
+  eventType                String
+  eventStatus              String
+  eventMessage             String?
+  eventPayloadRedactedJson Json?
+  rawSecretStored          Boolean  @default(false)
+  rawTokenStored           Boolean  @default(false)
+  createdAt                DateTime @default(now())
+
+  attempt BlogDailyContentLlmDispatchAttempt @relation(fields: [attemptId], references: [id])
+
+  @@index([attemptId, createdAt], map: "idx_bdc_llm_dispatch_events_attempt_created")
+  @@index([eventType, createdAt], map: "idx_bdc_llm_dispatch_events_type_created")
+  @@index([eventStatus, createdAt], map: "idx_bdc_llm_dispatch_events_status_created")
+  @@map("blog_daily_content_llm_dispatch_events")
+}
+
+model BlogDailyContentLlmDispatchArtifact {
+  id String @id @default(cuid())
+
+  attemptId String
+
+  artifactKind            String
+  artifactHash            String
+  artifactStorageMode     String   @default("not_stored")
+  artifactRedactionStatus String   @default("redacted_or_hash_only")
+  artifactPreview         String?
+  rawSecretStored         Boolean  @default(false)
+  rawTokenStored          Boolean  @default(false)
+  createdAt               DateTime @default(now())
+
+  attempt BlogDailyContentLlmDispatchAttempt @relation(fields: [attemptId], references: [id])
+
+  @@index([attemptId, createdAt], map: "idx_bdc_llm_dispatch_artifacts_attempt_created")
+  @@index([artifactKind, createdAt], map: "idx_bdc_llm_dispatch_artifacts_kind_created")
+  @@index([artifactHash], map: "idx_bdc_llm_dispatch_artifacts_hash")
+  @@map("blog_daily_content_llm_dispatch_artifacts")
 }
 
 model BloggerConnectionSecret {
