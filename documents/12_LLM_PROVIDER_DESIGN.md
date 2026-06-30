@@ -1035,3 +1035,15 @@ Patch 9F-3A previews the first audit event that would be attached to the existin
 - It keeps attempts/events/artifacts counts unchanged at `1 / 0 / 0`.
 - It does not insert audit events, create artifacts, run provider health checks, call providers, create `llm_call_logs`, store prompts, store request/response bodies, mutate `content_items`, create `draftMarkdown`/`draftHtml`, call Blogger, reconnect OAuth, or refresh tokens.
 - Next boundary is `9F-3B — Gated LLM dispatch attempt event creation persistence, no provider call/no content mutation`.
+
+## Patch 9F-3B draft-generation dispatch attempt event persistence boundary
+
+Patch 9F-3B persists the first audit event for the existing dispatch attempt.
+
+- `POST /api/daily-content-plans/draft-generation-llm-dispatch-attempt-event-creation` supports preview and guarded apply modes.
+- Apply mode requires `BLOG_DAILY_CONTENT_LLM_DISPATCH_EVENT_CREATE_ENABLED=true`, exact confirmation phrase, idempotency key, candidate event readiness, and no existing target event.
+- The only allowed write is one `blog_daily_content_llm_dispatch_events` row.
+- The event uses `eventType=dispatch_attempt_created` and `eventStatus=recorded_audit_only`.
+- Duplicate apply returns the existing event and creates no additional row.
+- It does not create artifacts, run provider health checks, call providers, create `llm_call_logs`, store prompts, store raw request/response bodies, mutate `content_items`, create `draftMarkdown`/`draftHtml`, call Blogger, reconnect OAuth, or refresh tokens.
+- Next boundary is `9F-3C — LLM dispatch audit artifact preview, no provider call/no content mutation`.

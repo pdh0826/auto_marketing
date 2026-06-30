@@ -1,5 +1,23 @@
 # 13_CHANGELOG
 
+## Patch 9F-3B Gated LLM Dispatch Attempt Event Creation Persistence
+
+Implemented after Patch 9F-3A:
+
+- Added helper `src/lib/daily-content-plans/draft-generation-llm-dispatch-attempt-event-creation.ts`.
+- Added route `POST /api/daily-content-plans/draft-generation-llm-dispatch-attempt-event-creation`.
+- Added `/settings/blogger` `초안 생성 LLM dispatch attempt event 생성 preview` UI readback.
+- Apply mode can create exactly one `blog_daily_content_llm_dispatch_events` row for the existing attempt when the feature flag, exact confirmation phrase, idempotency key, candidate event, and duplicate-event gate pass.
+- The event uses `eventType=dispatch_attempt_created` and `eventStatus=recorded_audit_only`.
+- Duplicate apply returns the existing event without inserting another row.
+
+Policy:
+
+- 9F-3B does not create audit artifact rows.
+- 9F-3B does not call providers, run provider health checks, call LLMs, create `llm_call_logs`, mutate `content_items`, create `draftMarkdown`/`draftHtml`, write to Blogger, publish, schedule, reconnect OAuth, or refresh tokens.
+- Positive local smoke is expected to move audit counts from `1 / 0 / 0` to `1 / 1 / 0`.
+- Recommended next patch: `9F-3C — LLM dispatch audit artifact preview, no provider call/no content mutation`.
+
 ## Patch 9F-3A LLM Dispatch Attempt Event Creation Preview
 
 Implemented after Patch 9F-2Z:

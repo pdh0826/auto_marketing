@@ -585,3 +585,18 @@ Patch 9F-3A previews the first audit event for the existing dispatch attempt.
 Next candidate gate:
 
 - `9F-3B — Gated LLM dispatch attempt event creation persistence, no provider call/no content mutation`
+
+## Patch 9F-3B Dispatch Attempt Event Creation Persistence
+
+Patch 9F-3B persists the first audit event row for the existing dispatch attempt.
+
+- It adds `POST /api/daily-content-plans/draft-generation-llm-dispatch-attempt-event-creation`.
+- `mode=preview` reports the event creation gate without inserting rows.
+- `mode=apply` is allowed only with `BLOG_DAILY_CONTENT_LLM_DISPATCH_EVENT_CREATE_ENABLED=true`, exact confirmation phrase, idempotency key, a ready candidate event, and no existing target event.
+- The only allowed write is one event row with `eventType=dispatch_attempt_created` and `eventStatus=recorded_audit_only`.
+- Attempts/events/artifacts counts move to `1 / 1 / 0` only after the gated apply smoke.
+- Artifact creation, provider calls, LLM calls, `llm_call_logs`, content mutation, draft creation, Blogger write, OAuth reconnect, and token refresh remain disabled.
+
+Next candidate gate:
+
+- `9F-3C — LLM dispatch audit artifact preview, no provider call/no content mutation`

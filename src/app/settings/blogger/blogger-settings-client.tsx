@@ -28,6 +28,7 @@ import type { DailyContentDraftGenerationLlmDispatchAuditSchemaDesignResponse } 
 import type { DailyContentDraftGenerationLlmDispatchAuditMigrationApplyReadbackResponse } from "@/lib/daily-content-plans/draft-generation-llm-dispatch-audit-migration-apply-readback";
 import type { DailyContentDraftGenerationLlmDispatchAttemptCreationResponse } from "@/lib/daily-content-plans/draft-generation-llm-dispatch-attempt-creation";
 import type { DailyContentDraftGenerationLlmDispatchAttemptCreationGatePreviewResponse } from "@/lib/daily-content-plans/draft-generation-llm-dispatch-attempt-creation-gate-preview";
+import type { DailyContentDraftGenerationLlmDispatchAttemptEventCreationResponse } from "@/lib/daily-content-plans/draft-generation-llm-dispatch-attempt-event-creation";
 import type { DailyContentDraftGenerationLlmDispatchAttemptEventPreviewResponse } from "@/lib/daily-content-plans/draft-generation-llm-dispatch-attempt-event-preview";
 import type { DailyContentDraftGenerationLlmDispatchAttemptReadbackResponse } from "@/lib/daily-content-plans/draft-generation-llm-dispatch-attempt-readback";
 import type { DailyContentDraftGenerationLlmDispatchAuditSchemaScaffoldPreviewResponse } from "@/lib/daily-content-plans/draft-generation-llm-dispatch-audit-schema-scaffold-preview";
@@ -128,6 +129,8 @@ export function BloggerSettingsClient() {
     useState<DailyContentDraftGenerationLlmDispatchAttemptCreationResponse | null>(null);
   const [draftGenerationLlmDispatchAttemptEventPreviewResult, setDraftGenerationLlmDispatchAttemptEventPreviewResult] =
     useState<DailyContentDraftGenerationLlmDispatchAttemptEventPreviewResponse | null>(null);
+  const [draftGenerationLlmDispatchAttemptEventCreationResult, setDraftGenerationLlmDispatchAttemptEventCreationResult] =
+    useState<DailyContentDraftGenerationLlmDispatchAttemptEventCreationResponse | null>(null);
   const [oauthDryRun, setOauthDryRun] = useState<BloggerOAuthStartDryRun | null>(null);
   const [blogListResult, setBlogListResult] = useState<BloggerBlogListResult | null>(null);
   const [blogListLoadingId, setBlogListLoadingId] = useState<string | null>(null);
@@ -158,6 +161,7 @@ export function BloggerSettingsClient() {
     useState<string | null>(null);
   const [loadingDraftGenerationLlmDispatchAttemptCreationItemId, setLoadingDraftGenerationLlmDispatchAttemptCreationItemId] = useState<string | null>(null);
   const [loadingDraftGenerationLlmDispatchAttemptEventPreviewItemId, setLoadingDraftGenerationLlmDispatchAttemptEventPreviewItemId] = useState<string | null>(null);
+  const [loadingDraftGenerationLlmDispatchAttemptEventCreationItemId, setLoadingDraftGenerationLlmDispatchAttemptEventCreationItemId] = useState<string | null>(null);
   const [selectingBlogId, setSelectingBlogId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -249,6 +253,7 @@ export function BloggerSettingsClient() {
       setDraftGenerationLlmDispatchAttemptCreationGatePreviewResult(null);
       setDraftGenerationLlmDispatchAttemptCreationResult(null);
       setDraftGenerationLlmDispatchAttemptEventPreviewResult(null);
+      setDraftGenerationLlmDispatchAttemptEventCreationResult(null);
       setOauthDryRun(null);
       setBlogListResult(null);
       setNotice("Blogger connection을 저장했습니다. Blogger draft/publish는 수행하지 않았습니다.");
@@ -388,6 +393,7 @@ export function BloggerSettingsClient() {
       setDraftGenerationLlmDispatchAttemptCreationGatePreviewResult(null);
       setDraftGenerationLlmDispatchAttemptCreationResult(null);
       setDraftGenerationLlmDispatchAttemptEventPreviewResult(null);
+      setDraftGenerationLlmDispatchAttemptEventCreationResult(null);
       setNotice("Daily Content Plan preview를 생성했습니다. Plan row 저장, content generation, LLM call, Blogger write/publish는 수행하지 않았습니다.");
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Daily Content Plan preview에 실패했습니다.");
@@ -1143,6 +1149,44 @@ export function BloggerSettingsClient() {
     }
   }
 
+  async function previewDraftGenerationLlmDispatchAttemptEventCreation(
+    planId: string | null | undefined,
+    planItemId: string | null | undefined,
+    contentItemId: string | null | undefined
+  ) {
+    if (!planId || !planItemId || !contentItemId) {
+      setError("Daily plan id, item id, linked content item id가 필요합니다.");
+      return;
+    }
+
+    setError(null);
+    setNotice(null);
+    setLoadingDraftGenerationLlmDispatchAttemptEventCreationItemId(planItemId);
+
+    try {
+      const result = await requestJson<ApiResult<DailyContentDraftGenerationLlmDispatchAttemptEventCreationResponse>>(
+        "/api/daily-content-plans/draft-generation-llm-dispatch-attempt-event-creation",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            mode: "preview",
+            planId,
+            planItemId,
+            contentItemId
+          })
+        }
+      );
+      setDraftGenerationLlmDispatchAttemptEventCreationResult(result.data);
+      setNotice(
+        "초안 생성 LLM dispatch attempt event 생성 preview를 확인했습니다. UI에서는 preview만 실행하며 event/artifact insert, provider/LLM call, content_items 수정, Blogger write/publish는 수행하지 않았습니다."
+      );
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "초안 생성 LLM dispatch attempt event 생성 preview 확인에 실패했습니다.");
+    } finally {
+      setLoadingDraftGenerationLlmDispatchAttemptEventCreationItemId(null);
+    }
+  }
+
   async function createOAuthDryRun(connection: BloggerConnectionAdmin) {
     setError(null);
     setNotice(null);
@@ -1344,6 +1388,7 @@ export function BloggerSettingsClient() {
                   setDraftGenerationLlmDispatchAttemptCreationGatePreviewResult(null);
                   setDraftGenerationLlmDispatchAttemptCreationResult(null);
                   setDraftGenerationLlmDispatchAttemptEventPreviewResult(null);
+                  setDraftGenerationLlmDispatchAttemptEventCreationResult(null);
                   setOauthDryRun(null);
                   setBlogListResult(null);
                 }}
@@ -2179,6 +2224,25 @@ export function BloggerSettingsClient() {
                         }
                       >
                         {loadingDraftGenerationLlmDispatchAttemptEventPreviewItemId === getDailyPlanItemId(item) ? "event preview 확인 중" : "event preview"}
+                      </button>
+                      <button
+                        className="button small secondary"
+                        type="button"
+                        disabled={
+                          !dailyContentPlanSummary.persistedPlanId ||
+                          !getDailyPlanItemId(item) ||
+                          !getDailyPlanItemContentItemId(item) ||
+                          loadingDraftGenerationLlmDispatchAttemptEventCreationItemId === getDailyPlanItemId(item)
+                        }
+                        onClick={() =>
+                          void previewDraftGenerationLlmDispatchAttemptEventCreation(
+                            dailyContentPlanSummary.persistedPlanId,
+                            getDailyPlanItemId(item),
+                            getDailyPlanItemContentItemId(item)
+                          )
+                        }
+                      >
+                        {loadingDraftGenerationLlmDispatchAttemptEventCreationItemId === getDailyPlanItemId(item) ? "event 생성 확인 중" : "event 생성 preview"}
                       </button>
                     </td>
                   </tr>
@@ -5958,6 +6022,93 @@ export function BloggerSettingsClient() {
               ) : (
                 <div className="notice">
                   후보 큐에서 linked content item이 있는 행의 “event preview”를 실행하세요. 이 단계는 candidate event만 만들고 DB row를 만들지 않습니다.
+                </div>
+              )}
+            </div>
+
+            <div className="read-block">
+              <h3>초안 생성 LLM dispatch attempt event 생성 preview</h3>
+              <div className="notice">
+                <strong>event row 생성 route를 preview mode로 확인합니다.</strong>
+                <p>UI에서는 apply를 호출하지 않습니다. 실제 event row 생성은 feature flag, exact confirmation phrase, idempotency key가 있는 별도 smoke에서만 수행합니다.</p>
+              </div>
+              <div className="button-row">
+                <button className="button small secondary" type="button" disabled>
+                  Apply event insert - UI 비활성
+                </button>
+                <button className="button small secondary" type="button" disabled>
+                  Provider call - 비활성
+                </button>
+                <button className="button small secondary" type="button" disabled>
+                  Content mutation - 비활성
+                </button>
+              </div>
+              {draftGenerationLlmDispatchAttemptEventCreationResult ? (
+                <>
+                  <div className="notice">
+                    <strong>
+                      mode={draftGenerationLlmDispatchAttemptEventCreationResult.mode} / allowed=
+                      {String(draftGenerationLlmDispatchAttemptEventCreationResult.eventCreationAllowed)} / createdNow=
+                      {String(draftGenerationLlmDispatchAttemptEventCreationResult.eventCreatedNow)}
+                    </strong>
+                    <p>
+                      eventId={draftGenerationLlmDispatchAttemptEventCreationResult.eventCreationSummary.eventId ?? "null"} / status=
+                      {draftGenerationLlmDispatchAttemptEventCreationResult.eventCreationSummary.eventStatus}
+                    </p>
+                  </div>
+                  <div className="detail-grid">
+                    <DetailItem label="Patch" value={draftGenerationLlmDispatchAttemptEventCreationResult.patchVersion} />
+                    <DetailItem label="Requested Mode" value={draftGenerationLlmDispatchAttemptEventCreationResult.requestedMode} />
+                    <DetailItem label="Persistence Patch" value={String(draftGenerationLlmDispatchAttemptEventCreationResult.eventCreationPersistencePatch)} />
+                    <DetailItem label="Event Created Now" value={String(draftGenerationLlmDispatchAttemptEventCreationResult.eventCreatedNow)} />
+                    <DetailItem label="Existing Returned" value={String(draftGenerationLlmDispatchAttemptEventCreationResult.existingEventReturned)} />
+                    <DetailItem label="Duplicate Event" value={String(draftGenerationLlmDispatchAttemptEventCreationResult.duplicateEventDetected)} />
+                    <DetailItem label="Attempts Before" value={String(draftGenerationLlmDispatchAttemptEventCreationResult.eventCreationSummary.attemptsCountBefore)} />
+                    <DetailItem label="Events Before" value={String(draftGenerationLlmDispatchAttemptEventCreationResult.eventCreationSummary.eventsCountBefore)} />
+                    <DetailItem label="Artifacts Before" value={String(draftGenerationLlmDispatchAttemptEventCreationResult.eventCreationSummary.artifactsCountBefore)} />
+                    <DetailItem label="Attempts After" value={String(draftGenerationLlmDispatchAttemptEventCreationResult.eventCreationSummary.attemptsCountAfter)} />
+                    <DetailItem label="Events After" value={String(draftGenerationLlmDispatchAttemptEventCreationResult.eventCreationSummary.eventsCountAfter)} />
+                    <DetailItem label="Artifacts After" value={String(draftGenerationLlmDispatchAttemptEventCreationResult.eventCreationSummary.artifactsCountAfter)} />
+                  </div>
+                  <div className="detail-grid">
+                    <DetailItem
+                      label="Feature Flag"
+                      value={`${draftGenerationLlmDispatchAttemptEventCreationResult.eventCreationSummary.eventCreationFeatureFlagName}=${String(
+                        draftGenerationLlmDispatchAttemptEventCreationResult.eventCreationSummary.eventCreationFeatureFlagEnabled
+                      )}`}
+                    />
+                    <DetailItem
+                      label="Confirmation Matched"
+                      value={String(draftGenerationLlmDispatchAttemptEventCreationResult.eventCreationSummary.confirmationPhraseMatched)}
+                    />
+                    <DetailItem label="Idempotency Present" value={String(draftGenerationLlmDispatchAttemptEventCreationResult.eventCreationSummary.idempotencyKeyPresent)} />
+                    <DetailItem
+                      label="Payload Hash"
+                      value={draftGenerationLlmDispatchAttemptEventCreationResult.eventCreationSummary.eventPayloadHash?.slice(0, 16) ?? "null"}
+                    />
+                    <DetailItem label="DB Write" value={String(draftGenerationLlmDispatchAttemptEventCreationResult.currentSideEffectSummary.dbWrite)} />
+                    <DetailItem label="Audit Event Mutation" value={String(draftGenerationLlmDispatchAttemptEventCreationResult.currentSideEffectSummary.auditEventMutation)} />
+                    <DetailItem label="Provider Network" value={String(draftGenerationLlmDispatchAttemptEventCreationResult.currentSideEffectSummary.providerNetworkCall)} />
+                    <DetailItem label="LLM Call" value={String(draftGenerationLlmDispatchAttemptEventCreationResult.currentSideEffectSummary.llmCall)} />
+                    <DetailItem label="Content Mutation" value={String(draftGenerationLlmDispatchAttemptEventCreationResult.currentSideEffectSummary.contentItemMutation)} />
+                    <DetailItem label="Blogger Write" value={String(draftGenerationLlmDispatchAttemptEventCreationResult.currentSideEffectSummary.bloggerWrite)} />
+                  </div>
+                  <ValidationList
+                    title="Event creation blockers"
+                    items={draftGenerationLlmDispatchAttemptEventCreationResult.eventCreationSummary.eventCreationBlockers}
+                    emptyText="event creation blocker가 없습니다."
+                    isError
+                  />
+                  <ValidationList
+                    title="Warnings"
+                    items={draftGenerationLlmDispatchAttemptEventCreationResult.warnings}
+                    emptyText="warning이 없습니다."
+                    isWarning
+                  />
+                </>
+              ) : (
+                <div className="notice">
+                  후보 큐에서 linked content item이 있는 행의 “event 생성 preview”를 실행하세요. 이 UI 동작은 preview only이며 event row를 만들지 않습니다.
                 </div>
               )}
             </div>

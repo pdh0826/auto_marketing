@@ -1817,3 +1817,15 @@ Safety guard:
 - Non-preview mode는 `draft_generation_llm_dispatch_attempt_event_preview_is_preview_only`로 차단되어야 한다.
 - 9F-3A 구현/스모크 중에는 audit event insert, audit artifact insert, provider health check, provider network call, LLM call, `llm_call_logs` 생성, content item mutation, Blogger write/publish, OAuth reconnect, token refresh가 발생하지 않아야 한다.
 - `/settings/blogger` UI는 event preview summary를 보여야 하며 event insert/provider/content/Blogger buttons는 비활성 또는 미노출이어야 한다.
+
+## Patch 9F-3B gated LLM dispatch attempt event creation persistence 검증
+
+- `POST /api/daily-content-plans/draft-generation-llm-dispatch-attempt-event-creation` route가 있어야 한다.
+- `mode=preview`는 DB read만 수행하고 event row를 만들지 않아야 한다.
+- feature flag 없이 `mode=apply`를 호출하면 `llm_dispatch_event_create_feature_flag_disabled` blocker로 차단되고 row count는 그대로여야 한다.
+- `BLOG_DAILY_CONTENT_LLM_DISPATCH_EVENT_CREATE_ENABLED=true`, exact confirmation phrase, idempotency key, candidate event, duplicate-event gate가 모두 만족되면 event row 1건만 생성되어야 한다.
+- 생성 row는 `eventType=dispatch_attempt_created`, `eventStatus=recorded_audit_only`, safe `eventPayloadRedactedJson`, `rawSecretStored=false`, `rawTokenStored=false`를 저장해야 한다.
+- 같은 target/eventType으로 다시 apply하면 기존 event를 반환하고 추가 row를 만들지 않아야 한다.
+- Positive apply 후 expected counts: attempts/events/artifacts `1 / 1 / 0`, `llm_call_logs=22`.
+- linked daily fixture는 계속 `status=planned`, `draftMarkdown` length `0`, `draftHtml` length `0`, `publishedAt=null`, `scheduledAt=null`이어야 한다.
+- 9F-3B 구현/스모크 중에는 audit artifact insert, provider health check, provider network call, LLM call, `llm_call_logs` 생성, content item mutation, Blogger write/publish, OAuth reconnect, token refresh가 발생하지 않아야 한다.

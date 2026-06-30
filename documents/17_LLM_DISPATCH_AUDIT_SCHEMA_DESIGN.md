@@ -211,3 +211,19 @@ Next patch candidate:
 Next patch candidate:
 
 - `9F-3B — Gated LLM dispatch attempt event creation persistence, no provider call/no content mutation`
+
+## Patch 9F-3B Event Persistence Semantics
+
+9F-3B creates the first event row under explicit gate.
+
+- Route: `POST /api/daily-content-plans/draft-generation-llm-dispatch-attempt-event-creation`.
+- Expected pre-apply counts: attempts/events/artifacts `1 / 0 / 0`.
+- Expected post-apply counts: attempts/events/artifacts `1 / 1 / 0`.
+- Created row fields: `attemptId`, `eventType=dispatch_attempt_created`, `eventStatus=recorded_audit_only`, safe event message, redacted payload JSON, `rawSecretStored=false`, `rawTokenStored=false`.
+- The redacted payload may include idempotency and confirmation hashes, but must not store raw idempotency keys or raw confirmation phrases.
+- Duplicate target event requests return the existing event and must not create another row.
+- Artifact rows remain absent until 9F-3D or a later gated persistence patch.
+
+Next patch candidate:
+
+- `9F-3C — LLM dispatch audit artifact preview, no provider call/no content mutation`

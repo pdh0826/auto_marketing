@@ -1,5 +1,27 @@
 # 14_NEXT_SESSION_BRIEF
 
+## Current State: Patch 9F-3B Completed
+
+```text
+repo: ~/blog-growth-agent
+branch: master
+expected HEAD after 9F-3B commit: local commit `Add gated draft generation LLM dispatch attempt event creation` (verify exact hash with `git log --oneline -8`)
+```
+
+9F-3B adds gated event persistence for the existing draft-generation LLM dispatch attempt:
+
+- Route: `POST /api/daily-content-plans/draft-generation-llm-dispatch-attempt-event-creation`
+- UI: `/settings/blogger` shows `초안 생성 LLM dispatch attempt event 생성 preview`
+- Positive local apply creates exactly one event row.
+- Event: `eventType=dispatch_attempt_created`, `eventStatus=recorded_audit_only`.
+- Audit counts after apply: attempts/events/artifacts `1 / 1 / 0`.
+- No artifact row is created yet.
+- Provider health checks, provider network calls, LLM calls, `llm_call_logs`, content mutations, Blogger writes/publish, OAuth reconnect, and token refresh remain disabled.
+
+Next recommended patch:
+
+- `9F-3C — LLM dispatch audit artifact preview, no provider call/no content mutation`
+
 ## Current State: Patch 9F-3A Completed
 
 ```text
