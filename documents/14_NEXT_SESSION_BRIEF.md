@@ -1,5 +1,28 @@
 # 14_NEXT_SESSION_BRIEF
 
+## Current State: Patch 9F-3H Completed
+
+```text
+repo: ~/blog-growth-agent
+branch: master
+expected HEAD after 9F-3H commit: local commit `Add draft generation LLM dispatch execution plan lock` (verify exact hash with `git log --oneline -8`)
+```
+
+9F-3H adds a read-only execution plan lock candidate:
+
+- Route used: `POST /api/daily-content-plans/draft-generation-llm-dispatch-execution-plan-lock`
+- UI: `/settings/blogger` shows `초안 생성 LLM dispatch execution plan lock`.
+- It derives a stable lock envelope/hash from the final preflight result.
+- It keeps `lockPersistedNow=false` and does not create audit rows.
+- Audit counts remain attempts/events/artifacts `1 / 1 / 1`.
+- `llm_call_logs` remains `22`.
+- The linked fixture remains `planned` with empty `draftMarkdown` and `draftHtml`.
+- Content mutations, Blogger writes/publish, OAuth reconnect, and token refresh remain disabled.
+
+Next recommended patch:
+
+- `9F-3I — Gated single LLM dispatch, no content mutation`
+
 ## Current State: Patch 9F-3G Completed
 
 ```text

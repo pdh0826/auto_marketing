@@ -296,3 +296,17 @@ Next patch candidate:
 Next patch candidate:
 
 - `9F-3H — LLM dispatch execution plan lock`
+
+## Patch 9F-3H Execution Plan Lock Audit Semantics
+
+9F-3H computes an execution plan lock candidate without adding audit rows.
+
+- Route: `POST /api/daily-content-plans/draft-generation-llm-dispatch-execution-plan-lock`.
+- It derives `lockHash` from a stable JSON envelope based on final preflight readiness.
+- It does not persist a lock row or mutate the existing attempt/event/artifact rows in this patch.
+- It returns no raw prompt, raw request body, raw provider response body/header, secret value, token value, full candidate, or generated content.
+- Attempts/events/artifacts counts remain `1 / 1 / 1`.
+
+Next patch candidate:
+
+- `9F-3I — Gated single LLM dispatch, no content mutation`

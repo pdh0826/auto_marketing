@@ -1,5 +1,20 @@
 # 13_CHANGELOG
 
+## Patch 9F-3H LLM Dispatch Execution Plan Lock
+
+Implemented after Patch 9F-3G:
+
+- Added `POST /api/daily-content-plans/draft-generation-llm-dispatch-execution-plan-lock`.
+- Added a `/settings/blogger` UI action and summary block for execution plan lock candidate readback.
+- The route computes a deterministic lock envelope/hash from final preflight readiness.
+- It keeps lock persistence disabled in this patch and does not create new audit rows.
+
+Policy:
+
+- 9F-3H does not call provider health-check, completion/chat/generate/responses endpoints, create `llm_call_logs`, mutate `content_items`, write to Blogger, publish, schedule, reconnect OAuth, or refresh tokens.
+- Audit counts remain attempts/events/artifacts `1 / 1 / 1`.
+- Recommended next patch: `9F-3I — Gated single LLM dispatch, no content mutation`.
+
 ## Patch 9F-3G LLM Dispatch Final Preflight
 
 Implemented after Patch 9F-3F:

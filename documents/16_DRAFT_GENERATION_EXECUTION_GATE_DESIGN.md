@@ -671,3 +671,17 @@ Patch 9F-3G aggregates the final pre-dispatch checks without executing dispatch.
 Next candidate gate:
 
 - `9F-3H — LLM dispatch execution plan lock`
+
+## Patch 9F-3H LLM Dispatch Execution Plan Lock
+
+Patch 9F-3H computes a deterministic plan lock candidate without persisting it.
+
+- It adds `POST /api/daily-content-plans/draft-generation-llm-dispatch-execution-plan-lock`.
+- It reads the 9F-3G final preflight result and derives a stable lock envelope/hash.
+- It keeps `lockPersistenceAllowedInThisPatch=false`, `lockPersistedNow=false`, and `dispatchExecutionAllowedInThisPatch=false`.
+- Provider health-check calls, provider network calls, completion/chat/generate/responses calls, `llm_call_logs`, content mutation, draft creation, Blogger write, OAuth reconnect, and token refresh remain disabled.
+- Attempts/events/artifacts counts remain `1 / 1 / 1`.
+
+Next candidate gate:
+
+- `9F-3I — Gated single LLM dispatch, no content mutation`

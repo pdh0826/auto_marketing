@@ -1101,3 +1101,13 @@ Patch 9F-3G aggregates final pre-dispatch readiness without executing dispatch.
 - It keeps `dispatchExecutionAllowedInThisPatch=false` and does not create a plan lock.
 - It does not call provider health-check endpoints, call completion/chat/generate/responses endpoints, create `llm_call_logs`, store prompts, store raw provider response bodies/headers, mutate `content_items`, create `draftMarkdown`/`draftHtml`, call Blogger, reconnect OAuth, or refresh tokens.
 - Next boundary is `9F-3H — LLM dispatch execution plan lock`.
+
+## Patch 9F-3H LLM dispatch execution plan lock boundary
+
+Patch 9F-3H computes a deterministic execution plan lock candidate without dispatch execution.
+
+- It adds `POST /api/daily-content-plans/draft-generation-llm-dispatch-execution-plan-lock`.
+- It derives a stable lock envelope/hash from the 9F-3G final preflight result.
+- It keeps lock persistence disabled and returns `lockPersistedNow=false`.
+- It does not call provider health-check endpoints, call completion/chat/generate/responses endpoints, create `llm_call_logs`, store prompts, store raw provider response bodies/headers, mutate `content_items`, create `draftMarkdown`/`draftHtml`, call Blogger, reconnect OAuth, or refresh tokens.
+- Next boundary is `9F-3I — Gated single LLM dispatch, no content mutation`.

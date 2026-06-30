@@ -29,6 +29,7 @@ import type { DailyContentDraftGenerationLlmDispatchAuditSchemaDesignResponse } 
 import type { DailyContentDraftGenerationLlmDispatchAuditMigrationApplyReadbackResponse } from "@/lib/daily-content-plans/draft-generation-llm-dispatch-audit-migration-apply-readback";
 import type { DailyContentDraftGenerationLlmDispatchArtifactCreationResponse } from "@/lib/daily-content-plans/draft-generation-llm-dispatch-artifact-creation";
 import type { DailyContentDraftGenerationLlmDispatchArtifactPreviewResponse } from "@/lib/daily-content-plans/draft-generation-llm-dispatch-artifact-preview";
+import type { DailyContentDraftGenerationLlmDispatchExecutionPlanLockResponse } from "@/lib/daily-content-plans/draft-generation-llm-dispatch-execution-plan-lock";
 import type { DailyContentDraftGenerationLlmDispatchFinalPreflightResponse } from "@/lib/daily-content-plans/draft-generation-llm-dispatch-final-preflight";
 import type { DailyContentDraftGenerationLlmDispatchAttemptCreationResponse } from "@/lib/daily-content-plans/draft-generation-llm-dispatch-attempt-creation";
 import type { DailyContentDraftGenerationLlmDispatchAttemptCreationGatePreviewResponse } from "@/lib/daily-content-plans/draft-generation-llm-dispatch-attempt-creation-gate-preview";
@@ -143,6 +144,8 @@ export function BloggerSettingsClient() {
     useState<DailyContentDraftGenerationLlmDispatchArtifactCreationResponse | null>(null);
   const [draftGenerationLlmDispatchFinalPreflightResult, setDraftGenerationLlmDispatchFinalPreflightResult] =
     useState<DailyContentDraftGenerationLlmDispatchFinalPreflightResponse | null>(null);
+  const [draftGenerationLlmDispatchExecutionPlanLockResult, setDraftGenerationLlmDispatchExecutionPlanLockResult] =
+    useState<DailyContentDraftGenerationLlmDispatchExecutionPlanLockResponse | null>(null);
   const [oauthDryRun, setOauthDryRun] = useState<BloggerOAuthStartDryRun | null>(null);
   const [blogListResult, setBlogListResult] = useState<BloggerBlogListResult | null>(null);
   const [blogListLoadingId, setBlogListLoadingId] = useState<string | null>(null);
@@ -178,6 +181,7 @@ export function BloggerSettingsClient() {
   const [loadingDraftGenerationLlmDispatchArtifactPreviewItemId, setLoadingDraftGenerationLlmDispatchArtifactPreviewItemId] = useState<string | null>(null);
   const [loadingDraftGenerationLlmDispatchArtifactCreationItemId, setLoadingDraftGenerationLlmDispatchArtifactCreationItemId] = useState<string | null>(null);
   const [loadingDraftGenerationLlmDispatchFinalPreflightItemId, setLoadingDraftGenerationLlmDispatchFinalPreflightItemId] = useState<string | null>(null);
+  const [loadingDraftGenerationLlmDispatchExecutionPlanLockItemId, setLoadingDraftGenerationLlmDispatchExecutionPlanLockItemId] = useState<string | null>(null);
   const [selectingBlogId, setSelectingBlogId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -274,6 +278,7 @@ export function BloggerSettingsClient() {
       setDraftGenerationLlmDispatchArtifactPreviewResult(null);
       setDraftGenerationLlmDispatchArtifactCreationResult(null);
       setDraftGenerationLlmDispatchFinalPreflightResult(null);
+      setDraftGenerationLlmDispatchExecutionPlanLockResult(null);
       setOauthDryRun(null);
       setBlogListResult(null);
       setNotice("Blogger connection을 저장했습니다. Blogger draft/publish는 수행하지 않았습니다.");
@@ -418,6 +423,7 @@ export function BloggerSettingsClient() {
       setDraftGenerationLlmDispatchArtifactPreviewResult(null);
       setDraftGenerationLlmDispatchArtifactCreationResult(null);
       setDraftGenerationLlmDispatchFinalPreflightResult(null);
+      setDraftGenerationLlmDispatchExecutionPlanLockResult(null);
       setNotice("Daily Content Plan preview를 생성했습니다. Plan row 저장, content generation, LLM call, Blogger write/publish는 수행하지 않았습니다.");
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Daily Content Plan preview에 실패했습니다.");
@@ -1363,6 +1369,44 @@ export function BloggerSettingsClient() {
     }
   }
 
+  async function previewDraftGenerationLlmDispatchExecutionPlanLock(
+    planId: string | null | undefined,
+    planItemId: string | null | undefined,
+    contentItemId: string | null | undefined
+  ) {
+    if (!planId || !planItemId || !contentItemId) {
+      setError("Daily plan id, item id, linked content item id가 필요합니다.");
+      return;
+    }
+
+    setError(null);
+    setNotice(null);
+    setLoadingDraftGenerationLlmDispatchExecutionPlanLockItemId(planItemId);
+
+    try {
+      const result = await requestJson<ApiResult<DailyContentDraftGenerationLlmDispatchExecutionPlanLockResponse>>(
+        "/api/daily-content-plans/draft-generation-llm-dispatch-execution-plan-lock",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            mode: "preview",
+            planId,
+            planItemId,
+            contentItemId
+          })
+        }
+      );
+      setDraftGenerationLlmDispatchExecutionPlanLockResult(result.data);
+      setNotice(
+        "초안 생성 LLM dispatch execution plan lock 후보를 확인했습니다. 이 단계는 read-only이며 plan lock 저장, provider/LLM call, content_items 수정, Blogger write/publish는 수행하지 않았습니다."
+      );
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "초안 생성 LLM dispatch execution plan lock 확인에 실패했습니다.");
+    } finally {
+      setLoadingDraftGenerationLlmDispatchExecutionPlanLockItemId(null);
+    }
+  }
+
   async function createOAuthDryRun(connection: BloggerConnectionAdmin) {
     setError(null);
     setNotice(null);
@@ -1569,6 +1613,7 @@ export function BloggerSettingsClient() {
                   setDraftGenerationLlmDispatchArtifactPreviewResult(null);
                   setDraftGenerationLlmDispatchArtifactCreationResult(null);
                   setDraftGenerationLlmDispatchFinalPreflightResult(null);
+                  setDraftGenerationLlmDispatchExecutionPlanLockResult(null);
                   setOauthDryRun(null);
                   setBlogListResult(null);
                 }}
@@ -2499,6 +2544,25 @@ export function BloggerSettingsClient() {
                         }
                       >
                         {loadingDraftGenerationLlmDispatchFinalPreflightItemId === getDailyPlanItemId(item) ? "final preflight 확인 중" : "final preflight"}
+                      </button>
+                      <button
+                        className="button small secondary"
+                        type="button"
+                        disabled={
+                          !dailyContentPlanSummary.persistedPlanId ||
+                          !getDailyPlanItemId(item) ||
+                          !getDailyPlanItemContentItemId(item) ||
+                          loadingDraftGenerationLlmDispatchExecutionPlanLockItemId === getDailyPlanItemId(item)
+                        }
+                        onClick={() =>
+                          void previewDraftGenerationLlmDispatchExecutionPlanLock(
+                            dailyContentPlanSummary.persistedPlanId,
+                            getDailyPlanItemId(item),
+                            getDailyPlanItemContentItemId(item)
+                          )
+                        }
+                      >
+                        {loadingDraftGenerationLlmDispatchExecutionPlanLockItemId === getDailyPlanItemId(item) ? "plan lock 확인 중" : "plan lock"}
                       </button>
                     </td>
                   </tr>
@@ -6841,6 +6905,112 @@ export function BloggerSettingsClient() {
               ) : (
                 <div className="notice">
                   후보 큐에서 linked content item이 있는 행의 “final preflight”를 실행하세요. 이 단계는 모든 dispatch 전제조건을 읽기만 합니다.
+                </div>
+              )}
+            </div>
+
+            <div className="read-block">
+              <h3>초안 생성 LLM dispatch execution plan lock</h3>
+              <div className="notice">
+                <strong>9F-3H execution plan lock candidate · read-only</strong>
+                <p>final preflight 결과를 기준으로 dispatch execution plan lock 후보와 hash를 산출합니다.</p>
+                <p>이번 단계는 lock을 DB에 저장하지 않고, provider/LLM call, content mutation, Blogger write/publish를 수행하지 않습니다.</p>
+              </div>
+              {draftGenerationLlmDispatchExecutionPlanLockResult ? (
+                <>
+                  <div className="notice warning">
+                    <strong>
+                      candidateReady=
+                      {String(draftGenerationLlmDispatchExecutionPlanLockResult.executionPlanLockSummary.planLockCandidateReady)} / persistedNow=
+                      {String(draftGenerationLlmDispatchExecutionPlanLockResult.lockPersistedNow)}
+                    </strong>
+                    <p>
+                      latestAttempt={draftGenerationLlmDispatchExecutionPlanLockResult.executionPlanLockSummary.latestAttemptId ?? "null"} / lockHash=
+                      {draftGenerationLlmDispatchExecutionPlanLockResult.executionPlanLockSummary.lockHash?.slice(0, 16) ?? "null"}
+                    </p>
+                  </div>
+                  <div className="detail-grid">
+                    <DetailItem label="Patch" value={draftGenerationLlmDispatchExecutionPlanLockResult.patchVersion} />
+                    <DetailItem label="Lock Version" value={draftGenerationLlmDispatchExecutionPlanLockResult.executionPlanLockSummary.lockVersion} />
+                    <DetailItem label="Plan Item" value={draftGenerationLlmDispatchExecutionPlanLockResult.targetSummary.planItemId} />
+                    <DetailItem label="Linked Fixture" value={draftGenerationLlmDispatchExecutionPlanLockResult.targetSummary.contentItemId ?? "-"} />
+                    <DetailItem
+                      label="Final Preflight Ready"
+                      value={String(draftGenerationLlmDispatchExecutionPlanLockResult.executionPlanLockSummary.finalPreflightReadyForPlanLock)}
+                    />
+                    <DetailItem label="Candidate Ready" value={String(draftGenerationLlmDispatchExecutionPlanLockResult.executionPlanLockSummary.planLockCandidateReady)} />
+                    <DetailItem label="Persisted" value={String(draftGenerationLlmDispatchExecutionPlanLockResult.executionPlanLockSummary.planLockPersisted)} />
+                    <DetailItem label="Hash Algorithm" value={draftGenerationLlmDispatchExecutionPlanLockResult.executionPlanLockSummary.lockHashAlgorithm} />
+                    <DetailItem label="Canonicalization" value={draftGenerationLlmDispatchExecutionPlanLockResult.executionPlanLockSummary.canonicalization} />
+                    <DetailItem label="Next Patch" value={draftGenerationLlmDispatchExecutionPlanLockResult.executionPlanLockSummary.nextSafePatchCandidate} />
+                  </div>
+                  <div className="detail-grid">
+                    <DetailItem
+                      label="Prompt Ready"
+                      value={String(draftGenerationLlmDispatchExecutionPlanLockResult.executionPlanLockSummary.lockEnvelope?.promptReady ?? false)}
+                    />
+                    <DetailItem
+                      label="Envelope Ready"
+                      value={String(draftGenerationLlmDispatchExecutionPlanLockResult.executionPlanLockSummary.lockEnvelope?.requestEnvelopeReady ?? false)}
+                    />
+                    <DetailItem
+                      label="Provider Ready"
+                      value={String(draftGenerationLlmDispatchExecutionPlanLockResult.executionPlanLockSummary.lockEnvelope?.providerRouteReady ?? false)}
+                    />
+                    <DetailItem
+                      label="Health Reference"
+                      value={String(draftGenerationLlmDispatchExecutionPlanLockResult.executionPlanLockSummary.lockEnvelope?.healthCheckReferenceFound ?? false)}
+                    />
+                    <DetailItem
+                      label="Idempotency Policy"
+                      value={String(draftGenerationLlmDispatchExecutionPlanLockResult.executionPlanLockSummary.lockEnvelope?.idempotencyPolicyReady ?? false)}
+                    />
+                    <DetailItem
+                      label="Confirmation Policy"
+                      value={String(draftGenerationLlmDispatchExecutionPlanLockResult.executionPlanLockSummary.lockEnvelope?.confirmationPolicyReady ?? false)}
+                    />
+                  </div>
+                  <ValidationList
+                    title="Plan lock blockers"
+                    items={draftGenerationLlmDispatchExecutionPlanLockResult.executionPlanLockSummary.planLockBlockers}
+                    emptyText="plan lock blocker가 없습니다."
+                    isWarning
+                  />
+                  <ValidationList
+                    title="Next required inputs"
+                    items={draftGenerationLlmDispatchExecutionPlanLockResult.executionPlanLockSummary.nextRequiredInputs}
+                    emptyText="추가 입력이 없습니다."
+                    isWarning
+                  />
+                  <details className="read-block">
+                    <summary>Plan lock side-effect 상세</summary>
+                    <div className="detail-grid">
+                      <DetailItem label="DB Read" value={String(draftGenerationLlmDispatchExecutionPlanLockResult.currentSideEffectSummary.dbRead)} />
+                      <DetailItem label="DB Write" value={String(draftGenerationLlmDispatchExecutionPlanLockResult.currentSideEffectSummary.dbWrite)} />
+                      <DetailItem
+                        label="Plan Lock Persisted"
+                        value={String(draftGenerationLlmDispatchExecutionPlanLockResult.currentSideEffectSummary.planLockPersisted)}
+                      />
+                      <DetailItem
+                        label="Provider Network"
+                        value={String(draftGenerationLlmDispatchExecutionPlanLockResult.currentSideEffectSummary.providerNetworkCall)}
+                      />
+                      <DetailItem label="LLM Call" value={String(draftGenerationLlmDispatchExecutionPlanLockResult.currentSideEffectSummary.llmCall)} />
+                      <DetailItem
+                        label="LLM Log Mutation"
+                        value={String(draftGenerationLlmDispatchExecutionPlanLockResult.currentSideEffectSummary.llmCallLogMutation)}
+                      />
+                      <DetailItem
+                        label="Content Mutation"
+                        value={String(draftGenerationLlmDispatchExecutionPlanLockResult.currentSideEffectSummary.contentItemMutation)}
+                      />
+                      <DetailItem label="Blogger Write" value={String(draftGenerationLlmDispatchExecutionPlanLockResult.currentSideEffectSummary.bloggerWrite)} />
+                    </div>
+                  </details>
+                </>
+              ) : (
+                <div className="notice">
+                  후보 큐에서 linked content item이 있는 행의 “plan lock”을 실행하세요. 이 단계는 execution plan lock 후보를 읽기 전용으로 계산합니다.
                 </div>
               )}
             </div>

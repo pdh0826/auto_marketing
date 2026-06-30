@@ -1884,3 +1884,13 @@ Safety guard:
 - Expected counts after smoke: attempts/events/artifacts `1 / 1 / 1`, `llm_call_logs=22`.
 - linked daily fixture는 계속 `status=planned`, `draftMarkdown` length `0`, `draftHtml` length `0`, `publishedAt=null`, `scheduledAt=null`이어야 한다.
 - 9F-3G 구현/스모크 중에는 audit row 생성, plan lock 생성, content item mutation, Blogger write/publish, OAuth reconnect, token refresh가 발생하지 않아야 한다.
+
+## Patch 9F-3H LLM dispatch execution plan lock 검증
+
+- `POST /api/daily-content-plans/draft-generation-llm-dispatch-execution-plan-lock`는 read-only lock candidate 계산이어야 한다.
+- Response는 final preflight 기반 lock envelope, `lockHash`, hash algorithm, canonicalization, next required inputs를 반환해야 한다.
+- `lockPersistenceAllowedInThisPatch=false`, `lockPersistedNow=false`, `dispatchExecutionAllowedInThisPatch=false`여야 한다.
+- 호출 중 provider health-check, provider network call, completion/chat/generate/responses endpoint, LLM call이 없어야 한다.
+- Expected counts after smoke: attempts/events/artifacts `1 / 1 / 1`, `llm_call_logs=22`.
+- linked daily fixture는 계속 `status=planned`, `draftMarkdown` length `0`, `draftHtml` length `0`, `publishedAt=null`, `scheduledAt=null`이어야 한다.
+- 9F-3H 구현/스모크 중에는 audit row 생성, lock persistence, content item mutation, Blogger write/publish, OAuth reconnect, token refresh가 발생하지 않아야 한다.
