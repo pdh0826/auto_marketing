@@ -1840,3 +1840,15 @@ Safety guard:
 - Expected counts before/after: attempts/events/artifacts `1 / 1 / 0`, `llm_call_logs=22`.
 - Non-preview mode는 `draft_generation_llm_dispatch_artifact_preview_is_preview_only`로 차단되어야 한다.
 - 9F-3C 구현/스모크 중에는 audit artifact insert, provider health check, provider network call, LLM call, `llm_call_logs` 생성, content item mutation, Blogger write/publish, OAuth reconnect, token refresh가 발생하지 않아야 한다.
+
+## Patch 9F-3D gated LLM dispatch audit artifact persistence 검증
+
+- `POST /api/daily-content-plans/draft-generation-llm-dispatch-artifact-creation` route가 있어야 한다.
+- `mode=preview`는 DB read만 수행하고 artifact row를 만들지 않아야 한다.
+- feature flag 없이 `mode=apply`를 호출하면 `llm_dispatch_artifact_create_feature_flag_disabled` blocker로 차단되고 row count는 그대로여야 한다.
+- `BLOG_DAILY_CONTENT_LLM_DISPATCH_ARTIFACT_CREATE_ENABLED=true`, exact confirmation phrase, idempotency key, candidate artifact, duplicate-artifact gate가 모두 만족되면 artifact row 1건만 생성되어야 한다.
+- 생성 row는 `artifactKind=prompt_request_hash_bundle`, `artifactStorageMode=hash_only`, `artifactRedactionStatus=redacted_or_hash_only`, safe bounded preview, `rawSecretStored=false`, `rawTokenStored=false`를 저장해야 한다.
+- 같은 target/kind/hash로 다시 apply하면 기존 artifact를 반환하고 추가 row를 만들지 않아야 한다.
+- Positive apply 후 expected counts: attempts/events/artifacts `1 / 1 / 1`, `llm_call_logs=22`.
+- linked daily fixture는 계속 `status=planned`, `draftMarkdown` length `0`, `draftHtml` length `0`, `publishedAt=null`, `scheduledAt=null`이어야 한다.
+- 9F-3D 구현/스모크 중에는 provider health check, provider network call, LLM call, `llm_call_logs` 생성, content item mutation, Blogger write/publish, OAuth reconnect, token refresh가 발생하지 않아야 한다.

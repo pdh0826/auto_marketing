@@ -241,3 +241,18 @@ Next patch candidate:
 Next patch candidate:
 
 - `9F-3D — Gated LLM dispatch audit artifact persistence, no provider call/no content mutation`
+
+## Patch 9F-3D Artifact Persistence Semantics
+
+9F-3D creates the first artifact row under explicit gate.
+
+- Route: `POST /api/daily-content-plans/draft-generation-llm-dispatch-artifact-creation`.
+- Expected pre-apply counts: attempts/events/artifacts `1 / 1 / 0`.
+- Expected post-apply counts: attempts/events/artifacts `1 / 1 / 1`.
+- Created row fields: `attemptId`, `artifactKind=prompt_request_hash_bundle`, `artifactHash`, `artifactStorageMode=hash_only`, `artifactRedactionStatus=redacted_or_hash_only`, bounded safe preview, `rawSecretStored=false`, `rawTokenStored=false`.
+- The artifact must not store raw prompts, raw request bodies, raw response bodies, full generated candidates, secret values, token values, or raw env values.
+- Duplicate target artifact requests return the existing artifact and must not create another row.
+
+Next patch candidate:
+
+- `9F-3E — Provider health-check positive gated run`

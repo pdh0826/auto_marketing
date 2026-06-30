@@ -1,5 +1,26 @@
 # 14_NEXT_SESSION_BRIEF
 
+## Current State: Patch 9F-3D Completed
+
+```text
+repo: ~/blog-growth-agent
+branch: master
+expected HEAD after 9F-3D commit: local commit `Add gated draft generation LLM dispatch artifact persistence` (verify exact hash with `git log --oneline -8`)
+```
+
+9F-3D adds gated hash-only artifact persistence for the existing draft-generation LLM dispatch attempt:
+
+- Route: `POST /api/daily-content-plans/draft-generation-llm-dispatch-artifact-creation`
+- UI: `/settings/blogger` shows `초안 생성 LLM dispatch artifact 생성 preview`
+- Positive local apply creates exactly one artifact row.
+- Artifact: `artifactKind=prompt_request_hash_bundle`, `artifactStorageMode=hash_only`, `artifactRedactionStatus=redacted_or_hash_only`.
+- Audit counts after apply: attempts/events/artifacts `1 / 1 / 1`.
+- Provider health checks, provider network calls, LLM calls, `llm_call_logs`, content mutations, Blogger writes/publish, OAuth reconnect, and token refresh remain disabled.
+
+Next recommended patch:
+
+- `9F-3E — Provider health-check positive gated run`
+
 ## Current State: Patch 9F-3C Completed
 
 ```text

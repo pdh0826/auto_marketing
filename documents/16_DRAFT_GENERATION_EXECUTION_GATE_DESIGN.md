@@ -614,3 +614,18 @@ Patch 9F-3C previews a hash-only artifact for the existing dispatch attempt.
 Next candidate gate:
 
 - `9F-3D — Gated LLM dispatch audit artifact persistence, no provider call/no content mutation`
+
+## Patch 9F-3D Dispatch Audit Artifact Persistence
+
+Patch 9F-3D persists the first hash-only artifact row for the existing dispatch attempt.
+
+- It adds `POST /api/daily-content-plans/draft-generation-llm-dispatch-artifact-creation`.
+- `mode=preview` reports artifact creation gate metadata without inserting rows.
+- `mode=apply` is allowed only with `BLOG_DAILY_CONTENT_LLM_DISPATCH_ARTIFACT_CREATE_ENABLED=true`, exact confirmation phrase, idempotency key, a ready candidate artifact, and no duplicate target artifact.
+- The only allowed write is one artifact row with `artifactKind=prompt_request_hash_bundle`, `artifactStorageMode=hash_only`, and `artifactRedactionStatus=redacted_or_hash_only`.
+- Attempts/events/artifacts counts move to `1 / 1 / 1` only after the gated apply smoke.
+- Provider health checks, provider calls, LLM calls, `llm_call_logs`, content mutation, draft creation, Blogger write, OAuth reconnect, and token refresh remain disabled.
+
+Next candidate gate:
+
+- `9F-3E — Provider health-check positive gated run`

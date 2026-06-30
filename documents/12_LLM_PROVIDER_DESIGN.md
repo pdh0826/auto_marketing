@@ -1058,3 +1058,14 @@ Patch 9F-3C previews the first hash-only artifact for the existing dispatch atte
 - It keeps attempts/events/artifacts counts unchanged at `1 / 1 / 0`.
 - It does not insert artifacts, run provider health checks, call providers, create `llm_call_logs`, mutate `content_items`, create `draftMarkdown`/`draftHtml`, call Blogger, reconnect OAuth, or refresh tokens.
 - Next boundary is `9F-3D — Gated LLM dispatch audit artifact persistence, no provider call/no content mutation`.
+
+## Patch 9F-3D draft-generation dispatch artifact persistence boundary
+
+Patch 9F-3D persists the first hash-only artifact for the existing dispatch attempt.
+
+- `POST /api/daily-content-plans/draft-generation-llm-dispatch-artifact-creation` supports preview and guarded apply modes.
+- Apply mode requires `BLOG_DAILY_CONTENT_LLM_DISPATCH_ARTIFACT_CREATE_ENABLED=true`, exact confirmation phrase, idempotency key, candidate artifact readiness, and no existing target artifact with the same kind/hash.
+- The only allowed write is one `blog_daily_content_llm_dispatch_artifacts` row.
+- The artifact uses `artifactKind=prompt_request_hash_bundle`, `artifactStorageMode=hash_only`, and `artifactRedactionStatus=redacted_or_hash_only`.
+- It does not run provider health checks, call providers, create `llm_call_logs`, store prompts, store raw request/response bodies, mutate `content_items`, create `draftMarkdown`/`draftHtml`, call Blogger, reconnect OAuth, or refresh tokens.
+- Next boundary is `9F-3E — Provider health-check positive gated run`.

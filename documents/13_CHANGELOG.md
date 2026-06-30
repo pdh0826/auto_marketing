@@ -1,5 +1,21 @@
 # 13_CHANGELOG
 
+## Patch 9F-3D Gated LLM Dispatch Audit Artifact Persistence
+
+Implemented after Patch 9F-3C:
+
+- Added helper `src/lib/daily-content-plans/draft-generation-llm-dispatch-artifact-creation.ts`.
+- Added route `POST /api/daily-content-plans/draft-generation-llm-dispatch-artifact-creation`.
+- Added `/settings/blogger` `초안 생성 LLM dispatch artifact 생성 preview` UI readback.
+- Apply mode can create exactly one `blog_daily_content_llm_dispatch_artifacts` row for the existing attempt when the feature flag, exact confirmation phrase, idempotency key, candidate artifact, and duplicate-artifact gate pass.
+- The artifact uses `artifactKind=prompt_request_hash_bundle`, `artifactStorageMode=hash_only`, and `artifactRedactionStatus=redacted_or_hash_only`.
+
+Policy:
+
+- 9F-3D does not call providers, run provider health checks, call LLMs, create `llm_call_logs`, mutate `content_items`, create `draftMarkdown`/`draftHtml`, write to Blogger, publish, schedule, reconnect OAuth, or refresh tokens.
+- Positive local smoke is expected to move audit counts from `1 / 1 / 0` to `1 / 1 / 1`.
+- Recommended next patch: `9F-3E — Provider health-check positive gated run`.
+
 ## Patch 9F-3C LLM Dispatch Audit Artifact Preview
 
 Implemented after Patch 9F-3B:
