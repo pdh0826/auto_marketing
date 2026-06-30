@@ -1,5 +1,27 @@
 # 14_NEXT_SESSION_BRIEF
 
+## Current State: Patch 9F-3M Completed
+
+```text
+repo: ~/blog-growth-agent
+branch: master
+expected HEAD after 9F-3M commit: local commit `Add draft generation markdown candidate acceptance gate` (verify exact hash with `git log --oneline -8`)
+```
+
+9F-3M adds the Markdown candidate acceptance gate:
+
+- Route used: `POST /api/daily-content-plans/draft-generation-markdown-candidate-acceptance-gate`
+- UI: `/settings/blogger` shows `초안 생성 Markdown candidate acceptance gate`.
+- It reads 9F-3K validation readiness and the linked content item snapshot.
+- Current state blocks acceptance because full Markdown candidate text is not stored and output validation is not ready.
+- It does not call provider/LLM endpoints, create `llm_call_logs`, mutate audit rows, or mutate content.
+- The linked fixture must remain `planned` with unchanged `draftMarkdown` and `draftHtml`.
+- Blogger write/publish, OAuth reconnect, and token refresh remain disabled.
+
+Next recommended patch:
+
+- `9F-3N — draftMarkdown mutation gate preview`
+
 ## Current State: Patch 9F-3L Completed
 
 ```text

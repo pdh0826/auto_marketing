@@ -1160,3 +1160,14 @@ Patch 9F-3L adds a gated local audit persistence path for the 9F-3K validation p
 - It does not call provider endpoints, use an LLM judge, create `llm_call_logs`, mutate `content_items`, create `draftMarkdown`/`draftHtml`, call Blogger, reconnect OAuth, or refresh tokens.
 - It returns no raw prompt, raw request body, raw provider response, full generated candidate, secret, token, or encrypted value.
 - Next boundary is `9F-3M — Markdown candidate acceptance gate`.
+
+## Patch 9F-3M Markdown candidate acceptance gate boundary
+
+Patch 9F-3M adds a read-only gate for whether an LLM output can become `draftMarkdown`.
+
+- It adds `POST /api/daily-content-plans/draft-generation-markdown-candidate-acceptance-gate`.
+- It reads 9F-3K validation readiness and the linked content item snapshot.
+- Because candidate Markdown text is not stored yet, acceptance is blocked and `canAcceptMarkdownCandidate=false`.
+- It does not mutate audit rows, create `llm_call_logs`, mutate `content_items`, create `draftMarkdown`/`draftHtml`, call Blogger, reconnect OAuth, or refresh tokens.
+- It returns no raw prompt, raw request body, raw provider response, full generated candidate, secret, token, or encrypted value.
+- Next boundary is `9F-3N — draftMarkdown mutation gate preview`.

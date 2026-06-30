@@ -35,6 +35,7 @@ import type { DailyContentDraftGenerationLlmDispatchFinalPreflightResponse } fro
 import type { DailyContentDraftGenerationLlmDispatchResponseReadbackResponse } from "@/lib/daily-content-plans/draft-generation-llm-dispatch-response-readback";
 import type { DailyContentDraftGenerationLlmOutputQualityValidationPreviewResponse } from "@/lib/daily-content-plans/draft-generation-llm-output-quality-validation-preview";
 import type { DailyContentDraftGenerationLlmOutputValidationPersistenceResponse } from "@/lib/daily-content-plans/draft-generation-llm-output-validation-persistence";
+import type { DailyContentDraftGenerationMarkdownCandidateAcceptanceGateResponse } from "@/lib/daily-content-plans/draft-generation-markdown-candidate-acceptance-gate";
 import type { DailyContentDraftGenerationLlmDispatchAttemptCreationResponse } from "@/lib/daily-content-plans/draft-generation-llm-dispatch-attempt-creation";
 import type { DailyContentDraftGenerationLlmDispatchAttemptCreationGatePreviewResponse } from "@/lib/daily-content-plans/draft-generation-llm-dispatch-attempt-creation-gate-preview";
 import type { DailyContentDraftGenerationLlmDispatchAttemptEventCreationResponse } from "@/lib/daily-content-plans/draft-generation-llm-dispatch-attempt-event-creation";
@@ -158,6 +159,8 @@ export function BloggerSettingsClient() {
     useState<DailyContentDraftGenerationLlmOutputQualityValidationPreviewResponse | null>(null);
   const [draftGenerationLlmOutputValidationPersistenceResult, setDraftGenerationLlmOutputValidationPersistenceResult] =
     useState<DailyContentDraftGenerationLlmOutputValidationPersistenceResponse | null>(null);
+  const [draftGenerationMarkdownCandidateAcceptanceGateResult, setDraftGenerationMarkdownCandidateAcceptanceGateResult] =
+    useState<DailyContentDraftGenerationMarkdownCandidateAcceptanceGateResponse | null>(null);
   const [oauthDryRun, setOauthDryRun] = useState<BloggerOAuthStartDryRun | null>(null);
   const [blogListResult, setBlogListResult] = useState<BloggerBlogListResult | null>(null);
   const [blogListLoadingId, setBlogListLoadingId] = useState<string | null>(null);
@@ -198,6 +201,7 @@ export function BloggerSettingsClient() {
   const [loadingDraftGenerationLlmDispatchResponseReadbackItemId, setLoadingDraftGenerationLlmDispatchResponseReadbackItemId] = useState<string | null>(null);
   const [loadingDraftGenerationLlmOutputQualityValidationPreviewItemId, setLoadingDraftGenerationLlmOutputQualityValidationPreviewItemId] = useState<string | null>(null);
   const [loadingDraftGenerationLlmOutputValidationPersistenceItemId, setLoadingDraftGenerationLlmOutputValidationPersistenceItemId] = useState<string | null>(null);
+  const [loadingDraftGenerationMarkdownCandidateAcceptanceGateItemId, setLoadingDraftGenerationMarkdownCandidateAcceptanceGateItemId] = useState<string | null>(null);
   const [selectingBlogId, setSelectingBlogId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -299,6 +303,7 @@ export function BloggerSettingsClient() {
       setDraftGenerationLlmDispatchResponseReadbackResult(null);
       setDraftGenerationLlmOutputQualityValidationPreviewResult(null);
       setDraftGenerationLlmOutputValidationPersistenceResult(null);
+      setDraftGenerationMarkdownCandidateAcceptanceGateResult(null);
       setOauthDryRun(null);
       setBlogListResult(null);
       setNotice("Blogger connection을 저장했습니다. Blogger draft/publish는 수행하지 않았습니다.");
@@ -448,6 +453,7 @@ export function BloggerSettingsClient() {
       setDraftGenerationLlmDispatchResponseReadbackResult(null);
       setDraftGenerationLlmOutputQualityValidationPreviewResult(null);
       setDraftGenerationLlmOutputValidationPersistenceResult(null);
+      setDraftGenerationMarkdownCandidateAcceptanceGateResult(null);
       setNotice("Daily Content Plan preview를 생성했습니다. Plan row 저장, content generation, LLM call, Blogger write/publish는 수행하지 않았습니다.");
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Daily Content Plan preview에 실패했습니다.");
@@ -1583,6 +1589,44 @@ export function BloggerSettingsClient() {
     }
   }
 
+  async function previewDraftGenerationMarkdownCandidateAcceptanceGate(
+    planId: string | null | undefined,
+    planItemId: string | null | undefined,
+    contentItemId: string | null | undefined
+  ) {
+    if (!planId || !planItemId || !contentItemId) {
+      setError("Daily plan id, item id, linked content item id가 필요합니다.");
+      return;
+    }
+
+    setError(null);
+    setNotice(null);
+    setLoadingDraftGenerationMarkdownCandidateAcceptanceGateItemId(planItemId);
+
+    try {
+      const result = await requestJson<ApiResult<DailyContentDraftGenerationMarkdownCandidateAcceptanceGateResponse>>(
+        "/api/daily-content-plans/draft-generation-markdown-candidate-acceptance-gate",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            mode: "preview",
+            planId,
+            planItemId,
+            contentItemId
+          })
+        }
+      );
+      setDraftGenerationMarkdownCandidateAcceptanceGateResult(result.data);
+      setNotice(
+        "초안 생성 Markdown candidate acceptance gate를 확인했습니다. 이 단계는 read-only이며 draftMarkdown 저장, LLM call, Blogger write/publish를 수행하지 않았습니다."
+      );
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "초안 생성 Markdown candidate acceptance gate 확인에 실패했습니다.");
+    } finally {
+      setLoadingDraftGenerationMarkdownCandidateAcceptanceGateItemId(null);
+    }
+  }
+
   async function createOAuthDryRun(connection: BloggerConnectionAdmin) {
     setError(null);
     setNotice(null);
@@ -1794,6 +1838,7 @@ export function BloggerSettingsClient() {
                   setDraftGenerationLlmDispatchResponseReadbackResult(null);
                   setDraftGenerationLlmOutputQualityValidationPreviewResult(null);
                   setDraftGenerationLlmOutputValidationPersistenceResult(null);
+                  setDraftGenerationMarkdownCandidateAcceptanceGateResult(null);
                   setOauthDryRun(null);
                   setBlogListResult(null);
                 }}
@@ -2825,6 +2870,27 @@ export function BloggerSettingsClient() {
                         {loadingDraftGenerationLlmOutputValidationPersistenceItemId === getDailyPlanItemId(item)
                           ? "validation 저장 확인 중"
                           : "validation 저장 preview"}
+                      </button>
+                      <button
+                        className="button small secondary"
+                        type="button"
+                        disabled={
+                          !dailyContentPlanSummary.persistedPlanId ||
+                          !getDailyPlanItemId(item) ||
+                          !getDailyPlanItemContentItemId(item) ||
+                          loadingDraftGenerationMarkdownCandidateAcceptanceGateItemId === getDailyPlanItemId(item)
+                        }
+                        onClick={() =>
+                          void previewDraftGenerationMarkdownCandidateAcceptanceGate(
+                            dailyContentPlanSummary.persistedPlanId,
+                            getDailyPlanItemId(item),
+                            getDailyPlanItemContentItemId(item)
+                          )
+                        }
+                      >
+                        {loadingDraftGenerationMarkdownCandidateAcceptanceGateItemId === getDailyPlanItemId(item)
+                          ? "markdown gate 확인 중"
+                          : "markdown acceptance"}
                       </button>
                     </td>
                   </tr>
@@ -7814,6 +7880,88 @@ export function BloggerSettingsClient() {
               ) : (
                 <div className="notice">
                   후보 큐에서 linked content item이 있는 행의 “validation 저장 preview”를 실행하세요. UI는 audit row 저장을 수행하지 않습니다.
+                </div>
+              )}
+            </div>
+
+            <div className="read-block">
+              <h3>초안 생성 Markdown candidate acceptance gate</h3>
+              <div className="notice">
+                <strong>9F-3M acceptance gate · read-only</strong>
+                <p>LLM output을 draftMarkdown 후보로 받아들일 수 있는지 확인합니다. 저장은 9F-3O 이후 별도 gate입니다.</p>
+              </div>
+              {draftGenerationMarkdownCandidateAcceptanceGateResult ? (
+                <>
+                  <div className={draftGenerationMarkdownCandidateAcceptanceGateResult.blockingReasons.length > 0 ? "notice warning" : "notice"}>
+                    <strong>
+                      canAccept=
+                      {String(draftGenerationMarkdownCandidateAcceptanceGateResult.markdownCandidateAcceptanceSummary.canAcceptMarkdownCandidate)} / candidateAvailable=
+                      {String(draftGenerationMarkdownCandidateAcceptanceGateResult.markdownCandidateAcceptanceSummary.candidateMarkdownAvailable)}
+                    </strong>
+                    <p>
+                      attempt={draftGenerationMarkdownCandidateAcceptanceGateResult.markdownCandidateAcceptanceSummary.latestAttemptId ?? "null"} / responseHash=
+                      {draftGenerationMarkdownCandidateAcceptanceGateResult.markdownCandidateAcceptanceSummary.responseHashPrefix ?? "null"}
+                    </p>
+                  </div>
+                  <div className="detail-grid">
+                    <DetailItem label="Patch" value={draftGenerationMarkdownCandidateAcceptanceGateResult.patchVersion} />
+                    <DetailItem label="Mode" value={draftGenerationMarkdownCandidateAcceptanceGateResult.mode} />
+                    <DetailItem label="Plan Item" value={draftGenerationMarkdownCandidateAcceptanceGateResult.targetSummary.planItemId} />
+                    <DetailItem label="Linked Fixture" value={draftGenerationMarkdownCandidateAcceptanceGateResult.targetSummary.contentItemId ?? "-"} />
+                    <DetailItem
+                      label="Validation Ready"
+                      value={String(draftGenerationMarkdownCandidateAcceptanceGateResult.markdownCandidateAcceptanceSummary.validationReady)}
+                    />
+                    <DetailItem
+                      label="Content Status"
+                      value={draftGenerationMarkdownCandidateAcceptanceGateResult.markdownCandidateAcceptanceSummary.contentItemStatus ?? "null"}
+                    />
+                    <DetailItem
+                      label="Draft Markdown Len"
+                      value={String(draftGenerationMarkdownCandidateAcceptanceGateResult.markdownCandidateAcceptanceSummary.draftMarkdownLength ?? "null")}
+                    />
+                    <DetailItem
+                      label="Draft HTML Len"
+                      value={String(draftGenerationMarkdownCandidateAcceptanceGateResult.markdownCandidateAcceptanceSummary.draftHtmlLength ?? "null")}
+                    />
+                    <DetailItem
+                      label="Raw Candidate Returned"
+                      value={String(draftGenerationMarkdownCandidateAcceptanceGateResult.markdownCandidateAcceptanceSummary.fullCandidateStoredOrReturned)}
+                    />
+                    <DetailItem label="Next Patch" value={draftGenerationMarkdownCandidateAcceptanceGateResult.markdownCandidateAcceptanceSummary.nextSafePatchCandidate} />
+                  </div>
+                  <ValidationList
+                    title="Markdown acceptance blockers"
+                    items={draftGenerationMarkdownCandidateAcceptanceGateResult.blockingReasons}
+                    emptyText="Markdown acceptance blocker가 없습니다."
+                    isError
+                  />
+                  <ValidationList title="Warnings" items={draftGenerationMarkdownCandidateAcceptanceGateResult.warnings} emptyText="warning이 없습니다." isWarning />
+                  <details className="read-block">
+                    <summary>Markdown acceptance side-effect 상세</summary>
+                    <div className="detail-grid">
+                      <DetailItem label="DB Read" value={String(draftGenerationMarkdownCandidateAcceptanceGateResult.currentSideEffectSummary.dbRead)} />
+                      <DetailItem label="DB Write" value={String(draftGenerationMarkdownCandidateAcceptanceGateResult.currentSideEffectSummary.dbWrite)} />
+                      <DetailItem label="LLM Call" value={String(draftGenerationMarkdownCandidateAcceptanceGateResult.currentSideEffectSummary.llmCall)} />
+                      <DetailItem
+                        label="Content Mutation"
+                        value={String(draftGenerationMarkdownCandidateAcceptanceGateResult.currentSideEffectSummary.contentItemMutation)}
+                      />
+                      <DetailItem
+                        label="Draft Markdown"
+                        value={String(draftGenerationMarkdownCandidateAcceptanceGateResult.currentSideEffectSummary.draftMarkdownMutation)}
+                      />
+                      <DetailItem
+                        label="Draft HTML"
+                        value={String(draftGenerationMarkdownCandidateAcceptanceGateResult.currentSideEffectSummary.draftHtmlMutation)}
+                      />
+                      <DetailItem label="Blogger Write" value={String(draftGenerationMarkdownCandidateAcceptanceGateResult.currentSideEffectSummary.bloggerWrite)} />
+                    </div>
+                  </details>
+                </>
+              ) : (
+                <div className="notice">
+                  후보 큐에서 linked content item이 있는 행의 “markdown acceptance”를 실행하세요. 이 단계는 draftMarkdown을 저장하지 않습니다.
                 </div>
               )}
             </div>

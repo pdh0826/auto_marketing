@@ -368,3 +368,16 @@ Next patch candidate:
 Next patch candidate:
 
 - `9F-3M — Markdown candidate acceptance gate`
+
+## Patch 9F-3M Markdown Candidate Acceptance Audit Semantics
+
+9F-3M is read-only and adds no audit rows.
+
+- It reads validation readiness and linked content item state.
+- It reports candidate acceptance blockers, primarily missing candidate Markdown and validation not ready.
+- It keeps `dbWrite=false`, `auditEventMutation=false`, `auditArtifactMutation=false`, and `llmCallLogMutation=false`.
+- It stores and returns no raw prompt, raw request body, raw provider response body/header, full generated candidate, secret, token, or encrypted value.
+
+Next patch candidate:
+
+- `9F-3N — draftMarkdown mutation gate preview`

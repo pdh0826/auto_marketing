@@ -746,3 +746,17 @@ Patch 9F-3L adds a gated local audit persistence path for the 9F-3K validation p
 Next candidate gate:
 
 - `9F-3M — Markdown candidate acceptance gate`
+
+## Patch 9F-3M Markdown Candidate Acceptance Gate
+
+Patch 9F-3M determines whether a generated Markdown candidate can proceed toward draft persistence.
+
+- Route: `POST /api/daily-content-plans/draft-generation-markdown-candidate-acceptance-gate`.
+- It reads validation readiness and linked content item state.
+- Candidate acceptance is currently blocked because no full candidate Markdown text exists and validation is not ready.
+- It does not mutate audit rows, create `llm_call_logs`, mutate content, write Blogger, reconnect OAuth, or refresh tokens.
+- It returns no raw prompt, raw response body/header, full generated candidate, request body, API key, token, secret, or encrypted value.
+
+Next candidate gate:
+
+- `9F-3N — draftMarkdown mutation gate preview`

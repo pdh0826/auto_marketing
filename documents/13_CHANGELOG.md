@@ -1,5 +1,20 @@
 # 13_CHANGELOG
 
+## Patch 9F-3M Markdown Candidate Acceptance Gate
+
+Implemented after Patch 9F-3L:
+
+- Added `POST /api/daily-content-plans/draft-generation-markdown-candidate-acceptance-gate`.
+- Added a `/settings/blogger` UI action and summary block for Markdown candidate acceptance.
+- The gate reads 9F-3K validation readiness and the linked fixture content snapshot.
+- Current state blocks acceptance because full candidate Markdown text is not stored and validation is not ready.
+
+Policy:
+
+- 9F-3M does not write DB rows, call a provider, create `llm_call_logs`, mutate content, or write Blogger/OAuth/token state.
+- 9F-3M does not return raw prompt, raw provider response, full generated candidate, request body, API key, token, secret, or encrypted value.
+- Recommended next patch: `9F-3N — draftMarkdown mutation gate preview`.
+
 ## Patch 9F-3L Gated Output Validation Persistence
 
 Implemented after Patch 9F-3K:

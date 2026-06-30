@@ -1933,3 +1933,12 @@ Safety guard:
 - 자동 검증 중에는 apply를 실행하지 않으며, Expected counts after preview smoke는 attempts/events/artifacts `1 / 2 / 2`, `llm_call_logs=23`이다.
 - 호출 중 provider network call, LLM call, `llm_call_logs` 생성, content item mutation, Blogger write/publish, OAuth reconnect, token refresh가 없어야 한다.
 - linked daily fixture는 계속 `status=planned`, `draftMarkdown` length `0`, `draftHtml` length `0`, `publishedAt=null`, `scheduledAt=null`이어야 한다.
+
+## Patch 9F-3M Markdown candidate acceptance gate 검증
+
+- `POST /api/daily-content-plans/draft-generation-markdown-candidate-acceptance-gate`는 read-only acceptance gate여야 한다.
+- 현재 candidate Markdown text가 저장되지 않았으므로 `candidateMarkdownAvailable=false`, `validationReady=false`, `canAcceptMarkdownCandidate=false`가 정상이다.
+- Blocking reasons에는 `draft_generation_markdown_candidate_not_available`, `draft_generation_output_validation_not_ready`가 포함되어야 한다.
+- 호출 중 DB write, audit row 생성, provider/LLM call, `llm_call_logs` 생성, content item mutation, Blogger write/publish, OAuth reconnect, token refresh가 없어야 한다.
+- Expected counts after smoke: attempts/events/artifacts `1 / 2 / 2`, `llm_call_logs=23`.
+- linked daily fixture는 계속 `status=planned`, `draftMarkdown` length `0`, `draftHtml` length `0`이어야 한다.
