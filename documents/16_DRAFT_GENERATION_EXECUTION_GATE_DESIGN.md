@@ -571,3 +571,17 @@ Patch 9F-2Z is the first guarded DB persistence step after the creation gate pre
 Next candidate gate:
 
 - `9F-3A — LLM dispatch attempt event creation preview, no provider call/no content mutation`
+
+## Patch 9F-3A Dispatch Attempt Event Creation Preview
+
+Patch 9F-3A previews the first audit event for the existing dispatch attempt.
+
+- It adds `POST /api/daily-content-plans/draft-generation-llm-dispatch-attempt-event-preview`.
+- It reads the latest target attempt and constructs a candidate event with `eventType=dispatch_attempt_created` and `eventStatus=recorded_audit_only`.
+- It keeps `eventCreationAllowedInThisPatch=false`, `eventInsertAttempted=false`, `auditRowsCreatedNow=false`, and `auditRowsMutatedNow=false`.
+- Attempts/events/artifacts counts remain `1 / 0 / 0`.
+- Provider calls, LLM calls, `llm_call_logs`, content mutation, draft creation, Blogger write, OAuth reconnect, and token refresh remain disabled.
+
+Next candidate gate:
+
+- `9F-3B — Gated LLM dispatch attempt event creation persistence, no provider call/no content mutation`

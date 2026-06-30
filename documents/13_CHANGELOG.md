@@ -1,5 +1,22 @@
 # 13_CHANGELOG
 
+## Patch 9F-3A LLM Dispatch Attempt Event Creation Preview
+
+Implemented after Patch 9F-2Z:
+
+- Added read-only helper `src/lib/daily-content-plans/draft-generation-llm-dispatch-attempt-event-preview.ts`.
+- Added route `POST /api/daily-content-plans/draft-generation-llm-dispatch-attempt-event-preview`.
+- Added `/settings/blogger` `초안 생성 LLM dispatch attempt event preview` UI readback.
+- The preview reads the latest target dispatch attempt and constructs an in-memory candidate event with `eventType=dispatch_attempt_created` and `eventStatus=recorded_audit_only`.
+- The candidate event includes safe hash/redaction metadata only and keeps raw secret/token storage false.
+
+Policy:
+
+- 9F-3A does not insert audit event rows or artifact rows.
+- 9F-3A does not call providers, run provider health checks, call LLMs, create `llm_call_logs`, mutate `content_items`, create `draftMarkdown`/`draftHtml`, write to Blogger, publish, schedule, reconnect OAuth, or refresh tokens.
+- Audit row counts remain attempts/events/artifacts `1 / 0 / 0`.
+- Recommended next patch: `9F-3B — Gated LLM dispatch attempt event creation persistence, no provider call/no content mutation`.
+
 ## Patch 9F-2Z Gated LLM Dispatch Attempt Creation Persistence
 
 Implemented after Patch 9F-2Y:

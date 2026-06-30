@@ -1806,3 +1806,14 @@ Safety guard:
 - linked daily fixture는 계속 `status=planned`, `draftMarkdown` length `0`, `draftHtml` length `0`, `publishedAt=null`, `scheduledAt=null`이어야 한다.
 - 9F-2Z 구현/스모크 중에는 dispatch event/artifact 생성, provider health check, provider network call, LLM call, `llm_call_logs` 생성, content item mutation, Blogger write/publish, OAuth reconnect, token refresh가 발생하지 않아야 한다.
 - `/settings/blogger` UI는 preview-only attempt creation summary를 보여야 하며 apply/create/provider/content/Blogger buttons는 비활성 또는 미노출이어야 한다.
+
+## Patch 9F-3A LLM dispatch attempt event creation preview 검증
+
+- `POST /api/daily-content-plans/draft-generation-llm-dispatch-attempt-event-preview` route가 있어야 한다.
+- Preview는 latest target attempt를 읽고 candidate event만 메모리에서 구성해야 한다.
+- Candidate event는 `eventType=dispatch_attempt_created`, `eventStatus=recorded_audit_only`, safe payload hash, `rawSecretStored=false`, `rawTokenStored=false`를 표시해야 한다.
+- Preview는 `eventInsertAttempted=false`, `auditRowsCreatedNow=false`, `auditRowsMutatedNow=false`를 반환해야 한다.
+- Expected counts before/after: attempts/events/artifacts `1 / 0 / 0`.
+- Non-preview mode는 `draft_generation_llm_dispatch_attempt_event_preview_is_preview_only`로 차단되어야 한다.
+- 9F-3A 구현/스모크 중에는 audit event insert, audit artifact insert, provider health check, provider network call, LLM call, `llm_call_logs` 생성, content item mutation, Blogger write/publish, OAuth reconnect, token refresh가 발생하지 않아야 한다.
+- `/settings/blogger` UI는 event preview summary를 보여야 하며 event insert/provider/content/Blogger buttons는 비활성 또는 미노출이어야 한다.

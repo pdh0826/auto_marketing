@@ -1,5 +1,27 @@
 # 14_NEXT_SESSION_BRIEF
 
+## Current State: Patch 9F-3A Completed
+
+```text
+repo: ~/blog-growth-agent
+branch: master
+expected HEAD after 9F-3A commit: local commit `Add draft generation LLM dispatch attempt event creation preview` (verify exact hash with `git log --oneline -8`)
+```
+
+9F-3A adds read-only event creation preview for the existing draft-generation LLM dispatch attempt:
+
+- Route: `POST /api/daily-content-plans/draft-generation-llm-dispatch-attempt-event-preview`
+- UI: `/settings/blogger` shows `초안 생성 LLM dispatch attempt event preview`
+- The preview reads the latest target attempt and constructs a candidate event only.
+- Candidate event: `eventType=dispatch_attempt_created`, `eventStatus=recorded_audit_only`.
+- No audit event row is inserted in 9F-3A.
+- Audit counts remain attempts/events/artifacts `1 / 0 / 0`.
+- Provider health checks, provider network calls, LLM calls, `llm_call_logs`, content mutations, Blogger writes/publish, OAuth reconnect, and token refresh remain disabled.
+
+Next recommended patch:
+
+- `9F-3B — Gated LLM dispatch attempt event creation persistence, no provider call/no content mutation`
+
 ## Current State: Patch 9F-2Z Completed
 
 ```text

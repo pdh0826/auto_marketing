@@ -1024,3 +1024,14 @@ Patch 9F-2Z adds the first gated persistence point for a future draft-generation
 - Duplicate apply with the same idempotency key hash returns the existing attempt without another insert.
 - This patch does not dispatch the request envelope, run provider health checks, call providers, create `llm_call_logs`, store raw prompts or raw request/response bodies, mutate `content_items`, create `draftMarkdown`/`draftHtml`, call Blogger, reconnect OAuth, or refresh tokens.
 - Next boundary is `9F-3A — LLM dispatch attempt event creation preview, no provider call/no content mutation`.
+
+## Patch 9F-3A draft-generation dispatch attempt event preview boundary
+
+Patch 9F-3A previews the first audit event that would be attached to the existing dispatch attempt.
+
+- `POST /api/daily-content-plans/draft-generation-llm-dispatch-attempt-event-preview` reads the latest target attempt and builds a candidate event in memory.
+- The candidate event uses `eventType=dispatch_attempt_created` and `eventStatus=recorded_audit_only`.
+- Candidate payload details are represented by safe hash/redaction metadata only.
+- It keeps attempts/events/artifacts counts unchanged at `1 / 0 / 0`.
+- It does not insert audit events, create artifacts, run provider health checks, call providers, create `llm_call_logs`, store prompts, store request/response bodies, mutate `content_items`, create `draftMarkdown`/`draftHtml`, call Blogger, reconnect OAuth, or refresh tokens.
+- Next boundary is `9F-3B — Gated LLM dispatch attempt event creation persistence, no provider call/no content mutation`.

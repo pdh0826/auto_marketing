@@ -197,3 +197,17 @@ Next patch candidate:
 Next patch candidate:
 
 - `9F-3A — LLM dispatch attempt event creation preview, no provider call/no content mutation`
+
+## Patch 9F-3A Event Preview Semantics
+
+9F-3A previews the first event row without inserting it.
+
+- Route: `POST /api/daily-content-plans/draft-generation-llm-dispatch-attempt-event-preview`.
+- Expected starting counts: attempts/events/artifacts `1 / 0 / 0`.
+- Candidate event fields: `attemptId`, `eventType=dispatch_attempt_created`, `eventStatus=recorded_audit_only`, safe event message, safe payload hash, `rawSecretStored=false`, `rawTokenStored=false`.
+- The preview may show whether duplicate target events already exist, but it must not insert or mutate rows.
+- Event payload preview must not include raw prompt text, raw request bodies, raw response bodies, full generated candidates, secret values, token values, or raw env values.
+
+Next patch candidate:
+
+- `9F-3B — Gated LLM dispatch attempt event creation persistence, no provider call/no content mutation`
