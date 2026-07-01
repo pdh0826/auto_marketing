@@ -417,3 +417,14 @@ Next patch candidate:
 - The full Markdown body may be stored in the artifact row for later server-side validation/persistence, but API/UI responses must return only hash, length, artifact ids, and safe metadata.
 - It may create one `llm_call_logs` row, one response event, one hash-only response metadata artifact, and one controlled candidate text artifact.
 - It must keep `contentMutationAttempted=false`, `draftMutationAttempted=false`, and `bloggerWriteAttempted=false`.
+
+## Patch 9F-3O draftMarkdown Persistence Audit Semantics
+
+9F-3O consumes existing audit artifacts and does not add LLM dispatch audit rows.
+
+- It reads the controlled candidate artifact and mutation gate state.
+- It writes only `content_items.draftMarkdown`.
+- It does not create or mutate dispatch attempts, dispatch events, dispatch artifacts, or `llm_call_logs`.
+- Blogger write/publish, OAuth reconnect, and token refresh remain disabled.
+- The approved apply leaves dispatch counts unchanged at attempts/events/artifacts `2/3/4` and `llm_call_logs=24`.
+- Any future HTML conversion gate should read the persisted `draftMarkdown` without creating LLM dispatch audit rows unless a new provider call is explicitly approved.

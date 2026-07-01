@@ -800,3 +800,19 @@ Patch 9F-3I-R1 creates the missing controlled Markdown candidate artifact throug
 Next candidate gate:
 
 - `9F-3O — Gated draftMarkdown persistence` after candidate policy, validation, acceptance, and mutation preview pass.
+
+## Patch 9F-3O Gated draftMarkdown Persistence
+
+Patch 9F-3O is the first `content_items` content mutation in the daily queue path.
+
+- Route: `POST /api/daily-content-plans/draft-markdown-persistence`.
+- Preview mode is read-only.
+- Apply mode requires feature flag, exact confirmation phrase, idempotency key, expected candidate hash, controlled candidate artifact, mutation gate readiness, and an empty planned content item.
+- The only allowed mutation is `content_items.draftMarkdown`.
+- `draftHtml`, status, quality score, publish timestamps, audit rows, LLM calls, Blogger writes, OAuth reconnect, and token refresh remain disabled.
+- The approved 9F-3O apply persisted candidate artifact `cmr241dl40009iwkn78t0brg7` with SHA-256 `fb5fa8203eb830abd03b2d77dd52d70694f888a61882bd76f42932ad903c44b0`.
+- After apply, duplicate persistence is blocked because the target content item already has `draftMarkdown`.
+
+Next candidate gate:
+
+- `9F-3P — draftHtml conversion preview`.

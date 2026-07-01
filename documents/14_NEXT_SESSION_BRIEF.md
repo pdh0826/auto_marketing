@@ -1,5 +1,30 @@
 # 14_NEXT_SESSION_BRIEF
 
+## Current State: Patch 9F-3O Implemented
+
+```text
+repo: ~/blog-growth-agent
+branch: master
+expected HEAD after 9F-3O commit: local commit `Persist gated draftMarkdown for daily content item` (verify exact hash with `git log --oneline -8`)
+```
+
+9F-3O performs the first approved daily queue content mutation:
+
+- Route used: `POST /api/daily-content-plans/draft-markdown-persistence`
+- Apply mode requires `BLOG_DAILY_CONTENT_DRAFT_MARKDOWN_PERSISTENCE_ENABLED=true`, exact confirmation phrase, idempotency key, expected candidate hash, controlled candidate artifact, mutation gate readiness, and an empty planned content item.
+- The one-time approved apply wrote only `content_items.draftMarkdown` for fixture content item `daily_fixture_cmqlr1v1y0001iwj2gpv2875r`.
+- Applied candidate artifact: `cmr241dl40009iwkn78t0brg7`
+- Applied candidate hash: `fb5fa8203eb830abd03b2d77dd52d70694f888a61882bd76f42932ad903c44b0`
+- Post-apply fixture state: `draftMarkdown` length `1141`, `draftHtml` length `0`, status `planned`, `qualityScore=null`, `publishedAt=null`, `scheduledAt=null`.
+- Audit/log counts after apply remain attempts/events/artifacts/llm_call_logs/blogger_draft_saves/blogger_publish_execution_attempts `2/3/4/24/1/1`.
+- Duplicate apply is blocked by `draft_markdown_already_present` without an additional write.
+- No LLM/provider call, `llm_call_logs` mutation, dispatch audit row mutation, Blogger write, publish, schedule, OAuth reconnect, or token refresh is performed by 9F-3O.
+
+Next recommended patch:
+
+- `9F-3P — draftHtml conversion preview`
+- This should be preview/read-only first: convert saved `draftMarkdown` to a candidate HTML preview without writing `draftHtml`.
+
 ## Current State: Patch 9F-3I-R1 Implemented
 
 ```text

@@ -1970,3 +1970,14 @@ Safety guard:
 - `draft-generation-llm-output-quality-validation-preview`와 `draft-markdown-mutation-gate-preview`는 controlled candidate artifact의 hash/length/readiness만 사용해야 한다.
 - linked daily fixture는 계속 `status=planned`; `draftMarkdown` length `0`, `draftHtml` length `0`이어야 한다.
 - Approved one-time execute result: attempts/events/artifacts/llm_call_logs `2/3/4/24`, candidate artifact `cmr241dl40009iwkn78t0brg7`, candidate length `1141`, fixture remains `planned/0/0`.
+
+## Patch 9F-3O gated draftMarkdown persistence 검증
+
+- `POST /api/daily-content-plans/draft-markdown-persistence`는 기본 preview에서 DB write 없이 persistence 가능 여부만 반환해야 한다.
+- Apply mode는 `BLOG_DAILY_CONTENT_DRAFT_MARKDOWN_PERSISTENCE_ENABLED=true`, exact confirmation phrase, idempotency key, expected candidate hash, mutation gate ready, controlled candidate artifact, planned content item, empty `draftMarkdown`, empty `draftHtml`가 모두 만족될 때만 허용된다.
+- 성공 시 `content_items.draftMarkdown`만 변경되어야 한다.
+- `draftHtml`, status, `qualityScore`, `publishedAt`, `scheduledAt`, Blogger tables, `llm_call_logs`, LLM dispatch audit rows는 변경되면 안 된다.
+- API/UI 응답은 full candidate Markdown을 반환하지 않아야 한다.
+- Approved one-time apply result: fixture `draftMarkdown` length `1141`, candidate SHA-256 `fb5fa8203eb830abd03b2d77dd52d70694f888a61882bd76f42932ad903c44b0`, `draftHtml` length/hash `0/d41d8cd98f00b204e9800998ecf8427e`, status `planned`, `qualityScore/publishedAt/scheduledAt=null`.
+- Post-apply counts should remain attempts/events/artifacts/llm_call_logs/blogger_draft_saves/blogger_publish_execution_attempts `2/3/4/24/1/1`.
+- Repeated apply should be blocked by `draft_markdown_already_present` and must not write again.

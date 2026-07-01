@@ -1,5 +1,23 @@
 # 13_CHANGELOG
 
+## Patch 9F-3O Gated draftMarkdown Persistence
+
+Implemented after Patch 9F-3I-R1:
+
+- Added `POST /api/daily-content-plans/draft-markdown-persistence`.
+- The route revalidates the current mutation gate, controlled `llm_candidate_markdown_text` artifact, expected candidate hash, linked content item state, confirmation phrase, idempotency key, and feature flag before writing.
+- Apply mode writes only `content_items.draftMarkdown`.
+- The response returns candidate hash/length and before/after lengths, not the full Markdown body.
+- The approved one-time apply persisted candidate artifact `cmr241dl40009iwkn78t0brg7` to fixture content item `daily_fixture_cmqlr1v1y0001iwj2gpv2875r`.
+- Post-apply `draftMarkdown` length is `1141`; `draftHtml` remains empty; status remains `planned`.
+- Duplicate apply is blocked once `draftMarkdown` exists.
+
+Policy:
+
+- `draftHtml`, status, `qualityScore`, `publishedAt`, and `scheduledAt` are not changed.
+- Blogger write/publish/schedule, OAuth reconnect, token refresh, provider calls, LLM calls, and `llm_call_logs` are not performed.
+- Apply mode requires `BLOG_DAILY_CONTENT_DRAFT_MARKDOWN_PERSISTENCE_ENABLED=true` and exact confirmation phrase.
+
 ## Patch 9F-3I-R1 Candidate Text Redispatch
 
 Implemented after Patch 9F-3O-prep:

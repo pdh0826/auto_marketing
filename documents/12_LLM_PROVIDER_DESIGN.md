@@ -1202,3 +1202,14 @@ Patch 9F-3I-R1 adds the controlled path for creating the missing Markdown candid
 - Execute mode may perform one provider call and store the result as `llm_candidate_markdown_text` with `artifactStorageMode=controlled_candidate_text`.
 - The route does not mutate `content_items`, create `draftMarkdown`/`draftHtml`, write Blogger, publish, reconnect OAuth, or refresh tokens.
 - API responses return candidate hash/length/artifact ids only, not the full Markdown body.
+
+## Patch 9F-3O draftMarkdown persistence boundary
+
+Patch 9F-3O consumes the controlled candidate text artifact without calling an LLM/provider.
+
+- It writes only `content_items.draftMarkdown`.
+- It performs no provider call, no LLM call, and no `llm_call_logs` mutation.
+- It does not write `draftHtml`, Blogger, OAuth, publish, schedule, or token refresh state.
+- It keeps full Markdown out of API responses while using the server-side artifact body for the approved persistence write.
+- The approved apply consumed the existing controlled artifact; it did not invoke the provider abstraction.
+- Next work should treat saved `draftMarkdown` as input for a preview-only Markdown-to-HTML conversion gate before any `draftHtml` persistence.
