@@ -1,5 +1,35 @@
 # 14_NEXT_SESSION_BRIEF
 
+## Current State: Patch 9F-3P Implemented
+
+```text
+repo: ~/blog-growth-agent
+branch: master
+expected HEAD after 9F-3P commit: local commit `Add daily draftHtml conversion preview` (verify exact hash with `git log --oneline -8`)
+```
+
+9F-3P previews deterministic HTML conversion from the saved daily `draftMarkdown`:
+
+- Route used: `POST /api/daily-content-plans/draft-html-conversion-preview`
+- Source: saved `content_items.draftMarkdown`
+- Renderer: existing deterministic `blog_post_template_preview` renderer
+- Default response returns safe hash/length/validation metadata only; full preview HTML is opt-in with `includePreviewHtml=true`.
+- Runtime smoke result for fixture `daily_fixture_cmqlr1v1y0001iwj2gpv2875r`:
+  - `conversionPreviewReady=true`
+  - `canProceedTo9F3Q=true`
+  - blockers `[]`
+  - saved `draftMarkdown` length/hash `1141` / `fb5fa8203eb830abd03b2d77dd52d70694f888a61882bd76f42932ad903c44b0`
+  - current `draftHtml` length/hash `0` / `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`
+  - preview HTML length/hash `1690` / `dd89e256aa4af32cf34e79f77b8309a32b1624cb0fdb0b76b6318f7d8b91a96d`
+  - validation `ok=true`, errors `[]`, warnings `[]`
+- No `draftHtml` persistence, content item mutation, LLM/provider call, `llm_call_logs` mutation, audit row mutation, Blogger write, publish, OAuth reconnect, or token refresh occurred.
+- Post-preview counts remain attempts/events/artifacts/llm_call_logs/blogger_draft_saves/blogger_publish_execution_attempts `2/3/4/24/1/1`.
+
+Next recommended patch:
+
+- `9F-3Q — gated draftHtml persistence`
+- This is a content item mutation and requires explicit approval before execution.
+
 ## Current State: Patch 9F-3O Implemented
 
 ```text

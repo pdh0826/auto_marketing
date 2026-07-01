@@ -816,3 +816,18 @@ Patch 9F-3O is the first `content_items` content mutation in the daily queue pat
 Next candidate gate:
 
 - `9F-3P — draftHtml conversion preview`.
+
+## Patch 9F-3P draftHtml Conversion Preview
+
+Patch 9F-3P previews the next content transformation after `draftMarkdown` persistence.
+
+- Route: `POST /api/daily-content-plans/draft-html-conversion-preview`.
+- It reads saved `content_items.draftMarkdown` and renders a deterministic Blogger-ready HTML preview with the existing blog post template renderer.
+- It does not write `content_items.draftHtml`.
+- It blocks readiness if the linked plan item/content item do not match, the content item is not `planned`, saved `draftMarkdown` is missing, `draftHtml` is already present, or the renderer validation fails.
+- Full preview HTML is opt-in via `includePreviewHtml=true`; the default response exposes safe hash/length/validation metadata only.
+- LLM calls, provider calls, dispatch audit row mutations, Blogger writes, OAuth reconnect, token refresh, publish/schedule, and content mutations remain disabled.
+
+Next candidate gate:
+
+- `9F-3Q — gated draftHtml persistence`.

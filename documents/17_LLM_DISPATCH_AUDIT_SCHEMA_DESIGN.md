@@ -428,3 +428,12 @@ Next patch candidate:
 - Blogger write/publish, OAuth reconnect, and token refresh remain disabled.
 - The approved apply leaves dispatch counts unchanged at attempts/events/artifacts `2/3/4` and `llm_call_logs=24`.
 - Any future HTML conversion gate should read the persisted `draftMarkdown` without creating LLM dispatch audit rows unless a new provider call is explicitly approved.
+
+## Patch 9F-3P draftHtml Conversion Preview Audit Semantics
+
+9F-3P does not participate in LLM dispatch audit persistence.
+
+- It reads `content_items.draftMarkdown` and deterministic renderer output metadata.
+- It does not create or mutate dispatch attempts, dispatch events, dispatch artifacts, or `llm_call_logs`.
+- It does not store preview HTML as an audit artifact.
+- Blogger write/publish, OAuth reconnect, and token refresh remain disabled.

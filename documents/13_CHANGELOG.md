@@ -1,5 +1,21 @@
 # 13_CHANGELOG
 
+## Patch 9F-3P draftHtml Conversion Preview
+
+Implemented after Patch 9F-3O:
+
+- Added `POST /api/daily-content-plans/draft-html-conversion-preview`.
+- The route reads the persisted daily fixture `draftMarkdown` and renders a deterministic Blogger-ready HTML preview with the existing blog post template renderer.
+- The route verifies the linked plan item, content item status, saved `draftMarkdown`, empty `draftHtml`, and preview validation result before reporting `canProceedTo9F3Q=true`.
+- Preview HTML is not returned by default; callers may request it with `includePreviewHtml=true`.
+
+Policy:
+
+- 9F-3P is read-only and does not persist `draftHtml`.
+- `draftMarkdown`, status, `qualityScore`, `publishedAt`, and `scheduledAt` are not changed.
+- Blogger write/publish/schedule, OAuth reconnect, token refresh, provider calls, LLM calls, `llm_call_logs`, and dispatch audit row mutations are not performed.
+- Recommended next patch: `9F-3Q — gated draftHtml persistence`.
+
 ## Patch 9F-3O Gated draftMarkdown Persistence
 
 Implemented after Patch 9F-3I-R1:

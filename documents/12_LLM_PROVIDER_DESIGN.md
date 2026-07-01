@@ -1213,3 +1213,13 @@ Patch 9F-3O consumes the controlled candidate text artifact without calling an L
 - It keeps full Markdown out of API responses while using the server-side artifact body for the approved persistence write.
 - The approved apply consumed the existing controlled artifact; it did not invoke the provider abstraction.
 - Next work should treat saved `draftMarkdown` as input for a preview-only Markdown-to-HTML conversion gate before any `draftHtml` persistence.
+
+## Patch 9F-3P draftHtml conversion preview boundary
+
+Patch 9F-3P is outside the LLM provider path.
+
+- It uses the deterministic blog post template renderer, not a provider/model call.
+- It does not create `llm_call_logs`.
+- It does not create or mutate LLM dispatch attempts, events, or artifacts.
+- It reads saved `draftMarkdown` and reports HTML preview hash/length/validation metadata.
+- It does not persist `draftHtml`; that remains a separate gated patch.

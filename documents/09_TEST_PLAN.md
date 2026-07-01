@@ -1981,3 +1981,14 @@ Safety guard:
 - Approved one-time apply result: fixture `draftMarkdown` length `1141`, candidate SHA-256 `fb5fa8203eb830abd03b2d77dd52d70694f888a61882bd76f42932ad903c44b0`, `draftHtml` length/hash `0/d41d8cd98f00b204e9800998ecf8427e`, status `planned`, `qualityScore/publishedAt/scheduledAt=null`.
 - Post-apply counts should remain attempts/events/artifacts/llm_call_logs/blogger_draft_saves/blogger_publish_execution_attempts `2/3/4/24/1/1`.
 - Repeated apply should be blocked by `draft_markdown_already_present` and must not write again.
+
+## Patch 9F-3P draftHtml conversion preview 검증
+
+- `POST /api/daily-content-plans/draft-html-conversion-preview`는 saved `draftMarkdown`을 deterministic blog post template renderer로 HTML preview 변환해야 한다.
+- 기본 응답은 full preview HTML body를 반환하지 않아야 하며 `includePreviewHtml=true`일 때만 `previewHtml`을 반환할 수 있다.
+- 정상 조건은 linked plan item/content item match, content status `planned`, saved `draftMarkdown` 존재, `draftHtml` empty, published/scheduled timestamp 없음, template validation ok이다.
+- 정상 preview는 `conversionPreviewReady=true`, `canProceedTo9F3Q=true`, `previewHtmlStored=false`, `draftHtmlApplied=false`를 반환해야 한다.
+- Side effects should remain false for DB write, content mutation, `draftMarkdown` mutation, `draftHtml` mutation, status/quality/publish timestamp mutation, audit row mutation, `llm_call_logs` mutation, Blogger write/publish, OAuth reconnect, and token refresh.
+- Post-preview DB state should remain: fixture `draftMarkdown` length `1141`, `draftHtml` length `0`, status `planned`, `qualityScore/publishedAt/scheduledAt=null`.
+- Counts should remain attempts/events/artifacts/llm_call_logs/blogger_draft_saves/blogger_publish_execution_attempts `2/3/4/24/1/1`.
+- Runtime smoke result: `conversionPreviewReady=true`, `canProceedTo9F3Q=true`, blockers `[]`, preview HTML length/hash `1690/dd89e256aa4af32cf34e79f77b8309a32b1624cb0fdb0b76b6318f7d8b91a96d`, validation `ok=true`, validation errors/warnings empty.
