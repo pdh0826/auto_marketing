@@ -446,3 +446,11 @@ Next patch candidate:
 - It does not create or mutate dispatch attempts, dispatch events, dispatch artifacts, or `llm_call_logs`.
 - It does not store full preview HTML as an audit artifact.
 - Blogger write/publish, OAuth reconnect, and token refresh remain disabled.
+
+## Patch 9F-3R Saved draftHtml Readiness Readback Audit Semantics
+
+9F-3R is read-only and does not participate in LLM dispatch audit persistence.
+
+- It reads saved content and safe Blogger DB metadata.
+- It does not create or mutate dispatch attempts, dispatch events, dispatch artifacts, or `llm_call_logs`.
+- It does not call Blogger APIs.

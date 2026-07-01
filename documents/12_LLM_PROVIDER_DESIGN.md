@@ -1232,3 +1232,12 @@ Patch 9F-3Q persists deterministic HTML without invoking a provider.
 - It does not call an LLM provider and does not create `llm_call_logs`.
 - It writes only `content_items.draftHtml`.
 - It does not mutate LLM dispatch audit tables.
+
+## Patch 9F-3R saved draftHtml readiness readback boundary
+
+Patch 9F-3R is a read-only local readiness aggregation.
+
+- It does not call an LLM provider.
+- It does not create `llm_call_logs`.
+- It does not mutate LLM dispatch audit tables.
+- It reads saved `draftHtml` and local DB metadata only.

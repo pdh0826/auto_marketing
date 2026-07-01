@@ -1,5 +1,34 @@
 # 14_NEXT_SESSION_BRIEF
 
+## Current State: Patch 9F-3R Implemented
+
+```text
+repo: ~/blog-growth-agent
+branch: master
+expected HEAD after 9F-3R commit: local commit `Add saved daily draftHtml readiness readback` (verify exact hash with `git log --oneline -8`)
+```
+
+9F-3R adds read-only readiness readback for the saved daily `draftHtml`:
+
+- Route used: `POST /api/daily-content-plans/saved-draft-html-readiness-readback`
+- It recomputes local HTML quality, publish readiness, and Blogger draft payload readiness from saved `draftHtml`.
+- It returns safe hash/length/check summaries only and does not return full HTML or Markdown bodies.
+- Runtime smoke result for fixture `daily_fixture_cmqlr1v1y0001iwj2gpv2875r`:
+  - target state: `draftMarkdown` length/hash `1141` / `fb5fa8203eb830abd03b2d77dd52d70694f888a61882bd76f42932ad903c44b0`
+  - target state: `draftHtml` length/hash `1690` / `dd89e256aa4af32cf34e79f77b8309a32b1624cb0fdb0b76b6318f7d8b91a96d`
+  - quality: `ready=false`, `grade=fail`, `scorePreview=76`, `requiredFailCount=1`
+  - failed required check: `finance_risky_phrases`
+  - publish readiness: `contentReady=false`, `publishReady=false`, `stage=quality_not_passed`
+  - draft payload: `draftPayloadReady=false`
+  - next step blockers: `quality_readiness_not_ready`, `content_readiness_not_ready`, `draft_payload_not_ready`
+- No content item mutation, LLM/provider call, `llm_call_logs` mutation, dispatch audit row mutation, Blogger API read/write, publish, schedule, OAuth reconnect, or token refresh occurred.
+- Post-readback counts remain attempts/events/artifacts/llm_call_logs/blogger_draft_saves/blogger_publish_execution_attempts `2/3/4/24/1/1`.
+
+Next recommended patch:
+
+- `9F-3R-FIX1 — saved draftHtml finance-risk quality repair preview`
+- Do not proceed to `9F-3S — Blogger draft payload approval refresh` until `finance_risky_phrases` is resolved and content readiness passes.
+
 ## Current State: Patch 9F-3Q Implemented
 
 ```text

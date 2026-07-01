@@ -846,3 +846,17 @@ Patch 9F-3Q performs the approved HTML field mutation after the deterministic co
 Next candidate gate:
 
 - `9F-3R — saved draftHtml readiness readback`.
+
+## Patch 9F-3R Saved draftHtml Readiness Readback
+
+Patch 9F-3R verifies the post-HTML-persistence state before approval refresh.
+
+- Route: `POST /api/daily-content-plans/saved-draft-html-readiness-readback`.
+- It recomputes HTML quality, publish readiness, and Blogger draft payload readiness from saved `draftHtml`.
+- It returns safe summaries only; full Markdown/HTML bodies are not returned.
+- It does not mutate content, audit rows, Blogger state, OAuth state, or token state.
+- It does not call LLM/provider or Blogger APIs.
+
+Next candidate gate:
+
+- `9F-3S — Blogger draft payload approval refresh`.

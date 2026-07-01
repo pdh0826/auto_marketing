@@ -1,5 +1,21 @@
 # 13_CHANGELOG
 
+## Patch 9F-3R Saved draftHtml Readiness Readback
+
+Implemented after Patch 9F-3Q:
+
+- Added `POST /api/daily-content-plans/saved-draft-html-readiness-readback`.
+- The route reads the saved daily fixture `draftMarkdown`/`draftHtml` state and recomputes HTML quality, publish readiness, and Blogger draft payload readiness.
+- The route returns safe hash/length/check summaries only and does not return full HTML or Markdown bodies.
+- The route reads safe Blogger connection/approval/draft-save metadata from DB but does not call Blogger APIs.
+- Runtime readback found saved HTML quality blocked by required check `finance_risky_phrases`; content readiness and draft payload readiness are therefore not ready.
+
+Policy:
+
+- 9F-3R is read-only and does not mutate `content_items`.
+- Blogger write/read API calls, draft save, publish/schedule, OAuth reconnect, token refresh, provider calls, LLM calls, `llm_call_logs`, and dispatch audit row mutations are not performed.
+- Recommended next patch: `9F-3R-FIX1 — saved draftHtml finance-risk quality repair preview`, before `9F-3S`.
+
 ## Patch 9F-3Q Gated draftHtml Persistence
 
 Implemented after Patch 9F-3P:

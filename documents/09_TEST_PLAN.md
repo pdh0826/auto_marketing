@@ -2004,3 +2004,13 @@ Safety guard:
 - Approved one-time apply result: fixture `draftMarkdown` length/hash `1141/fb5fa8203eb830abd03b2d77dd52d70694f888a61882bd76f42932ad903c44b0`, `draftHtml` length/hash `1690/dd89e256aa4af32cf34e79f77b8309a32b1624cb0fdb0b76b6318f7d8b91a96d`, status `planned`, `qualityScore/publishedAt/scheduledAt=null`.
 - Post-apply counts should remain attempts/events/artifacts/llm_call_logs/blogger_draft_saves/blogger_publish_execution_attempts `2/3/4/24/1/1`.
 - Duplicate apply smoke result should include `draft_html_already_present`, `draftHtmlPersistedNow=false`, `dbWrite=false`, and `draftHtmlMutation=false`.
+
+## Patch 9F-3R saved draftHtml readiness readback 검증
+
+- `POST /api/daily-content-plans/saved-draft-html-readiness-readback`는 saved `draftHtml` 기준으로 quality/readiness/draft payload 상태를 read-only로 반환해야 한다.
+- 응답은 full `draftHtml`, full `draftMarkdown`, raw prompt, raw response, secret, token, encrypted value를 반환하지 않아야 한다.
+- Side effects should remain false for DB write, content mutation, `draftMarkdown` mutation, `draftHtml` mutation, status/quality/publish timestamp mutation, audit row mutation, `llm_call_logs` mutation, Blogger API read/write, draft save, publish, OAuth reconnect, and token refresh.
+- Post-readback DB state should remain: fixture `draftMarkdown` length `1141`, `draftHtml` length `1690`, status `planned`, `qualityScore/publishedAt/scheduledAt=null`.
+- Counts should remain attempts/events/artifacts/llm_call_logs/blogger_draft_saves/blogger_publish_execution_attempts `2/3/4/24/1/1`.
+- Runtime smoke result: quality `grade=fail`, `requiredFailCount=1`, failed required check `finance_risky_phrases`; publish readiness `contentReady=false`, `stage=quality_not_passed`; draft payload `draftPayloadReady=false`.
+- `9F-3S` must remain blocked until the saved HTML is repaired or regenerated so required quality failures are zero.
