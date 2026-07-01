@@ -773,3 +773,16 @@ Patch 9F-3N previews the first future content mutation without performing it.
 Next candidate gate:
 
 - `9F-3O — Gated draftMarkdown persistence`
+
+## Patch 9F-3O-prep Candidate Text Artifact Policy
+
+Patch 9F-3O-prep blocks direct `draftMarkdown` persistence until a controlled candidate text artifact exists.
+
+- Route: `POST /api/daily-content-plans/draft-generation-candidate-text-artifact-policy`.
+- It requires the future persistence path to source text from an explicit `llm_candidate_markdown_text` artifact, not from hash-only response metadata.
+- It reports `canProceedTo9F3O=false` when candidate text is missing.
+- It does not call a provider, create `llm_call_logs`, mutate audit rows, mutate content, write Blogger, reconnect OAuth, or refresh tokens.
+
+Next candidate gate:
+
+- `9F-3I-R1 — gated redispatch with candidate text artifact`, or an explicitly approved manual candidate text import path.

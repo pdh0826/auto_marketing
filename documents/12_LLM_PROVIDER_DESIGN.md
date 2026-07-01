@@ -1181,3 +1181,14 @@ Patch 9F-3N previews the future `draftMarkdown` mutation without writing content
 - Because no accepted Markdown candidate is available, the mutation preview is blocked.
 - It does not return a proposed draftMarkdown body and does not mutate `content_items`.
 - Next boundary is `9F-3O — Gated draftMarkdown persistence`, the first content mutation, requiring explicit approval before execution.
+
+## Patch 9F-3O-prep candidate text artifact policy boundary
+
+Patch 9F-3O-prep adds a read-only policy gate before any `draftMarkdown` persistence attempt.
+
+- It adds `POST /api/daily-content-plans/draft-generation-candidate-text-artifact-policy`.
+- It checks for a controlled `llm_candidate_markdown_text` artifact on the latest dispatch attempt.
+- It does not reconstruct candidate Markdown from hash-only response artifacts.
+- It keeps `dbWrite=false`, `llmCall=false`, `llmCallLogMutation=false`, `contentItemMutation=false`, and `draftMarkdownMutation=false`.
+- Current state is expected to block `9F-3O` because the existing dispatch stored only hash/length metadata.
+- The next safe path is `9F-3I-R1 — gated redispatch with candidate text artifact`, or an explicitly approved manual candidate text import path.

@@ -1950,3 +1950,13 @@ Safety guard:
 - 호출 중 DB write, content item mutation, draftMarkdown mutation, draftHtml mutation, LLM call, Blogger write/publish가 없어야 한다.
 - Expected counts after smoke: attempts/events/artifacts `1 / 2 / 2`, `llm_call_logs=23`.
 - linked daily fixture는 계속 `status=planned`, `draftMarkdown` length `0`, `draftHtml` length `0`이어야 한다.
+
+## Patch 9F-3O-prep candidate text artifact policy 검증
+
+- `POST /api/daily-content-plans/draft-generation-candidate-text-artifact-policy`는 read-only policy/readiness check여야 한다.
+- 현재 9F-3I dispatch artifacts는 hash-only이므로 `candidateTextArtifactFound=false`, `candidateMarkdownAvailableForDraftPersistence=false`, `canProceedTo9F3O=false`가 정상이다.
+- Blocking reasons에는 `candidate_text_artifact_missing` 및 `draft_markdown_proposal_not_available`이 포함되어야 한다.
+- `recommendedNextPatch=9F-3I-R1` 또는 manual candidate import 안내가 표시되어야 한다.
+- 호출 중 DB write, audit row 생성, content item mutation, draftMarkdown mutation, draftHtml mutation, provider/LLM call, `llm_call_logs` 생성, Blogger write/publish가 없어야 한다.
+- Expected counts after smoke: attempts/events/artifacts `1 / 2 / 2`, `llm_call_logs=23`.
+- linked daily fixture는 계속 `status=planned`, `draftMarkdown` length `0`, `draftHtml` length `0`이어야 한다.

@@ -1,5 +1,20 @@
 # 13_CHANGELOG
 
+## Patch 9F-3O-prep Candidate Text Artifact Policy
+
+Implemented after Patch 9F-3N:
+
+- Added `POST /api/daily-content-plans/draft-generation-candidate-text-artifact-policy`.
+- Added a `/settings/blogger` UI action and summary block for candidate text artifact policy/readiness.
+- The policy checks whether the latest dispatch attempt has a controlled `llm_candidate_markdown_text` artifact before any `draftMarkdown` persistence work proceeds.
+- Current state is expected to block 9F-3O because the existing dispatch stored only hash/length metadata, not full Markdown candidate text.
+
+Policy:
+
+- 9F-3O-prep does not write DB rows, call a provider, create `llm_call_logs`, mutate content, or write Blogger/OAuth/token state.
+- 9F-3O-prep does not reconstruct candidate text from hash-only artifacts and does not return raw prompt, raw provider response, full generated candidate, API key, token, secret, or encrypted value.
+- Recommended next patch is `9F-3I-R1 — gated redispatch with candidate text artifact`, or an explicitly approved manual candidate text import path.
+
 ## Patch 9F-3N draftMarkdown Mutation Gate Preview
 
 Implemented after Patch 9F-3M:

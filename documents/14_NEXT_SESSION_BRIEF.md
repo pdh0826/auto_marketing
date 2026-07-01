@@ -1,5 +1,28 @@
 # 14_NEXT_SESSION_BRIEF
 
+## Current State: Patch 9F-3O-prep Completed
+
+```text
+repo: ~/blog-growth-agent
+branch: master
+expected HEAD after 9F-3O-prep commit: local commit `Add draft generation candidate text artifact policy` (verify exact hash with `git log --oneline -8`)
+```
+
+9F-3O-prep adds candidate text artifact policy/readiness:
+
+- Route used: `POST /api/daily-content-plans/draft-generation-candidate-text-artifact-policy`
+- UI: `/settings/blogger` shows `candidate text artifact policy`.
+- It checks for a controlled `llm_candidate_markdown_text` artifact before `draftMarkdown` persistence proceeds.
+- Current state blocks 9F-3O because existing artifacts are hash-only and cannot reconstruct a full Markdown candidate.
+- It does not call an LLM/provider, create audit rows, create `llm_call_logs`, mutate content, or write Blogger/OAuth/token state.
+- The linked fixture remains `planned` with empty `draftMarkdown` and `draftHtml`.
+
+Next recommended patch:
+
+- `9F-3I-R1 — gated redispatch with candidate text artifact`
+- Alternative: explicitly approved manual candidate text import policy.
+- Do not proceed to `9F-3O — Gated draftMarkdown persistence` until a controlled candidate text artifact exists.
+
 ## Current State: Patch 9F-3N Completed
 
 ```text

@@ -35,6 +35,7 @@ import type { DailyContentDraftGenerationLlmDispatchFinalPreflightResponse } fro
 import type { DailyContentDraftGenerationLlmDispatchResponseReadbackResponse } from "@/lib/daily-content-plans/draft-generation-llm-dispatch-response-readback";
 import type { DailyContentDraftGenerationLlmOutputQualityValidationPreviewResponse } from "@/lib/daily-content-plans/draft-generation-llm-output-quality-validation-preview";
 import type { DailyContentDraftGenerationLlmOutputValidationPersistenceResponse } from "@/lib/daily-content-plans/draft-generation-llm-output-validation-persistence";
+import type { DailyContentDraftGenerationCandidateTextArtifactPolicyResponse } from "@/lib/daily-content-plans/draft-generation-candidate-text-artifact-policy";
 import type { DailyContentDraftGenerationMarkdownCandidateAcceptanceGateResponse } from "@/lib/daily-content-plans/draft-generation-markdown-candidate-acceptance-gate";
 import type { DailyContentDraftMarkdownMutationGatePreviewResponse } from "@/lib/daily-content-plans/draft-markdown-mutation-gate-preview";
 import type { DailyContentDraftGenerationLlmDispatchAttemptCreationResponse } from "@/lib/daily-content-plans/draft-generation-llm-dispatch-attempt-creation";
@@ -164,6 +165,8 @@ export function BloggerSettingsClient() {
     useState<DailyContentDraftGenerationMarkdownCandidateAcceptanceGateResponse | null>(null);
   const [draftMarkdownMutationGatePreviewResult, setDraftMarkdownMutationGatePreviewResult] =
     useState<DailyContentDraftMarkdownMutationGatePreviewResponse | null>(null);
+  const [draftGenerationCandidateTextArtifactPolicyResult, setDraftGenerationCandidateTextArtifactPolicyResult] =
+    useState<DailyContentDraftGenerationCandidateTextArtifactPolicyResponse | null>(null);
   const [oauthDryRun, setOauthDryRun] = useState<BloggerOAuthStartDryRun | null>(null);
   const [blogListResult, setBlogListResult] = useState<BloggerBlogListResult | null>(null);
   const [blogListLoadingId, setBlogListLoadingId] = useState<string | null>(null);
@@ -206,6 +209,7 @@ export function BloggerSettingsClient() {
   const [loadingDraftGenerationLlmOutputValidationPersistenceItemId, setLoadingDraftGenerationLlmOutputValidationPersistenceItemId] = useState<string | null>(null);
   const [loadingDraftGenerationMarkdownCandidateAcceptanceGateItemId, setLoadingDraftGenerationMarkdownCandidateAcceptanceGateItemId] = useState<string | null>(null);
   const [loadingDraftMarkdownMutationGatePreviewItemId, setLoadingDraftMarkdownMutationGatePreviewItemId] = useState<string | null>(null);
+  const [loadingDraftGenerationCandidateTextArtifactPolicyItemId, setLoadingDraftGenerationCandidateTextArtifactPolicyItemId] = useState<string | null>(null);
   const [selectingBlogId, setSelectingBlogId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -309,6 +313,7 @@ export function BloggerSettingsClient() {
       setDraftGenerationLlmOutputValidationPersistenceResult(null);
       setDraftGenerationMarkdownCandidateAcceptanceGateResult(null);
       setDraftMarkdownMutationGatePreviewResult(null);
+      setDraftGenerationCandidateTextArtifactPolicyResult(null);
       setOauthDryRun(null);
       setBlogListResult(null);
       setNotice("Blogger connection을 저장했습니다. Blogger draft/publish는 수행하지 않았습니다.");
@@ -460,6 +465,7 @@ export function BloggerSettingsClient() {
       setDraftGenerationLlmOutputValidationPersistenceResult(null);
       setDraftGenerationMarkdownCandidateAcceptanceGateResult(null);
       setDraftMarkdownMutationGatePreviewResult(null);
+      setDraftGenerationCandidateTextArtifactPolicyResult(null);
       setNotice("Daily Content Plan preview를 생성했습니다. Plan row 저장, content generation, LLM call, Blogger write/publish는 수행하지 않았습니다.");
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Daily Content Plan preview에 실패했습니다.");
@@ -1658,6 +1664,37 @@ export function BloggerSettingsClient() {
     }
   }
 
+  async function previewDraftGenerationCandidateTextArtifactPolicy(
+    planId: string | null | undefined,
+    planItemId: string | null | undefined,
+    contentItemId: string | null | undefined
+  ) {
+    if (!planId || !planItemId || !contentItemId) {
+      setError("Daily plan id, item id, linked content item id가 필요합니다.");
+      return;
+    }
+    setError(null);
+    setNotice(null);
+    setLoadingDraftGenerationCandidateTextArtifactPolicyItemId(planItemId);
+    try {
+      const result = await requestJson<ApiResult<DailyContentDraftGenerationCandidateTextArtifactPolicyResponse>>(
+        "/api/daily-content-plans/draft-generation-candidate-text-artifact-policy",
+        {
+          method: "POST",
+          body: JSON.stringify({ mode: "preview", planId, planItemId, contentItemId })
+        }
+      );
+      setDraftGenerationCandidateTextArtifactPolicyResult(result.data);
+      setNotice(
+        "candidate text artifact policy를 확인했습니다. 이 단계는 read-only이며 candidate 본문 복원, content_items 변경, LLM call, Blogger write/publish를 수행하지 않습니다."
+      );
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "candidate text artifact policy 확인에 실패했습니다.");
+    } finally {
+      setLoadingDraftGenerationCandidateTextArtifactPolicyItemId(null);
+    }
+  }
+
   async function createOAuthDryRun(connection: BloggerConnectionAdmin) {
     setError(null);
     setNotice(null);
@@ -1871,6 +1908,7 @@ export function BloggerSettingsClient() {
                   setDraftGenerationLlmOutputValidationPersistenceResult(null);
                   setDraftGenerationMarkdownCandidateAcceptanceGateResult(null);
                   setDraftMarkdownMutationGatePreviewResult(null);
+                  setDraftGenerationCandidateTextArtifactPolicyResult(null);
                   setOauthDryRun(null);
                   setBlogListResult(null);
                 }}
@@ -2942,6 +2980,25 @@ export function BloggerSettingsClient() {
                         }
                       >
                         {loadingDraftMarkdownMutationGatePreviewItemId === getDailyPlanItemId(item) ? "draftMarkdown preview 중" : "draftMarkdown preview"}
+                      </button>
+                      <button
+                        className="button small secondary"
+                        type="button"
+                        disabled={
+                          !dailyContentPlanSummary.persistedPlanId ||
+                          !getDailyPlanItemId(item) ||
+                          !getDailyPlanItemContentItemId(item) ||
+                          loadingDraftGenerationCandidateTextArtifactPolicyItemId === getDailyPlanItemId(item)
+                        }
+                        onClick={() =>
+                          void previewDraftGenerationCandidateTextArtifactPolicy(
+                            dailyContentPlanSummary.persistedPlanId,
+                            getDailyPlanItemId(item),
+                            getDailyPlanItemContentItemId(item)
+                          )
+                        }
+                      >
+                        {loadingDraftGenerationCandidateTextArtifactPolicyItemId === getDailyPlanItemId(item) ? "candidate policy 확인 중" : "candidate policy"}
                       </button>
                     </td>
                   </tr>
@@ -8062,6 +8119,99 @@ export function BloggerSettingsClient() {
                 </>
               ) : (
                 <div className="notice">후보 큐에서 linked content item이 있는 행의 “draftMarkdown preview”를 실행하세요.</div>
+              )}
+            </div>
+
+            <div className="read-block">
+              <h3>candidate text artifact policy</h3>
+              <div className="notice">
+                <strong>9F-3O-prep candidate policy · read-only</strong>
+                <p>hash-only audit artifact에서 full Markdown 후보를 복원하지 않습니다. 9F-3O 전에 controlled candidate text artifact가 있는지 확인합니다.</p>
+              </div>
+              {draftGenerationCandidateTextArtifactPolicyResult ? (
+                <>
+                  <div className={draftGenerationCandidateTextArtifactPolicyResult.blockingReasons.length > 0 ? "notice warning" : "notice"}>
+                    <strong>
+                      canProceedTo9F3O=
+                      {String(draftGenerationCandidateTextArtifactPolicyResult.candidateTextArtifactPolicySummary.canProceedTo9F3O)} /
+                      candidateTextArtifactFound=
+                      {String(draftGenerationCandidateTextArtifactPolicyResult.candidateTextArtifactPolicySummary.candidateTextArtifactFound)}
+                    </strong>
+                    <p>
+                      recommendedNextPatch={draftGenerationCandidateTextArtifactPolicyResult.candidateTextArtifactPolicySummary.recommendedNextPatch} /
+                      requiredArtifactKind={draftGenerationCandidateTextArtifactPolicyResult.candidateTextArtifactPolicySummary.requiredArtifactKind}
+                    </p>
+                  </div>
+                  <div className="detail-grid">
+                    <DetailItem label="Patch" value={draftGenerationCandidateTextArtifactPolicyResult.patchVersion} />
+                    <DetailItem label="Mode" value={draftGenerationCandidateTextArtifactPolicyResult.mode} />
+                    <DetailItem label="Plan Item" value={draftGenerationCandidateTextArtifactPolicyResult.targetSummary.planItemId} />
+                    <DetailItem
+                      label="Latest Attempt"
+                      value={draftGenerationCandidateTextArtifactPolicyResult.candidateTextArtifactPolicySummary.latestAttemptId ?? "null"}
+                    />
+                    <DetailItem
+                      label="Artifact ID"
+                      value={draftGenerationCandidateTextArtifactPolicyResult.candidateTextArtifactPolicySummary.candidateTextArtifactId ?? "null"}
+                    />
+                    <DetailItem
+                      label="Storage"
+                      value={draftGenerationCandidateTextArtifactPolicyResult.candidateTextArtifactPolicySummary.candidateTextArtifactStorageMode ?? "null"}
+                    />
+                    <DetailItem
+                      label="Redaction"
+                      value={draftGenerationCandidateTextArtifactPolicyResult.candidateTextArtifactPolicySummary.candidateTextArtifactRedactionStatus ?? "null"}
+                    />
+                    <DetailItem
+                      label="Candidate Available"
+                      value={String(draftGenerationCandidateTextArtifactPolicyResult.candidateTextArtifactPolicySummary.candidateMarkdownAvailableForDraftPersistence)}
+                    />
+                    <DetailItem
+                      label="Current Markdown Len"
+                      value={String(draftGenerationCandidateTextArtifactPolicyResult.candidateTextArtifactPolicySummary.currentDraftMarkdownLength ?? "null")}
+                    />
+                    <DetailItem
+                      label="Current HTML Len"
+                      value={String(draftGenerationCandidateTextArtifactPolicyResult.candidateTextArtifactPolicySummary.currentDraftHtmlLength ?? "null")}
+                    />
+                    <DetailItem
+                      label="Content Status"
+                      value={draftGenerationCandidateTextArtifactPolicyResult.candidateTextArtifactPolicySummary.contentItemStatus ?? "null"}
+                    />
+                  </div>
+                  <ValidationList
+                    title="candidate policy blockers"
+                    items={draftGenerationCandidateTextArtifactPolicyResult.blockingReasons}
+                    emptyText="candidate policy blocker가 없습니다."
+                    isError
+                  />
+                  <ValidationList
+                    title="Allowed acquisition paths"
+                    items={draftGenerationCandidateTextArtifactPolicyResult.candidateTextArtifactPolicySummary.allowedAcquisitionPaths.map(
+                      (path) =>
+                        `${path.key}: recommended=${String(path.recommended)}, approval=${String(path.requiresUserApproval)}, gates=${path.requiredGates.join(", ")}`
+                    )}
+                    emptyText="허용된 candidate acquisition path가 없습니다."
+                  />
+                  <ValidationList title="Warnings" items={draftGenerationCandidateTextArtifactPolicyResult.warnings} emptyText="warning이 없습니다." isWarning />
+                  <div className="detail-grid">
+                    <DetailItem label="DB Read" value={String(draftGenerationCandidateTextArtifactPolicyResult.currentSideEffectSummary.dbRead)} />
+                    <DetailItem label="DB Write" value={String(draftGenerationCandidateTextArtifactPolicyResult.currentSideEffectSummary.dbWrite)} />
+                    <DetailItem label="LLM Call" value={String(draftGenerationCandidateTextArtifactPolicyResult.currentSideEffectSummary.llmCall)} />
+                    <DetailItem
+                      label="Content Mutation"
+                      value={String(draftGenerationCandidateTextArtifactPolicyResult.currentSideEffectSummary.contentItemMutation)}
+                    />
+                    <DetailItem
+                      label="Draft Markdown Mutation"
+                      value={String(draftGenerationCandidateTextArtifactPolicyResult.currentSideEffectSummary.draftMarkdownMutation)}
+                    />
+                    <DetailItem label="Blogger Write" value={String(draftGenerationCandidateTextArtifactPolicyResult.currentSideEffectSummary.bloggerWrite)} />
+                    <DetailItem label="Blogger Publish" value={String(draftGenerationCandidateTextArtifactPolicyResult.currentSideEffectSummary.bloggerPublish)} />
+                  </div>
+                </>
+              ) : (
+                <div className="notice">후보 큐에서 linked content item이 있는 행의 “candidate policy”를 실행하세요.</div>
               )}
             </div>
 

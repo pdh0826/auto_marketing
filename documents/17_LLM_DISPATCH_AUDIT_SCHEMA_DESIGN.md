@@ -393,3 +393,16 @@ Next patch candidate:
 Next patch candidate:
 
 - `9F-3O — Gated draftMarkdown persistence`
+
+## Patch 9F-3O-prep Candidate Text Artifact Policy Audit Semantics
+
+9F-3O-prep is read-only and adds no audit rows.
+
+- It checks whether the latest dispatch attempt has a controlled `llm_candidate_markdown_text` artifact.
+- Existing `llm_response_metadata_hash` artifacts remain hash-only and are not used to reconstruct candidate text.
+- It keeps `dbWrite=false`, `auditEventMutation=false`, `auditArtifactMutation=false`, `llmCallLogMutation=false`, `contentItemMutation=false`, and `draftMarkdownMutation=false`.
+- It returns no raw prompt, raw request body, raw provider response body/header, full generated candidate, secret, token, or encrypted value.
+
+Next patch candidate:
+
+- `9F-3I-R1 — gated redispatch with candidate text artifact`, or an explicitly approved manual candidate text import path.
