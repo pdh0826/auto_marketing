@@ -437,3 +437,12 @@ Next patch candidate:
 - It does not create or mutate dispatch attempts, dispatch events, dispatch artifacts, or `llm_call_logs`.
 - It does not store preview HTML as an audit artifact.
 - Blogger write/publish, OAuth reconnect, and token refresh remain disabled.
+
+## Patch 9F-3Q draftHtml Persistence Audit Semantics
+
+9F-3Q is a content item mutation, not an LLM dispatch audit mutation.
+
+- It reads deterministic renderer metadata and writes only `content_items.draftHtml`.
+- It does not create or mutate dispatch attempts, dispatch events, dispatch artifacts, or `llm_call_logs`.
+- It does not store full preview HTML as an audit artifact.
+- Blogger write/publish, OAuth reconnect, and token refresh remain disabled.

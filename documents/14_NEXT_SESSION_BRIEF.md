@@ -1,5 +1,30 @@
 # 14_NEXT_SESSION_BRIEF
 
+## Current State: Patch 9F-3Q Implemented
+
+```text
+repo: ~/blog-growth-agent
+branch: master
+expected HEAD after 9F-3Q commit: local commit `Persist gated daily draftHtml` (verify exact hash with `git log --oneline -8`)
+```
+
+9F-3Q performs the approved daily queue `draftHtml` mutation:
+
+- Route used: `POST /api/daily-content-plans/draft-html-persistence`
+- Apply mode requires `BLOG_DAILY_CONTENT_DRAFT_HTML_PERSISTENCE_ENABLED=true`, exact confirmation phrase, idempotency key, expected preview HTML hash, 9F-3P preview readiness, saved `draftMarkdown`, empty `draftHtml`, and planned content item.
+- The server recomputes preview HTML from saved `draftMarkdown`; it does not trust caller-supplied HTML.
+- The one-time approved apply wrote only `content_items.draftHtml` for fixture content item `daily_fixture_cmqlr1v1y0001iwj2gpv2875r`.
+- Applied preview HTML hash: `dd89e256aa4af32cf34e79f77b8309a32b1624cb0fdb0b76b6318f7d8b91a96d`
+- Post-apply fixture state: `draftMarkdown` length `1141`, `draftHtml` length `1690`, status `planned`, `qualityScore=null`, `publishedAt=null`, `scheduledAt=null`.
+- Duplicate apply is blocked by `draft_html_already_present` without an additional write.
+- No `draftMarkdown` mutation, status mutation, quality score mutation, publish timestamp mutation, LLM/provider call, `llm_call_logs` mutation, dispatch audit row mutation, Blogger write, publish, schedule, OAuth reconnect, or token refresh is performed by 9F-3Q.
+- Post-apply counts remain attempts/events/artifacts/llm_call_logs/blogger_draft_saves/blogger_publish_execution_attempts `2/3/4/24/1/1`.
+
+Next recommended patch:
+
+- `9F-3R — saved draftHtml readiness readback`
+- This should be read-only: recompute quality/readiness/payload-preview state from saved `draftHtml` without writing DB or calling Blogger/LLM.
+
 ## Current State: Patch 9F-3P Implemented
 
 ```text

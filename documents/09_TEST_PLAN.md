@@ -1992,3 +1992,15 @@ Safety guard:
 - Post-preview DB state should remain: fixture `draftMarkdown` length `1141`, `draftHtml` length `0`, status `planned`, `qualityScore/publishedAt/scheduledAt=null`.
 - Counts should remain attempts/events/artifacts/llm_call_logs/blogger_draft_saves/blogger_publish_execution_attempts `2/3/4/24/1/1`.
 - Runtime smoke result: `conversionPreviewReady=true`, `canProceedTo9F3Q=true`, blockers `[]`, preview HTML length/hash `1690/dd89e256aa4af32cf34e79f77b8309a32b1624cb0fdb0b76b6318f7d8b91a96d`, validation `ok=true`, validation errors/warnings empty.
+
+## Patch 9F-3Q gated draftHtml persistence 검증
+
+- `POST /api/daily-content-plans/draft-html-persistence`는 기본 preview에서 DB write 없이 persistence 가능 여부만 반환해야 한다.
+- Apply mode는 `BLOG_DAILY_CONTENT_DRAFT_HTML_PERSISTENCE_ENABLED=true`, exact confirmation phrase, idempotency key, expected preview HTML hash, 9F-3P conversion preview ready, planned content item, saved `draftMarkdown`, empty `draftHtml`가 모두 만족될 때만 허용된다.
+- 성공 시 `content_items.draftHtml`만 변경되어야 한다.
+- `draftMarkdown`, status, `qualityScore`, `publishedAt`, `scheduledAt`, Blogger tables, `llm_call_logs`, LLM dispatch audit rows는 변경되면 안 된다.
+- API/UI 응답은 full preview HTML body와 full draftMarkdown body를 반환하지 않아야 한다.
+- Repeated apply should be blocked by `draft_html_already_present` and must not write again.
+- Approved one-time apply result: fixture `draftMarkdown` length/hash `1141/fb5fa8203eb830abd03b2d77dd52d70694f888a61882bd76f42932ad903c44b0`, `draftHtml` length/hash `1690/dd89e256aa4af32cf34e79f77b8309a32b1624cb0fdb0b76b6318f7d8b91a96d`, status `planned`, `qualityScore/publishedAt/scheduledAt=null`.
+- Post-apply counts should remain attempts/events/artifacts/llm_call_logs/blogger_draft_saves/blogger_publish_execution_attempts `2/3/4/24/1/1`.
+- Duplicate apply smoke result should include `draft_html_already_present`, `draftHtmlPersistedNow=false`, `dbWrite=false`, and `draftHtmlMutation=false`.

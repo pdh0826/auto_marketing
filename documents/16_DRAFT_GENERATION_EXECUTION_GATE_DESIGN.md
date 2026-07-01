@@ -831,3 +831,18 @@ Patch 9F-3P previews the next content transformation after `draftMarkdown` persi
 Next candidate gate:
 
 - `9F-3Q — gated draftHtml persistence`.
+
+## Patch 9F-3Q Gated draftHtml Persistence
+
+Patch 9F-3Q performs the approved HTML field mutation after the deterministic conversion preview.
+
+- Route: `POST /api/daily-content-plans/draft-html-persistence`.
+- Preview mode is read-only.
+- Apply mode requires feature flag, exact confirmation phrase, idempotency key, expected preview HTML hash, 9F-3P readiness, and an empty planned `draftHtml` target.
+- The server recomputes the preview HTML and does not trust a caller-supplied HTML body.
+- The only allowed mutation is `content_items.draftHtml`.
+- `draftMarkdown`, status, quality score, publish timestamps, audit rows, LLM calls, Blogger writes, OAuth reconnect, and token refresh remain disabled.
+
+Next candidate gate:
+
+- `9F-3R — saved draftHtml readiness readback`.

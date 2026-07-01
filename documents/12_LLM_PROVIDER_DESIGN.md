@@ -1223,3 +1223,12 @@ Patch 9F-3P is outside the LLM provider path.
 - It does not create or mutate LLM dispatch attempts, events, or artifacts.
 - It reads saved `draftMarkdown` and reports HTML preview hash/length/validation metadata.
 - It does not persist `draftHtml`; that remains a separate gated patch.
+
+## Patch 9F-3Q draftHtml persistence boundary
+
+Patch 9F-3Q persists deterministic HTML without invoking a provider.
+
+- It recomputes the HTML preview server-side through the template renderer.
+- It does not call an LLM provider and does not create `llm_call_logs`.
+- It writes only `content_items.draftHtml`.
+- It does not mutate LLM dispatch audit tables.

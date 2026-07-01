@@ -1,5 +1,24 @@
 # 13_CHANGELOG
 
+## Patch 9F-3Q Gated draftHtml Persistence
+
+Implemented after Patch 9F-3P:
+
+- Added `POST /api/daily-content-plans/draft-html-persistence`.
+- The route recomputes the 9F-3P deterministic HTML preview server-side before any write.
+- Apply mode requires `BLOG_DAILY_CONTENT_DRAFT_HTML_PERSISTENCE_ENABLED=true`, exact confirmation phrase, idempotency key, expected preview HTML hash, preview readiness, planned content item, saved `draftMarkdown`, and empty `draftHtml`.
+- Apply mode writes only `content_items.draftHtml`.
+- The response returns preview HTML hash/length and before/after lengths, not the full HTML body.
+- The approved one-time apply persisted preview HTML hash `dd89e256aa4af32cf34e79f77b8309a32b1624cb0fdb0b76b6318f7d8b91a96d` to fixture content item `daily_fixture_cmqlr1v1y0001iwj2gpv2875r`.
+- Post-apply `draftHtml` length is `1690`; `draftMarkdown` remains length `1141`; status remains `planned`.
+- Duplicate apply is blocked once `draftHtml` exists.
+
+Policy:
+
+- `draftMarkdown`, status, `qualityScore`, `publishedAt`, and `scheduledAt` are not changed.
+- Blogger write/publish/schedule, OAuth reconnect, token refresh, provider calls, LLM calls, `llm_call_logs`, and dispatch audit row mutations are not performed.
+- Recommended next patch: `9F-3R — saved draftHtml readiness readback`.
+
 ## Patch 9F-3P draftHtml Conversion Preview
 
 Implemented after Patch 9F-3O:
