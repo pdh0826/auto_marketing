@@ -1192,3 +1192,13 @@ Patch 9F-3O-prep adds a read-only policy gate before any `draftMarkdown` persist
 - It keeps `dbWrite=false`, `llmCall=false`, `llmCallLogMutation=false`, `contentItemMutation=false`, and `draftMarkdownMutation=false`.
 - Current state is expected to block `9F-3O` because the existing dispatch stored only hash/length metadata.
 - The next safe path is `9F-3I-R1 — gated redispatch with candidate text artifact`, or an explicitly approved manual candidate text import path.
+
+## Patch 9F-3I-R1 candidate text redispatch boundary
+
+Patch 9F-3I-R1 adds the controlled path for creating the missing Markdown candidate text artifact.
+
+- It adds `POST /api/daily-content-plans/draft-generation-candidate-text-redispatch`.
+- The prior 9F-3I response body cannot be reconstructed from hash-only metadata.
+- Execute mode may perform one provider call and store the result as `llm_candidate_markdown_text` with `artifactStorageMode=controlled_candidate_text`.
+- The route does not mutate `content_items`, create `draftMarkdown`/`draftHtml`, write Blogger, publish, reconnect OAuth, or refresh tokens.
+- API responses return candidate hash/length/artifact ids only, not the full Markdown body.

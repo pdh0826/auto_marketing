@@ -1,5 +1,21 @@
 # 13_CHANGELOG
 
+## Patch 9F-3I-R1 Candidate Text Redispatch
+
+Implemented after Patch 9F-3O-prep:
+
+- Added `POST /api/daily-content-plans/draft-generation-candidate-text-redispatch`.
+- The previous 9F-3I dispatch intentionally stored only hash/length metadata, so full Markdown could not be reconstructed.
+- The new R1 route can perform one explicitly gated provider redispatch and store the generated Markdown as a controlled `llm_candidate_markdown_text` artifact.
+- Existing validation and draftMarkdown mutation previews now read the controlled candidate text artifact for hash/length/readiness checks without returning the body.
+
+Policy:
+
+- `content_items.draftMarkdown`, `draftHtml`, status, `qualityScore`, `publishedAt`, and `scheduledAt` are not changed by R1.
+- Blogger write/publish/schedule, OAuth reconnect, and token refresh remain disabled.
+- Candidate Markdown is stored only as a controlled artifact and is not returned by API/UI responses.
+- Execute mode requires `BLOG_DAILY_CONTENT_DRAFT_GENERATION_CANDIDATE_TEXT_REDISPATCH_ENABLED=true`, the exact confirmation phrase, and an idempotency key.
+
 ## Patch 9F-3O-prep Candidate Text Artifact Policy
 
 Implemented after Patch 9F-3N:

@@ -1960,3 +1960,13 @@ Safety guard:
 - 호출 중 DB write, audit row 생성, content item mutation, draftMarkdown mutation, draftHtml mutation, provider/LLM call, `llm_call_logs` 생성, Blogger write/publish가 없어야 한다.
 - Expected counts after smoke: attempts/events/artifacts `1 / 2 / 2`, `llm_call_logs=23`.
 - linked daily fixture는 계속 `status=planned`, `draftMarkdown` length `0`, `draftHtml` length `0`이어야 한다.
+
+## Patch 9F-3I-R1 candidate text redispatch 검증
+
+- `POST /api/daily-content-plans/draft-generation-candidate-text-redispatch`는 기본 preview에서 DB write, provider call, LLM call, `llm_call_logs` 생성, content mutation, Blogger write/publish를 수행하지 않아야 한다.
+- `mode=execute`는 `BLOG_DAILY_CONTENT_DRAFT_GENERATION_CANDIDATE_TEXT_REDISPATCH_ENABLED=true`, 정확한 confirmation phrase, idempotency key, operator approval, linked fixture planned/no draft state, route/model readiness가 모두 만족될 때만 provider call 1회를 허용한다.
+- 성공 시 새 redispatch attempt, safe event, hash-only response artifact, controlled `llm_candidate_markdown_text` artifact, `llm_call_logs` 1건이 생성될 수 있다.
+- API/UI 응답은 full candidate Markdown을 반환하지 않아야 한다.
+- `draft-generation-llm-output-quality-validation-preview`와 `draft-markdown-mutation-gate-preview`는 controlled candidate artifact의 hash/length/readiness만 사용해야 한다.
+- linked daily fixture는 계속 `status=planned`; `draftMarkdown` length `0`, `draftHtml` length `0`이어야 한다.
+- Approved one-time execute result: attempts/events/artifacts/llm_call_logs `2/3/4/24`, candidate artifact `cmr241dl40009iwkn78t0brg7`, candidate length `1141`, fixture remains `planned/0/0`.

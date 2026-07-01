@@ -1,5 +1,42 @@
 # 14_NEXT_SESSION_BRIEF
 
+## Current State: Patch 9F-3I-R1 Implemented
+
+```text
+repo: ~/blog-growth-agent
+branch: master
+expected HEAD after 9F-3I-R1 commit: local commit `Add candidate text redispatch artifact gate` (verify exact hash with `git log --oneline -8`)
+```
+
+9F-3I-R1 explains and fixes the missing candidate text artifact path:
+
+- Previous 9F-3I stored only hash/length metadata by design; full Markdown cannot be reconstructed from those hashes.
+- New route: `POST /api/daily-content-plans/draft-generation-candidate-text-redispatch`
+- Default/preview mode performs no DB write and no provider call.
+- Execute mode requires feature flag `BLOG_DAILY_CONTENT_DRAFT_GENERATION_CANDIDATE_TEXT_REDISPATCH_ENABLED=true`, exact confirmation phrase, and idempotency key.
+- A successful execute may create a new redispatch attempt, one `llm_call_logs` row, response metadata event/artifact rows, and one controlled `llm_candidate_markdown_text` artifact.
+- Existing output validation and draftMarkdown mutation preview now read the controlled candidate artifact for readiness/hash/length checks without returning the full body.
+- The linked fixture remains `planned`; `draftMarkdown` and `draftHtml` remain unchanged until a later explicit 9F-3O content mutation.
+
+Runtime result from the approved one-time execute:
+
+- attemptId: `cmr240bh60001iwkn9qii0w2r`
+- llmCallLogId: `cmr241dj00003iwknam7m70ad`
+- candidateArtifactId: `cmr241dl40009iwkn78t0brg7`
+- candidate artifact kind/storage: `llm_candidate_markdown_text` / `controlled_candidate_text`
+- candidate length: `1141`
+- candidate hash: `fb5fa8203eb830abd03b2d77dd52d70694f888a61882bd76f42932ad903c44b0`
+- audit/log counts after execute: attempts/events/artifacts/llm_call_logs `2/3/4/24`
+- fixture state after execute: `planned`, `draftMarkdown` length `0`, `draftHtml` length `0`
+- Candidate policy now reports `canProceedTo9F3O=true`.
+- Output validation preview now reports `candidateMarkdownAvailable=true`, `validationReady=true`.
+- draftMarkdown mutation gate preview now reports `canPreviewDraftMarkdownMutation=true`, `proposedDraftMarkdownLength=1141`.
+
+Next recommended patch:
+
+- `9F-3O — Gated draftMarkdown persistence`
+- This is a content item mutation and must remain explicitly gated.
+
 ## Current State: Patch 9F-3O-prep Completed
 
 ```text

@@ -2,10 +2,13 @@ import {
   buildDailyContentDraftGenerationMarkdownCandidateAcceptanceGateResponse,
   type DailyContentDraftGenerationMarkdownCandidateAcceptanceGateResponse
 } from "@/lib/daily-content-plans/draft-generation-markdown-candidate-acceptance-gate";
+import { prisma } from "@/lib/db/client";
 
 const PATCH_VERSION = "9F-3N";
 const PREVIEW_MODE = "read_only_draft_markdown_mutation_gate_preview";
 const PREVIEW_VERSION = "daily_content_draft_markdown_mutation_gate_preview_v0";
+const CANDIDATE_ARTIFACT_KIND = "llm_candidate_markdown_text";
+const CANDIDATE_STORAGE_MODE = "controlled_candidate_text";
 
 type MutationPreviewMode = "preview" | "blocked_non_preview";
 type AcceptanceSummary =
@@ -91,7 +94,7 @@ export async function buildDailyContentDraftMarkdownMutationGatePreviewResponse(
     contentItemId: request.contentItemId
   });
   const acceptanceSummary = acceptance.draftGenerationMarkdownCandidateAcceptanceGateSummary;
-  const draftMarkdownMutationPreviewSummary = buildMutationPreviewSummary(acceptanceSummary);
+  const draftMarkdownMutationPreviewSummary = await buildMutationPreviewSummary(acceptanceSummary);
   const blockingReasons = new Set<string>(draftMarkdownMutationPreviewSummary.mutationPreviewBlockers);
 
   if (request.mode !== "preview") {
@@ -148,8 +151,24 @@ function getString(value: unknown) {
   return typeof value === "string" && value.trim() ? value.trim() : null;
 }
 
-function buildMutationPreviewSummary(acceptanceSummary: AcceptanceSummary): DraftMarkdownMutationPreviewSummary {
+async function buildMutationPreviewSummary(acceptanceSummary: AcceptanceSummary): Promise<DraftMarkdownMutationPreviewSummary> {
   const acceptance = acceptanceSummary.markdownCandidateAcceptanceSummary;
+  const candidateArtifact = acceptance.latestAttemptId
+    ? await prisma.blogDailyContentLlmDispatchArtifact.findFirst({
+        where: {
+          attemptId: acceptance.latestAttemptId,
+          artifactKind: CANDIDATE_ARTIFACT_KIND,
+          artifactStorageMode: CANDIDATE_STORAGE_MODE
+        },
+        orderBy: { createdAt: "desc" },
+        select: {
+          artifactHash: true,
+          artifactPreview: true
+        }
+      })
+    : null;
+  const proposedDraftMarkdownLength = candidateArtifact?.artifactPreview?.length ?? null;
+  const proposedDraftMarkdownHash = candidateArtifact?.artifactHash ?? null;
   const blockers = new Set<string>(acceptance.acceptanceBlockers);
 
   if (!acceptance.canAcceptMarkdownCandidate) {
@@ -157,6 +176,9 @@ function buildMutationPreviewSummary(acceptanceSummary: AcceptanceSummary): Draf
   }
   if (!acceptance.candidateMarkdownAvailable) {
     blockers.add("proposed_draft_markdown_not_available");
+  }
+  if (!candidateArtifact) {
+    blockers.add("candidate_text_artifact_missing");
   }
   if (acceptance.contentItemStatus !== "planned") {
     blockers.add("content_item_status_not_planned");
@@ -167,8 +189,8 @@ function buildMutationPreviewSummary(acceptanceSummary: AcceptanceSummary): Draf
     latestAttemptId: acceptance.latestAttemptId,
     canAcceptMarkdownCandidate: acceptance.canAcceptMarkdownCandidate,
     proposedDraftMarkdownAvailable: acceptance.candidateMarkdownAvailable,
-    proposedDraftMarkdownLength: null,
-    proposedDraftMarkdownHash: null,
+    proposedDraftMarkdownLength,
+    proposedDraftMarkdownHash,
     currentDraftMarkdownLength: acceptance.draftMarkdownLength,
     currentDraftHtmlLength: acceptance.draftHtmlLength,
     contentItemStatus: acceptance.contentItemStatus,

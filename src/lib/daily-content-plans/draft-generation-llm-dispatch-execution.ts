@@ -28,7 +28,7 @@ type PlanLockSummary =
 type PromptRenderSummary =
   DailyContentDraftGenerationPromptRenderPreviewResponse["draftGenerationPromptRenderPreviewSummary"];
 
-interface ProviderCallResult {
+export interface DailyContentDraftProviderCallResult {
   text: string;
   latencyMs: number;
   inputTokens: number | null;
@@ -191,7 +191,7 @@ export async function buildDailyContentDraftGenerationLlmDispatchExecutionRespon
       })
     : null;
   const gate = buildExecutionGate({ request, planLockSummary, latestAttempt, routeReady: Boolean(route?.primaryProvider && route.primaryModel) });
-  let providerCall: ProviderCallResult | null = null;
+  let providerCall: DailyContentDraftProviderCallResult | null = null;
   let llmCallLogId: string | null = null;
   let responseArtifactId: string | null = null;
   let responseEventId: string | null = null;
@@ -203,10 +203,10 @@ export async function buildDailyContentDraftGenerationLlmDispatchExecutionRespon
   if (gate.canExecuteNow && route?.primaryProvider && route.primaryModel && latestAttempt) {
     const startedAt = new Date();
     try {
-      providerCall = await callProviderOnce({
+      providerCall = await callDailyContentDraftProviderOnce({
         provider: route.primaryProvider,
         modelName: route.primaryModel.name,
-        promptRender: promptRender.draftGenerationPromptRenderPreviewSummary,
+        fullPromptPreview: promptRender.draftGenerationPromptRenderPreviewSummary.promptRenderPreviewSummary.fullPromptPreview,
         temperature: route.temperature,
         maxTokens: route.maxTokens,
         timeoutSeconds: route.timeoutSeconds
@@ -524,17 +524,17 @@ function buildExecutionGate(input: {
   };
 }
 
-async function callProviderOnce(input: {
+export async function callDailyContentDraftProviderOnce(input: {
   provider: ProviderWithSecrets;
   modelName: string;
-  promptRender: PromptRenderSummary;
+  fullPromptPreview: string;
   temperature: number | null;
   maxTokens: number | null;
   timeoutSeconds: number | null;
-}): Promise<ProviderCallResult> {
+}): Promise<DailyContentDraftProviderCallResult> {
   const prompt = {
     system: "You are a careful Korean blog draft writer. Return only the requested Markdown draft.",
-    user: input.promptRender.promptRenderPreviewSummary.fullPromptPreview
+    user: input.fullPromptPreview
   };
   if (input.provider.apiFormat === "openai_compatible") {
     return callOpenAiCompatible(input.provider, input.modelName, prompt, input.temperature, input.maxTokens, input.timeoutSeconds ?? input.provider.timeoutSeconds);
@@ -552,7 +552,7 @@ async function callOpenAiCompatible(
   temperature: number | null,
   maxTokens: number | null,
   timeoutSeconds: number
-): Promise<ProviderCallResult> {
+): Promise<DailyContentDraftProviderCallResult> {
   const startedAt = Date.now();
   const baseUrl = requireBaseUrl(provider.baseUrl);
   const apiKey = getProviderApiKey(provider);
@@ -600,7 +600,7 @@ async function callOllamaCompatible(
   temperature: number | null,
   maxTokens: number | null,
   timeoutSeconds: number
-): Promise<ProviderCallResult> {
+): Promise<DailyContentDraftProviderCallResult> {
   const startedAt = Date.now();
   const baseUrl = requireBaseUrl(provider.baseUrl);
   const response = await fetchWithTimeout(
@@ -838,6 +838,6 @@ function sha256(value: string) {
   return createHash("sha256").update(value).digest("hex");
 }
 
-type ProviderWithSecrets = NonNullable<Awaited<ReturnType<typeof prisma.llmProvider.findUnique>>> & {
+export type ProviderWithSecrets = NonNullable<Awaited<ReturnType<typeof prisma.llmProvider.findUnique>>> & {
   secrets: Array<{ secretKind: string; encryptedValue: string }>;
 };

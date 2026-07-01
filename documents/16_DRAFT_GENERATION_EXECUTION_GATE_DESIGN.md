@@ -786,3 +786,17 @@ Patch 9F-3O-prep blocks direct `draftMarkdown` persistence until a controlled ca
 Next candidate gate:
 
 - `9F-3I-R1 — gated redispatch with candidate text artifact`, or an explicitly approved manual candidate text import path.
+
+## Patch 9F-3I-R1 Candidate Text Redispatch
+
+Patch 9F-3I-R1 creates the missing controlled Markdown candidate artifact through a separate gated redispatch path.
+
+- Route: `POST /api/daily-content-plans/draft-generation-candidate-text-redispatch`.
+- Default preview mode is read-only.
+- Execute mode requires feature flag, exact confirmation phrase, idempotency key, operator approval, linked fixture planned/no-draft state, and LLM route/model readiness.
+- It may create a new redispatch attempt and controlled candidate artifact, but it does not write `content_items`.
+- After success, output validation and mutation preview can use the artifact hash/length while still withholding the full body from responses.
+
+Next candidate gate:
+
+- `9F-3O — Gated draftMarkdown persistence` after candidate policy, validation, acceptance, and mutation preview pass.

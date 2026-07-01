@@ -406,3 +406,14 @@ Next patch candidate:
 Next patch candidate:
 
 - `9F-3I-R1 — gated redispatch with candidate text artifact`, or an explicitly approved manual candidate text import path.
+
+## Patch 9F-3I-R1 Candidate Text Redispatch Audit Semantics
+
+9F-3I-R1 may create a second dispatch attempt dedicated to controlled candidate text storage.
+
+- Attempt purpose: `daily_content_draft_generation_candidate_text_redispatch`.
+- Candidate artifact kind: `llm_candidate_markdown_text`.
+- Candidate artifact storage mode: `controlled_candidate_text`.
+- The full Markdown body may be stored in the artifact row for later server-side validation/persistence, but API/UI responses must return only hash, length, artifact ids, and safe metadata.
+- It may create one `llm_call_logs` row, one response event, one hash-only response metadata artifact, and one controlled candidate text artifact.
+- It must keep `contentMutationAttempted=false`, `draftMutationAttempted=false`, and `bloggerWriteAttempted=false`.

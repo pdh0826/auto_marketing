@@ -2,10 +2,13 @@ import {
   buildDailyContentDraftGenerationLlmDispatchResponseReadbackResponse,
   type DailyContentDraftGenerationLlmDispatchResponseReadbackResponse
 } from "@/lib/daily-content-plans/draft-generation-llm-dispatch-response-readback";
+import { prisma } from "@/lib/db/client";
 
 const PATCH_VERSION = "9F-3K";
 const PREVIEW_MODE = "read_only_draft_generation_llm_output_quality_validation_preview";
 const VALIDATION_VERSION = "daily_content_draft_generation_llm_output_quality_validation_preview_v0";
+const CANDIDATE_ARTIFACT_KIND = "llm_candidate_markdown_text";
+const CANDIDATE_STORAGE_MODE = "controlled_candidate_text";
 
 type ValidationPreviewMode = "preview" | "blocked_non_preview";
 type ResponseReadbackSummary =
@@ -50,7 +53,7 @@ export interface OutputQualityValidationSummary {
   responseHashPrefix: string | null;
   responseLength: number | null;
   candidateMarkdownAvailable: boolean;
-  candidateMarkdownSource: "not_stored_by_9f3i_policy" | "future_redacted_candidate_artifact";
+  candidateMarkdownSource: "not_stored_by_9f3i_policy" | "controlled_candidate_text_artifact";
   canRunFullMarkdownValidation: boolean;
   validationReady: boolean;
   deterministicValidationOnly: true;
@@ -117,7 +120,7 @@ export async function buildDailyContentDraftGenerationLlmOutputQualityValidation
     contentItemId: request.contentItemId
   });
   const readbackSummary = responseReadback.draftGenerationLlmDispatchResponseReadbackSummary;
-  const outputQualityValidationSummary = buildOutputQualityValidationSummary(readbackSummary);
+  const outputQualityValidationSummary = await buildOutputQualityValidationSummary(readbackSummary);
   const blockingReasons = new Set<string>();
 
   if (request.mode !== "preview") {
@@ -192,26 +195,47 @@ function getString(value: unknown) {
   return typeof value === "string" && value.trim() ? value.trim() : null;
 }
 
-function buildOutputQualityValidationSummary(readbackSummary: ResponseReadbackSummary): OutputQualityValidationSummary {
+async function buildOutputQualityValidationSummary(readbackSummary: ResponseReadbackSummary): Promise<OutputQualityValidationSummary> {
   const response = readbackSummary.responseReadbackSummary;
-  const candidateMarkdownAvailable = false;
-  const checks = buildChecks({ responseReceived: response.providerResponseReceived, candidateMarkdownAvailable });
+  const candidateArtifact = response.latestAttemptId
+    ? await prisma.blogDailyContentLlmDispatchArtifact.findFirst({
+        where: {
+          attemptId: response.latestAttemptId,
+          artifactKind: CANDIDATE_ARTIFACT_KIND,
+          artifactStorageMode: CANDIDATE_STORAGE_MODE
+        },
+        orderBy: { createdAt: "desc" },
+        select: {
+          artifactHash: true,
+          artifactPreview: true
+        }
+      })
+    : null;
+  const candidateMarkdown = candidateArtifact?.artifactPreview?.trim() ?? "";
+  const candidateMarkdownAvailable = candidateMarkdown.length > 0;
+  const checks = buildChecks({ responseReceived: response.providerResponseReceived, candidateMarkdownAvailable, candidateMarkdown });
   const passCount = checks.filter((check) => check.status === "pass").length;
   const warnCount = checks.filter((check) => check.status === "warn").length;
   const blockedCount = checks.filter((check) => check.status === "blocked").length;
   const notApplicableCount = checks.filter((check) => check.status === "not_applicable").length;
+  const requiredBlockedCount = checks.filter((check) => check.required && check.status === "blocked").length;
 
   return {
     validationVersion: VALIDATION_VERSION,
     sourceReadbackPatchVersion: "9F-3J",
     latestAttemptId: response.latestAttemptId,
     latestAttemptStatus: response.latestAttemptStatus,
-    responseHashPrefix: response.responseArtifact?.artifactHashPrefix ?? response.responseEvent?.responseHashPrefix ?? response.latestLlmCallLog?.responseHashPrefix ?? null,
-    responseLength: response.responseEvent?.responseLength ?? response.latestLlmCallLog?.responseLength ?? null,
+    responseHashPrefix:
+      candidateArtifact?.artifactHash.slice(0, 16) ??
+      response.responseArtifact?.artifactHashPrefix ??
+      response.responseEvent?.responseHashPrefix ??
+      response.latestLlmCallLog?.responseHashPrefix ??
+      null,
+    responseLength: candidateMarkdownAvailable ? candidateMarkdown.length : response.responseEvent?.responseLength ?? response.latestLlmCallLog?.responseLength ?? null,
     candidateMarkdownAvailable,
-    candidateMarkdownSource: "not_stored_by_9f3i_policy",
-    canRunFullMarkdownValidation: false,
-    validationReady: candidateMarkdownAvailable && blockedCount === 0,
+    candidateMarkdownSource: candidateMarkdownAvailable ? "controlled_candidate_text_artifact" : "not_stored_by_9f3i_policy",
+    canRunFullMarkdownValidation: candidateMarkdownAvailable,
+    validationReady: candidateMarkdownAvailable && requiredBlockedCount === 0,
     deterministicValidationOnly: true,
     llmJudgeUsed: false,
     checks,
@@ -225,12 +249,19 @@ function buildOutputQualityValidationSummary(readbackSummary: ResponseReadbackSu
     secretOrTokenStoredOrReturned: false,
     contentItemSnapshot: response.contentItemSnapshot,
     nextSafePatchCandidate: "9F-3L",
-    nextSafePatchPurpose: "Persist the blocked validation preview as an audit event/artifact without content mutation, or add an explicitly approved candidate text artifact policy first."
+    nextSafePatchPurpose: candidateMarkdownAvailable
+      ? "Persist the validation preview as an audit event/artifact without content mutation."
+      : "Persist the blocked validation preview as an audit event/artifact without content mutation, or add an explicitly approved candidate text artifact policy first."
   };
 }
 
-function buildChecks(input: { responseReceived: boolean; candidateMarkdownAvailable: boolean }): OutputQualityValidationCheck[] {
+function buildChecks(input: { responseReceived: boolean; candidateMarkdownAvailable: boolean; candidateMarkdown: string }): OutputQualityValidationCheck[] {
   const candidateBlockedMessage = "Full Markdown candidate text is not stored by the 9F-3I policy, so this check cannot inspect generated content.";
+  const headingCount = countMarkdownHeadings(input.candidateMarkdown);
+  const hasKorean = /[가-힣]/.test(input.candidateMarkdown);
+  const hasForbiddenPhrase = /(죄송합니다|AI\s*언어\s*모델|투자\s*수익을\s*보장|무조건\s*상승)/i.test(input.candidateMarkdown);
+  const hasCta = /(확인해보세요|점검해보세요|비교해보세요|댓글|문의|상담|체크)/i.test(input.candidateMarkdown);
+  const hasFaq = /(FAQ|자주\s*묻는\s*질문|Q\.|질문)/i.test(input.candidateMarkdown);
   return [
     {
       key: "provider_response_metadata",
@@ -249,44 +280,44 @@ function buildChecks(input: { responseReceived: boolean; candidateMarkdownAvaila
     {
       key: "markdown_structure",
       label: "Markdown structure",
-      status: input.candidateMarkdownAvailable ? "not_applicable" : "blocked",
+      status: input.candidateMarkdownAvailable ? (headingCount >= 2 && input.candidateMarkdown.length >= 500 ? "pass" : "warn") : "blocked",
       required: true,
-      message: candidateBlockedMessage
+      message: input.candidateMarkdownAvailable ? "Candidate Markdown has inspectable structure metadata." : candidateBlockedMessage
     },
     {
       key: "korean_readability_heuristics",
       label: "Korean readability heuristics",
-      status: input.candidateMarkdownAvailable ? "not_applicable" : "blocked",
+      status: input.candidateMarkdownAvailable ? (hasKorean ? "pass" : "warn") : "blocked",
       required: false,
-      message: candidateBlockedMessage
+      message: input.candidateMarkdownAvailable ? "Candidate Markdown was checked with deterministic Korean readability heuristics." : candidateBlockedMessage
     },
     {
       key: "seo_headings",
       label: "SEO headings",
-      status: input.candidateMarkdownAvailable ? "not_applicable" : "blocked",
+      status: input.candidateMarkdownAvailable ? (headingCount >= 2 ? "pass" : "warn") : "blocked",
       required: true,
-      message: candidateBlockedMessage
+      message: input.candidateMarkdownAvailable ? "Candidate Markdown heading shape was checked." : candidateBlockedMessage
     },
     {
       key: "policy_forbidden_phrases",
       label: "Policy forbidden phrases",
-      status: input.candidateMarkdownAvailable ? "not_applicable" : "blocked",
+      status: input.candidateMarkdownAvailable ? (hasForbiddenPhrase ? "blocked" : "pass") : "blocked",
       required: true,
-      message: candidateBlockedMessage
+      message: input.candidateMarkdownAvailable ? "Candidate Markdown was scanned for blocked phrases." : candidateBlockedMessage
     },
     {
       key: "cta_faq_requirements",
       label: "CTA and FAQ requirements",
-      status: input.candidateMarkdownAvailable ? "not_applicable" : "blocked",
+      status: input.candidateMarkdownAvailable ? (hasCta && hasFaq ? "pass" : "warn") : "blocked",
       required: true,
-      message: candidateBlockedMessage
+      message: input.candidateMarkdownAvailable ? "CTA and FAQ presence were checked deterministically." : candidateBlockedMessage
     },
     {
       key: "blogger_compatibility",
       label: "Blogger compatibility",
-      status: input.candidateMarkdownAvailable ? "not_applicable" : "blocked",
+      status: input.candidateMarkdownAvailable ? "pass" : "blocked",
       required: true,
-      message: candidateBlockedMessage
+      message: input.candidateMarkdownAvailable ? "Candidate Markdown is plain text and ready for later HTML conversion preview." : candidateBlockedMessage
     },
     {
       key: "redaction_boundary",
@@ -296,6 +327,12 @@ function buildChecks(input: { responseReceived: boolean; candidateMarkdownAvaila
       message: "Preview returns metadata only and does not expose raw prompt, raw response, or full candidate text."
     }
   ];
+}
+
+function countMarkdownHeadings(markdown: string) {
+  return markdown
+    .split(/\r?\n/)
+    .filter((line) => /^#{1,3}\s+\S/.test(line.trim())).length;
 }
 
 function buildSideEffectSummary(): DailyContentDraftGenerationLlmOutputQualityValidationPreviewSideEffectSummary {
