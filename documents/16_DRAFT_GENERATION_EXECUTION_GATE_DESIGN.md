@@ -860,3 +860,17 @@ Patch 9F-3R verifies the post-HTML-persistence state before approval refresh.
 Next candidate gate:
 
 - `9F-3S — Blogger draft payload approval refresh`.
+
+## Patch 9F-3R-FIX1 Saved draftHtml Finance-Risk Repair Preview
+
+Patch 9F-3R-FIX1 repairs the blocker discovered by 9F-3R without writing content.
+
+- Route: `POST /api/daily-content-plans/draft-html-finance-risk-repair-preview`.
+- It scans saved `draftHtml` for finance risky phrases and builds a deterministic replacement candidate.
+- It does not persist the candidate HTML.
+- It reports before/after quality summaries and safe candidate hash/length metadata.
+- LLM calls, Blogger calls, audit mutations, and content mutations remain disabled.
+
+Next candidate gate:
+
+- `9F-3R-FIX2 — gated finance-risk repaired draftHtml persistence`.

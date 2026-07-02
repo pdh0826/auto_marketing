@@ -1241,3 +1241,12 @@ Patch 9F-3R is a read-only local readiness aggregation.
 - It does not create `llm_call_logs`.
 - It does not mutate LLM dispatch audit tables.
 - It reads saved `draftHtml` and local DB metadata only.
+
+## Patch 9F-3R-FIX1 finance-risk repair preview boundary
+
+Patch 9F-3R-FIX1 is deterministic and local.
+
+- It does not call an LLM provider.
+- It does not create `llm_call_logs`.
+- It does not mutate LLM dispatch audit tables.
+- It builds a rule-based HTML repair candidate for finance-risk wording.

@@ -454,3 +454,11 @@ Next patch candidate:
 - It reads saved content and safe Blogger DB metadata.
 - It does not create or mutate dispatch attempts, dispatch events, dispatch artifacts, or `llm_call_logs`.
 - It does not call Blogger APIs.
+
+## Patch 9F-3R-FIX1 Finance-Risk Repair Preview Audit Semantics
+
+9F-3R-FIX1 is read-only and deterministic.
+
+- It does not create or mutate dispatch attempts, dispatch events, dispatch artifacts, or `llm_call_logs`.
+- It does not store the repaired HTML candidate as an audit artifact.
+- Blogger API calls remain disabled.

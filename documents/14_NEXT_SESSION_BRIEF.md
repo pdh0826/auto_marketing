@@ -1,5 +1,30 @@
 # 14_NEXT_SESSION_BRIEF
 
+## Current State: Patch 9F-3R-FIX1 Implemented
+
+```text
+repo: ~/blog-growth-agent
+branch: master
+expected HEAD after 9F-3R-FIX1 commit: local commit `Add daily draftHtml finance-risk repair preview` (verify exact hash with `git log --oneline -8`)
+```
+
+9F-3R-FIX1 adds a read-only repair preview for the `finance_risky_phrases` blocker:
+
+- Route used: `POST /api/daily-content-plans/draft-html-finance-risk-repair-preview`
+- Runtime preview found risky phrase `매수 추천` twice in saved `draftHtml`.
+- Candidate replacement: `매수 추천` -> `매수 여부를 판단할 때 참고할 점`
+- Candidate HTML length/hash: `1716` / `a6c57bbefe1788d82f7030ee92c71a034211f139c274f992ff4c7a331d7531c2`
+- Before quality: `ready=false`, `grade=fail`, `scorePreview=76`, `requiredFailCount=1`, failed required check `finance_risky_phrases`
+- After quality: `ready=true`, `grade=warn`, `scorePreview=96`, `requiredFailCount=0`, failed required checks `[]`
+- Candidate HTML is not returned by default and is not persisted.
+- No content item mutation, LLM/provider call, `llm_call_logs` mutation, dispatch audit row mutation, Blogger API read/write, publish, schedule, OAuth reconnect, or token refresh occurred.
+- Post-preview DB state remains `draftMarkdown` length `1141`, `draftHtml` length `1690`, status `planned`, `qualityScore=null`, `publishedAt=null`, `scheduledAt=null`.
+
+Next recommended patch:
+
+- `9F-3R-FIX2 — gated finance-risk repaired draftHtml persistence`
+- This is a content item mutation and requires explicit approval before execution.
+
 ## Current State: Patch 9F-3R Implemented
 
 ```text

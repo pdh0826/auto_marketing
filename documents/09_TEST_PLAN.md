@@ -2014,3 +2014,13 @@ Safety guard:
 - Counts should remain attempts/events/artifacts/llm_call_logs/blogger_draft_saves/blogger_publish_execution_attempts `2/3/4/24/1/1`.
 - Runtime smoke result: quality `grade=fail`, `requiredFailCount=1`, failed required check `finance_risky_phrases`; publish readiness `contentReady=false`, `stage=quality_not_passed`; draft payload `draftPayloadReady=false`.
 - `9F-3S` must remain blocked until the saved HTML is repaired or regenerated so required quality failures are zero.
+
+## Patch 9F-3R-FIX1 saved draftHtml finance-risk repair preview 검증
+
+- `POST /api/daily-content-plans/draft-html-finance-risk-repair-preview`는 saved `draftHtml`을 읽어 finance-risk phrase repair candidate를 preview-only로 생성해야 한다.
+- 기본 응답은 full candidate HTML body를 반환하지 않아야 하며, 저장도 하지 않아야 한다.
+- Runtime smoke should find `매수 추천` and produce replacement text `매수 여부를 판단할 때 참고할 점`.
+- Expected after-quality result: `ready=true`, `grade=warn`, `requiredFailCount=0`, `failedRequiredCheckKeys=[]`.
+- Side effects should remain false for DB write, content mutation, `draftMarkdown` mutation, `draftHtml` mutation, status/quality/publish timestamp mutation, audit row mutation, `llm_call_logs` mutation, Blogger API read/write, draft save, publish, OAuth reconnect, and token refresh.
+- Post-preview DB state should remain: fixture `draftMarkdown` length `1141`, `draftHtml` length `1690`, status `planned`, `qualityScore/publishedAt/scheduledAt=null`.
+- Counts should remain attempts/events/artifacts/llm_call_logs/blogger_draft_saves/blogger_publish_execution_attempts `2/3/4/24/1/1`.

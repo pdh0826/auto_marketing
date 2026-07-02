@@ -1,5 +1,21 @@
 # 13_CHANGELOG
 
+## Patch 9F-3R-FIX1 Saved draftHtml Finance-Risk Repair Preview
+
+Implemented after Patch 9F-3R:
+
+- Added `POST /api/daily-content-plans/draft-html-finance-risk-repair-preview`.
+- The route scans saved `draftHtml` for the required-check `finance_risky_phrases` blocker and builds a deterministic repair candidate.
+- Runtime preview found `매수 추천` twice and replaces it with `매수 여부를 판단할 때 참고할 점`.
+- The candidate improves quality from `grade=fail`, `requiredFailCount=1` to `grade=warn`, `requiredFailCount=0`.
+- Candidate HTML is not returned by default and is not persisted.
+
+Policy:
+
+- 9F-3R-FIX1 is read-only and does not mutate `content_items`.
+- Blogger API calls, draft save, publish/schedule, OAuth reconnect, token refresh, provider calls, LLM calls, `llm_call_logs`, and dispatch audit row mutations are not performed.
+- Recommended next patch: `9F-3R-FIX2 — gated finance-risk repaired draftHtml persistence`.
+
 ## Patch 9F-3R Saved draftHtml Readiness Readback
 
 Implemented after Patch 9F-3Q:
