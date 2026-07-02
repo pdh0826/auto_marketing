@@ -59,6 +59,26 @@ Next recommended patch:
 
 - `9F-3T — daily Blogger draft save preflight`.
 
+## Current State: Patch 9F-3T Completed And 9F-3U Blocked
+
+9F-3T ran the daily Blogger draft save preflight:
+
+- Route used: `POST /api/content-items/daily_fixture_cmqlr1v1y0001iwj2gpv2875r/blogger-draft-save-preflight`
+- `draftPayloadReady=true`
+- approval snapshot matches current preview
+- selected Blogger blog is ready
+- duplicate save is not the blocker
+- `canSaveDraft=false`
+- blocking reason: `access_token_expired_reauth_required`
+
+9F-3U guarded Blogger draft save execution was not run because preflight did not pass.
+
+Next required action:
+
+- Complete Blogger OAuth reconnect or an explicitly approved token refresh/reconnect patch.
+- After OAuth is valid, rerun 9F-3T preflight.
+- Only if `canSaveDraft=true`, proceed to 9F-3U guarded draft save execution.
+
 ## Current State: Patch 9F-3R-FIX3 Implemented
 
 ```text

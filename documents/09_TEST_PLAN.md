@@ -2077,3 +2077,11 @@ Safety guard:
 - Post-approval saved draftHtml readback should report `manualApprovalStatus=approved`, `bloggerDraftApprovalMatchesCurrentPreview=true`, `draftPayloadReady=true`, and remaining blocker `blogger_draft_saved`.
 - Content item `draftMarkdown`, `draftHtml`, status, `qualityScore`, `publishedAt`, `scheduledAt` must remain unchanged.
 - Blogger API write/read, draft save, publish, OAuth reconnect, token refresh, LLM calls, and `llm_call_logs` mutation must not occur.
+
+## Patch 9F-3T daily Blogger draft save preflight 검증
+
+- `POST /api/content-items/daily_fixture_cmqlr1v1y0001iwj2gpv2875r/blogger-draft-save-preflight`는 saved draftHtml, approval snapshot, selected Blogger blog, duplicate save, and OAuth token status를 read-only로 확인해야 한다.
+- Current result: `canSaveDraft=false`, blocking reason `access_token_expired_reauth_required`.
+- `draftPayloadReady=true`, approval snapshot matches current preview, duplicate save is not the current blocker.
+- Since preflight is blocked, `POST /api/content-items/[id]/blogger-draft-save` must not be called.
+- Side effects should remain false for Blogger API write, Blogger draft save, publish, scheduled publish, token refresh, LLM call, and content item mutation.

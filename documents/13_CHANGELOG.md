@@ -47,6 +47,21 @@ Policy:
 - This patch writes only the local Blogger draft approval row.
 - No content item mutation, Blogger API call, draft save, publish/schedule, OAuth reconnect, token refresh, LLM call, or `llm_call_logs` mutation occurred.
 
+## Patch 9F-3T Daily Blogger Draft Save Preflight
+
+Completed after Patch 9F-3S:
+
+- Ran `POST /api/content-items/daily_fixture_cmqlr1v1y0001iwj2gpv2875r/blogger-draft-save-preflight`.
+- Saved `draftHtml`, draft payload readiness, selected Blogger blog, and approval snapshot are ready.
+- Preflight returned `canSaveDraft=false` because the connected Blogger access token is expired.
+- Blocking reason: `access_token_expired_reauth_required`.
+- Because preflight did not pass, guarded Blogger draft save execution was not run.
+
+Policy:
+
+- Preflight is read-only.
+- No Blogger draft save, publish/schedule, OAuth reconnect, token refresh, LLM call, or content item mutation occurred.
+
 ## Patch 9F-3R-FIX3 Daily Draft Payload Blocker Diagnosis
 
 Implemented after Patch 9F-3R-FIX2:
