@@ -1,5 +1,21 @@
 # 13_CHANGELOG
 
+## Patch 9F-3R-FIX4 Gated Daily Content Item Blog Target Assignment
+
+Implemented after Patch 9F-3R-FIX3:
+
+- Added `POST /api/daily-content-plans/blog-target-assignment`.
+- Preview mode recomputes the draft payload blocker diagnosis and checks whether the proposed Blog target still matches the safe diagnosis.
+- Apply mode requires `BLOG_DAILY_CONTENT_BLOG_TARGET_ASSIGNMENT_ENABLED=true`, exact confirmation phrase, idempotency key, expected current `blogId`, expected saved draft hashes, expected Blog id, expected Blogger connection id, and expected Blogger blog id.
+- Apply mode writes only `content_items.blogId`.
+- Approved one-time apply linked the daily fixture content item to Blog `급등포착 블로그` (`cmqc0ugaz00001yek2ve7fv3x`).
+- Duplicate apply is blocked after `blogId` is already present and performs no second write.
+
+Policy:
+
+- `draftMarkdown`, `draftHtml`, status, `qualityScore`, `publishedAt`, and `scheduledAt` are not changed.
+- Blogger API calls, draft save, publish/schedule, OAuth reconnect, token refresh, provider calls, LLM calls, `llm_call_logs`, and dispatch audit row mutations are not performed.
+
 ## Patch 9F-3R-FIX3 Daily Draft Payload Blocker Diagnosis
 
 Implemented after Patch 9F-3R-FIX2:

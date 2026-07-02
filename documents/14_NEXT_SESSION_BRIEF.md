@@ -1,5 +1,26 @@
 # 14_NEXT_SESSION_BRIEF
 
+## Current State: Patch 9F-3R-FIX4 Implemented
+
+```text
+repo: ~/blog-growth-agent
+branch: master
+expected HEAD after 9F-3R-FIX4 commit: local commit `Assign daily content item Blog target` (verify exact hash with `git log --oneline -8`)
+```
+
+9F-3R-FIX4 links the daily fixture content item to the active Blog profile through an explicit gate:
+
+- Route used: `POST /api/daily-content-plans/blog-target-assignment`
+- Apply mode requires feature flag, exact confirmation phrase, idempotency key, expected current `blogId`, saved draft hashes, target Blog id, Blogger connection id, and selected Blogger blog id.
+- The only intended mutation is `content_items.blogId`.
+- Approved one-time apply linked fixture `daily_fixture_cmqlr1v1y0001iwj2gpv2875r` to Blog `cmqc0ugaz00001yek2ve7fv3x` (`급등포착 블로그`).
+- Fixture after apply: `draftMarkdown` hash `fb5fa8203eb830abd03b2d77dd52d70694f888a61882bd76f42932ad903c44b0`, `draftHtml` hash `a6c57bbefe1788d82f7030ee92c71a034211f139c274f992ff4c7a331d7531c2`, status `planned`, `qualityScore=null`, `publishedAt=null`, `scheduledAt=null`.
+- No draft Markdown/HTML, status, quality score, publish timestamp, Blogger, LLM, token, or audit mutation is allowed.
+
+Next recommended patch:
+
+- `9F-3R-R2 — saved draftHtml readiness readback after Blog target assignment`.
+
 ## Current State: Patch 9F-3R-FIX3 Implemented
 
 ```text

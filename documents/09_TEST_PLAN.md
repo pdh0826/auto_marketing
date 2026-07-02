@@ -2051,3 +2051,13 @@ Safety guard:
 - Post-diagnosis DB state should remain fixture `draftMarkdown` length/hash `1141/fb5fa8203eb830abd03b2d77dd52d70694f888a61882bd76f42932ad903c44b0`, `draftHtml` length/hash `1716/a6c57bbefe1788d82f7030ee92c71a034211f139c274f992ff4c7a331d7531c2`, status `planned`, `qualityScore/publishedAt/scheduledAt=null`.
 - Counts should remain attempts/events/artifacts/llm_call_logs/blogger_draft_saves/blogger_publish_execution_attempts `2/3/4/24/1/1`.
 - Runtime smoke result: target `blogId=null`, quality `ready=true`, `grade=warn`, required fail `0`, draft payload blockers `blog_profile_missing` and `blogger_connection_not_configured`, viable target candidate count `1`, `recommendedNextPatch=9F-3R-FIX4`, proposed Blog `cmqc0ugaz00001yek2ve7fv3x`, proposed Blogger connection `cmqfst8vc0001iwrpi1qu8oj2`.
+
+## Patch 9F-3R-FIX4 gated Blog target assignment 검증
+
+- `POST /api/daily-content-plans/blog-target-assignment`는 기본 preview에서 DB write 없이 assignment 가능 여부만 반환해야 한다.
+- Apply mode는 `BLOG_DAILY_CONTENT_BLOG_TARGET_ASSIGNMENT_ENABLED=true`, exact confirmation phrase, idempotency key, expected current `blogId=null`, expected saved draft hashes, expected Blog id, expected Blogger connection id, expected Blogger blog id가 모두 만족될 때만 허용된다.
+- 성공 시 `content_items.blogId`만 변경되어야 한다.
+- `draftMarkdown`, `draftHtml`, status, `qualityScore`, `publishedAt`, `scheduledAt`, Blogger tables, `llm_call_logs`, LLM dispatch audit rows는 변경되면 안 된다.
+- Repeated apply should be blocked by `content_item_blog_id_already_present` and must not write again.
+- Approved one-time apply result: fixture `blogId=cmqc0ugaz00001yek2ve7fv3x`, `draftMarkdown` length/hash `1141/fb5fa8203eb830abd03b2d77dd52d70694f888a61882bd76f42932ad903c44b0`, `draftHtml` length/hash `1716/a6c57bbefe1788d82f7030ee92c71a034211f139c274f992ff4c7a331d7531c2`, status `planned`, `qualityScore/publishedAt/scheduledAt=null`.
+- Post-apply counts should remain attempts/events/artifacts/llm_call_logs/blogger_draft_saves/blogger_publish_execution_attempts/blogger_draft_approvals `2/3/4/24/1/1/1`.
