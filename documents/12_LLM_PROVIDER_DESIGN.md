@@ -1260,3 +1260,12 @@ Patch 9F-3R-FIX2 persists deterministic repair output without invoking a provide
 - It writes only `content_items.draftHtml`.
 - It does not mutate LLM dispatch audit tables.
 - Runtime apply left `llm_call_logs` unchanged at `24` and did not create provider/network calls.
+
+## Patch 9F-3R-FIX3 draft payload blocker diagnosis boundary
+
+Patch 9F-3R-FIX3 is a local read-only diagnosis.
+
+- It does not call an LLM provider.
+- It does not create `llm_call_logs`.
+- It does not mutate `content_items`, Blogger connections, or dispatch audit tables.
+- It does not return full saved Markdown/HTML bodies.

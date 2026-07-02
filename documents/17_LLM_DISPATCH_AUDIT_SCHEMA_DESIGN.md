@@ -472,3 +472,12 @@ Next patch candidate:
 - It does not store full repaired HTML as an audit artifact.
 - Blogger API calls remain disabled.
 - Runtime apply left dispatch counts unchanged at attempts/events/artifacts `2/3/4` and `llm_call_logs=24`.
+
+## Patch 9F-3R-FIX3 Draft Payload Blocker Diagnosis Audit Semantics
+
+9F-3R-FIX3 is read-only and does not participate in LLM dispatch audit persistence.
+
+- It does not create or mutate dispatch attempts, dispatch events, dispatch artifacts, or `llm_call_logs`.
+- It reads saved content, Blog profile, and Blogger connection metadata only.
+- It does not store full Markdown/HTML bodies as audit artifacts.
+- Blogger API calls remain disabled.

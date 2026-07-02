@@ -891,3 +891,17 @@ Patch 9F-3R-FIX2 applies the deterministic repair candidate from 9F-3R-FIX1.
 Next candidate gate:
 
 - Resolve the remaining draft payload blockers before moving to a refreshed Blogger approval gate.
+
+## Patch 9F-3R-FIX3 Draft Payload Blocker Diagnosis
+
+Patch 9F-3R-FIX3 explains the remaining blockers after finance-risk repair.
+
+- Route: `POST /api/daily-content-plans/draft-payload-blocker-diagnosis`.
+- It is read-only and reuses saved draftHtml readiness readback.
+- It maps blockers such as `blog_profile_missing`, `blogger_connection_not_configured`, `manual_approval`, and `draft_payload_not_ready` to safe next actions.
+- It lists safe Blog/Blogger target candidates without returning secrets, tokens, encrypted values, full Markdown, or full HTML.
+- It may propose a future mutation preview for `content_items.blogId`, but does not perform that mutation.
+
+Next candidate gate:
+
+- `9F-3R-FIX4 — gated daily content item Blog target assignment`.

@@ -2038,3 +2038,16 @@ Safety guard:
 - Duplicate apply smoke result should include `expected_current_draft_html_hash_mismatch`, `finance_risk_repair_preview_not_ready`, `draft_html_already_matches_repair_candidate`, `repairedDraftHtmlPersistedNow=false`, `dbWrite=false`, and `draftHtmlMutation=false`.
 - Post-apply counts should remain attempts/events/artifacts/llm_call_logs/blogger_draft_saves/blogger_publish_execution_attempts `2/3/4/24/1/1`.
 - Post-apply saved draftHtml readback should report quality `ready=true`, `grade=warn`, `scorePreview=96`, `requiredFailCount=0`, failed required checks `[]`, while draft payload remains blocked by `blog_profile_missing` and `blogger_connection_not_configured`.
+
+## Patch 9F-3R-FIX3 draft payload blocker diagnosis 검증
+
+- `POST /api/daily-content-plans/draft-payload-blocker-diagnosis`는 saved draftHtml readiness readback을 재사용해 남은 draft payload blocker를 read-only로 진단해야 한다.
+- 응답은 safe Blog profile candidates, safe Blogger connection candidates, blocker/action mapping, suggested mutation preview만 반환해야 한다.
+- access token, refresh token, encrypted value, token last4, full draftMarkdown, full draftHtml, raw prompt, raw response를 반환하면 안 된다.
+- 현재 fixture에서는 quality `ready=true`, `requiredFailCount=0`인 상태에서 `blog_profile_missing` 및 `draft_payload_not_ready`가 남아야 한다.
+- 현재 fixture에서는 추천 target이 active Blog profile `급등포착 블로그`와 connected verified Blogger target `급등포착`으로 식별될 수 있다.
+- `recommendedNextPatch=9F-3R-FIX4`, suggested mutation field `content_items.blogId`, `mutationAllowedInThisPatch=false`가 정상이다.
+- Side effects should remain false for DB write, content mutation, `draftMarkdown` mutation, `draftHtml` mutation, blog profile mutation, Blogger connection mutation, status/quality/publish timestamp mutation, audit row mutation, `llm_call_logs` mutation, Blogger API read/write, draft save, publish, OAuth reconnect, and token refresh.
+- Post-diagnosis DB state should remain fixture `draftMarkdown` length/hash `1141/fb5fa8203eb830abd03b2d77dd52d70694f888a61882bd76f42932ad903c44b0`, `draftHtml` length/hash `1716/a6c57bbefe1788d82f7030ee92c71a034211f139c274f992ff4c7a331d7531c2`, status `planned`, `qualityScore/publishedAt/scheduledAt=null`.
+- Counts should remain attempts/events/artifacts/llm_call_logs/blogger_draft_saves/blogger_publish_execution_attempts `2/3/4/24/1/1`.
+- Runtime smoke result: target `blogId=null`, quality `ready=true`, `grade=warn`, required fail `0`, draft payload blockers `blog_profile_missing` and `blogger_connection_not_configured`, viable target candidate count `1`, `recommendedNextPatch=9F-3R-FIX4`, proposed Blog `cmqc0ugaz00001yek2ve7fv3x`, proposed Blogger connection `cmqfst8vc0001iwrpi1qu8oj2`.

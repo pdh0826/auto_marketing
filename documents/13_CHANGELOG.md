@@ -1,5 +1,22 @@
 # 13_CHANGELOG
 
+## Patch 9F-3R-FIX3 Daily Draft Payload Blocker Diagnosis
+
+Implemented after Patch 9F-3R-FIX2:
+
+- Added `POST /api/daily-content-plans/draft-payload-blocker-diagnosis`.
+- The route reuses saved draftHtml readiness readback and adds a read-only diagnosis for remaining draft payload blockers.
+- It reports safe Blog profile candidates, safe Blogger connection candidates, blocker-to-action mapping, and a suggested next mutation preview.
+- Current diagnosis identifies that the daily fixture content item is not linked to a Blog profile even though an active Blog profile with a connected verified Blogger target exists.
+- The recommended next patch is `9F-3R-FIX4`: a gated one-time link of the daily fixture content item to the active Blog profile.
+- Runtime smoke result: `recommendedNextPatch=9F-3R-FIX4`, suggested mutation field `content_items.blogId`, proposed Blog `급등포착 블로그`, proposed Blogger target `급등포착`, and all side-effect write flags false.
+
+Policy:
+
+- The route does not mutate `content_items.blogId`.
+- `draftMarkdown`, `draftHtml`, status, `qualityScore`, `publishedAt`, and `scheduledAt` are not changed.
+- Blogger API calls, draft save, publish/schedule, OAuth reconnect, token refresh, provider calls, LLM calls, `llm_call_logs`, and dispatch audit row mutations are not performed.
+
 ## Patch 9F-3R-FIX2 Gated Finance-Risk Repaired draftHtml Persistence
 
 Implemented after Patch 9F-3R-FIX1:
