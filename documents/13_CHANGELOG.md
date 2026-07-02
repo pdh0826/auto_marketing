@@ -16,6 +16,21 @@ Policy:
 - `draftMarkdown`, `draftHtml`, status, `qualityScore`, `publishedAt`, and `scheduledAt` are not changed.
 - Blogger API calls, draft save, publish/schedule, OAuth reconnect, token refresh, provider calls, LLM calls, `llm_call_logs`, and dispatch audit row mutations are not performed.
 
+## Patch 9F-3R-R2 Saved draftHtml Readiness Readback After Blog Target Assignment
+
+Completed after Patch 9F-3R-FIX4:
+
+- Re-ran `POST /api/daily-content-plans/saved-draft-html-readiness-readback`.
+- `draftPayloadReady=true`, `contentReady=true`, `bloggerConnectionReady=true`, and `selectedBlogReady=true`.
+- Previous blockers `blog_profile_missing` and `blogger_connection_not_configured` are resolved.
+- Remaining publish-readiness blockers are `manual_approval` and `blogger_draft_saved`, which is expected before approval refresh and draft save.
+- `canProceedTo9F3S=true`.
+
+Policy:
+
+- Readback is read-only.
+- No content item mutation, Blogger API call, draft save, publish/schedule, OAuth reconnect, token refresh, LLM call, `llm_call_logs`, or dispatch audit mutation occurred.
+
 ## Patch 9F-3R-FIX3 Daily Draft Payload Blocker Diagnosis
 
 Implemented after Patch 9F-3R-FIX2:

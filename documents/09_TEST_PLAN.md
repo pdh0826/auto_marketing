@@ -2061,3 +2061,11 @@ Safety guard:
 - Repeated apply should be blocked by `content_item_blog_id_already_present` and must not write again.
 - Approved one-time apply result: fixture `blogId=cmqc0ugaz00001yek2ve7fv3x`, `draftMarkdown` length/hash `1141/fb5fa8203eb830abd03b2d77dd52d70694f888a61882bd76f42932ad903c44b0`, `draftHtml` length/hash `1716/a6c57bbefe1788d82f7030ee92c71a034211f139c274f992ff4c7a331d7531c2`, status `planned`, `qualityScore/publishedAt/scheduledAt=null`.
 - Post-apply counts should remain attempts/events/artifacts/llm_call_logs/blogger_draft_saves/blogger_publish_execution_attempts/blogger_draft_approvals `2/3/4/24/1/1/1`.
+
+## Patch 9F-3R-R2 saved draftHtml readiness after Blog target assignment 검증
+
+- `POST /api/daily-content-plans/saved-draft-html-readiness-readback`를 다시 실행하면 `draftPayloadReady=true`, `contentReady=true`, `bloggerConnectionReady=true`, `selectedBlogReady=true`여야 한다.
+- `blog_profile_missing` 및 `blogger_connection_not_configured`가 없어야 한다.
+- `publishReadinessSummary.stage=manual_approval_required`, blocking issue keys `manual_approval`, `blogger_draft_saved`는 정상이다.
+- `nextStepSummary.canProceedTo9F3S=true`, `nextStepBlockers=[]`여야 한다.
+- Side effects should remain false for DB write, content mutation, `draftMarkdown` mutation, `draftHtml` mutation, status/quality/publish timestamp mutation, audit row mutation, `llm_call_logs` mutation, Blogger API read/write, draft save, publish, OAuth reconnect, and token refresh.

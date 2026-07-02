@@ -21,6 +21,25 @@ Next recommended patch:
 
 - `9F-3R-R2 — saved draftHtml readiness readback after Blog target assignment`.
 
+## Current State: Patch 9F-3R-R2 Completed
+
+9F-3R-R2 re-ran saved draftHtml readiness after Blog target assignment:
+
+- Route used: `POST /api/daily-content-plans/saved-draft-html-readiness-readback`
+- `draftPayloadReady=true`
+- `contentReady=true`
+- `bloggerConnectionReady=true`
+- `selectedBlogReady=true`
+- target Blogger blog: `3065973490356135805` / `급등포착`
+- publish readiness remains `ready=false`, `publishReady=false`, stage `manual_approval_required`
+- remaining expected blockers: `manual_approval`, `blogger_draft_saved`
+- `canProceedTo9F3S=true`
+- DB state remains `blogId=cmqc0ugaz00001yek2ve7fv3x`, `draftMarkdown` hash `fb5fa8203eb830abd03b2d77dd52d70694f888a61882bd76f42932ad903c44b0`, `draftHtml` hash `a6c57bbefe1788d82f7030ee92c71a034211f139c274f992ff4c7a331d7531c2`, status `planned`.
+
+Next recommended patch:
+
+- `9F-3S — refreshed Blogger draft payload approval snapshot`.
+
 ## Current State: Patch 9F-3R-FIX3 Implemented
 
 ```text
