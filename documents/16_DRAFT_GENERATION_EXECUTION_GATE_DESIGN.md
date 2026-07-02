@@ -874,3 +874,20 @@ Patch 9F-3R-FIX1 repairs the blocker discovered by 9F-3R without writing content
 Next candidate gate:
 
 - `9F-3R-FIX2 — gated finance-risk repaired draftHtml persistence`.
+
+## Patch 9F-3R-FIX2 Gated Finance-Risk Repaired draftHtml Persistence
+
+Patch 9F-3R-FIX2 applies the deterministic repair candidate from 9F-3R-FIX1.
+
+- Route: `POST /api/daily-content-plans/draft-html-finance-risk-repair-persistence`.
+- Preview mode is read-only.
+- Apply mode requires feature flag, exact confirmation phrase, idempotency key, expected current `draftHtml` hash, expected candidate HTML hash, repair preview readiness, and planned content item.
+- The server recomputes the repair candidate and does not trust caller-supplied HTML.
+- The only allowed mutation is `content_items.draftHtml`.
+- `draftMarkdown`, status, quality score, publish timestamps, audit rows, LLM calls, Blogger calls, OAuth reconnect, and token refresh remain disabled.
+- Approved one-time apply updated the saved HTML from hash `dd89e256aa4af32cf34e79f77b8309a32b1624cb0fdb0b76b6318f7d8b91a96d` to `a6c57bbefe1788d82f7030ee92c71a034211f139c274f992ff4c7a331d7531c2`.
+- Post-apply readiness readback confirms the finance-risk required check is cleared, while draft payload readiness is still blocked by blog profile/Blogger target setup.
+
+Next candidate gate:
+
+- Resolve the remaining draft payload blockers before moving to a refreshed Blogger approval gate.

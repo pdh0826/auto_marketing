@@ -1250,3 +1250,13 @@ Patch 9F-3R-FIX1 is deterministic and local.
 - It does not create `llm_call_logs`.
 - It does not mutate LLM dispatch audit tables.
 - It builds a rule-based HTML repair candidate for finance-risk wording.
+
+## Patch 9F-3R-FIX2 finance-risk repair persistence boundary
+
+Patch 9F-3R-FIX2 persists deterministic repair output without invoking a provider.
+
+- It does not call an LLM provider.
+- It does not create `llm_call_logs`.
+- It writes only `content_items.draftHtml`.
+- It does not mutate LLM dispatch audit tables.
+- Runtime apply left `llm_call_logs` unchanged at `24` and did not create provider/network calls.

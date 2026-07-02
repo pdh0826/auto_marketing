@@ -2024,3 +2024,17 @@ Safety guard:
 - Side effects should remain false for DB write, content mutation, `draftMarkdown` mutation, `draftHtml` mutation, status/quality/publish timestamp mutation, audit row mutation, `llm_call_logs` mutation, Blogger API read/write, draft save, publish, OAuth reconnect, and token refresh.
 - Post-preview DB state should remain: fixture `draftMarkdown` length `1141`, `draftHtml` length `1690`, status `planned`, `qualityScore/publishedAt/scheduledAt=null`.
 - Counts should remain attempts/events/artifacts/llm_call_logs/blogger_draft_saves/blogger_publish_execution_attempts `2/3/4/24/1/1`.
+
+## Patch 9F-3R-FIX2 gated finance-risk repaired draftHtml persistence 검증
+
+- `POST /api/daily-content-plans/draft-html-finance-risk-repair-persistence`는 기본 preview에서 DB write 없이 repair persistence 가능 여부만 반환해야 한다.
+- Apply mode는 `BLOG_DAILY_CONTENT_DRAFT_HTML_FINANCE_RISK_REPAIR_PERSISTENCE_ENABLED=true`, exact confirmation phrase, idempotency key, expected current `draftHtml` hash, expected candidate HTML hash, 9F-3R-FIX1 repair readiness, planned content item, saved `draftMarkdown`, saved `draftHtml`가 모두 만족될 때만 허용된다.
+- 성공 시 `content_items.draftHtml`만 변경되어야 한다.
+- `draftMarkdown`, status, `qualityScore`, `publishedAt`, `scheduledAt`, Blogger tables, `llm_call_logs`, LLM dispatch audit rows는 변경되면 안 된다.
+- API/UI 응답은 full candidate HTML body와 full draftMarkdown body를 반환하지 않아야 한다.
+- Repeated apply should be blocked once saved `draftHtml` already matches the repair candidate or the repair preview no longer finds a risky phrase.
+- Approved one-time apply result: fixture `draftMarkdown` length/hash `1141/fb5fa8203eb830abd03b2d77dd52d70694f888a61882bd76f42932ad903c44b0`, `draftHtml` length/hash `1716/a6c57bbefe1788d82f7030ee92c71a034211f139c274f992ff4c7a331d7531c2`, status `planned`, `qualityScore/publishedAt/scheduledAt=null`.
+- Apply response: `repairedDraftHtmlPersistedNow=true`, `appliedField=draftHtml`, after quality `ready=true`, `grade=warn`, `requiredFailCount=0`, and full HTML/Markdown bodies not returned.
+- Duplicate apply smoke result should include `expected_current_draft_html_hash_mismatch`, `finance_risk_repair_preview_not_ready`, `draft_html_already_matches_repair_candidate`, `repairedDraftHtmlPersistedNow=false`, `dbWrite=false`, and `draftHtmlMutation=false`.
+- Post-apply counts should remain attempts/events/artifacts/llm_call_logs/blogger_draft_saves/blogger_publish_execution_attempts `2/3/4/24/1/1`.
+- Post-apply saved draftHtml readback should report quality `ready=true`, `grade=warn`, `scorePreview=96`, `requiredFailCount=0`, failed required checks `[]`, while draft payload remains blocked by `blog_profile_missing` and `blogger_connection_not_configured`.

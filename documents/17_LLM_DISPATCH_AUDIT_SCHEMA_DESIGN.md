@@ -462,3 +462,13 @@ Next patch candidate:
 - It does not create or mutate dispatch attempts, dispatch events, dispatch artifacts, or `llm_call_logs`.
 - It does not store the repaired HTML candidate as an audit artifact.
 - Blogger API calls remain disabled.
+
+## Patch 9F-3R-FIX2 Finance-Risk Repair Persistence Audit Semantics
+
+9F-3R-FIX2 is a content item mutation, not an LLM dispatch audit mutation.
+
+- It writes only `content_items.draftHtml`.
+- It does not create or mutate dispatch attempts, dispatch events, dispatch artifacts, or `llm_call_logs`.
+- It does not store full repaired HTML as an audit artifact.
+- Blogger API calls remain disabled.
+- Runtime apply left dispatch counts unchanged at attempts/events/artifacts `2/3/4` and `llm_call_logs=24`.

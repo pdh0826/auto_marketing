@@ -1,5 +1,24 @@
 # 13_CHANGELOG
 
+## Patch 9F-3R-FIX2 Gated Finance-Risk Repaired draftHtml Persistence
+
+Implemented after Patch 9F-3R-FIX1:
+
+- Added `POST /api/daily-content-plans/draft-html-finance-risk-repair-persistence`.
+- The route recomputes the 9F-3R-FIX1 repair candidate server-side before any write.
+- Apply mode requires `BLOG_DAILY_CONTENT_DRAFT_HTML_FINANCE_RISK_REPAIR_PERSISTENCE_ENABLED=true`, exact confirmation phrase, idempotency key, expected current `draftHtml` hash, expected repair candidate hash, repair preview readiness, and planned content item.
+- Apply mode writes only `content_items.draftHtml`.
+- The response returns candidate hash/length and before/after lengths, not the full HTML body.
+- Approved one-time apply persisted repaired `draftHtml` length/hash `1716` / `a6c57bbefe1788d82f7030ee92c71a034211f139c274f992ff4c7a331d7531c2`.
+- Post-apply readback reports quality `ready=true`, `grade=warn`, `scorePreview=96`, `requiredFailCount=0`, and no failed required checks.
+- Duplicate apply is blocked after the saved `draftHtml` already matches the repair candidate.
+
+Policy:
+
+- `draftMarkdown`, status, `qualityScore`, `publishedAt`, and `scheduledAt` are not changed.
+- Blogger API calls, draft save, publish/schedule, OAuth reconnect, token refresh, provider calls, LLM calls, `llm_call_logs`, and dispatch audit row mutations are not performed.
+- Recommended next patch: resolve remaining draft payload blockers before `9F-3S`; current readback still reports `blog_profile_missing`, `blogger_connection_not_configured`, and `draft_payload_not_ready`.
+
 ## Patch 9F-3R-FIX1 Saved draftHtml Finance-Risk Repair Preview
 
 Implemented after Patch 9F-3R:

@@ -1,5 +1,37 @@
 # 14_NEXT_SESSION_BRIEF
 
+## Current State: Patch 9F-3R-FIX2 Implemented
+
+```text
+repo: ~/blog-growth-agent
+branch: master
+expected HEAD after 9F-3R-FIX2 commit: local commit `Persist gated finance-risk repaired draftHtml` (verify exact hash with `git log --oneline -8`)
+```
+
+9F-3R-FIX2 applies the deterministic finance-risk repair candidate from 9F-3R-FIX1:
+
+- Route used: `POST /api/daily-content-plans/draft-html-finance-risk-repair-persistence`
+- Preview mode is read-only and returns safe hash/length/check summaries only.
+- Apply mode requires `BLOG_DAILY_CONTENT_DRAFT_HTML_FINANCE_RISK_REPAIR_PERSISTENCE_ENABLED=true`, exact confirmation phrase, idempotency key, expected current `draftHtml` hash, expected candidate HTML hash, repair readiness, and planned content item.
+- The server recomputes the repair candidate and does not trust caller-provided HTML.
+- Approved one-time apply wrote only `content_items.draftHtml` for fixture content item `daily_fixture_cmqlr1v1y0001iwj2gpv2875r`.
+- Applied repaired HTML length/hash: `1716` / `a6c57bbefe1788d82f7030ee92c71a034211f139c274f992ff4c7a331d7531c2`
+- Fixture state after apply: `draftMarkdown` length/hash `1141` / `fb5fa8203eb830abd03b2d77dd52d70694f888a61882bd76f42932ad903c44b0`, `draftHtml` length/hash `1716` / `a6c57bbefe1788d82f7030ee92c71a034211f139c274f992ff4c7a331d7531c2`, status `planned`, `qualityScore=null`, `publishedAt=null`, `scheduledAt=null`.
+- Duplicate apply is blocked by stale expected-current hash plus already-matching repair candidate, without a second write.
+- Post-apply counts remain attempts/events/artifacts/llm_call_logs/blogger_draft_saves/blogger_publish_execution_attempts `2/3/4/24/1/1`.
+- No `draftMarkdown` mutation, status mutation, quality score mutation, publish timestamp mutation, LLM/provider call, `llm_call_logs` mutation, dispatch audit row mutation, Blogger write, publish, schedule, OAuth reconnect, or token refresh occurred.
+
+Post-apply readback:
+
+- Saved draftHtml quality: `ready=true`, `grade=warn`, `scorePreview=96`, `requiredFailCount=0`, failed required checks `[]`.
+- Publish readiness remains `ready=false`, `publishReady=false`; draft payload remains blocked.
+- Current draft payload blockers include `blog_profile_missing` and `blogger_connection_not_configured`.
+
+Next recommended patch:
+
+- Resolve the remaining daily fixture draft payload blockers before `9F-3S`.
+- Candidate direction: align the daily fixture with a blog profile and Blogger connection/target, then rerun saved draftHtml readiness readback before creating any refreshed Blogger approval.
+
 ## Current State: Patch 9F-3R-FIX1 Implemented
 
 ```text
