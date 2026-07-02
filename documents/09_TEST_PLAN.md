@@ -2069,3 +2069,11 @@ Safety guard:
 - `publishReadinessSummary.stage=manual_approval_required`, blocking issue keys `manual_approval`, `blogger_draft_saved`는 정상이다.
 - `nextStepSummary.canProceedTo9F3S=true`, `nextStepBlockers=[]`여야 한다.
 - Side effects should remain false for DB write, content mutation, `draftMarkdown` mutation, `draftHtml` mutation, status/quality/publish timestamp mutation, audit row mutation, `llm_call_logs` mutation, Blogger API read/write, draft save, publish, OAuth reconnect, and token refresh.
+
+## Patch 9F-3S refreshed Blogger draft payload approval snapshot 검증
+
+- `POST /api/content-items/daily_fixture_cmqlr1v1y0001iwj2gpv2875r/blogger-draft-approval`은 서버에서 current draft payload preview를 다시 계산한 뒤 approval을 생성해야 한다.
+- Approval response should report `approvalStatus=approved`, `approvalMatchesCurrentPreview=true`, current snapshot prefix `ea4df1ce3e19`, current draftHtml hash prefix `a6c57bbefe17`.
+- Post-approval saved draftHtml readback should report `manualApprovalStatus=approved`, `bloggerDraftApprovalMatchesCurrentPreview=true`, `draftPayloadReady=true`, and remaining blocker `blogger_draft_saved`.
+- Content item `draftMarkdown`, `draftHtml`, status, `qualityScore`, `publishedAt`, `scheduledAt` must remain unchanged.
+- Blogger API write/read, draft save, publish, OAuth reconnect, token refresh, LLM calls, and `llm_call_logs` mutation must not occur.

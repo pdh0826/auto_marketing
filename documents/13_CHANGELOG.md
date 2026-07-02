@@ -31,6 +31,22 @@ Policy:
 - Readback is read-only.
 - No content item mutation, Blogger API call, draft save, publish/schedule, OAuth reconnect, token refresh, LLM call, `llm_call_logs`, or dispatch audit mutation occurred.
 
+## Patch 9F-3S Refreshed Blogger Draft Payload Approval Snapshot
+
+Completed after Patch 9F-3R-R2:
+
+- Reused `POST /api/content-items/[id]/blogger-draft-approval` for the daily fixture content item.
+- The route recalculated Blogger draft payload preview server-side and created approval `cmr3joq6v00015lk6hd8umgzr`.
+- Approval snapshot prefix: `ea4df1ce3e19`.
+- Current draftHtml hash prefix: `a6c57bbefe17`.
+- Approval matches current preview: `true`.
+- Remaining expected publish-readiness blocker: `blogger_draft_saved`.
+
+Policy:
+
+- This patch writes only the local Blogger draft approval row.
+- No content item mutation, Blogger API call, draft save, publish/schedule, OAuth reconnect, token refresh, LLM call, or `llm_call_logs` mutation occurred.
+
 ## Patch 9F-3R-FIX3 Daily Draft Payload Blocker Diagnosis
 
 Implemented after Patch 9F-3R-FIX2:
