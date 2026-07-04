@@ -4,6 +4,8 @@ import { createBloggerOAuthState, consumeBloggerOAuthState, findBloggerOAuthStat
 
 const GOOGLE_OAUTH_AUTHORIZE_URL = "https://accounts.google.com/o/oauth2/v2/auth";
 const DEFAULT_BLOGGER_SCOPE = "https://www.googleapis.com/auth/blogger";
+const DEFAULT_LOCAL_BLOGGER_OAUTH_REDIRECT_ORIGIN = "http://localhost:3013";
+const BLOGGER_OAUTH_REDIRECT_ORIGIN_ENV = "BLOGGER_OAUTH_REDIRECT_ORIGIN";
 const STATE_TTL_MINUTES = 10;
 
 export interface BloggerOAuthStartDryRunInput {
@@ -89,5 +91,22 @@ export function hashOAuthState(state: string) {
 
 function buildRedirectUri(requestUrl: string) {
   const url = new URL(requestUrl);
-  return `${url.origin}/api/settings/blogger/oauth/callback`;
+  const configuredOrigin = normalizeOrigin(process.env[BLOGGER_OAUTH_REDIRECT_ORIGIN_ENV]);
+  const redirectOrigin = configuredOrigin ?? (isLocalOrigin(url) ? DEFAULT_LOCAL_BLOGGER_OAUTH_REDIRECT_ORIGIN : url.origin);
+  return `${redirectOrigin}/api/settings/blogger/oauth/callback`;
+}
+
+function normalizeOrigin(value: string | undefined) {
+  if (!value?.trim()) {
+    return null;
+  }
+  try {
+    return new URL(value.trim()).origin;
+  } catch {
+    return null;
+  }
+}
+
+function isLocalOrigin(url: URL) {
+  return url.hostname === "localhost" || url.hostname === "127.0.0.1" || url.hostname === "::1";
 }

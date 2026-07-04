@@ -1,5 +1,14 @@
 # 13_CHANGELOG
 
+## Patch: Fix Local Blogger OAuth Redirect Origin
+
+Implemented after the daily draft save preflight blocker:
+
+- Local Blogger OAuth redirect origin now defaults to `http://localhost:3013`.
+- OAuth start no longer depends on whichever localhost port the request happened to use.
+- The default generated redirect URI is `http://localhost:3013/api/settings/blogger/oauth/callback`.
+- `BLOGGER_OAUTH_REDIRECT_ORIGIN` can override the origin when intentionally changing ports.
+
 ## Patch 9F-3R-FIX4 Gated Daily Content Item Blog Target Assignment
 
 Implemented after Patch 9F-3R-FIX3:

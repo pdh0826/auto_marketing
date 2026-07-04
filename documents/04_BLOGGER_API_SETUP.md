@@ -67,6 +67,12 @@ Patch 9C-2는 OAuth callback에서 authorization code를 Google token endpoint�
 - API/UI/log에는 authorization code, access token, refresh token, client secret, encryptedValue, raw token response를 반환하거나 저장하지 않는다.
 - token refresh, Blogger API 호출, Blogger blog list 조회, draft save, publish는 아직 구현하지 않는다.
 
+## Local OAuth redirect origin
+
+- Local Blogger OAuth redirect origin defaults to `http://localhost:3013`.
+- The generated redirect URI is `http://localhost:3013/api/settings/blogger/oauth/callback`.
+- Override with `BLOGGER_OAUTH_REDIRECT_ORIGIN` only when intentionally changing the local OAuth port.
+
 ## Patch 9D-1 Blogger blog list read-only
 
 Patch 9D-1은 저장된 encrypted access token을 서버 내부에서만 복호화해 Blogger blog list를 read-only로 조회한다.
