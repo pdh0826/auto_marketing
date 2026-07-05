@@ -1,5 +1,39 @@
 # 14_NEXT_SESSION_BRIEF
 
+## Current State: Patch 9F-7D Dispatch Audit Preparation Completed
+
+The second daily fixture now has audit-only dispatch preparation rows for future LLM execution.
+
+Runtime smoke target:
+
+- Plan item: `cmqlr1v1y0002iwj27df8ac5a`.
+- Content item: `daily_fixture_cmqlr1v1y0002iwj27df8ac5a`.
+
+Created rows:
+
+- Dispatch attempt: `cmr7vhofm00015lm8rnoopfhg`.
+- Dispatch event: `cmr7vhoj500035lm8y5h0elsw`.
+- Dispatch artifact: `cmr7vhom700055lm8mn0qm9t2`.
+
+Observed result:
+
+- Attempt status: `created_pending_dispatch_gate`.
+- Event status/type: `recorded_audit_only` / `dispatch_attempt_created`.
+- Artifact kind/storage/redaction: `prompt_request_hash_bundle` / `hash_only` / `redacted_or_hash_only`.
+- Global dispatch attempts/events/artifacts are now `3 / 4 / 5`.
+- Target-scoped dispatch attempts/events/artifacts for the second fixture are now `1 / 1 / 1`.
+
+Verified side effects:
+
+- `llm_call_logs=24`.
+- Second fixture remains `planned`, `draftMarkdown` length `0`, `draftHtml` length `0`, `qualityScore=null`, `publishedAt=null`, and `scheduledAt=null`.
+- The created attempt records `llmCallAttempted=false`, `contentMutationAttempted=false`, and `draftMutationAttempted=false`.
+- No LLM completion, provider completion, content mutation, Blogger API call, draft save, publish, scheduled publish, OAuth reconnect, or token refresh occurred.
+
+Next recommended patch:
+
+- `9F-7E — second fixture final preflight / execution plan lock / gated LLM dispatch`.
+
 ## Current State: Patch 9F-7C Provider Health-check Completed
 
 The second daily fixture passed the safe provider health-check execution checkpoint.

@@ -8,6 +8,24 @@ npm run typecheck
 npm run build
 ```
 
+## Patch 9F-7D second fixture dispatch audit preparation 검증
+
+- Target plan item/content item: `cmqlr1v1y0002iwj27df8ac5a` / `daily_fixture_cmqlr1v1y0002iwj27df8ac5a`.
+- With explicit operator approval for the 9F-7 line, the existing gated audit-only routes may create exactly one dispatch attempt, one dispatch event, and one hash-only dispatch artifact for the second fixture:
+  - `POST /api/daily-content-plans/draft-generation-llm-dispatch-attempt-creation`
+  - `POST /api/daily-content-plans/draft-generation-llm-dispatch-attempt-event-creation`
+  - `POST /api/daily-content-plans/draft-generation-llm-dispatch-artifact-creation`
+- Required feature flags are the existing audit creation flags for attempt, event, and artifact rows.
+- Required confirmation phrases are the existing exact audit-only phrases for each route.
+- Expected rows after apply:
+  - attempt `cmr7vhofm00015lm8rnoopfhg`, status `created_pending_dispatch_gate`
+  - event `cmr7vhoj500035lm8y5h0elsw`, status `recorded_audit_only`
+  - artifact `cmr7vhom700055lm8mn0qm9t2`, kind `prompt_request_hash_bundle`, storage `hash_only`, redaction `redacted_or_hash_only`
+- Post-apply counts should be dispatch attempts/events/artifacts `3 / 4 / 5`.
+- Target-scoped second fixture dispatch counts should be `1 / 1 / 1`.
+- The created attempt must keep `llmCallAttempted=false`, `contentMutationAttempted=false`, and `draftMutationAttempted=false`.
+- `llm_call_logs` should remain `24`, and second fixture draft lengths/status should remain `0 / 0 / planned`.
+
 ## Patch 9F-7C second fixture provider health-check execution/readback 검증
 
 - Target plan item/content item: `cmqlr1v1y0002iwj27df8ac5a` / `daily_fixture_cmqlr1v1y0002iwj27df8ac5a`.

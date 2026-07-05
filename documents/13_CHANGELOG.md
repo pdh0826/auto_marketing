@@ -1,5 +1,21 @@
 # 13_CHANGELOG
 
+## Patch 9F-7D: Second Fixture Dispatch Audit Preparation
+
+Created the audit-only dispatch preparation rows for the second daily fixture.
+
+- Target plan item/content item: `cmqlr1v1y0002iwj27df8ac5a` / `daily_fixture_cmqlr1v1y0002iwj27df8ac5a`.
+- Created dispatch attempt `cmr7vhofm00015lm8rnoopfhg` with status `created_pending_dispatch_gate`.
+- Created dispatch event `cmr7vhoj500035lm8y5h0elsw` with type/status `dispatch_attempt_created` / `recorded_audit_only`.
+- Created dispatch artifact `cmr7vhom700055lm8mn0qm9t2` with kind/storage/redaction `prompt_request_hash_bundle` / `hash_only` / `redacted_or_hash_only`.
+- Verified global dispatch attempts/events/artifacts are now `3 / 4 / 5`.
+- Verified the second fixture target-scoped dispatch attempts/events/artifacts are now `1 / 1 / 1`.
+- Verified `llm_call_logs=24`, and the second fixture remains `planned` with empty `draftMarkdown` and `draftHtml`.
+
+Not executed:
+
+- LLM completion, provider completion, `llm_call_logs` mutation, content item mutation, `draftMarkdown`/`draftHtml` persistence, Blogger API call, draft save, publish, scheduled publish, OAuth reconnect, token refresh, deploy, push, or external service write.
+
 ## Patch 9F-7C: Second Fixture Provider Health-check
 
 Executed the safe provider health-check checkpoint for the second daily fixture.
