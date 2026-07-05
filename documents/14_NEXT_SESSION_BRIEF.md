@@ -1,8 +1,8 @@
 # 14_NEXT_SESSION_BRIEF
 
-## Current State: Patch 9F-6B Implemented, Apply Pending User Approval
+## Current State: Patch 9F-6B Apply Completed
 
-The next daily content item fixture creation/linking gate is now implemented, but the apply action has not been executed.
+The next daily content item fixture creation/linking gate has been applied once after explicit user approval.
 
 Implemented:
 
@@ -11,11 +11,19 @@ Implemented:
 - Preview mode reads the target daily plan item and reports whether it is safe to create or link the next fixture content item.
 - Apply mode is gated by `BLOG_DAILY_NEXT_CONTENT_ITEM_FIXTURE_WRITE_ENABLED=true`, exact confirmation phrase `I_UNDERSTAND_THIS_WILL_CREATE_OR_LINK_NEXT_DAILY_CONTENT_ITEM_FIXTURE`, and deterministic idempotency key `9F-6B:{planId}:{planItemId}:{contentItemId}`.
 - The only allowed apply mutation is creating one planned `content_items` fixture row and/or linking that id to the daily plan item.
+- After apply, `next-item-readiness` now selects the earliest non-published/non-scheduled plan item in item order, so the newly linked planned fixture correctly becomes the `9F-6C` target instead of skipping ahead to the next unlinked item.
+
+Approved apply result:
+
+- Created content item `daily_fixture_cmqlr1v1y0002iwj27df8ac5a`.
+- Linked daily plan item `cmqlr1v1y0002iwj27df8ac5a` to that content item.
+- New fixture title/target keyword: `급등 포착 전에 점검할 거래량과 뉴스 해석 체크리스트`.
+- New fixture status/mode: `planned` / `memo_expand`.
+- New fixture has `blogId=null`, no `draftMarkdown`, no `draftHtml`, `qualityScore=null`, `publishedAt=null`, and `scheduledAt=null`.
+- Counts after apply: `content_items=3`, linked daily plan items `2`, `llm_call_logs=24`, draft saves `2`, publish approvals `2`, publish attempts `2`.
 
 Not executed:
 
-- 9F-6B apply was not run.
-- No content item was created or linked in this patch.
 - No draft Markdown/HTML generation, LLM call, Blogger API call, draft save, publish, scheduled publish, OAuth reconnect, or token refresh occurred.
 
 Runtime smoke:
@@ -24,12 +32,12 @@ Runtime smoke:
 - 9F-6B deterministic content item id is `daily_fixture_cmqlr1v1y0002iwj27df8ac5a`.
 - 9F-6B preview returned `safeForFixtureApply=true`, `fixtureWouldBeCreated=true`, `blockingReasons=[]`, and all write/external side effects false.
 - 9F-6B apply-negative smoke with confirmation and idempotency key but without the feature flag returned blocker `next_content_item_fixture_write_feature_flag_disabled`.
-- Post-smoke DB counts remained `content_items=2`, linked daily plan items `1`, `llm_call_logs=24`, draft saves `2`, publish approvals `2`, publish attempts `2`, and the deterministic next fixture row does not exist.
+- Approved 9F-6B apply returned `applyOk=true`, `createdContentItem=true`, `updatedPlanItem=true`, and no blockers.
+- Post-apply `next-item-readiness` returns `recommendedNextPatch=9F-6C`, `canProceedTo9F6C=true`, and no blockers.
 
-Next user-approval gate:
+Next recommended patch:
 
-- To continue the next daily item pipeline, explicitly approve one 9F-6B apply for the previewed next plan item.
-- After apply succeeds, the next likely patch is `9F-6C — draft generation readiness restart for the newly linked planned content item`.
+- `9F-6C — draft generation readiness restart for the newly linked planned content item`.
 - `9F-7` is not yet defined in the project documents; it should be planned after 9F-6B apply and 9F-6C readiness clarify the next item state.
 
 ## Current State: Patch 9F-6A Completed

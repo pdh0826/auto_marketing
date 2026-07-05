@@ -350,9 +350,7 @@ function buildItemSummary(
 
 function buildNextCandidateSummary(itemSummaries: DailyContentNextPlanItemSummary[]): DailyContentNextCandidateSummary | null {
   const nextItem =
-    itemSummaries.find((item) => !item.contentItemId) ??
-    itemSummaries.find((item) => item.contentStatus !== "published" && !item.publishedAt && item.contentStatus !== "scheduled" && !item.scheduledAt) ??
-    null;
+    itemSummaries.find((item) => item.contentStatus !== "published" && !item.publishedAt && item.contentStatus !== "scheduled" && !item.scheduledAt) ?? null;
 
   if (!nextItem) {
     return null;

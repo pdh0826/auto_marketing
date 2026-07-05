@@ -2616,11 +2616,12 @@ Implemented after Patch 9F-6A:
 - Added a gated helper for previewing and, with explicit operator controls, creating/linking one planned content item fixture for the next unlinked daily plan item.
 - Apply mode requires `BLOG_DAILY_NEXT_CONTENT_ITEM_FIXTURE_WRITE_ENABLED=true`, exact confirmation phrase, and deterministic idempotency key.
 - Preview mode and feature-flag-disabled negative checks perform DB reads only.
+- After explicit user approval, applied the gate once for plan item `cmqlr1v1y0002iwj27df8ac5a`, creating/linking fixture content item `daily_fixture_cmqlr1v1y0002iwj27df8ac5a`.
+- Adjusted next-item readiness selection so the earliest non-published/non-scheduled item in item order is selected after linking; it now recommends `9F-6C` for the newly linked planned fixture.
 
 Not executed or not implemented:
 
-- 9F-6B apply was not run.
-- No content item creation/linking, draft Markdown/HTML generation, LLM call, `llm_call_logs`, Blogger API read/write, draft save, publish, scheduled publish, OAuth reconnect, token refresh, deploy, push, or external service write occurred.
+- No draft Markdown/HTML generation, LLM call, `llm_call_logs`, Blogger API read/write, draft save, publish, scheduled publish, OAuth reconnect, token refresh, deploy, push, or external service write occurred.
 
 ## Patch 9F-6A: Next Daily Item Readiness Readback
 

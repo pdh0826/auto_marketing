@@ -2074,7 +2074,9 @@ Safety guard:
 - `draftMarkdown`, `draftHtml`, status, `qualityScore`, `publishedAt`, `scheduledAt`, Blogger tables, publish approval/attempt rows, LLM dispatch audit rows, and `llm_call_logs` must remain unchanged.
 - Preview and feature-flag-disabled negative smoke should report `dbWrite=false`, `contentItemInsert=false`, `dailyPlanItemUpdate=false`, Blogger/LLM/publish side effects false.
 - Full draft bodies, prompt, raw response, token, secret, encrypted value, or raw Blogger response body must not be returned.
-- 9F-6B apply requires a separate explicit user approval before execution.
+- Approved one-time apply result: content item `daily_fixture_cmqlr1v1y0002iwj27df8ac5a` created, daily plan item `cmqlr1v1y0002iwj27df8ac5a` linked, new fixture `status=planned`, `mode=memo_expand`, `blogId=null`, `draftMarkdown=null`, `draftHtml=null`, `qualityScore/publishedAt/scheduledAt=null`.
+- Post-apply counts should be `content_items=3`, linked daily plan items `2`, `llm_call_logs=24`, draft saves `2`, publish approvals `2`, publish attempts `2`.
+- Post-apply `next-item-readiness` should return `recommendedNextPatch=9F-6C`, `canProceedTo9F6C=true`, and blockers `[]`.
 
 ## Patch 9F-6A next daily item readiness readback 검증
 
