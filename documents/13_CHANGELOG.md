@@ -1,5 +1,27 @@
 # 13_CHANGELOG
 
+## Patch 9F-3T-R1 / 9F-3U / 9F-3V / 9F-3W Daily Blogger Draft Save Completion
+
+Completed after fixing the local Blogger OAuth redirect origin and refreshing the expired access token:
+
+- Ran the manual Blogger access token refresh route for connection `cmqfst8vc0001iwrpi1qu8oj2`.
+- Refresh result: `refreshOk=true`, old access token state `expired_reauth_required`, new access token state `valid`.
+- Re-ran `POST /api/content-items/daily_fixture_cmqlr1v1y0001iwj2gpv2875r/blogger-draft-save-preflight`.
+- Preflight returned `canSaveDraft=true`, no blocking reasons, approval `cmr3joq6v00015lk6hd8umgzr` matched current preview, draft payload was ready, duplicate save was not blocked, and `accessTokenExpired=false`.
+- Ran `POST /api/content-items/daily_fixture_cmqlr1v1y0001iwj2gpv2875r/blogger-draft-save` exactly once.
+- Blogger draft save succeeded with local save id `cmr72x71100035lh5aby7v4nf`.
+- Safe Blogger result metadata: post id `491846717642826194`, post URL `https://mathlearningappl.blogspot.com/`, saved at `2026-07-05T00:55:04.403Z`.
+- Post-save preflight now returns `canSaveDraft=false` with blocker `blogger_draft_already_saved_for_approval`, confirming duplicate-save protection for the same approval.
+- Post-save DB counts: total `blogger_draft_saves=2`, daily fixture `blogger_draft_saves=1`, daily fixture `blogger_draft_approvals=1`, `llm_call_logs=24`, `blogger_publish_execution_attempts=1`.
+- Daily fixture content item remains `status=planned`, draft Markdown md5 `5e6505fdec8762266ff972e149a07562`, draft HTML md5 `bf26fc216c779a21e7b5a3a80a1976e5`, draft HTML length `1716`, `qualityScore=null`, `publishedAt=null`, and `scheduledAt=null`.
+
+Policy:
+
+- The token refresh updated only encrypted Blogger token storage and connection metadata.
+- The draft save used the existing guarded Blogger draft save route and Blogger draft insert path.
+- No Blogger publish, scheduled publish, `posts.update`, content item status mutation, quality score mutation, published timestamp mutation, scheduled timestamp mutation, LLM call, or `llm_call_logs` mutation occurred.
+- Additional draft saves for approval `cmr3joq6v00015lk6hd8umgzr` are blocked unless a later approved patch intentionally changes approval/update semantics.
+
 ## Patch: Fix Local Blogger OAuth Redirect Origin
 
 Implemented after the daily draft save preflight blocker:

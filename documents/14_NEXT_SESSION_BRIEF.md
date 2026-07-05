@@ -1,5 +1,44 @@
 # 14_NEXT_SESSION_BRIEF
 
+## Current State: Patch 9F-3T-R1 / 9F-3U / 9F-3V / 9F-3W Completed
+
+The daily fixture reached the Blogger draft-save milestone.
+
+- Content item: `daily_fixture_cmqlr1v1y0001iwj2gpv2875r`
+- Blogger connection: `cmqfst8vc0001iwrpi1qu8oj2`
+- Blogger target: `3065973490356135805` / `급등포착`
+- Active draft approval: `cmr3joq6v00015lk6hd8umgzr`
+- Access token refresh was run once through the existing manual refresh route because the prior 9F-3T preflight blocker was `access_token_expired_reauth_required`.
+- Post-refresh draft save preflight returned `canSaveDraft=true`, no blocking reasons, `draftPayloadReady=true`, `approvalMatchesCurrentPreview=true`, `duplicateSaveBlocked=false`, and `accessTokenExpired=false`.
+- Guarded draft save was executed exactly once through `POST /api/content-items/daily_fixture_cmqlr1v1y0001iwj2gpv2875r/blogger-draft-save`.
+- Local Blogger draft save row: `cmr72x71100035lh5aby7v4nf`
+- Blogger post id: `491846717642826194`
+- Safe Blogger post URL metadata: `https://mathlearningappl.blogspot.com/`
+- Post-save preflight now blocks repeat saves with `blogger_draft_already_saved_for_approval`.
+
+Current verified DB state after 9F-3W:
+
+- `blogger_draft_saves`: total `2`, daily fixture `1`
+- `blogger_draft_approvals` for daily fixture: `1`
+- `llm_call_logs`: `24`
+- `blogger_publish_execution_attempts`: `1`
+- Daily fixture remains `status=planned`
+- Daily fixture draft Markdown md5: `5e6505fdec8762266ff972e149a07562`
+- Daily fixture draft HTML md5: `bf26fc216c779a21e7b5a3a80a1976e5`
+- Daily fixture draft HTML length: `1716`
+- `qualityScore=null`, `publishedAt=null`, `scheduledAt=null`
+
+Safety notes:
+
+- No Blogger publish, scheduled publish, `posts.update`, extra draft save, content status mutation, quality score mutation, publish timestamp mutation, schedule timestamp mutation, LLM call, or `llm_call_logs` mutation occurred.
+- The saved Blogger post is a draft-save milestone, not a publish milestone.
+- Additional saves for the same approval are blocked by duplicate protection.
+
+Next recommended patch:
+
+- `9F-4A — publish readiness final preflight after saved Blogger draft`.
+- Do not run live publish until a dedicated publish preflight/approval/execution gate is current and the user explicitly approves the live Blogger publish action.
+
 ## Current State: Patch 9F-3R-FIX4 Implemented
 
 ```text

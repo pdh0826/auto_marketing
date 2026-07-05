@@ -8,6 +8,19 @@ npm run typecheck
 npm run build
 ```
 
+## Patch 9F-3U / 9F-3V Daily Blogger Draft Save Completion
+
+- Run `POST /api/content-items/daily_fixture_cmqlr1v1y0001iwj2gpv2875r/blogger-draft-save-preflight` before live save.
+- Before the one-time save, preflight must return `canSaveDraft=true`, `blockingReasons=[]`, `draftPayloadReady=true`, `approvalMatchesCurrentPreview=true`, `duplicateSaveBlocked=false`, and `accessTokenExpired=false`.
+- Run `POST /api/content-items/daily_fixture_cmqlr1v1y0001iwj2gpv2875r/blogger-draft-save` exactly once only after the passing preflight.
+- Expected successful save row for this run: `cmr72x71100035lh5aby7v4nf`.
+- Expected Blogger post id metadata for this run: `491846717642826194`.
+- After save, rerun draft save preflight and expect `canSaveDraft=false`, `blockingReasons=["blogger_draft_already_saved_for_approval"]`, `duplicateSaveBlocked=true`, and `successfulSaveForCurrentApproval=true`.
+- Verify daily fixture content item remains `status=planned`, `qualityScore=null`, `publishedAt=null`, and `scheduledAt=null`.
+- Verify daily fixture content hashes remain draft Markdown md5 `5e6505fdec8762266ff972e149a07562` and draft HTML md5 `bf26fc216c779a21e7b5a3a80a1976e5`.
+- Verify `llm_call_logs` count does not increase during preflight/save/readback.
+- Verify no Blogger publish, scheduled publish, `posts.update`, extra draft save, content status mutation, quality score mutation, publish timestamp mutation, or schedule timestamp mutation occurs.
+
 ## Patch 9F-2T Draft-generation LLM Request Envelope Preview
 
 - `POST /api/daily-content-plans/draft-generation-llm-request-envelope-preview` should return `patchVersion=9F-2T`.
