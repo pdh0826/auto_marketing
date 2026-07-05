@@ -1,5 +1,53 @@
 # 14_NEXT_SESSION_BRIEF
 
+## Current State: Patch 9F-4A / 9F-4B / 9F-4C / 9F-4D / 9F-4E Completed
+
+The daily fixture reached the guarded Blogger publish milestone.
+
+- Content item: `daily_fixture_cmqlr1v1y0001iwj2gpv2875r`
+- Blogger connection: `cmqfst8vc0001iwrpi1qu8oj2`
+- Blogger target: `3065973490356135805` / `급등포착`
+- Blogger post id: `491846717642826194`
+- Published URL: `https://mathlearningappl.blogspot.com/2026/07/blog-post.html`
+- Blogger published timestamp from readback: `2026-07-05T05:48:17-07:00`
+- Local content `publishedAt`: `2026-07-05T12:48:17.000Z`
+- Draft approval: `cmr3joq6v00015lk6hd8umgzr`
+- Blogger draft save: `cmr72x71100035lh5aby7v4nf`
+- Publish approval: `cmr7sapcr00035lwudp6uhasw`
+- Publish execution attempt: `cmr7sbu7b00055lwurw45hbwi`
+
+9F-4 execution summary:
+
+- 9F-4A ran publish preflight after saved draft. OAuth was expired, so the existing manual token refresh route was run once and preflight was repeated.
+- 9F-4B created a local publish approval snapshot for the current draft/post metadata.
+- 9F-4C created a local planning-only publish execution attempt and verified guarded publish dry-run plus live-negative feature-flag blocking.
+- 9F-4D enabled `BLOGGER_GUARDED_PUBLISH_LIVE_ENABLED=true` for one local server run and executed the guarded live publish exactly once.
+- 9F-4E performed Blogger readback, then applied post-publish reconciliation with `BLOGGER_POST_PUBLISH_RECONCILIATION_APPLY_ENABLED=true`.
+
+Current verified DB state after 9F-4E:
+
+- Daily fixture status: `published`
+- Daily fixture draft Markdown md5: `5e6505fdec8762266ff972e149a07562`
+- Daily fixture draft HTML md5: `bf26fc216c779a21e7b5a3a80a1976e5`
+- Daily fixture draft HTML length: `1716`
+- `qualityScore=null`
+- `scheduledAt=null`
+- Daily fixture draft saves / publish approvals / publish attempts: `1 / 1 / 1`
+- `llm_call_logs=24`
+- Publish execution attempt status: `success`
+- Attempt row has redacted Blogger response metadata; raw Blogger response body is not stored.
+
+Safety notes:
+
+- Do not run another publish for this content item.
+- Do not run scheduled publish for this already published content item.
+- Do not run `posts.update` unless a later approved update policy patch exists.
+- No draft Markdown/HTML mutation, quality score mutation, scheduled publish, `posts.update`, extra draft save, OAuth reconnect, LLM call, deploy, push, or raw Blogger response storage occurred in 9F-4.
+
+Next recommended patch:
+
+- `9F-5A — post-publish operations/readback UX and duplicate publish prevention hardening`, or move to the next daily content item pipeline.
+
 ## Current State: Patch 9F-3T-R1 / 9F-3U / 9F-3V / 9F-3W Completed
 
 The daily fixture reached the Blogger draft-save milestone.

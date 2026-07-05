@@ -8,6 +8,22 @@ npm run typecheck
 npm run build
 ```
 
+## Patch 9F-4A / 9F-4B / 9F-4C / 9F-4D / 9F-4E Daily Blogger Publish Completion
+
+- Publish preflight should confirm the saved Blogger draft post id `491846717642826194`, target blog `3065973490356135805`, draft approval `cmr3joq6v00015lk6hd8umgzr`, and duplicate draft-save protection.
+- If the access token is expired before publish, use only the existing manual Blogger token refresh route and verify it does not call Blogger publish/write.
+- Publish approval save should create or idempotently confirm approval `cmr7sapcr00035lwudp6uhasw` with snapshot hash `80785f1d8b47f807fdaafaca026489df1acdea8b72012ed796bebfb11e3a54e2`.
+- Publish execution attempt save should create or idempotently confirm attempt `cmr7sbu7b00055lwurw45hbwi` with plan hash `60d7b6897317d0bfc4addfc2ecc5be87114e57aaeef2870b1e03ee4ebad120fe`.
+- Guarded publish dry-run must not call Blogger write/publish and should match approval id, attempt id, content hashes, target blog, and Blogger post id.
+- Live-negative guarded publish with the full live body but without `BLOGGER_GUARDED_PUBLISH_LIVE_ENABLED=true` must be blocked by `live_blogger_publish_feature_flag_disabled`.
+- Live guarded publish may be executed exactly once only with feature flag enabled, exact confirmation phrase, rollback acknowledgement, external write acknowledgement, final human approval, matching approval/attempt ids, matching content hashes, matching target blog, and matching Blogger post id.
+- Expected live publish result: Blogger post id `491846717642826194`, URL `https://mathlearningappl.blogspot.com/2026/07/blog-post.html`, published at `2026-07-05T05:48:17-07:00`.
+- Publish result readback should confirm post id, URL, published timestamp, updated timestamp, target blog, approval, attempt, and draft save match expected metadata.
+- Post-publish reconciliation apply should update only content status/timestamps and the publish execution attempt row.
+- Expected final content item state: status `published`, draft Markdown md5 `5e6505fdec8762266ff972e149a07562`, draft HTML md5 `bf26fc216c779a21e7b5a3a80a1976e5`, draft HTML length `1716`, `qualityScore=null`, `publishedAt=2026-07-05T12:48:17.000Z`, and `scheduledAt=null`.
+- Expected final publish attempt state: status `success`, redacted Blogger response metadata present, `errorCode=null`, content status before/after `planned` / `published`.
+- Verify no scheduled publish, `posts.update`, extra draft save, OAuth reconnect, LLM call, `llm_call_logs` mutation, draft Markdown mutation, draft HTML mutation, quality score mutation, deploy, push, or raw Blogger response storage occurs.
+
 ## Patch 9F-3U / 9F-3V Daily Blogger Draft Save Completion
 
 - Run `POST /api/content-items/daily_fixture_cmqlr1v1y0001iwj2gpv2875r/blogger-draft-save-preflight` before live save.

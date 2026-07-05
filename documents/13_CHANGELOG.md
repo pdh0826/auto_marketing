@@ -1,5 +1,31 @@
 # 13_CHANGELOG
 
+## Patch 9F-4A / 9F-4B / 9F-4C / 9F-4D / 9F-4E Daily Blogger Publish Completion
+
+Completed after the daily Blogger draft save milestone:
+
+- Ran publish preflight for `daily_fixture_cmqlr1v1y0001iwj2gpv2875r`.
+- The first publish preflight found the saved draft ready but access token expired; ran the existing manual Blogger token refresh route for connection `cmqfst8vc0001iwrpi1qu8oj2`.
+- Token refresh result: `refreshOk=true`, old state `expired_reauth_required`, new state `valid`, new expiry `2026-07-05T13:44:07.174Z`.
+- Re-ran publish preflight and confirmed saved draft metadata was ready: Blogger blog `3065973490356135805`, draft post id `491846717642826194`, approval `cmr3joq6v00015lk6hd8umgzr`, and `accessTokenExpired=false`.
+- Created publish approval `cmr7sapcr00035lwudp6uhasw` with snapshot hash `80785f1d8b47f807fdaafaca026489df1acdea8b72012ed796bebfb11e3a54e2`.
+- Created planning-only publish execution attempt `cmr7sbu7b00055lwurw45hbwi` with plan hash `60d7b6897317d0bfc4addfc2ecc5be87114e57aaeef2870b1e03ee4ebad120fe`.
+- Guarded publish dry-run passed all state matches while keeping Blogger write false.
+- Live-negative smoke with the exact live body was blocked by `live_blogger_publish_feature_flag_disabled`, proving the feature flag gate.
+- Restarted local server once with `BLOGGER_GUARDED_PUBLISH_LIVE_ENABLED=true` and executed guarded live publish exactly once.
+- Blogger publish succeeded: post id `491846717642826194`, URL `https://mathlearningappl.blogspot.com/2026/07/blog-post.html`, published at `2026-07-05T05:48:17-07:00`.
+- Publish readback succeeded before DB reconciliation and matched expected post id, URL, published timestamp, updated timestamp, approval, attempt, draft save, and target blog.
+- Ran post-publish reconciliation apply once with `BLOGGER_POST_PUBLISH_RECONCILIATION_APPLY_ENABLED=true`.
+- Reconciliation updated only the local content item status/timestamps and publish attempt row: content status `published`, `publishedAt=2026-07-05T12:48:17.000Z`, attempt status `success`, redacted Blogger response stored.
+- Final daily fixture DB counts: draft saves `1`, publish approvals `1`, publish execution attempts `1`, `llm_call_logs=24`.
+- Daily fixture draft Markdown md5 remains `5e6505fdec8762266ff972e149a07562`; draft HTML md5 remains `bf26fc216c779a21e7b5a3a80a1976e5`; draft HTML length remains `1716`; `qualityScore=null`; `scheduledAt=null`.
+
+Policy:
+
+- Blogger publish was executed once through the guarded route after exact metadata, feature flag, exact confirmation phrase, rollback acknowledgement, external write acknowledgement, and final human approval were satisfied.
+- No scheduled publish, `posts.update`, extra draft save, OAuth reconnect, LLM call, `llm_call_logs` mutation, draft Markdown mutation, draft HTML mutation, quality score mutation, deploy, push, or raw Blogger response storage occurred.
+- After reconciliation, additional publish execution must not be repeated for the same published content unless a later approved patch intentionally defines a retry/update policy.
+
 ## Patch 9F-3T-R1 / 9F-3U / 9F-3V / 9F-3W Daily Blogger Draft Save Completion
 
 Completed after fixing the local Blogger OAuth redirect origin and refreshing the expired access token:
