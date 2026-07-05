@@ -2066,6 +2066,16 @@ Safety guard:
 - Post-preview DB state should remain: fixture `draftMarkdown` length `1141`, `draftHtml` length `1690`, status `planned`, `qualityScore/publishedAt/scheduledAt=null`.
 - Counts should remain attempts/events/artifacts/llm_call_logs/blogger_draft_saves/blogger_publish_execution_attempts `2/3/4/24/1/1`.
 
+## Patch 9F-6A next daily item readiness readback 검증
+
+- `POST /api/daily-content-plans/next-item-readiness`는 latest 또는 요청된 daily content plan을 읽고 다음 plan item 진행 가능성을 read-only로 반환해야 한다.
+- 응답은 plan summary, item summaries, published milestone summary, next candidate summary, recommended next patch, blocking reasons, warnings, and side-effect summary를 포함한다.
+- Full `draftMarkdown`, full `draftHtml`, prompt, raw response, secret, token, encrypted value, Blogger raw response body를 반환하면 안 된다.
+- Published milestone summary는 이미 published 된 daily fixture의 draft save / publish approval / publish attempt count를 safe count로 표시해야 한다.
+- Next candidate summary는 아직 content item이 없는 plan item이면 `recommendedNextPatch=9F-6B`, 이미 linked planned item이고 draft body가 없으면 `recommendedNextPatch=9F-6C`를 반환해야 한다.
+- Side effects must remain false for DB write, content item mutation, draft Markdown/HTML mutation, status/quality/publish timestamp mutation, daily plan mutation, approval/attempt/artifact mutation, `llm_call_logs` mutation, Blogger API read/write, draft save, publish, scheduled publish, OAuth reconnect, and token refresh.
+- Runtime smoke should confirm `sideEffectSummary.dbRead=true`, all write/external side effects false, and DB baselines for published daily fixture hashes/counts remain unchanged.
+
 ## Patch 9F-3R-FIX2 gated finance-risk repaired draftHtml persistence 검증
 
 - `POST /api/daily-content-plans/draft-html-finance-risk-repair-persistence`는 기본 preview에서 DB write 없이 repair persistence 가능 여부만 반환해야 한다.

@@ -1,5 +1,39 @@
 # 14_NEXT_SESSION_BRIEF
 
+## Current State: Patch 9F-6A Completed
+
+The next daily content item readiness check is now available after the first daily fixture publish milestone.
+
+Implemented:
+
+- Added `POST /api/daily-content-plans/next-item-readiness`.
+- Added `src/lib/daily-content-plans/next-item-readiness.ts`.
+- The check reads the latest daily content plan, linked content item statuses, safe draft body hashes, and existing draft-save/publish audit counts.
+- It identifies whether the first published daily item is protected by local draft-save/publish records and whether another plan item can proceed to the next fixture/draft pipeline.
+- It returns a recommended next patch, currently either `9F-6B` for a new/linkable content item fixture, `9F-6C` for an existing safe planned item, or `manual_review`.
+
+Safety notes:
+
+- 9F-6A is read-only.
+- It does not create or update content items, daily plan rows, approvals, attempts, artifacts, `llm_call_logs`, Blogger records, OAuth state, or tokens.
+- It does not call Blogger API, LLM providers, publish, draft save, scheduled publish, `posts.update`, OAuth reconnect, or token refresh.
+- Full `draftMarkdown` and `draftHtml` bodies are never returned; only length-free boolean presence and SHA-256 hashes are exposed.
+
+Runtime smoke:
+
+- `/settings/blogger` returned 200 on port 3013.
+- `POST /api/daily-content-plans/next-item-readiness` returned 200.
+- Latest plan `cmqlr1v1d0000iwj2smxcsajr` has 3 persisted items.
+- Published milestone is complete for `daily_fixture_cmqlr1v1y0001iwj2gpv2875r`; draft save / publish approval / publish attempt counts are `1 / 1 / 1`.
+- Next action is `create_or_link_content_item_fixture`; recommended next patch is `9F-6B`.
+- Blocking reasons are empty and all write/external side effects are false.
+- Daily fixture remains `published` with draft Markdown md5 `5e6505fdec8762266ff972e149a07562`, draft HTML md5 `bf26fc216c779a21e7b5a3a80a1976e5`, `publishedAt=2026-07-05T12:48:17.000Z`, `scheduledAt=null`, and `llm_call_logs=24`.
+
+Next recommended patch:
+
+- `9F-6B — gated next daily content item fixture creation/linking`, if the readiness route reports a linkable plan item without a content item.
+- `9F-6C — restart draft generation pipeline for the next planned item`, if a linked planned content item already exists and has no draft body.
+
 ## Current State: Patch 9F-5A / 9F-5B Completed
 
 Post-publish duplicate prevention and idempotent readback/reconciliation were hardened after the daily fixture publish.

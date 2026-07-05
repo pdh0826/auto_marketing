@@ -2608,6 +2608,19 @@ Not implemented:
 - content item status, `publishedAt`, `scheduledAt`, `qualityScore`, `draftHtml`, or `draftMarkdown` mutation
 - LLM calls, `llm_call_logs`, deploy, push, or external service writes
 
+## Patch 9F-6A: Next Daily Item Readiness Readback
+
+Implemented after Patch 9F-5:
+
+- Added `POST /api/daily-content-plans/next-item-readiness`.
+- Added a read-only next daily item readiness helper that summarizes the latest daily content plan, linked content statuses, safe draft body hashes, published milestone audit counts, and the next recommended plan item action.
+- The response recommends `9F-6B` for gated next content item fixture creation/linking, `9F-6C` for restarting the draft pipeline on an existing planned item, or `manual_review` when the next item is unsafe or missing.
+
+Not executed or not implemented:
+
+- Content item creation/linking, daily plan mutation, approval/attempt/artifact mutation, LLM calls, `llm_call_logs`, Blogger API read/write, draft save, publish, scheduled publish, OAuth reconnect, token refresh, deploy, push, or external service write.
+- Full `draftMarkdown`/`draftHtml` bodies, prompts, raw responses, tokens, secrets, encrypted values, and raw Blogger response bodies are not returned.
+
 ## Patch 9E-9B: Guarded Blogger Publish Execution Route
 
 Implemented after Patch 9E-9A:
