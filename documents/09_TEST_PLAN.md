@@ -2066,6 +2066,16 @@ Safety guard:
 - Post-preview DB state should remain: fixture `draftMarkdown` length `1141`, `draftHtml` length `1690`, status `planned`, `qualityScore/publishedAt/scheduledAt=null`.
 - Counts should remain attempts/events/artifacts/llm_call_logs/blogger_draft_saves/blogger_publish_execution_attempts `2/3/4/24/1/1`.
 
+## Patch 9F-6B gated next content item fixture 검증
+
+- `POST /api/daily-content-plans/next-content-item-fixture`는 기본 preview에서 DB write 없이 다음 unlinked daily plan item fixture 생성/링크 가능 여부만 반환해야 한다.
+- Apply mode는 `BLOG_DAILY_NEXT_CONTENT_ITEM_FIXTURE_WRITE_ENABLED=true`, exact confirmation phrase `I_UNDERSTAND_THIS_WILL_CREATE_OR_LINK_NEXT_DAILY_CONTENT_ITEM_FIXTURE`, deterministic idempotency key, plan id, plan item id, expected content item id가 모두 맞을 때만 허용된다.
+- 성공 시 허용되는 mutation은 planned `content_items` fixture row 1개 생성 및/또는 해당 id를 daily plan item에 linking 하는 것뿐이다.
+- `draftMarkdown`, `draftHtml`, status, `qualityScore`, `publishedAt`, `scheduledAt`, Blogger tables, publish approval/attempt rows, LLM dispatch audit rows, and `llm_call_logs` must remain unchanged.
+- Preview and feature-flag-disabled negative smoke should report `dbWrite=false`, `contentItemInsert=false`, `dailyPlanItemUpdate=false`, Blogger/LLM/publish side effects false.
+- Full draft bodies, prompt, raw response, token, secret, encrypted value, or raw Blogger response body must not be returned.
+- 9F-6B apply requires a separate explicit user approval before execution.
+
 ## Patch 9F-6A next daily item readiness readback 검증
 
 - `POST /api/daily-content-plans/next-item-readiness`는 latest 또는 요청된 daily content plan을 읽고 다음 plan item 진행 가능성을 read-only로 반환해야 한다.

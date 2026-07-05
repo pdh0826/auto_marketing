@@ -1,5 +1,37 @@
 # 14_NEXT_SESSION_BRIEF
 
+## Current State: Patch 9F-6B Implemented, Apply Pending User Approval
+
+The next daily content item fixture creation/linking gate is now implemented, but the apply action has not been executed.
+
+Implemented:
+
+- Added `POST /api/daily-content-plans/next-content-item-fixture`.
+- Added `src/lib/daily-content-plans/next-content-item-fixture.ts`.
+- Preview mode reads the target daily plan item and reports whether it is safe to create or link the next fixture content item.
+- Apply mode is gated by `BLOG_DAILY_NEXT_CONTENT_ITEM_FIXTURE_WRITE_ENABLED=true`, exact confirmation phrase `I_UNDERSTAND_THIS_WILL_CREATE_OR_LINK_NEXT_DAILY_CONTENT_ITEM_FIXTURE`, and deterministic idempotency key `9F-6B:{planId}:{planItemId}:{contentItemId}`.
+- The only allowed apply mutation is creating one planned `content_items` fixture row and/or linking that id to the daily plan item.
+
+Not executed:
+
+- 9F-6B apply was not run.
+- No content item was created or linked in this patch.
+- No draft Markdown/HTML generation, LLM call, Blogger API call, draft save, publish, scheduled publish, OAuth reconnect, or token refresh occurred.
+
+Runtime smoke:
+
+- `POST /api/daily-content-plans/next-item-readiness` returned 200 and selected plan item `cmqlr1v1y0002iwj27df8ac5a`.
+- 9F-6B deterministic content item id is `daily_fixture_cmqlr1v1y0002iwj27df8ac5a`.
+- 9F-6B preview returned `safeForFixtureApply=true`, `fixtureWouldBeCreated=true`, `blockingReasons=[]`, and all write/external side effects false.
+- 9F-6B apply-negative smoke with confirmation and idempotency key but without the feature flag returned blocker `next_content_item_fixture_write_feature_flag_disabled`.
+- Post-smoke DB counts remained `content_items=2`, linked daily plan items `1`, `llm_call_logs=24`, draft saves `2`, publish approvals `2`, publish attempts `2`, and the deterministic next fixture row does not exist.
+
+Next user-approval gate:
+
+- To continue the next daily item pipeline, explicitly approve one 9F-6B apply for the previewed next plan item.
+- After apply succeeds, the next likely patch is `9F-6C — draft generation readiness restart for the newly linked planned content item`.
+- `9F-7` is not yet defined in the project documents; it should be planned after 9F-6B apply and 9F-6C readiness clarify the next item state.
+
 ## Current State: Patch 9F-6A Completed
 
 The next daily content item readiness check is now available after the first daily fixture publish milestone.

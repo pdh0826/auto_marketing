@@ -1,0 +1,29 @@
+import { NextResponse } from "next/server";
+import {
+  buildDailyContentNextContentItemFixtureResponse,
+  type DailyContentNextContentItemFixtureRequest
+} from "@/lib/daily-content-plans/next-content-item-fixture";
+import { safeErrorMessage } from "@/lib/llm/redaction";
+
+export const runtime = "nodejs";
+
+export async function POST(request: Request) {
+  try {
+    const body = (await parseJsonBody(request)) as DailyContentNextContentItemFixtureRequest;
+    const result = await buildDailyContentNextContentItemFixtureResponse(body);
+    return NextResponse.json({ data: result, ...result });
+  } catch (error) {
+    return NextResponse.json(
+      { error: safeErrorMessage(error instanceof Error ? error.message : "Daily content next item fixture check failed.", 500) },
+      { status: 400 }
+    );
+  }
+}
+
+async function parseJsonBody(request: Request) {
+  try {
+    return await request.json();
+  } catch {
+    return {};
+  }
+}

@@ -2608,6 +2608,20 @@ Not implemented:
 - content item status, `publishedAt`, `scheduledAt`, `qualityScore`, `draftHtml`, or `draftMarkdown` mutation
 - LLM calls, `llm_call_logs`, deploy, push, or external service writes
 
+## Patch 9F-6B: Gated Next Daily Content Item Fixture
+
+Implemented after Patch 9F-6A:
+
+- Added `POST /api/daily-content-plans/next-content-item-fixture`.
+- Added a gated helper for previewing and, with explicit operator controls, creating/linking one planned content item fixture for the next unlinked daily plan item.
+- Apply mode requires `BLOG_DAILY_NEXT_CONTENT_ITEM_FIXTURE_WRITE_ENABLED=true`, exact confirmation phrase, and deterministic idempotency key.
+- Preview mode and feature-flag-disabled negative checks perform DB reads only.
+
+Not executed or not implemented:
+
+- 9F-6B apply was not run.
+- No content item creation/linking, draft Markdown/HTML generation, LLM call, `llm_call_logs`, Blogger API read/write, draft save, publish, scheduled publish, OAuth reconnect, token refresh, deploy, push, or external service write occurred.
+
 ## Patch 9F-6A: Next Daily Item Readiness Readback
 
 Implemented after Patch 9F-5:
