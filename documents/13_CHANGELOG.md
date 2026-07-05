@@ -1,5 +1,30 @@
 # 13_CHANGELOG
 
+## Patch 9F-5A / 9F-5B Post-Publish Duplicate Prevention Hardening
+
+Implemented after the daily Blogger publish milestone:
+
+- Hardened publish preflight so already-published or already-scheduled content adds explicit blockers:
+  - `content_status_not_planned`
+  - `content_already_published`
+  - `content_already_scheduled`
+- Hardened publish approval preview/save so published content carries the same blockers and approval save is rejected server-side.
+- Publish approval save for the published daily fixture now returns HTTP 400 with `content_status_not_planned` and does not create another approval row.
+- Publish execution attempt save for the published daily fixture returns HTTP 400 with `approval_no_longer_matches_current_state` and `content_status_changed`.
+- Guarded live publish remains blocked for the published daily fixture by `content_status_not_planned` and `content_already_published` before any Blogger write can occur.
+- Improved publish result readback after local reconciliation so already-published, already-reconciled content can still perform read-only Blogger readback without requiring the pre-publish final execution gate.
+- Improved post-publish reconciliation idempotency so a repeated apply on already reconciled content is a no-op success with no DB write.
+
+Runtime smoke:
+
+- Published fixture readback after reconciliation returned `readbackOk=true`, all expected post id/URL/timestamp matches true, and side-effect DB write false.
+- Repeated reconciliation apply returned `applyOk=true`, `appliedContentItemPatch=false`, `appliedAttemptPatch=false`, and DB write false.
+- Final counts remained daily draft saves / publish approvals / publish attempts / `llm_call_logs` = `1 / 1 / 1 / 24`.
+
+Policy:
+
+- No Blogger publish/write, scheduled publish, `posts.update`, extra draft save, OAuth reconnect, token refresh, LLM call, draft Markdown mutation, draft HTML mutation, quality score mutation, deploy, push, or raw Blogger response storage occurred in this hardening patch.
+
 ## Patch 9F-4A / 9F-4B / 9F-4C / 9F-4D / 9F-4E Daily Blogger Publish Completion
 
 Completed after the daily Blogger draft save milestone:

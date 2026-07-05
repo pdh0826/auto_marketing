@@ -236,6 +236,10 @@ function collectApplyBlockers(input: {
 }) {
   const { readback, request, blockingReasons } = input;
 
+  if (input.alreadyReconciled) {
+    return;
+  }
+
   if (!input.featureFlagEnabled) blockingReasons.add("post_publish_reconciliation_apply_feature_flag_disabled");
   if (!input.confirmationPhraseAccepted) blockingReasons.add("post_publish_reconciliation_confirmation_missing");
   if (!input.contentMutationAcknowledged) blockingReasons.add("content_mutation_not_acknowledged");

@@ -63,6 +63,15 @@ export function buildPublishPreflightDryRun(input: BuildPublishPreflightInput): 
   ]);
   const warnings = new Set<string>();
 
+  if (input.contentItem.status !== "planned") {
+    blockingReasons.add("content_status_not_planned");
+  }
+  if (input.contentItem.publishedAt) {
+    blockingReasons.add("content_already_published");
+  }
+  if (input.contentItem.scheduledAt) {
+    blockingReasons.add("content_already_scheduled");
+  }
   if (input.accessTokenExpired) {
     blockingReasons.add("access_token_expired_reauth_required");
     blockingReasons.add("oauth_gate_not_satisfied");

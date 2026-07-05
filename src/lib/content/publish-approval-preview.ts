@@ -42,6 +42,15 @@ export function buildPublishApprovalPreview(input: BuildPublishApprovalPreviewIn
   ]);
   const warnings = new Set<string>(input.publishPreflight.warnings);
 
+  if (input.contentItem.status !== "planned") {
+    blockingReasons.add("content_status_not_planned");
+  }
+  if (input.contentItem.publishedAt) {
+    blockingReasons.add("content_already_published");
+  }
+  if (input.contentItem.scheduledAt) {
+    blockingReasons.add("content_already_scheduled");
+  }
   if (tokenState === "expired_reauth_required") {
     blockingReasons.add("access_token_expired_reauth_required");
   }

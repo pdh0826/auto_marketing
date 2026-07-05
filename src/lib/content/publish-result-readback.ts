@@ -106,6 +106,12 @@ export async function buildPublishResultReadbackResponse(
     operationProfileAdvisorySummary,
     checkedAt
   });
+  const alreadyLocallyReconciled = Boolean(
+    contentItem.status === "published" &&
+      contentItem.publishedAt &&
+      attemptWithReadbackFields?.status === "success" &&
+      attemptWithReadbackFields.bloggerResponseRedactedJson
+  );
 
   const actualTargetBlogId = approval?.targetBloggerBlogId ?? latestDraftSave?.targetBloggerBlogId ?? bloggerConnection?.bloggerBlogId ?? null;
   const actualTargetBlogUrl = approval?.targetBloggerBlogUrl ?? latestDraftSave?.targetBloggerBlogUrl ?? bloggerConnection?.bloggerBlogUrl ?? null;
@@ -125,14 +131,18 @@ export async function buildPublishResultReadbackResponse(
   const targetBlogMatches = Boolean(actualTargetBlogId && expectedTargetBlogId === actualTargetBlogId && expectedTargetBlogUrl === actualTargetBlogUrl);
   const bloggerPostIdMatchesInternalState = Boolean(actualBloggerPostId && expectedBloggerPostId === actualBloggerPostId);
 
-  if (!oauthGate.finalPublishExecutionPreflightSummary.oauthGateSatisfied) {
-    blockingReasons.add("oauth_gate_not_satisfied");
-  }
-  if (!oauthGate.finalPublishExecutionPreflightSummary.manualReconnectCompletionReady) {
-    blockingReasons.add("manual_reconnect_completion_not_ready");
-  }
-  if (!oauthGate.finalPublishExecutionPreflightSummary.finalPreflightReady) {
-    blockingReasons.add("final_publish_execution_preflight_not_ready");
+  if (alreadyLocallyReconciled) {
+    warnings.add("post_publish_readback_after_local_reconciliation");
+  } else {
+    if (!oauthGate.finalPublishExecutionPreflightSummary.oauthGateSatisfied) {
+      blockingReasons.add("oauth_gate_not_satisfied");
+    }
+    if (!oauthGate.finalPublishExecutionPreflightSummary.manualReconnectCompletionReady) {
+      blockingReasons.add("manual_reconnect_completion_not_ready");
+    }
+    if (!oauthGate.finalPublishExecutionPreflightSummary.finalPreflightReady) {
+      blockingReasons.add("final_publish_execution_preflight_not_ready");
+    }
   }
   if (!approval) {
     blockingReasons.add("publish_approval_missing");

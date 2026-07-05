@@ -1,5 +1,34 @@
 # 14_NEXT_SESSION_BRIEF
 
+## Current State: Patch 9F-5A / 9F-5B Completed
+
+Post-publish duplicate prevention and idempotent readback/reconciliation were hardened after the daily fixture publish.
+
+Implemented:
+
+- Publish preflight now reports `content_status_not_planned`, `content_already_published`, and `content_already_scheduled` blockers when applicable.
+- Publish approval preview/save now propagates those blockers.
+- Publish approval save rejects already published content server-side before creating a new approval row.
+- Publish result readback can run after local reconciliation for already published content without requiring the pre-publish final execution gate.
+- Post-publish reconciliation repeated apply is now a no-op success when the content and attempt are already reconciled.
+
+Verified current state:
+
+- Content item `daily_fixture_cmqlr1v1y0001iwj2gpv2875r` remains `published`.
+- Published URL remains `https://mathlearningappl.blogspot.com/2026/07/blog-post.html`.
+- Draft Markdown md5 remains `5e6505fdec8762266ff972e149a07562`.
+- Draft HTML md5 remains `bf26fc216c779a21e7b5a3a80a1976e5`.
+- Daily fixture draft saves / publish approvals / publish attempts remain `1 / 1 / 1`.
+- `llm_call_logs=24`.
+- Publish approval duplicate save is blocked with `content_status_not_planned`.
+- Publish attempt duplicate save is blocked with `approval_no_longer_matches_current_state` and `content_status_changed`.
+- Guarded live publish is blocked before Blogger write by published-content blockers.
+- Repeated post-publish reconciliation apply returns no-op success with no DB write.
+
+Next recommended patch:
+
+- `9F-6A — next daily item pipeline reset / new content item planning`, or `9F-6A — published content operations dashboard polish` if continuing product UX.
+
 ## Current State: Patch 9F-4A / 9F-4B / 9F-4C / 9F-4D / 9F-4E Completed
 
 The daily fixture reached the guarded Blogger publish milestone.

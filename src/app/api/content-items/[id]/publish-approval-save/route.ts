@@ -272,6 +272,15 @@ function parseCheckedAt(value: string | null | undefined) {
 }
 
 function buildReadinessError(preview: ReturnType<typeof buildPublishApprovalPreview>) {
+  if (preview.blockingReasons.includes("content_status_not_planned")) {
+    return { error: "content_status_not_planned", message: "Publish approval cannot be saved unless the content item is planned." };
+  }
+  if (preview.blockingReasons.includes("content_already_published")) {
+    return { error: "content_already_published", message: "Publish approval cannot be saved for an already published content item." };
+  }
+  if (preview.blockingReasons.includes("content_already_scheduled")) {
+    return { error: "content_already_scheduled", message: "Publish approval cannot be saved for an already scheduled content item." };
+  }
   if (!preview.approvalSnapshotPreview.bloggerPostId) {
     return { error: "blogger_draft_post_id_missing", message: "Blogger draft post id is required before saving publish approval." };
   }
