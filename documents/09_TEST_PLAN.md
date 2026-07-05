@@ -8,6 +8,19 @@ npm run typecheck
 npm run build
 ```
 
+## Patch 9F-7C second fixture provider health-check execution/readback 검증
+
+- Target plan item/content item: `cmqlr1v1y0002iwj27df8ac5a` / `daily_fixture_cmqlr1v1y0002iwj27df8ac5a`.
+- `POST /api/daily-content-plans/draft-generation-llm-provider-health-check-execution` may be called once in `healthcheck_execute` mode with:
+  - `BLOG_DAILY_CONTENT_LLM_PROVIDER_HEALTHCHECK_EXECUTION_ENABLED=true`
+  - `BLOG_DAILY_CONTENT_LLM_PROVIDER_NETWORK_CALLS_ENABLED=true`
+  - exact confirmation phrase `I_UNDERSTAND_THIS_WILL_CALL_LLM_PROVIDER_HEALTHCHECK_ONLY`
+  - deterministic idempotency key for the second fixture health-check.
+- Expected result: `healthCheckExecutionAllowedNow=true`, `healthCheckExecuted=true`, sanitized provider result `success=true`, `statusCodeClass=2xx`.
+- The route must not call a completion endpoint, create `llm_call_logs`, create dispatch audit rows, mutate content, or touch Blogger/publish/OAuth/token state.
+- Readback should remain read-only. Until a later audit persistence patch creates rows, target-scoped dispatch attempts/events/artifacts can remain `0 / 0 / 0`.
+- Post-check counts should remain dispatch attempts/events/artifacts `2 / 3 / 4`, `llm_call_logs=24`, and second fixture draft lengths `0 / 0`.
+
 ## Patch 9F-7B second fixture draft-generation planning previews 검증
 
 - Target plan item/content item: `cmqlr1v1y0002iwj27df8ac5a` / `daily_fixture_cmqlr1v1y0002iwj27df8ac5a`.

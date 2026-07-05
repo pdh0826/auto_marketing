@@ -1,5 +1,20 @@
 # 13_CHANGELOG
 
+## Patch 9F-7C: Second Fixture Provider Health-check
+
+Executed the safe provider health-check checkpoint for the second daily fixture.
+
+- Target plan item/content item: `cmqlr1v1y0002iwj27df8ac5a` / `daily_fixture_cmqlr1v1y0002iwj27df8ac5a`.
+- Called `POST /api/daily-content-plans/draft-generation-llm-provider-health-check-execution` once in `healthcheck_execute` mode with the exact health-check confirmation phrase.
+- Result: `healthCheckExecutionAllowedNow=true`, `healthCheckExecuted=true`, sanitized provider result `success=true`, `statusCodeClass=2xx`, provider kind `local_http`, endpoint category `provider_version`.
+- Verified readback-only route after the health-check and confirmed no target-scoped dispatch attempt/event/artifact rows exist yet for the second fixture.
+- Verified counts remained dispatch attempts/events/artifacts `2 / 3 / 4` and `llm_call_logs=24`.
+- Verified the second fixture remains `planned` with `draftMarkdown` length `0` and `draftHtml` length `0`.
+
+Not executed:
+
+- LLM completion, `llm_call_logs` mutation, dispatch audit row creation, content item mutation, `draftMarkdown`/`draftHtml` persistence, Blogger API call, draft save, publish, scheduled publish, OAuth reconnect, token refresh, deploy, push, or external service write beyond the safe provider health endpoint.
+
 ## Patch 9F-7B: Second Fixture Draft-generation Planning Preview
 
 Validated the second daily fixture through the existing read-only draft-generation planning preview bundle.

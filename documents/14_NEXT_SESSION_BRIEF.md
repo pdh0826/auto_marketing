@@ -1,5 +1,40 @@
 # 14_NEXT_SESSION_BRIEF
 
+## Current State: Patch 9F-7C Provider Health-check Completed
+
+The second daily fixture passed the safe provider health-check execution checkpoint.
+
+Runtime smoke target:
+
+- Plan item: `cmqlr1v1y0002iwj27df8ac5a`.
+- Content item: `daily_fixture_cmqlr1v1y0002iwj27df8ac5a`.
+
+Execution route:
+
+- `POST /api/daily-content-plans/draft-generation-llm-provider-health-check-execution`.
+- Mode: `healthcheck_execute`.
+- Feature flags enabled only for provider health-check/network-call safety gates.
+- Confirmation phrase: `I_UNDERSTAND_THIS_WILL_CALL_LLM_PROVIDER_HEALTHCHECK_ONLY`.
+
+Observed result:
+
+- `healthCheckExecutionAllowedNow=true`.
+- `healthCheckExecuted=true`.
+- Sanitized provider result: `success=true`, `statusCodeClass=2xx`, provider kind `local_http`, endpoint category `provider_version`.
+- Raw body, raw headers, secret, prompt, response, or candidate body were not returned.
+- Readback route remained read-only and reported no target-scoped dispatch attempts/events/artifacts for the second fixture yet.
+
+Verified side effects:
+
+- LLM dispatch attempts/events/artifacts remain `2 / 3 / 4`.
+- `llm_call_logs=24`.
+- Second fixture remains `planned` with `draftMarkdown` length `0` and `draftHtml` length `0`.
+- No LLM completion, content mutation, Blogger API call, draft save, publish, scheduled publish, OAuth reconnect, or token refresh occurred.
+
+Next recommended patch:
+
+- `9F-7D — second fixture dispatch attempt/event/artifact gated preparation`.
+
 ## Current State: Patch 9F-7B Read-only Planning Completed
 
 The second daily fixture passed the read-only draft-generation planning preview bundle.
