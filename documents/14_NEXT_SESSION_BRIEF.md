@@ -1,5 +1,42 @@
 # 14_NEXT_SESSION_BRIEF
 
+## Current State: Patch 9F-7B Read-only Planning Completed
+
+The second daily fixture passed the read-only draft-generation planning preview bundle.
+
+Runtime smoke target:
+
+- Plan item: `cmqlr1v1y0002iwj27df8ac5a`.
+- Content item: `daily_fixture_cmqlr1v1y0002iwj27df8ac5a`.
+- Approval id from 9F-7A: `cmr7uxdkd00015las7kqwfyr7`.
+
+Read-only routes checked on port 3013:
+
+- `POST /api/daily-content-plans/draft-generation-dry-run-planner`.
+- `POST /api/daily-content-plans/draft-generation-llm-provider-readiness`.
+- `POST /api/daily-content-plans/draft-generation-llm-provider-health-check-preview`.
+- `POST /api/daily-content-plans/draft-generation-final-execution-checklist`.
+- `POST /api/daily-content-plans/draft-generation-prompt-render-preview`.
+- `POST /api/daily-content-plans/draft-generation-prompt-quality-checklist-preview`.
+- `POST /api/daily-content-plans/draft-generation-llm-request-envelope-preview`.
+- `POST /api/daily-content-plans/draft-generation-llm-dispatch-gate-preview`.
+
+Observed result:
+
+- All preview routes returned HTTP 200.
+- Prompt/envelope/dispatch previews targeted `daily_fixture_cmqlr1v1y0002iwj27df8ac5a`.
+- Expected blockers remain for later gated execution: LLM execution feature flag, content mutation feature flag, draft-generation write feature flag, confirmation phrase, idempotency key, and provider health-check satisfaction.
+- No prompt body, raw response, candidate body, token, secret, encrypted value, or Blogger raw response was printed or stored by this checkpoint.
+
+Not executed:
+
+- No provider completion, `llm_call_logs` mutation, dispatch attempt creation, content mutation, `draftMarkdown`/`draftHtml` write, Blogger API call, draft save, publish, scheduled publish, OAuth reconnect, or token refresh occurred.
+
+Next recommended patch:
+
+- `9F-7C — second fixture provider health-check execution/readback`, gated and safe-healthcheck-only.
+- If provider health-check cannot pass, stop before LLM dispatch.
+
 ## Current State: Patch 9F-7A Apply Completed
 
 The second daily fixture now has a persisted operator approval row/event for future draft generation execution.

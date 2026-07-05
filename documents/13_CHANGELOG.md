@@ -1,5 +1,18 @@
 # 13_CHANGELOG
 
+## Patch 9F-7B: Second Fixture Draft-generation Planning Preview
+
+Validated the second daily fixture through the existing read-only draft-generation planning preview bundle.
+
+- Target plan item/content item: `cmqlr1v1y0002iwj27df8ac5a` / `daily_fixture_cmqlr1v1y0002iwj27df8ac5a`.
+- Confirmed HTTP 200 for dry-run planner, provider readiness preview, provider health-check preview, final checklist, prompt render preview, prompt quality checklist preview, request envelope preview, and dispatch gate preview.
+- Confirmed the later execution blockers remain gated by feature flags, confirmation phrase, idempotency key, and provider health-check satisfaction.
+- Kept validation output limited to safe metadata; prompt body, raw response, and candidate body were not printed.
+
+Not executed:
+
+- LLM completion, dispatch attempt creation, `llm_call_logs` mutation, content item mutation, `draftMarkdown`/`draftHtml` persistence, Blogger API call, draft save, publish, scheduled publish, OAuth reconnect, token refresh, deploy, push, or external service write.
+
 ## Patch 9F-5A / 9F-5B Post-Publish Duplicate Prevention Hardening
 
 Implemented after the daily Blogger publish milestone:

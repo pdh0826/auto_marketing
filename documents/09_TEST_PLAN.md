@@ -8,6 +8,23 @@ npm run typecheck
 npm run build
 ```
 
+## Patch 9F-7B second fixture draft-generation planning previews 검증
+
+- Target plan item/content item: `cmqlr1v1y0002iwj27df8ac5a` / `daily_fixture_cmqlr1v1y0002iwj27df8ac5a`.
+- The following routes should support read-only `mode=preview` for the second fixture:
+  - `POST /api/daily-content-plans/draft-generation-dry-run-planner`
+  - `POST /api/daily-content-plans/draft-generation-llm-provider-readiness`
+  - `POST /api/daily-content-plans/draft-generation-llm-provider-health-check-preview`
+  - `POST /api/daily-content-plans/draft-generation-final-execution-checklist`
+  - `POST /api/daily-content-plans/draft-generation-prompt-render-preview`
+  - `POST /api/daily-content-plans/draft-generation-prompt-quality-checklist-preview`
+  - `POST /api/daily-content-plans/draft-generation-llm-request-envelope-preview`
+  - `POST /api/daily-content-plans/draft-generation-llm-dispatch-gate-preview`
+- Runtime smoke should return HTTP 200 from all routes.
+- Expected blockers can include LLM execution feature flag, content mutation feature flag, draft-generation write feature flag, confirmation phrase, idempotency key, and provider health-check satisfaction.
+- Prompt body, raw provider response, candidate body, token, secret, encrypted value, or Blogger raw response must not be logged in validation output.
+- Side effects must remain false for DB write, dispatch attempt/event/artifact mutation, `llm_call_logs` mutation, content mutation, `draftMarkdown` mutation, `draftHtml` mutation, Blogger API read/write, draft save, publish, scheduled publish, OAuth reconnect, and token refresh.
+
 ## Patch 9F-5A / 9F-5B Post-Publish Duplicate Prevention Hardening
 
 - For published content item `daily_fixture_cmqlr1v1y0001iwj2gpv2875r`, publish preflight should include `content_status_not_planned` and `content_already_published`.
