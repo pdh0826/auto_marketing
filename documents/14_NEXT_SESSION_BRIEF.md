@@ -1,5 +1,37 @@
 # 14_NEXT_SESSION_BRIEF
 
+## Current State: Patch 9F-7A Apply Completed
+
+The second daily fixture now has a persisted operator approval row/event for future draft generation execution.
+
+Approved apply result:
+
+- Route used: `POST /api/daily-content-plans/operator-approvals`.
+- Target plan item: `cmqlr1v1y0002iwj27df8ac5a`.
+- Target content item: `daily_fixture_cmqlr1v1y0002iwj27df8ac5a`.
+- Approval id: `cmr7uxdkd00015las7kqwfyr7`.
+- Approval event id: `cmr7uxdkt00035lash5ttj6hz`.
+- Idempotency key: `9F-2K:draft_generation_execution:cmqlr1v1y0002iwj27df8ac5a:daily_fixture_cmqlr1v1y0002iwj27df8ac5a`.
+- Apply response reported `applyOk=true`, `createdApproval=true`, `createdEvent=true`, and no blockers.
+
+Verified state:
+
+- Operator approvals/events are now `2 / 2`.
+- Second fixture approval count is `1`.
+- Content item counts remain `3`, linked daily plan items remain `2`, `llm_call_logs=24`, draft saves `2`, publish approvals `2`, publish attempts `2`.
+- Second fixture remains `planned` / `memo_expand` with `blogId=null`, no `draftMarkdown`, no `draftHtml`, `qualityScore=null`, `publishedAt=null`, and `scheduledAt=null`.
+- Execution gate preview for the second fixture reports `readinessStructuralReady=true` and `operatorApprovalSatisfied=true`.
+- Remaining execution blockers are `llm_execution_feature_flag_disabled`, `content_mutation_feature_flag_disabled`, `draft_generation_write_feature_flag_disabled`, `confirmation_phrase_missing`, and `idempotency_key_missing`.
+
+Not executed:
+
+- No LLM call, `llm_call_logs` mutation, draft Markdown/HTML generation, content item mutation, Blogger API call, draft save, publish, scheduled publish, OAuth reconnect, or token refresh occurred.
+
+Next recommended patch:
+
+- `9F-7B — second fixture draft-generation dry-run/execution gate planning`, read-only first.
+- Any actual LLM execution or content mutation must remain separately approved and gated.
+
 ## Current State: Patch 9F-6C Implemented
 
 The second daily fixture is now linked, and a read-only next draft-generation readiness wrapper is available.

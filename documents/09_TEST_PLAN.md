@@ -2066,6 +2066,17 @@ Safety guard:
 - Post-preview DB state should remain: fixture `draftMarkdown` length `1141`, `draftHtml` length `1690`, status `planned`, `qualityScore/publishedAt/scheduledAt=null`.
 - Counts should remain attempts/events/artifacts/llm_call_logs/blogger_draft_saves/blogger_publish_execution_attempts `2/3/4/24/1/1`.
 
+## Patch 9F-7A second fixture operator approval persistence 검증
+
+- `POST /api/daily-content-plans/operator-approvals` apply mode may be used exactly once for the second daily fixture after explicit user approval.
+- Required target: plan item `cmqlr1v1y0002iwj27df8ac5a`, content item `daily_fixture_cmqlr1v1y0002iwj27df8ac5a`.
+- Required idempotency key: `9F-2K:draft_generation_execution:cmqlr1v1y0002iwj27df8ac5a:daily_fixture_cmqlr1v1y0002iwj27df8ac5a`.
+- Approved one-time apply result: approval id `cmr7uxdkd00015las7kqwfyr7`, event id `cmr7uxdkt00035lash5ttj6hz`, `applyOk=true`, `createdApproval=true`, `createdEvent=true`.
+- Post-apply counts should be `content_items=3`, linked daily plan items `2`, operator approvals/events `2 / 2`, second fixture approval count `1`, `llm_call_logs=24`, draft saves `2`, publish approvals `2`, publish attempts `2`.
+- The second fixture must remain `planned`, with no `draftMarkdown`, no `draftHtml`, no `qualityScore`, no `publishedAt`, and no `scheduledAt`.
+- Execution gate preview should report `operatorApprovalSatisfied=true` while LLM/write/confirmation/idempotency blockers remain.
+- No LLM call, `llm_call_logs` mutation, content mutation, draft body mutation, Blogger API call, draft save, publish, scheduled publish, OAuth reconnect, or token refresh should occur.
+
 ## Patch 9F-6C next draft-generation readiness 검증
 
 - `POST /api/daily-content-plans/next-draft-generation-readiness`는 현재 `next-item-readiness` 결과를 읽고, 다음 linked planned fixture에 대해 기존 `draft-generation-readiness` preflight를 read-only로 재사용해야 한다.

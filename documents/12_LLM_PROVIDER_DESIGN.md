@@ -1214,6 +1214,16 @@ Patch 9F-3O consumes the controlled candidate text artifact without calling an L
 - The approved apply consumed the existing controlled artifact; it did not invoke the provider abstraction.
 - Next work should treat saved `draftMarkdown` as input for a preview-only Markdown-to-HTML conversion gate before any `draftHtml` persistence.
 
+## Patch 9F-7A second fixture operator approval boundary
+
+Patch 9F-7A persists operator approval metadata only.
+
+- It does not call an LLM provider.
+- It does not create `llm_call_logs`.
+- It does not create dispatch attempts, dispatch events, or draft candidate artifacts.
+- It does not mutate `draftMarkdown`, `draftHtml`, content status, Blogger state, publish state, OAuth state, or tokens.
+- Future draft-generation execution remains gated by separate LLM/write/confirmation/idempotency controls.
+
 ## Patch 9F-6C next draft-generation readiness boundary
 
 Patch 9F-6C remains outside the LLM provider path.
