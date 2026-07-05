@@ -2066,6 +2066,15 @@ Safety guard:
 - Post-preview DB state should remain: fixture `draftMarkdown` length `1141`, `draftHtml` length `1690`, status `planned`, `qualityScore/publishedAt/scheduledAt=null`.
 - Counts should remain attempts/events/artifacts/llm_call_logs/blogger_draft_saves/blogger_publish_execution_attempts `2/3/4/24/1/1`.
 
+## Patch 9F-6C next draft-generation readiness 검증
+
+- `POST /api/daily-content-plans/next-draft-generation-readiness`는 현재 `next-item-readiness` 결과를 읽고, 다음 linked planned fixture에 대해 기존 `draft-generation-readiness` preflight를 read-only로 재사용해야 한다.
+- 현재 target은 plan item `cmqlr1v1y0002iwj27df8ac5a`, content item `daily_fixture_cmqlr1v1y0002iwj27df8ac5a`여야 한다.
+- 정상 결과는 `structuralReadyForFutureDraftGeneration=true`, `executionReadyForDraftGeneration=false`, `operatorApprovalRequired=true`, `nextRecommendedPatch=9F-7A`, blockers `[]`이다.
+- Warnings may include execution blockers from the underlying draft readiness route, including missing operator approval and disabled draft-generation/LLM/content mutation gates.
+- Side effects must remain false for DB write, operator approval/event mutation, LLM calls, `llm_call_logs`, content mutation, draft Markdown/HTML mutation, Blogger API read/write, draft save, publish, scheduled publish, OAuth reconnect, and token refresh.
+- 9F-7A operator approval persistence requires a separate explicit user approval before any approval/event row is created.
+
 ## Patch 9F-6B gated next content item fixture 검증
 
 - `POST /api/daily-content-plans/next-content-item-fixture`는 기본 preview에서 DB write 없이 다음 unlinked daily plan item fixture 생성/링크 가능 여부만 반환해야 한다.

@@ -2608,6 +2608,18 @@ Not implemented:
 - content item status, `publishedAt`, `scheduledAt`, `qualityScore`, `draftHtml`, or `draftMarkdown` mutation
 - LLM calls, `llm_call_logs`, deploy, push, or external service writes
 
+## Patch 9F-6C: Next Draft-generation Readiness
+
+Implemented after Patch 9F-6B apply:
+
+- Added `POST /api/daily-content-plans/next-draft-generation-readiness`.
+- Added a read-only helper that reads `next-item-readiness`, targets the newly linked second fixture, and reuses the existing draft-generation readiness preflight.
+- The route is intended to confirm structural readiness for the next planned fixture and identify `9F-7A` as the next approval-gated step.
+
+Not executed or not implemented:
+
+- Operator approval persistence, LLM calls, `llm_call_logs`, content item mutation, draft Markdown/HTML generation, Blogger API read/write, draft save, publish, scheduled publish, OAuth reconnect, token refresh, deploy, push, or external service write.
+
 ## Patch 9F-6B: Gated Next Daily Content Item Fixture
 
 Implemented after Patch 9F-6A:

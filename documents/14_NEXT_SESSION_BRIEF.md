@@ -1,5 +1,40 @@
 # 14_NEXT_SESSION_BRIEF
 
+## Current State: Patch 9F-6C Implemented
+
+The second daily fixture is now linked, and a read-only next draft-generation readiness wrapper is available.
+
+Implemented:
+
+- Added `POST /api/daily-content-plans/next-draft-generation-readiness`.
+- Added `src/lib/daily-content-plans/next-draft-generation-readiness.ts`.
+- The route reads current `next-item-readiness`, targets the newly linked planned fixture, then reuses the existing draft-generation readiness preflight.
+- It reports the second fixture as structurally ready for future draft generation while keeping execution blocked.
+- It recommends `9F-7A` as the next patch only when the next fixture is planned, linked, not published/scheduled, and has no draft body.
+
+Safety notes:
+
+- 9F-6C is read-only.
+- It does not create operator approvals, run LLM generation, create `llm_call_logs`, mutate content items, write Blogger drafts, publish, schedule, reconnect OAuth, or refresh tokens.
+- Draft generation execution remains blocked until an explicit operator approval persistence step and later write/LLM gates are approved.
+
+Runtime smoke:
+
+- `POST /api/daily-content-plans/next-draft-generation-readiness` returned 200.
+- Target plan item/content item: `cmqlr1v1y0002iwj27df8ac5a` / `daily_fixture_cmqlr1v1y0002iwj27df8ac5a`.
+- `structuralReadyForFutureDraftGeneration=true`, `executionReadyForDraftGeneration=false`, `operatorApprovalRequired=true`.
+- `nextRecommendedPatch=9F-7A`.
+- Top-level blockers are empty; underlying draft readiness blockers remain `no_operator_approval_persisted`, `draft_generation_execution_disabled`, `llm_generation_execution_disabled`, and `content_mutation_disabled`.
+- DB counts remained `content_items=3`, linked daily plan items `2`, operator approvals/events `1 / 1`, `llm_call_logs=24`, draft saves `2`, publish approvals `2`, publish attempts `2`.
+
+Next user-approval gate:
+
+- `9F-7A — persist operator approval row/event for the second fixture` requires explicit user approval because it creates DB approval/event rows.
+- Target plan item: `cmqlr1v1y0002iwj27df8ac5a`.
+- Target content item: `daily_fixture_cmqlr1v1y0002iwj27df8ac5a`.
+- Existing operator approval route: `POST /api/daily-content-plans/operator-approvals`.
+- Expected idempotency key: `9F-2K:draft_generation_execution:cmqlr1v1y0002iwj27df8ac5a:daily_fixture_cmqlr1v1y0002iwj27df8ac5a`.
+
 ## Current State: Patch 9F-6B Apply Completed
 
 The next daily content item fixture creation/linking gate has been applied once after explicit user approval.
