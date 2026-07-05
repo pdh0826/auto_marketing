@@ -8,6 +8,24 @@ npm run typecheck
 npm run build
 ```
 
+## Patch 9F-7E second fixture gated LLM dispatch 검증
+
+- Target plan item/content item: `cmqlr1v1y0002iwj27df8ac5a` / `daily_fixture_cmqlr1v1y0002iwj27df8ac5a`.
+- Final preflight should return `finalPreflightReadyForPlanLock=true`.
+- Plan lock preview should return `planLockCandidateReady=true` and lock hash `ccfe44cfdf3637981320bf522518f72701df8e82563e8767c513670c246dc08e`.
+- With explicit 9F-7 approval, `POST /api/daily-content-plans/draft-generation-llm-dispatch-execution` may be called once with:
+  - `BLOG_DAILY_CONTENT_DRAFT_GENERATION_LLM_ENABLED=true`
+  - mode `execute`
+  - exact confirmation phrase `I_UNDERSTAND_THIS_CALLS_ONE_LLM_PROVIDER_WITHOUT_CONTENT_MUTATION`
+  - deterministic idempotency key
+  - expected lock hash above
+- Expected result: `dispatchExecutionAllowed=true`, `dispatchExecutedNow=true`, provider response received, response event/artifact created, and `llm_call_logs` incremented by 1.
+- Runtime result: attempt `cmr7vhofm00015lm8rnoopfhg`, LLM call log `cmr7vmprp00015lm1gu51rmyo`, response event `cmr7vmptw00035lm10rihad8d`, response artifact `cmr7vmptw00055lm1go6fih4e`, response length `844`, response hash prefix `8a49f6d29d50f03b`.
+- Readback should confirm provider response/event/artifact/log are found and response hash/length match across audit.
+- Post-dispatch counts should be dispatch attempts/events/artifacts `3 / 5 / 6`, `llm_call_logs=25`.
+- The second fixture must remain `planned`, with `draftMarkdown` length `0`, `draftHtml` length `0`, `qualityScore=null`, `publishedAt=null`, and `scheduledAt=null`.
+- Blogger API, draft save, publish, scheduled publish, OAuth reconnect, and token refresh must not occur.
+
 ## Patch 9F-7D second fixture dispatch audit preparation 검증
 
 - Target plan item/content item: `cmqlr1v1y0002iwj27df8ac5a` / `daily_fixture_cmqlr1v1y0002iwj27df8ac5a`.

@@ -1,5 +1,44 @@
 # 14_NEXT_SESSION_BRIEF
 
+## Current State: Patch 9F-7E Gated LLM Dispatch Completed
+
+The second daily fixture now has a successful gated LLM dispatch response recorded in audit metadata only.
+
+Runtime smoke target:
+
+- Plan item: `cmqlr1v1y0002iwj27df8ac5a`.
+- Content item: `daily_fixture_cmqlr1v1y0002iwj27df8ac5a`.
+- Dispatch attempt: `cmr7vhofm00015lm8rnoopfhg`.
+- Plan lock hash: `ccfe44cfdf3637981320bf522518f72701df8e82563e8767c513670c246dc08e`.
+
+Observed result:
+
+- Final preflight reported `finalPreflightReadyForPlanLock=true`.
+- Plan lock preview reported `planLockCandidateReady=true`.
+- LLM dispatch route returned `dispatchExecutionAllowed=true`, `dispatchExecutedNow=true`, and no blockers.
+- Provider result summary: `ollama_generate_received`.
+- LLM call log id: `cmr7vmprp00015lm1gu51rmyo`.
+- Response event id: `cmr7vmptw00035lm10rihad8d`.
+- Response artifact id: `cmr7vmptw00055lm1go6fih4e`.
+- Response hash prefix: `8a49f6d29d50f03b`; response length `844`.
+- Readback confirmed provider response/event/artifact/log were found and response hash/length matched across audit.
+
+Verified side effects:
+
+- Dispatch attempts/events/artifacts are now `3 / 5 / 6`.
+- `llm_call_logs=25`.
+- Attempt status is `provider_response_received` with `llmCallAttempted=true`, `llmCompletionReceived=true`, and `providerNetworkCallAttempted=true`.
+- The same attempt still has `contentMutationAttempted=false`, `draftMutationAttempted=false`, and `bloggerWriteAttempted=false`.
+- Second fixture remains `planned`, `draftMarkdown` length `0`, `draftHtml` length `0`, `qualityScore=null`, `publishedAt=null`, and `scheduledAt=null`.
+
+Not executed:
+
+- No content item mutation, `draftMarkdown`/`draftHtml` persistence, Blogger API call, draft save, publish, scheduled publish, OAuth reconnect, or token refresh occurred.
+
+Next recommended patch:
+
+- `9F-7F — second fixture LLM output validation and candidate persistence gate`.
+
 ## Current State: Patch 9F-7D Dispatch Audit Preparation Completed
 
 The second daily fixture now has audit-only dispatch preparation rows for future LLM execution.

@@ -1,5 +1,24 @@
 # 13_CHANGELOG
 
+## Patch 9F-7E: Second Fixture Gated LLM Dispatch
+
+Executed the gated single LLM dispatch for the second daily fixture without content mutation.
+
+- Target plan item/content item: `cmqlr1v1y0002iwj27df8ac5a` / `daily_fixture_cmqlr1v1y0002iwj27df8ac5a`.
+- Final preflight reported `finalPreflightReadyForPlanLock=true`; plan lock preview reported `planLockCandidateReady=true`.
+- Used lock hash `ccfe44cfdf3637981320bf522518f72701df8e82563e8767c513670c246dc08e`.
+- LLM dispatch returned `dispatchExecutionAllowed=true`, `dispatchExecutedNow=true`, and no blockers.
+- Provider response summary was `ollama_generate_received`.
+- Created LLM call log `cmr7vmprp00015lm1gu51rmyo`.
+- Created response event `cmr7vmptw00035lm10rihad8d` and response artifact `cmr7vmptw00055lm1go6fih4e`.
+- Readback confirmed provider response/event/artifact/log were found and response hash/length matched across audit.
+- Dispatch attempts/events/artifacts are now `3 / 5 / 6`; `llm_call_logs=25`.
+- The second fixture remains `planned` with empty `draftMarkdown` and `draftHtml`.
+
+Not executed:
+
+- Content item mutation, `draftMarkdown`/`draftHtml` persistence, Blogger API call, draft save, publish, scheduled publish, OAuth reconnect, token refresh, deploy, push, or raw prompt/response storage.
+
 ## Patch 9F-7D: Second Fixture Dispatch Audit Preparation
 
 Created the audit-only dispatch preparation rows for the second daily fixture.
