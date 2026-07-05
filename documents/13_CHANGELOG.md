@@ -1,5 +1,34 @@
 # 13_CHANGELOG
 
+## Patch 9F-7F: Second Fixture Candidate Persistence and HTML Readiness
+
+Completed the approved second fixture draft body path through candidate redispatch, validation persistence, draft Markdown persistence, deterministic HTML persistence, and Blog target assignment.
+
+- Target plan item/content item: `cmqlr1v1y0002iwj27df8ac5a` / `daily_fixture_cmqlr1v1y0002iwj27df8ac5a`.
+- Executed candidate text redispatch once under the candidate redispatch feature flag.
+- Created candidate redispatch attempt `cmr7vrhjk00015lvylymaxgj1`.
+- Created LLM call log `cmr7vs5vt00035lvyu4d3k2fn`.
+- Created response event/artifact `cmr7vs5wb00055lvyhqau0tdo` / `cmr7vs5wc00075lvy0kdyuo0f`.
+- Created candidate Markdown artifact `cmr7vs5wc00095lvyuhmnaud7`.
+- Persisted the LLM output validation audit result.
+- Persisted `content_items.draftMarkdown` from the approved candidate only.
+- Persisted deterministic `content_items.draftHtml` from the saved Markdown only.
+- Linked the content item to Blog `cmqc0ugaz00001yek2ve7fv3x` after current blog id, draft Markdown hash, draft HTML hash, Blogger connection id, and Blogger blog id matched the guarded preview.
+- Final saved draft HTML readiness readback reported `draftPayloadReady=true`, `contentReady=true`, `bloggerConnectionReady=true`, `selectedBlogReady=true`, and `canProceedTo9F3S=true`.
+
+Final second fixture state:
+
+- Status remains `planned`.
+- `draftMarkdown` length `1094`, SHA-256 `6479923f89ff35ac44a9d92ed5c692335f9e262871a01b461b8648f2c2690304`.
+- `draftHtml` length `1505`, SHA-256 `f27737115a62d9ce3d9a4ef6fb2372187e1d97a7b097b83cf5ba199710d3bbeb`.
+- `blogId=cmqc0ugaz00001yek2ve7fv3x`.
+- `qualityScore`, `publishedAt`, and `scheduledAt` remain unset.
+- Publish readiness remains blocked by manual approval and Blogger draft save, as intended.
+
+Not executed:
+
+- Blogger API call, Blogger draft save, publish, scheduled publish, OAuth reconnect, token refresh, deploy, push, raw prompt output storage, or raw provider response body storage.
+
 ## Patch 9F-7E: Second Fixture Gated LLM Dispatch
 
 Executed the gated single LLM dispatch for the second daily fixture without content mutation.

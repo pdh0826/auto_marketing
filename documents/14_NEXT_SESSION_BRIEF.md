@@ -1,6 +1,44 @@
 # 14_NEXT_SESSION_BRIEF
 
-## Current State: Patch 9F-7E Gated LLM Dispatch Completed
+## Current State: Patch 9F-7F Second Fixture Candidate Persistence Completed
+
+The second daily fixture now has a persisted draft Markdown body, deterministic draft HTML body, and linked Blog target.
+
+Runtime smoke target:
+
+- Plan item: `cmqlr1v1y0002iwj27df8ac5a`.
+- Content item: `daily_fixture_cmqlr1v1y0002iwj27df8ac5a`.
+- Blog target: `cmqc0ugaz00001yek2ve7fv3x` (`급등포착 블로그`).
+- Blogger target blog id: `3065973490356135805`.
+
+Observed result:
+
+- Candidate text redispatch created attempt `cmr7vrhjk00015lvylymaxgj1`.
+- LLM call log id: `cmr7vs5vt00035lvyu4d3k2fn`.
+- Response event/artifact: `cmr7vs5wb00055lvyhqau0tdo` / `cmr7vs5wc00075lvy0kdyuo0f`.
+- Candidate Markdown artifact: `cmr7vs5wc00095lvyuhmnaud7`.
+- Candidate Markdown SHA-256: `6479923f89ff35ac44a9d92ed5c692335f9e262871a01b461b8648f2c2690304`; length `1094`.
+- Deterministic HTML SHA-256: `f27737115a62d9ce3d9a4ef6fb2372187e1d97a7b097b83cf5ba199710d3bbeb`; length `1505`.
+- Blog target assignment linked `content_items.blogId` to `cmqc0ugaz00001yek2ve7fv3x`.
+- Saved draft HTML readiness readback now reports `draftPayloadReady=true`, `contentReady=true`, `bloggerConnectionReady=true`, `selectedBlogReady=true`, `canProceedTo9F3S=true`, and `recommendedNextPatch=9F-3S`.
+
+Verified side effects:
+
+- Second fixture remains `planned`.
+- `draftMarkdown` length is `1094`; `draftHtml` length is `1505`.
+- `qualityScore=null`, `publishedAt=null`, and `scheduledAt=null`.
+- Blog target assignment changed only `content_items.blogId`.
+- Publish readiness remains `ready=false` / `publishReady=false`, blocked by manual approval and Blogger draft save.
+
+Not executed:
+
+- No Blogger API call, Blogger draft save, publish, scheduled publish, OAuth reconnect, token refresh, deploy, push, raw prompt storage, or raw provider response body storage occurred.
+
+Next recommended patch:
+
+- `9F-3S — refreshed Blogger draft payload approval snapshot` for the second fixture. This creates/refreshes the manual approval snapshot and should be treated as an explicit approval-gated operation.
+
+## Previous State: Patch 9F-7E Gated LLM Dispatch Completed
 
 The second daily fixture now has a successful gated LLM dispatch response recorded in audit metadata only.
 

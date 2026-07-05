@@ -8,6 +8,38 @@ npm run typecheck
 npm run build
 ```
 
+## Patch 9F-7F second fixture candidate persistence / HTML readiness 검증
+
+- Target plan item/content item: `cmqlr1v1y0002iwj27df8ac5a` / `daily_fixture_cmqlr1v1y0002iwj27df8ac5a`.
+- With explicit 9F-7 approval, the second fixture may proceed through the existing gated candidate persistence path:
+  - candidate text redispatch with `BLOG_DAILY_CONTENT_DRAFT_GENERATION_CANDIDATE_TEXT_REDISPATCH_ENABLED=true`
+  - LLM output validation persistence with `BLOG_DAILY_CONTENT_LLM_OUTPUT_VALIDATION_PERSISTENCE_ENABLED=true`
+  - draft Markdown persistence with `BLOG_DAILY_CONTENT_DRAFT_MARKDOWN_PERSISTENCE_ENABLED=true`
+  - deterministic draft HTML conversion/persistence with `BLOG_DAILY_CONTENT_DRAFT_HTML_PERSISTENCE_ENABLED=true`
+  - Blog target assignment with `BLOG_DAILY_CONTENT_BLOG_TARGET_ASSIGNMENT_ENABLED=true`
+- Runtime result:
+  - candidate redispatch attempt `cmr7vrhjk00015lvylymaxgj1`
+  - LLM call log `cmr7vs5vt00035lvyu4d3k2fn`
+  - response event/artifact `cmr7vs5wb00055lvyhqau0tdo` / `cmr7vs5wc00075lvy0kdyuo0f`
+  - candidate Markdown artifact `cmr7vs5wc00095lvyuhmnaud7`
+  - candidate Markdown SHA-256 `6479923f89ff35ac44a9d92ed5c692335f9e262871a01b461b8648f2c2690304`
+  - candidate Markdown length `1094`
+  - HTML preview/persisted SHA-256 `f27737115a62d9ce3d9a4ef6fb2372187e1d97a7b097b83cf5ba199710d3bbeb`
+  - HTML length `1505`
+- The output validation preview must report candidate available, validation ready, no blocking errors, and only non-blocking warnings.
+- Draft Markdown persistence must mutate only `content_items.draftMarkdown`; draft HTML persistence must mutate only `content_items.draftHtml`.
+- Blog target assignment must link only `content_items.blogId` to `cmqc0ugaz00001yek2ve7fv3x` after hash and Blogger target checks match.
+- Final saved draft HTML readiness readback should report:
+  - `contentReady=true`
+  - `draftPayloadReady=true`
+  - `bloggerConnectionReady=true`
+  - `selectedBlogReady=true`
+  - `canProceedTo9F3S=true`
+  - `recommendedNextPatch=9F-3S`
+- Publish readiness must remain `ready=false` / `publishReady=false`, with remaining blockers limited to manual approval and Blogger draft save.
+- The second fixture must remain `planned`; `qualityScore`, `publishedAt`, and `scheduledAt` must remain unchanged.
+- Blogger API, draft save, publish, scheduled publish, OAuth reconnect, token refresh, deploy, push, raw prompt output storage, and raw provider response body storage must not occur.
+
 ## Patch 9F-7E second fixture gated LLM dispatch 검증
 
 - Target plan item/content item: `cmqlr1v1y0002iwj27df8ac5a` / `daily_fixture_cmqlr1v1y0002iwj27df8ac5a`.
