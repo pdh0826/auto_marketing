@@ -1,5 +1,37 @@
 # 13_CHANGELOG
 
+## Patch 9F-4D / 9F-4E Second Fixture Live Publish Completion
+
+Completed the guarded live Blogger publish and post-publish reconciliation for the second fixture after explicit user approval.
+
+- Target content item: `daily_fixture_cmqlr1v1y0002iwj27df8ac5a`.
+- Live publish approval text explicitly acknowledged Blogger post `411073211994805417` would be publicly published.
+- Re-ran guarded publish dry-run with `BLOGGER_GUARDED_PUBLISH_LIVE_ENABLED=true` and confirmed final preflight ready, OAuth gate satisfied, and all expected metadata matched.
+- Executed guarded live Blogger publish exactly once.
+- Blogger publish result:
+  - post id `411073211994805417`
+  - URL `https://mathlearningappl.blogspot.com/2026/07/blog-post_06.html`
+  - published at `2026-07-06T08:36:05-07:00`
+  - updated at `2026-07-06T08:36:05-07:00`
+- Publish result readback succeeded and matched approval, attempt, draft save, target blog, post id, URL, published timestamp, and updated timestamp.
+- Applied post-publish reconciliation with `BLOGGER_POST_PUBLISH_RECONCILIATION_APPLY_ENABLED=true`.
+- Local content item is now `published`.
+- Publish execution attempt `cmr9d9v2m00055lmcsc6a247c` is now `success` with redacted Blogger readback metadata.
+
+Final second fixture state:
+
+- Status: `published`.
+- `publishedAt=2026-07-06T15:36:05.000Z`.
+- `scheduledAt=null`.
+- `draftMarkdown` length `1094`, md5 `b62b37748074bcfcf6c7b25b6852d064`.
+- `draftHtml` length `1505`, md5 `dbfed22f5d7e57be3449ade45eb30f6a`.
+- `qualityScore=null`.
+- Counts: `blogger_draft_approvals=3`, `blogger_draft_saves=3`, `blogger_publish_approvals=3`, `blogger_publish_execution_attempts=3`, `llm_call_logs=26`.
+
+Not executed:
+
+- Scheduled publish, `posts.update`, extra draft save, OAuth reconnect, LLM call, deploy, push, draft Markdown mutation, draft HTML mutation, quality score mutation, raw Blogger response storage, or raw token output.
+
 ## Patch 9F-4A / 9F-4B / 9F-4C Second Fixture Publish Gate Preparation
 
 Completed the second fixture publish preflight, publish approval snapshot, and publish execution attempt planning gates.

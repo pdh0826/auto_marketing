@@ -1,6 +1,47 @@
 # 14_NEXT_SESSION_BRIEF
 
-## Current State: Patch 9F-4A / 9F-4B / 9F-4C Second Fixture Publish Gate Preparation Completed
+## Current State: Patch 9F-4D / 9F-4E Second Fixture Live Publish Completed
+
+The second daily fixture reached the guarded Blogger publish milestone.
+
+Runtime smoke target:
+
+- Content item: `daily_fixture_cmqlr1v1y0002iwj27df8ac5a`.
+- Blogger post id: `411073211994805417`.
+- Blogger target blog id/name: `3065973490356135805` / `급등포착`.
+
+Observed result:
+
+- User explicitly approved guarded live Blogger publish for post `411073211994805417`.
+- Guarded publish dry-run with the live feature flag reported final preflight ready, OAuth gate satisfied, and all expected metadata matched.
+- Guarded live Blogger publish was executed exactly once.
+- Blogger publish result:
+  - URL `https://mathlearningappl.blogspot.com/2026/07/blog-post_06.html`
+  - published at `2026-07-06T08:36:05-07:00`
+  - updated at `2026-07-06T08:36:05-07:00`
+- Publish result readback succeeded and matched approval, attempt, draft save, target blog, post id, URL, published timestamp, and updated timestamp.
+- Post-publish reconciliation applied successfully.
+
+Final DB state:
+
+- Content status: `published`.
+- `publishedAt=2026-07-06T15:36:05.000Z`.
+- `scheduledAt=null`.
+- `draftMarkdown` length `1094`, md5 `b62b37748074bcfcf6c7b25b6852d064`.
+- `draftHtml` length `1505`, md5 `dbfed22f5d7e57be3449ade45eb30f6a`.
+- `qualityScore=null`.
+- Publish execution attempt `cmr9d9v2m00055lmcsc6a247c` status is `success` and has redacted Blogger readback metadata.
+- Counts: `blogger_draft_approvals=3`, `blogger_draft_saves=3`, `blogger_publish_approvals=3`, `blogger_publish_execution_attempts=3`, `llm_call_logs=26`.
+
+Not executed:
+
+- No scheduled publish, `posts.update`, extra draft save, OAuth reconnect, LLM call, deploy, push, draft Markdown mutation, draft HTML mutation, quality score mutation, raw Blogger response storage, or raw token output occurred.
+
+Next recommended patch:
+
+- `9F-5A/9F-5B` style post-publish duplicate prevention/readback hardening for the second fixture, or move to the next daily content item pipeline.
+
+## Previous State: Patch 9F-4A / 9F-4B / 9F-4C Second Fixture Publish Gate Preparation Completed
 
 The second daily fixture now has local publish approval and publish execution attempt records. Live Blogger publish has not been executed.
 

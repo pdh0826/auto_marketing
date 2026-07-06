@@ -8,6 +8,31 @@ npm run typecheck
 npm run build
 ```
 
+## Patch 9F-4D / 9F-4E second fixture live publish completion 검증
+
+- Target content item: `daily_fixture_cmqlr1v1y0002iwj27df8ac5a`.
+- Live publish requires explicit user approval acknowledging Blogger post `411073211994805417` will be publicly published.
+- With `BLOGGER_GUARDED_PUBLISH_LIVE_ENABLED=true`, guarded dry-run should report final preflight ready, OAuth gate satisfied, all expected metadata matched, and no Blogger write.
+- Guarded live publish may be called exactly once with:
+  - publish approval `cmr9d98zm00035lmc25l1245z`
+  - publish execution attempt `cmr9d9v2m00055lmcsc6a247c`
+  - draft Markdown md5 `b62b37748074bcfcf6c7b25b6852d064`
+  - draft HTML md5 `dbfed22f5d7e57be3449ade45eb30f6a`
+  - draft HTML length `1505`
+  - target Blogger blog id `3065973490356135805`
+  - Blogger post id `411073211994805417`
+- Expected live publish result:
+  - URL `https://mathlearningappl.blogspot.com/2026/07/blog-post_06.html`
+  - published at `2026-07-06T08:36:05-07:00`
+  - updated at `2026-07-06T08:36:05-07:00`
+- Publish result readback should match approval, attempt, draft save, target blog, post id, URL, published timestamp, and updated timestamp.
+- Post-publish reconciliation apply should update only:
+  - `content_items.status` to `published`
+  - `content_items.publishedAt` to `2026-07-06T15:36:05.000Z`
+  - publish execution attempt status/readback metadata to success/redacted readback
+- Final content item should keep `draftMarkdown` md5 `b62b37748074bcfcf6c7b25b6852d064`, `draftHtml` md5 `dbfed22f5d7e57be3449ade45eb30f6a`, `draftHtml` length `1505`, `qualityScore=null`, and `scheduledAt=null`.
+- Scheduled publish, `posts.update`, extra draft save, OAuth reconnect, LLM call, deploy, push, draft Markdown mutation, draft HTML mutation, quality score mutation, raw Blogger response storage, and raw token output must not occur.
+
 ## Patch 9F-4A / 9F-4B / 9F-4C second fixture publish gate preparation 검증
 
 - Target content item: `daily_fixture_cmqlr1v1y0002iwj27df8ac5a`.
