@@ -1,5 +1,34 @@
 # 13_CHANGELOG
 
+## Patch 9F-5A / 9F-5B Second Fixture Post-Publish Duplicate Prevention Hardening
+
+Verified the post-publish duplicate prevention and idempotent readback/reconciliation guards for the already published second daily fixture.
+
+- Target content item: `daily_fixture_cmqlr1v1y0002iwj27df8ac5a`.
+- Published Blogger post id: `411073211994805417`.
+- Published URL: `https://mathlearningappl.blogspot.com/2026/07/blog-post_06.html`.
+- Publish preflight now reports `content_status_not_planned` and `content_already_published` for the second fixture.
+- Publish approval preview reports `content_status_not_planned` and `content_already_published`.
+- Publish approval save is rejected with HTTP 400 and `content_status_not_planned`; no publish approval row is created.
+- Publish execution attempt save is rejected with HTTP 400, `approval_no_longer_matches_current_state`, and `content_status_changed`; no publish execution attempt row is created.
+- Guarded publish execution dry-run remains blocked with `content_status_not_planned` and `content_already_published`; Blogger publish/write is not attempted.
+- Publish result readback succeeds after local reconciliation, with all expected matches true.
+- Repeated post-publish reconciliation apply returns no-op success with `applyOk=true`, `appliedContentItemPatch=false`, `appliedAttemptPatch=false`, and `dbWrite=false`.
+
+Verified final second fixture state:
+
+- Status remains `published`.
+- `publishedAt=2026-07-06T15:36:05.000Z`.
+- `scheduledAt=null`.
+- `draftMarkdown` md5 remains `b62b37748074bcfcf6c7b25b6852d064`.
+- `draftHtml` md5 remains `dbfed22f5d7e57be3449ade45eb30f6a`.
+- `draftHtml` length remains `1505`.
+- Counts remain `blogger_draft_approvals=3`, `blogger_draft_saves=3`, `blogger_publish_approvals=3`, `blogger_publish_execution_attempts=3`, `llm_call_logs=26`.
+
+Not executed:
+
+- Blogger publish/write, scheduled publish, `posts.update`, extra draft save, OAuth reconnect, token refresh, LLM call, deploy, push, draft Markdown mutation, draft HTML mutation, quality score mutation, scheduled timestamp mutation, raw Blogger response storage, or raw token output.
+
 ## Patch 9F-4D / 9F-4E Second Fixture Live Publish Completion
 
 Completed the guarded live Blogger publish and post-publish reconciliation for the second fixture after explicit user approval.

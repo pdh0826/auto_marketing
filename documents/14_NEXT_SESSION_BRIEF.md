@@ -1,6 +1,44 @@
 # 14_NEXT_SESSION_BRIEF
 
-## Current State: Patch 9F-4D / 9F-4E Second Fixture Live Publish Completed
+## Current State: Patch 9F-5A / 9F-5B Second Fixture Post-Publish Duplicate Prevention Completed
+
+The second daily fixture is published and duplicate-protected. Post-publish readback/reconciliation is idempotent after local reconciliation.
+
+Runtime smoke target:
+
+- Content item: `daily_fixture_cmqlr1v1y0002iwj27df8ac5a`.
+- Blogger post id: `411073211994805417`.
+- Blogger target blog id/name: `3065973490356135805` / `급등포착`.
+- Published URL: `https://mathlearningappl.blogspot.com/2026/07/blog-post_06.html`.
+
+Observed result:
+
+- Publish preflight reports `content_status_not_planned` and `content_already_published`.
+- Publish approval preview reports `content_status_not_planned` and `content_already_published`.
+- Publish approval save is blocked with HTTP 400 `content_status_not_planned`.
+- Publish execution attempt save is blocked with HTTP 400 `approval_no_longer_matches_current_state` and `content_status_changed`.
+- Guarded publish execution dry-run remains blocked before any Blogger write, including `content_status_not_planned` and `content_already_published`.
+- Publish result readback returns `readbackOk=true`, all expected matches true, and no DB write.
+- Repeated post-publish reconciliation apply returns no-op success with `applyOk=true`, `appliedContentItemPatch=false`, `appliedAttemptPatch=false`, and `dbWrite=false`.
+
+Final DB state:
+
+- Content status: `published`.
+- `publishedAt=2026-07-06T15:36:05.000Z`.
+- `scheduledAt=null`.
+- `draftMarkdown` md5 `b62b37748074bcfcf6c7b25b6852d064`.
+- `draftHtml` length `1505`, md5 `dbfed22f5d7e57be3449ade45eb30f6a`.
+- Counts: `blogger_draft_approvals=3`, `blogger_draft_saves=3`, `blogger_publish_approvals=3`, `blogger_publish_execution_attempts=3`, `llm_call_logs=26`.
+
+Not executed:
+
+- No Blogger publish/write, scheduled publish, `posts.update`, extra draft save, OAuth reconnect, token refresh, LLM call, deploy, push, draft Markdown mutation, draft HTML mutation, quality score mutation, scheduled timestamp mutation, raw Blogger response storage, or raw token output occurred.
+
+Next recommended patch:
+
+- Move to the next daily content item pipeline, starting with the next fixture/plan creation and gated candidate-readiness sequence.
+
+## Previous State: Patch 9F-4D / 9F-4E Second Fixture Live Publish Completed
 
 The second daily fixture reached the guarded Blogger publish milestone.
 

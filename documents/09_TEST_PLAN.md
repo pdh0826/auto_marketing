@@ -207,6 +207,19 @@ npm run build
 - Final DB counts should remain daily fixture draft saves / publish approvals / publish attempts / `llm_call_logs` = `1 / 1 / 1 / 24`.
 - Verify no Blogger publish/write, scheduled publish, `posts.update`, extra draft save, OAuth reconnect, token refresh, LLM call, draft Markdown mutation, draft HTML mutation, quality score mutation, deploy, push, or raw Blogger response storage occurs.
 
+## Patch 9F-5A / 9F-5B Second Fixture Post-Publish Duplicate Prevention Hardening
+
+- For published content item `daily_fixture_cmqlr1v1y0002iwj27df8ac5a`, publish preflight should include `content_status_not_planned` and `content_already_published`.
+- Publish approval preview for the second published item should include `content_status_not_planned` and `content_already_published`.
+- Publish approval save for the second published item should return HTTP 400 with `content_status_not_planned` and must not create another approval row.
+- Publish execution attempt save for the second published item should return HTTP 400 with `approval_no_longer_matches_current_state` and `content_status_changed`.
+- Guarded publish execution dry-run should include `content_status_not_planned` and `content_already_published`, with `liveExecutionAttempted=false` and Blogger publish/write false.
+- Publish result readback after local reconciliation should return `readbackOk=true`, all expected matches true, and no DB write.
+- Repeated post-publish reconciliation apply after local reconciliation should return no-op success with `applyOk=true`, `appliedContentItemPatch=false`, `appliedAttemptPatch=false`, and DB write false.
+- Final DB counts should remain second fixture draft approvals / draft saves / publish approvals / publish attempts / `llm_call_logs` = `3 / 3 / 3 / 3 / 26`.
+- Final content state should remain `published`, `publishedAt=2026-07-06T15:36:05.000Z`, `draftMarkdown` md5 `b62b37748074bcfcf6c7b25b6852d064`, `draftHtml` md5 `dbfed22f5d7e57be3449ade45eb30f6a`, and `draftHtml` length `1505`.
+- Verify no Blogger publish/write, scheduled publish, `posts.update`, extra draft save, OAuth reconnect, token refresh, LLM call, draft Markdown mutation, draft HTML mutation, quality score mutation, deploy, push, or raw Blogger response storage occurs.
+
 ## Patch 9F-4A / 9F-4B / 9F-4C / 9F-4D / 9F-4E Daily Blogger Publish Completion
 
 - Publish preflight should confirm the saved Blogger draft post id `491846717642826194`, target blog `3065973490356135805`, draft approval `cmr3joq6v00015lk6hd8umgzr`, and duplicate draft-save protection.
