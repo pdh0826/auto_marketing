@@ -1,5 +1,63 @@
 # 13_CHANGELOG
 
+## Patch 9G-1B SEO-Sectioned Candidate Generation Smoke
+
+Generated and validated one new SEO-sectioned candidate without saving it to `content_items` and without Blogger API write/publish.
+
+- Target content item used for preview: `cmqc2xqbr00011y70sxmgl65v`.
+- Initial attempt on `daily_fixture_cmqlr1v1y0002iwj27df8ac5a` stopped safely because its saved `planJson` did not pass validation.
+- Successful generation route: `POST /api/content-items/cmqc2xqbr00011y70sxmgl65v/generate-draft`.
+- Generation strategy: `local_sectioned_multi_pass`.
+- Generation duration: about 478 seconds.
+- Candidate Markdown length: `9168`.
+- Candidate validation: `ok=true`, errors `0`, warnings `0`.
+- Section keys generated:
+  - `intro`
+  - `summary`
+  - `problem_context`
+  - `check_method_1`
+  - `check_method_2`
+  - `beginner_mistakes`
+  - `service_use_case`
+  - `faq`
+  - `risk_disclaimer`
+  - `cta`
+- FAQ required/detected: `true / true`.
+- Safety scrub applied: `true`, count `1`, codes `success_outcome_phrase`.
+- HTML template preview returned HTTP 200 and validation `ok=true`.
+- HTML preview metrics:
+  - Markdown length `9168`
+  - HTML length `11284`
+  - visible text length `8746`
+  - H1 `1`
+  - H2 `11`
+  - H3 `29`
+  - paragraphs `54`
+  - unsafe patterns `0`
+  - raw HTML escaped `false`
+  - `<pre>`/`<code>` detected `false / false`
+  - raw Markdown heading detected in HTML `false`
+  - SEO article grade `pass`
+  - SEO article score `100`
+  - SEO blockers `[]`
+  - SEO warnings `[]`
+- `validate-html` for the rendered HTML returned `validation.ok=true`, errors `0`, HTML SEO grade `pass`, score `100`, visible text length `8746`.
+
+Artifacts:
+
+- Candidate Markdown: `documents/generated/9g-1b-seo-sectioned-candidate.md`.
+- Candidate HTML preview: `documents/generated/9g-1b-seo-sectioned-candidate-preview.html`.
+
+Verified side effects:
+
+- No content item `draftMarkdown`, `draftHtml`, status, quality score, `publishedAt`, or `scheduledAt` mutation.
+- Blogger draft approvals/saves and publish approvals/attempts remained `3 / 3 / 3 / 3`.
+- `llm_call_logs` increased from `26` to `27` because one LLM candidate generation was intentionally executed.
+
+Not executed:
+
+- Blogger draft save, Blogger publish/write, scheduled publish, `posts.update`, OAuth reconnect, token refresh, deploy, push, draft Markdown apply, draft HTML apply, quality score mutation, raw Blogger response storage, or raw token output.
+
 ## Patch 9G-1A SEO Article Quality Engine Hardening
 
 Shifted the pipeline from publish-safety-only checks toward SEO article quality gates.

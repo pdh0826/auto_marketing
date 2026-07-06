@@ -1,6 +1,73 @@
 # 14_NEXT_SESSION_BRIEF
 
-## Current State: Patch 9G-1A SEO Article Quality Engine Hardening Completed
+## Current State: Patch 9G-1B SEO-Sectioned Candidate Generation Smoke Completed
+
+One new SEO-sectioned candidate was generated and validated without applying it to a content item and without Blogger write/publish.
+
+Target/result:
+
+- First attempted target: `daily_fixture_cmqlr1v1y0002iwj27df8ac5a`.
+- That target stopped safely because its saved `planJson` did not pass validation.
+- Successful target: `cmqc2xqbr00011y70sxmgl65v`.
+- Generation route: `POST /api/content-items/cmqc2xqbr00011y70sxmgl65v/generate-draft`.
+- Strategy: `local_sectioned_multi_pass`.
+- Runtime: about 478 seconds.
+
+Generated candidate:
+
+- Markdown length: `9168`.
+- Validation: `ok=true`, errors `0`, warnings `0`.
+- Section keys:
+  - `intro`
+  - `summary`
+  - `problem_context`
+  - `check_method_1`
+  - `check_method_2`
+  - `beginner_mistakes`
+  - `service_use_case`
+  - `faq`
+  - `risk_disclaimer`
+  - `cta`
+- FAQ required/detected: `true / true`.
+- Safety scrub applied: `true`, count `1`, code `success_outcome_phrase`.
+
+HTML preview:
+
+- Route: `POST /api/content-items/cmqc2xqbr00011y70sxmgl65v/blog-post-template-preview`.
+- Preview validation: `ok=true`.
+- HTML length: `11284`.
+- Visible text length: `8746`.
+- H1/H2/H3: `1 / 11 / 29`.
+- Paragraph count: `54`.
+- Unsafe patterns: `0`.
+- Raw HTML escaped: `false`.
+- `<pre>`/`<code>` detected: `false / false`.
+- Raw Markdown heading in rendered HTML: `false`.
+- SEO article grade/score: `pass / 100`.
+- SEO blockers/warnings: `[] / []`.
+- `validate-html` also returned `validation.ok=true`, SEO grade `pass`, score `100`, visible text length `8746`.
+
+Artifacts:
+
+- Candidate Markdown: `documents/generated/9g-1b-seo-sectioned-candidate.md`.
+- Candidate HTML preview: `documents/generated/9g-1b-seo-sectioned-candidate-preview.html`.
+
+Side effects:
+
+- No content item `draftMarkdown`, `draftHtml`, status, quality score, `publishedAt`, or `scheduledAt` mutation.
+- Blogger draft approvals/saves and publish approvals/attempts remained `3 / 3 / 3 / 3`.
+- `llm_call_logs` increased from `26` to `27` because one LLM generation was intentionally executed.
+
+Not executed:
+
+- No Blogger draft save, Blogger publish/write, scheduled publish, `posts.update`, OAuth reconnect, token refresh, deploy, push, draft Markdown apply, draft HTML apply, quality score mutation, raw Blogger response storage, or raw token output occurred.
+
+Next recommended patch:
+
+- Review the generated artifact content qualitatively and decide whether to apply it to a new/planned content item or create a rewrite/update plan for the bad 7/6 published post.
+- If applying to DB, create a separate guarded apply patch with explicit approval and hash checks.
+
+## Previous State: Patch 9G-1A SEO Article Quality Engine Hardening Completed
 
 The pipeline now blocks bad SEO article HTML before Blogger draft save/publish gates.
 

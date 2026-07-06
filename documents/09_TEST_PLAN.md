@@ -213,6 +213,39 @@ npm run build
   - saved bad second fixture `draftHtml` is blocked by draft save preflight
   - no Blogger write/publish, `posts.update`, token refresh, LLM call, content mutation, deploy, push, or raw token/Blogger response output occurs
 
+## Patch 9G-1B SEO-Sectioned Candidate Generation Smoke
+
+- Generate exactly one new SEO-sectioned candidate through the existing draft generation route.
+- If the first target content item has invalid `planJson`, stop that target safely and use a valid existing content item instead.
+- The successful candidate should expose safe metadata only in test output:
+  - strategy
+  - Markdown length
+  - section keys
+  - FAQ required/detected
+  - safety scrub status/count/codes
+  - validation error/warning counts
+- Save the generated Markdown and rendered HTML preview as explicit repo artifacts under `documents/generated/`.
+- Do not save the generated candidate into `content_items.draftMarkdown` or `content_items.draftHtml`.
+- Render the generated Markdown with `blog-post-template-preview`.
+- Expected HTML preview conditions:
+  - HTTP 200
+  - validation `ok=true`
+  - visible text length above `3000`
+  - all SEO section keys represented
+  - H1 exactly `1`
+  - H2 at least `5`
+  - paragraph count at least `10`
+  - FAQ present
+  - SEO article grade `pass`
+  - SEO article blockers `[]`
+  - no `<pre>`/`<code>` article body
+  - no raw Markdown heading left in rendered HTML
+- Validate the rendered HTML through `validate-html`; expected `validation.ok=true`, SEO article grade `pass`, and zero SEO blockers.
+- Verify content item status/draft hashes/published timestamps remain unchanged.
+- Verify Blogger draft approvals/saves and publish approvals/attempts do not change.
+- `llm_call_logs` may increase by exactly one intentional LLM generation call.
+- Do not execute Blogger draft save, Blogger publish/write, scheduled publish, `posts.update`, OAuth reconnect, token refresh, deploy, push, draft apply, HTML apply, quality score mutation, raw Blogger response output, or raw token output.
+
 ## Patch 9F-5A / 9F-5B Post-Publish Duplicate Prevention Hardening
 
 - For published content item `daily_fixture_cmqlr1v1y0001iwj2gpv2875r`, publish preflight should include `content_status_not_planned` and `content_already_published`.
