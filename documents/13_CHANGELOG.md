@@ -1,5 +1,36 @@
 # 13_CHANGELOG
 
+## Patch 9F-3S / 9F-3T Second Fixture Draft Approval And Preflight
+
+Completed the second fixture Blogger draft payload approval refresh and read-only draft save preflight.
+
+- Target content item: `daily_fixture_cmqlr1v1y0002iwj27df8ac5a`.
+- Created local Blogger draft approval `cmr8xwn2200015l7u8q3rmajv`.
+- Approval snapshot prefix: `28a2c54e2cb7`.
+- Current draftHtml hash prefix: `f27737115a62`.
+- Approval matches current preview: `true`.
+- Target Blogger blog id/name: `3065973490356135805` / `급등포착`.
+- Draft payload preflight confirmed saved draftHtml, selected Blogger blog, and approval snapshot are ready.
+- Draft save preflight returned `canSaveDraft=false`.
+- Blocking reason: `access_token_expired_reauth_required`.
+- Because preflight did not pass, guarded Blogger draft save execution was not run.
+
+Verified side effects:
+
+- Local draft approval count increased by one.
+- No Blogger draft save row was created for the second fixture.
+- The second fixture remains `planned`.
+- `draftMarkdown`, `draftHtml`, `qualityScore`, `publishedAt`, and `scheduledAt` were not changed.
+- `llm_call_logs` remained `26`.
+
+Not executed:
+
+- Blogger draft save, Blogger publish/write, scheduled publish, OAuth reconnect, token refresh, LLM call, deploy, push, raw token output, raw Blogger response output, or content item mutation.
+
+Next required action:
+
+- Complete Blogger OAuth reconnect or an explicitly approved safe token refresh, then rerun draft save preflight. Only if `canSaveDraft=true`, proceed to the guarded `9F-3U` Blogger draft save route.
+
 ## Patch 9F-7F: Second Fixture Candidate Persistence and HTML Readiness
 
 Completed the approved second fixture draft body path through candidate redispatch, validation persistence, draft Markdown persistence, deterministic HTML persistence, and Blog target assignment.

@@ -8,6 +8,28 @@ npm run typecheck
 npm run build
 ```
 
+## Patch 9F-3S / 9F-3T second fixture draft approval and preflight 검증
+
+- Target content item: `daily_fixture_cmqlr1v1y0002iwj27df8ac5a`.
+- `POST /api/content-items/daily_fixture_cmqlr1v1y0002iwj27df8ac5a/blogger-draft-approval` should recalculate the current draft payload preview server-side and create a local approval snapshot only.
+- Runtime result:
+  - approval id `cmr8xwn2200015l7u8q3rmajv`
+  - approval status `approved`
+  - approval snapshot prefix `28a2c54e2cb7`
+  - draftHtml hash prefix `f27737115a62`
+  - approval matches current preview `true`
+  - target Blogger blog `3065973490356135805` / `급등포착`
+- `POST /api/content-items/daily_fixture_cmqlr1v1y0002iwj27df8ac5a/blogger-draft-save-preflight` should remain read-only and verify saved `draftHtml`, selected Blogger blog, duplicate save, approval snapshot, and OAuth token status.
+- Current runtime preflight result:
+  - `canSaveDraft=false`
+  - blocking reason `access_token_expired_reauth_required`
+  - `draftPayloadReady=true`
+  - approval snapshot matches current preview
+  - duplicate save is not the blocker
+- Since preflight is blocked by the expired access token, `POST /api/content-items/[id]/blogger-draft-save` must not be called.
+- Content item `draftMarkdown`, `draftHtml`, status, `qualityScore`, `publishedAt`, and `scheduledAt` must remain unchanged.
+- Blogger API write/read, draft save, publish, OAuth reconnect, token refresh, LLM calls, deploy, push, and raw secret/token output must not occur.
+
 ## Patch 9F-7F second fixture candidate persistence / HTML readiness 검증
 
 - Target plan item/content item: `cmqlr1v1y0002iwj27df8ac5a` / `daily_fixture_cmqlr1v1y0002iwj27df8ac5a`.

@@ -1,6 +1,43 @@
 # 14_NEXT_SESSION_BRIEF
 
-## Current State: Patch 9F-7F Second Fixture Candidate Persistence Completed
+## Current State: Patch 9F-3S / 9F-3T Second Fixture Draft Approval And Preflight Completed
+
+The second daily fixture now has a fresh local Blogger draft approval snapshot, but guarded Blogger draft save is blocked by an expired access token.
+
+Runtime smoke target:
+
+- Content item: `daily_fixture_cmqlr1v1y0002iwj27df8ac5a`.
+- Blog target: `cmqc0ugaz00001yek2ve7fv3x` (`급등포착 블로그`).
+- Blogger target blog id: `3065973490356135805`.
+
+Observed result:
+
+- Created local Blogger draft approval `cmr8xwn2200015l7u8q3rmajv`.
+- Approval status: `approved`.
+- Approval snapshot prefix: `28a2c54e2cb7`.
+- Current draftHtml hash prefix: `f27737115a62`.
+- Approval matches current preview: `true`.
+- Draft save preflight returned `canSaveDraft=false`.
+- Blocking reason: `access_token_expired_reauth_required`.
+
+Verified side effects:
+
+- Local draft approval count increased by one.
+- No Blogger draft save row was created for the second fixture.
+- The second fixture remains `planned`.
+- `draftMarkdown` length remains `1094`; `draftHtml` length remains `1505`.
+- `qualityScore=null`, `publishedAt=null`, and `scheduledAt=null`.
+- `llm_call_logs=26`.
+
+Not executed:
+
+- No Blogger draft save, Blogger publish/write, scheduled publish, OAuth reconnect, token refresh, LLM call, deploy, push, raw token output, raw Blogger response output, or content item mutation occurred.
+
+Next recommended patch:
+
+- Complete Blogger OAuth reconnect or an explicitly approved safe token refresh, then rerun `9F-3T-R1` draft save preflight. If `canSaveDraft=true`, continue to `9F-3U` guarded Blogger draft save for the second fixture.
+
+## Previous State: Patch 9F-7F Second Fixture Candidate Persistence Completed
 
 The second daily fixture now has a persisted draft Markdown body, deterministic draft HTML body, and linked Blog target.
 
