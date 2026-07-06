@@ -19,7 +19,7 @@ export function buildBloggerDraftPayloadPreview(
   const connection = bloggerConnections.length === 1 ? bloggerConnections[0] : null;
   const publishReadiness = buildPublishReadiness(contentItem, assets, connection);
   const html = contentItem.draftHtml ?? "";
-  const htmlValidation = validateHtmlCandidate(html, assets);
+  const htmlValidation = validateHtmlCandidate(html, assets, contentItem);
   const titleCandidate = buildTitleCandidate(contentItem);
   const labelsCandidate = buildLabelsCandidate(contentItem);
   const bloggerConnectionReady = connection?.status === "connected";

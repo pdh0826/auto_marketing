@@ -1,5 +1,6 @@
 import type { ContentAssetAdmin } from "@/lib/content/asset-types";
 import type { ContentItemAdmin } from "@/lib/content/admin-types";
+import { analyzeSeoArticleHtml } from "@/lib/content/seo-article-quality";
 
 export type BlogPostTemplatePreviewSource = "manual_draft_candidate" | "stepwise_final_candidate" | "saved_draft_markdown";
 export type BlogPostTemplateTheme = "clean_blog";
@@ -29,6 +30,12 @@ export interface BlogPostTemplatePreviewResult {
     assetWithoutPlaceholderCount: number;
     unsafePatternCount: number;
     rawHtmlEscaped: boolean;
+    visibleTextLength: number;
+    seoArticleOk: boolean;
+    seoArticleGrade: "pass" | "warn" | "fail";
+    seoArticleScore: number;
+    seoArticleBlockingReasons: string[];
+    seoArticleWarnings: string[];
   };
   metadata: {
     previewOnly: true;
@@ -59,8 +66,6 @@ interface RenderState {
   paragraph: string[];
   unorderedItems: string[];
   orderedItems: string[];
-  inCodeFence: boolean;
-  codeLines: string[];
   h2Count: number;
   h3Count: number;
   paragraphCount: number;
@@ -108,10 +113,13 @@ export function buildBlogPostTemplatePreview(input: BuildBlogPostTemplatePreview
     bodyHtml: rendered.html,
     contentItem: input.contentItem
   });
+  const seoArticle = analyzeSeoArticleHtml(html, input.contentItem);
 
   if (!html.trim()) {
     errors.push("HTML preview가 비어 있습니다.");
   }
+  errors.push(...seoArticle.blockingReasons.map((reason) => `SEO article blocker: ${reason}`));
+  warnings.push(...seoArticle.warnings.map((warning) => `SEO article warning: ${warning}`));
 
   return {
     html,
@@ -137,7 +145,13 @@ export function buildBlogPostTemplatePreview(input: BuildBlogPostTemplatePreview
       unmatchedMediaPlaceholderCount,
       assetWithoutPlaceholderCount,
       unsafePatternCount,
-      rawHtmlEscaped
+      rawHtmlEscaped,
+      visibleTextLength: seoArticle.facts.visibleTextLength,
+      seoArticleOk: seoArticle.ok,
+      seoArticleGrade: seoArticle.grade,
+      seoArticleScore: seoArticle.score,
+      seoArticleBlockingReasons: seoArticle.blockingReasons,
+      seoArticleWarnings: seoArticle.warnings
     },
     metadata: {
       previewOnly: true,
@@ -156,8 +170,6 @@ function renderMarkdownBody(markdown: string, placeholders: PlaceholderToken[], 
     paragraph: [],
     unorderedItems: [],
     orderedItems: [],
-    inCodeFence: false,
-    codeLines: [],
     h2Count: 0,
     h3Count: 0,
     paragraphCount: 0
@@ -168,20 +180,8 @@ function renderMarkdownBody(markdown: string, placeholders: PlaceholderToken[], 
 
   for (const line of lines) {
     if (line.trim().startsWith("```")) {
-      if (state.inCodeFence) {
-        state.html.push(`<pre><code>${escapeHtml(state.codeLines.join("\n"))}</code></pre>`);
-        state.codeLines = [];
-        state.inCodeFence = false;
-      } else {
-        flushParagraph(state);
-        flushLists(state);
-        state.inCodeFence = true;
-      }
-      continue;
-    }
-
-    if (state.inCodeFence) {
-      state.codeLines.push(line);
+      flushParagraph(state);
+      flushLists(state);
       continue;
     }
 
@@ -252,9 +252,6 @@ function renderMarkdownBody(markdown: string, placeholders: PlaceholderToken[], 
     state.paragraph.push(line.trim());
   }
 
-  if (state.inCodeFence) {
-    state.html.push(`<pre><code>${escapeHtml(state.codeLines.join("\n"))}</code></pre>`);
-  }
   flushParagraph(state);
   flushLists(state);
 

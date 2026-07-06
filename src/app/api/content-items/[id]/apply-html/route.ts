@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import type { ContentAssetAdmin } from "@/lib/content/asset-types";
+import type { ContentItemAdmin } from "@/lib/content/admin-types";
 import { validateHtmlCandidate } from "@/lib/content/html-preview";
 import { prisma } from "@/lib/db/client";
 import { safeErrorMessage } from "@/lib/llm/redaction";
@@ -18,6 +19,8 @@ export async function POST(request: Request, { params }: RouteContext) {
     const contentItem = await prisma.contentItem.findUnique({
       where: { id: params.id },
       include: {
+        blog: true,
+        brandProfile: true,
         assets: {
           orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }]
         }
@@ -28,7 +31,7 @@ export async function POST(request: Request, { params }: RouteContext) {
       return NextResponse.json({ error: "Content item not found." }, { status: 404 });
     }
 
-    const result = validateHtmlCandidate(body.candidateHtml, contentItem.assets as unknown as ContentAssetAdmin[]);
+    const result = validateHtmlCandidate(body.candidateHtml, contentItem.assets as unknown as ContentAssetAdmin[], contentItem as unknown as ContentItemAdmin);
     const safeSource = typeof body.source === "string" && body.source.trim() ? body.source.trim().slice(0, 80) : "unknown";
     if (!result.validation.ok) {
       return NextResponse.json(
@@ -77,6 +80,14 @@ function buildApplySummary(result: ReturnType<typeof validateHtmlCandidate>, sou
     validationOk: result.validation.ok,
     htmlLength: result.metadata.htmlLength,
     unsafePatternCount: result.metadata.unsafePatternCount,
+    seoArticle: {
+      ok: result.metadata.seoArticle.ok,
+      grade: result.metadata.seoArticle.grade,
+      score: result.metadata.seoArticle.score,
+      visibleTextLength: result.metadata.seoArticle.facts.visibleTextLength,
+      blockingReasons: result.metadata.seoArticle.blockingReasons,
+      warnings: result.metadata.seoArticle.warnings
+    },
     applied,
     appliedField: applied ? "draftHtml" : null,
     contentItemSideEffect: applied ? "draftHtml_only" : "none",

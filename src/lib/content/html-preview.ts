@@ -2,6 +2,7 @@ import type { ContentAssetAdmin } from "@/lib/content/asset-types";
 import type { ContentItemAdmin } from "@/lib/content/admin-types";
 import type { ReadinessStatus } from "@/lib/content/content-plan-preview";
 import { validateDraftMarkdown, type DraftValidationResult } from "@/lib/content/draft-validation";
+import { analyzeSeoArticleHtml, type SeoArticleQualityAnalysis } from "@/lib/content/seo-article-quality";
 
 export interface HtmlReadinessCheck {
   key: string;
@@ -60,6 +61,7 @@ export interface HtmlCandidateValidationResult {
     assetWithoutReferenceCount: number;
     externalUrlCount: number;
     unsafePatternCount: number;
+    seoArticle: SeoArticleQualityAnalysis;
   };
 }
 
@@ -100,7 +102,7 @@ export function buildHtmlPreviewDryRun(contentItem: ContentItemAdmin, assets: Co
   };
 }
 
-export function validateHtmlCandidate(candidateHtml: unknown, assets: ContentAssetAdmin[]): HtmlCandidateValidationResult {
+export function validateHtmlCandidate(candidateHtml: unknown, assets: ContentAssetAdmin[], contentItem?: ContentItemAdmin | null): HtmlCandidateValidationResult {
   const errors: string[] = [];
   const warnings: string[] = [];
 
@@ -150,6 +152,9 @@ export function validateHtmlCandidate(candidateHtml: unknown, assets: ContentAss
 
   const weakMediaWarnings = buildMediaMarkupWarnings(html);
   warnings.push(...weakMediaWarnings);
+  const seoArticle = analyzeSeoArticleHtml(html, contentItem);
+  errors.push(...seoArticle.blockingReasons.map((reason) => `SEO article blocker: ${reason}`));
+  warnings.push(...seoArticle.warnings.map((warning) => `SEO article warning: ${warning}`));
 
   return {
     validation: {
@@ -166,7 +171,8 @@ export function validateHtmlCandidate(candidateHtml: unknown, assets: ContentAss
       unmatchedMediaReferenceCount,
       assetWithoutReferenceCount,
       externalUrlCount,
-      unsafePatternCount: countHtmlCandidateUnsafePatterns(html)
+      unsafePatternCount: countHtmlCandidateUnsafePatterns(html),
+      seoArticle
     }
   };
 }
@@ -320,8 +326,6 @@ function convertMarkdownToHtml(markdown: string, placeholders: PlaceholderToken[
   const html: string[] = [];
   let paragraph: string[] = [];
   let listItems: string[] = [];
-  let inCodeFence = false;
-  let codeLines: string[] = [];
 
   const flushParagraph = () => {
     if (paragraph.length === 0) {
@@ -341,20 +345,8 @@ function convertMarkdownToHtml(markdown: string, placeholders: PlaceholderToken[
 
   for (const line of lines) {
     if (line.trim().startsWith("```")) {
-      if (inCodeFence) {
-        html.push(`<pre><code>${escapeHtml(codeLines.join("\n"))}</code></pre>`);
-        codeLines = [];
-        inCodeFence = false;
-      } else {
-        flushParagraph();
-        flushList();
-        inCodeFence = true;
-      }
-      continue;
-    }
-
-    if (inCodeFence) {
-      codeLines.push(line);
+      flushParagraph();
+      flushList();
       continue;
     }
 
@@ -399,9 +391,6 @@ function convertMarkdownToHtml(markdown: string, placeholders: PlaceholderToken[
     paragraph.push(line.trim());
   }
 
-  if (inCodeFence) {
-    html.push(`<pre><code>${escapeHtml(codeLines.join("\n"))}</code></pre>`);
-  }
   flushParagraph();
   flushList();
 

@@ -1,6 +1,7 @@
 import type { ContentAssetAdmin } from "@/lib/content/asset-types";
 import type { ContentItemAdmin } from "@/lib/content/admin-types";
 import { validateHtmlCandidate } from "@/lib/content/html-preview";
+import { analyzeSeoArticleHtml } from "@/lib/content/seo-article-quality";
 
 export type QualityCheckStatus = "pass" | "warn" | "fail";
 export type QualityCheckSeverity = "required" | "recommended" | "optional";
@@ -24,6 +25,7 @@ export interface HtmlQualityPreviewResult {
   groups: Record<QualityCheckGroup, HtmlQualityCheck[]>;
   metadata: {
     draftHtmlLength: number;
+    visibleTextLength: number;
     headingCount: number;
     h1Count: number;
     h2h3Count: number;
@@ -40,6 +42,12 @@ export interface HtmlQualityPreviewResult {
     linkCount: number;
     ctaSignalCount: number;
     questionSignalCount: number;
+    seoArticleGrade: "pass" | "warn" | "fail";
+    seoArticleScore: number;
+    seoArticleBlockingReasonCount: number;
+    rawMarkdownHeadingCount: number;
+    rawMarkdownListLineCount: number;
+    codeBlockTextRatio: number;
   };
 }
 
@@ -65,7 +73,8 @@ interface HtmlFacts {
 export function buildHtmlQualityPreview(contentItem: ContentItemAdmin, assets: ContentAssetAdmin[]): HtmlQualityPreviewResult {
   const html = contentItem.draftHtml ?? "";
   const facts = collectHtmlFacts(html);
-  const candidateValidation = validateHtmlCandidate(html, assets);
+  const candidateValidation = validateHtmlCandidate(html, assets, contentItem);
+  const seoArticle = analyzeSeoArticleHtml(html, contentItem);
   const checks: HtmlQualityCheck[] = [];
 
   checks.push(...buildStructureChecks(contentItem, facts));
@@ -73,6 +82,7 @@ export function buildHtmlQualityPreview(contentItem: ContentItemAdmin, assets: C
   checks.push(...buildMediaChecks(facts, candidateValidation));
   checks.push(...buildSafetyChecks(contentItem, facts, candidateValidation));
   checks.push(...buildBloggerCompatibilityChecks(facts));
+  checks.push(...buildSeoArticleTemplateChecks(seoArticle));
 
   const scorePreview = calculateScore(checks);
   const grade = calculateGrade(checks, scorePreview);
@@ -86,6 +96,7 @@ export function buildHtmlQualityPreview(contentItem: ContentItemAdmin, assets: C
     groups,
     metadata: {
       draftHtmlLength: facts.draftHtmlLength,
+      visibleTextLength: seoArticle.facts.visibleTextLength,
       headingCount: facts.headingCount,
       h1Count: facts.h1Count,
       h2h3Count: facts.h2h3Count,
@@ -101,7 +112,13 @@ export function buildHtmlQualityPreview(contentItem: ContentItemAdmin, assets: C
       externalLinkCount: facts.externalLinkCount,
       linkCount: facts.linkTags.length,
       ctaSignalCount: facts.ctaSignalCount,
-      questionSignalCount: facts.questionSignalCount
+      questionSignalCount: facts.questionSignalCount,
+      seoArticleGrade: seoArticle.grade,
+      seoArticleScore: seoArticle.score,
+      seoArticleBlockingReasonCount: seoArticle.blockingReasons.length,
+      rawMarkdownHeadingCount: seoArticle.facts.rawMarkdownHeadingCount,
+      rawMarkdownListLineCount: seoArticle.facts.rawMarkdownListLineCount,
+      codeBlockTextRatio: seoArticle.facts.codeBlockTextRatio
     }
   };
 }
@@ -339,6 +356,49 @@ function buildBloggerCompatibilityChecks(facts: HtmlFacts): HtmlQualityCheck[] {
       hasEventHandler || hasJavascriptUrl ? "fail" : "pass",
       "required",
       hasEventHandler || hasJavascriptUrl ? "inline event handler 또는 위험 URL 패턴이 있습니다." : "inline event handler와 위험 URL 패턴이 없습니다."
+    )
+  ];
+}
+
+function buildSeoArticleTemplateChecks(seoArticle: ReturnType<typeof analyzeSeoArticleHtml>): HtmlQualityCheck[] {
+  return [
+    makeCheck(
+      "seo_article_template_gate",
+      "SEO article template gate",
+      "seo",
+      seoArticle.ok ? "pass" : "fail",
+      "required",
+      seoArticle.ok
+        ? `SEO article gate 통과: visible text ${seoArticle.facts.visibleTextLength}자, score ${seoArticle.score}`
+        : `SEO article blocker가 있습니다: ${seoArticle.blockingReasons.join(", ")}`
+    ),
+    makeCheck(
+      "seo_visible_text_length",
+      "SEO visible text length",
+      "seo",
+      seoArticle.facts.visibleTextLength >= seoArticle.templatePolicy.minVisibleTextLengthToPublish ? "pass" : "fail",
+      "required",
+      `visible text ${seoArticle.facts.visibleTextLength}자 / minimum ${seoArticle.templatePolicy.minVisibleTextLengthToPublish}자 / target ${seoArticle.templatePolicy.targetVisibleTextLength}자`
+    ),
+    makeCheck(
+      "seo_raw_markdown_absent",
+      "Raw Markdown absent",
+      "seo",
+      seoArticle.facts.rawMarkdownHeadingCount === 0 && seoArticle.facts.rawMarkdownListLineCount < 4 ? "pass" : "fail",
+      "required",
+      seoArticle.facts.rawMarkdownHeadingCount === 0 && seoArticle.facts.rawMarkdownListLineCount < 4
+        ? "HTML 본문에 raw Markdown heading/list가 남아 있지 않습니다."
+        : `raw Markdown 신호가 남아 있습니다: heading ${seoArticle.facts.rawMarkdownHeadingCount}, list ${seoArticle.facts.rawMarkdownListLineCount}`
+    ),
+    makeCheck(
+      "seo_code_block_absent",
+      "Article code block absent",
+      "seo",
+      seoArticle.facts.preBlockCount === 0 && seoArticle.facts.codeBlockTextRatio < 0.05 ? "pass" : "fail",
+      "required",
+      seoArticle.facts.preBlockCount === 0 && seoArticle.facts.codeBlockTextRatio < 0.05
+        ? "일반 블로그 글 본문이 code block 중심이 아닙니다."
+        : `code block 중심 HTML로 보입니다: pre ${seoArticle.facts.preBlockCount}, ratio ${seoArticle.facts.codeBlockTextRatio.toFixed(2)}`
     )
   ];
 }

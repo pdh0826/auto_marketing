@@ -45,7 +45,7 @@ export async function POST(_request: Request, { params }: RouteContext) {
     const bloggerConnections = contentItem.blogId ? await listBloggerConnectionsForBlog(contentItem.blogId) : [];
     const connection = bloggerConnections.length === 1 ? bloggerConnections[0] : null;
     const secretStatus = connection ? await getBloggerConnectionSecretStatus(connection.id) : null;
-    const htmlValidation = validateHtmlCandidate(safeContentItem.draftHtml ?? "", assets);
+    const htmlValidation = validateHtmlCandidate(safeContentItem.draftHtml ?? "", assets, safeContentItem);
     const payloadPreview = buildBloggerDraftPayloadPreview(safeContentItem, assets, bloggerConnections);
     const currentHashes = buildBloggerDraftApprovalSnapshotHashes(payloadPreview, safeContentItem.draftHtml);
     const activeApproval = await getActiveBloggerDraftApproval(safeContentItem.id);
@@ -111,7 +111,15 @@ export async function POST(_request: Request, { params }: RouteContext) {
         ok: htmlValidation.validation.ok,
         errorCount: htmlValidation.validation.errors.length,
         warningCount: htmlValidation.validation.warnings.length,
-        unsafePatternCount: htmlValidation.metadata.unsafePatternCount
+        unsafePatternCount: htmlValidation.metadata.unsafePatternCount,
+        seoArticle: {
+          ok: htmlValidation.metadata.seoArticle.ok,
+          grade: htmlValidation.metadata.seoArticle.grade,
+          score: htmlValidation.metadata.seoArticle.score,
+          visibleTextLength: htmlValidation.metadata.seoArticle.facts.visibleTextLength,
+          blockingReasons: htmlValidation.metadata.seoArticle.blockingReasons,
+          warnings: htmlValidation.metadata.seoArticle.warnings
+        }
       },
       qualitySummary: {
         grade: publishReadiness.metadata.qualityGrade,

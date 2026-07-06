@@ -1,5 +1,52 @@
 # 13_CHANGELOG
 
+## Patch 9G-1A SEO Article Quality Engine Hardening
+
+Shifted the pipeline from publish-safety-only checks toward SEO article quality gates.
+
+- Added `src/lib/content/seo-article-template.ts` with a fixed SEO article template:
+  - intro
+  - summary
+  - problem context
+  - two check-method sections
+  - beginner mistakes
+  - service use case
+  - FAQ
+  - risk disclaimer
+  - CTA
+- Added `src/lib/content/seo-article-quality.ts` to detect:
+  - code-block-centered article HTML
+  - raw Markdown headings/lists left inside HTML
+  - thin visible text
+  - missing article/H1/H2/paragraph structure
+  - missing FAQ and finance disclaimer
+- Hardened `validateHtmlCandidate` so SEO article blockers fail validation.
+- Wired SEO article validation into:
+  - `validate-html`
+  - `apply-html`
+  - Blogger draft payload preview
+  - Blogger draft save preflight
+  - publish readiness / quality preview
+- Hardened Markdown-to-HTML preview/rendering so code fences are not emitted as `<pre><code>` Blogger article bodies.
+- Added SEO validation details to the Content Detail HTML candidate validation UI and Blogger draft save preflight UI.
+- Updated local/stepwise section-generation prompts and default section keys so future runs fill fixed SEO template sections instead of relying on a loose four/five-section outline.
+
+Smoke results:
+
+- Bad HTML candidate with `<pre><code># ... ## ...</code></pre>` now fails validation with blockers including `html_is_code_block`, `html_contains_raw_markdown_headings`, `html_visible_text_too_short`, `html_h2_count_too_low`, `html_paragraph_count_too_low`, `html_faq_count_too_low`, and `html_finance_disclaimer_missing`.
+- Blog template preview no longer turns fenced Markdown into `<pre><code>`; the same short candidate still fails SEO blockers because it is thin.
+- The saved second fixture `draftHtml` now fails Blogger draft save preflight SEO validation with `html_is_code_block`, raw Markdown, thin-content, H2, paragraph, and FAQ blockers.
+
+Published post audit notes:
+
+- The first paid-LLM/API post is article-shaped but repetitive and still below the desired SEO depth.
+- The 7/5 post is article-shaped but thin.
+- The 7/6 post was published as Markdown inside a code block and now correctly fails the new gate.
+
+Not executed:
+
+- Blogger publish/write, scheduled publish, `posts.update`, extra draft save, OAuth reconnect, token refresh, LLM call, deploy, push, draft Markdown mutation, draft HTML mutation, quality score mutation, scheduled timestamp mutation, raw Blogger response storage, or raw token output.
+
 ## Patch 9F-5A / 9F-5B Second Fixture Post-Publish Duplicate Prevention Hardening
 
 Verified the post-publish duplicate prevention and idempotent readback/reconciliation guards for the already published second daily fixture.

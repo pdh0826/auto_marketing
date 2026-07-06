@@ -91,7 +91,7 @@ export function buildPublishReadiness(
   manualApproval?: PublishReadinessManualApprovalSummary | null,
   draftSave?: PublishReadinessDraftSaveSummary | null
 ): PublishReadinessResult {
-  const htmlValidation = validateHtmlCandidate(contentItem.draftHtml ?? "", assets);
+  const htmlValidation = validateHtmlCandidate(contentItem.draftHtml ?? "", assets, contentItem);
   const qualityPreview = buildHtmlQualityPreview(contentItem, assets);
   const bloggerConnectionStatus = bloggerConnection?.status ?? "not_configured";
   const bloggerBlogVerifiedAt =

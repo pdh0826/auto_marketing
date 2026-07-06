@@ -321,6 +321,14 @@ export interface BloggerDraftSavePreflight {
     errorCount: number;
     warningCount: number;
     unsafePatternCount: number;
+    seoArticle?: {
+      ok: boolean;
+      grade: "pass" | "warn" | "fail";
+      score: number;
+      visibleTextLength: number;
+      blockingReasons: string[];
+      warnings: string[];
+    };
   };
   qualitySummary: {
     grade: "pass" | "warn" | "fail";

@@ -3,7 +3,18 @@ import { prisma } from "@/lib/db/client";
 
 export const LOCAL_SECTIONED_STEPWISE_STRATEGY = "local_sectioned_stepwise" as const;
 
-export const DEFAULT_LOCAL_SECTIONED_STEPWISE_SECTION_KEYS = ["intro", "body_1", "body_2", "body_3", "conclusion_cta_faq"] as const;
+export const DEFAULT_LOCAL_SECTIONED_STEPWISE_SECTION_KEYS = [
+  "intro",
+  "summary",
+  "problem_context",
+  "check_method_1",
+  "check_method_2",
+  "beginner_mistakes",
+  "service_use_case",
+  "faq",
+  "risk_disclaimer",
+  "cta"
+] as const;
 
 export const DEFAULT_LOCAL_SECTIONED_STEPWISE_STEP_KEYS = ["skeleton", ...DEFAULT_LOCAL_SECTIONED_STEPWISE_SECTION_KEYS] as const;
 

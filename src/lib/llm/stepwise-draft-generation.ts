@@ -5,6 +5,7 @@ import type { ContentItemAdmin } from "@/lib/content/admin-types";
 import { buildDraftMarkdownDryRun, type DraftPromptPreview } from "@/lib/content/draft-preview";
 import { validateDraftMarkdown } from "@/lib/content/draft-validation";
 import { validatePlanJson } from "@/lib/content/plan-validation";
+import { buildSeoSectionPromptContract, SEO_ARTICLE_TEMPLATE_V1, type SeoArticleSectionKey } from "@/lib/content/seo-article-template";
 import { createLlmCallLog } from "@/lib/db/llm-call-logs";
 import { prisma } from "@/lib/db/client";
 import {
@@ -790,7 +791,7 @@ function buildSkeletonStepPrompt(
       "Return Markdown only.",
       "Start with ## Stepwise Draft Skeleton.",
       "For each section key, include exactly one bullet shaped like: - section_key: heading — goal.",
-      "Required section keys: intro, body_1, body_2, body_3, conclusion_cta_faq.",
+      `Required section keys: ${DEFAULT_LOCAL_SECTIONED_STEPWISE_SECTION_KEYS.join(", ")}.`,
       "Do not include article body paragraphs.",
       "Do not wrap in code fences."
     ].join("\n")
@@ -805,22 +806,26 @@ function buildSectionStepPrompt(input: {
   planJson: Record<string, unknown>;
   mediaMapping: Array<{ assetId: string; placementHint: string; caption: string | null; placeholder: string }>;
 }): DraftPromptPreview {
-  const faqRequired = input.sectionKey === "conclusion_cta_faq" && Array.isArray(input.planJson.faq) && input.planJson.faq.length > 0;
+  const faqRequired = input.sectionKey === "faq" && Array.isArray(input.planJson.faq) && input.planJson.faq.length > 0;
+  const seoContract = buildSeoSectionPromptContract(input.sectionKey as SeoArticleSectionKey, input.contentItem);
   return {
     system: [
       "You are a careful Korean Markdown section writer.",
       "Write only the requested section fragment.",
       "Do not write an H1. Use H2/H3 and paragraphs only.",
+      "Each non-FAQ section must include concrete context, practical criteria, beginner mistakes or examples, and a clear takeaway.",
+      `The full article target is at least ${SEO_ARTICLE_TEMPLATE_V1.targetVisibleTextLength} visible Korean characters. Make this section substantial enough for the template.`,
       "Do not include aggressive CTA wording or investment recommendations.",
       "Do not include guaranteed outcomes, return examples, risk-free wording, or buy/sell recommendations.",
       "Do not delete media placeholders.",
       faqRequired
         ? "This section must include a dedicated ## FAQ heading and ### question headings based on saved FAQ items."
-        : "Do not invent an FAQ section unless the requested section is conclusion_cta_faq and saved FAQ exists."
+        : "Do not invent an FAQ section unless the requested section is faq and saved FAQ exists."
     ].join("\n"),
     user: JSON.stringify(
       {
         context: buildSafePromptContext(input.contentItem, input.planJson, input.mediaMapping),
+        seoSectionContract: seoContract,
         skeletonMarkdown: input.skeletonMarkdown,
         requestedSectionKey: input.sectionKey,
         previousSectionSummaries: input.previousSectionSummaries,

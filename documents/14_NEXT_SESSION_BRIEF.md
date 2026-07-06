@@ -1,6 +1,56 @@
 # 14_NEXT_SESSION_BRIEF
 
-## Current State: Patch 9F-5A / 9F-5B Second Fixture Post-Publish Duplicate Prevention Completed
+## Current State: Patch 9G-1A SEO Article Quality Engine Hardening Completed
+
+The pipeline now blocks bad SEO article HTML before Blogger draft save/publish gates.
+
+Why this patch happened:
+
+- The 7/6 published post was rendered as Markdown inside `<pre><code>`, not as a normal article.
+- Existing gates proved Blogger write safety, but did not sufficiently prove SEO article quality.
+- The next work must prioritize article quality before additional publishing.
+
+Implemented:
+
+- Fixed SEO article template spec with section keys:
+  - `intro`
+  - `summary`
+  - `problem_context`
+  - `check_method_1`
+  - `check_method_2`
+  - `beginner_mistakes`
+  - `service_use_case`
+  - `faq`
+  - `risk_disclaimer`
+  - `cta`
+- Common SEO article analyzer detects:
+  - code-block-centered article HTML
+  - raw Markdown headings/lists left in visible text
+  - thin visible text
+  - missing article/H1/H2/paragraph structure
+  - missing FAQ and finance disclaimer
+- `validateHtmlCandidate` now fails on SEO article blockers.
+- Blog template renderer no longer emits fenced Markdown as `<pre><code>`.
+- Blogger draft payload preview, draft save preflight, publish readiness, quality preview, `validate-html`, and `apply-html` now share the same validation path.
+- Content Detail shows SEO grade, score, visible text length, and blocker information for HTML validation/preflight.
+- Future local/stepwise generation runs use the SEO section key set instead of the old loose body-section structure.
+
+Smoke results:
+
+- Bad `<pre><code># ... ## ...</code></pre>` candidate fails validation with `html_is_code_block`, raw Markdown, thin-content, H2, paragraph, FAQ, and disclaimer blockers.
+- Blog template preview no longer creates `<pre>`/`<code>` from fenced Markdown article candidates.
+- Saved second fixture `draftHtml` is now blocked by draft save preflight with SEO blockers.
+
+Not executed:
+
+- No Blogger publish/write, scheduled publish, `posts.update`, extra draft save, OAuth reconnect, token refresh, LLM call, deploy, push, draft Markdown mutation, draft HTML mutation, quality score mutation, scheduled timestamp mutation, raw Blogger response storage, or raw token output occurred.
+
+Next recommended patch:
+
+- `9G-1B`: Generate one new SEO-sectioned candidate without publishing, then compare visible text length, section coverage, FAQ, disclaimer, raw Markdown, and rendered HTML against the three published posts.
+- Do not proceed to Blogger draft save or publish until the new candidate reaches the SEO article gate.
+
+## Previous State: Patch 9F-5A / 9F-5B Second Fixture Post-Publish Duplicate Prevention Completed
 
 The second daily fixture is published and duplicate-protected. Post-publish readback/reconciliation is idempotent after local reconciliation.
 

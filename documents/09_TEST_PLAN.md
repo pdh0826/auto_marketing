@@ -195,6 +195,24 @@ npm run build
 - Prompt body, raw provider response, candidate body, token, secret, encrypted value, or Blogger raw response must not be logged in validation output.
 - Side effects must remain false for DB write, dispatch attempt/event/artifact mutation, `llm_call_logs` mutation, content mutation, `draftMarkdown` mutation, `draftHtml` mutation, Blogger API read/write, draft save, publish, scheduled publish, OAuth reconnect, and token refresh.
 
+## Patch 9G-1A SEO Article Quality Engine Hardening
+
+- `validate-html` should reject HTML candidates that are primarily `<pre><code>` article bodies.
+- `validate-html` should reject HTML candidates whose visible text still contains raw Markdown headings such as `#` or `##`.
+- `validate-html` should reject thin SEO article candidates with visible text below the publish minimum.
+- `validate-html` should reject candidates with insufficient H2, paragraph, FAQ, or finance disclaimer structure.
+- Blog template preview should not emit `<pre><code>` for fenced Markdown article candidates; code fences should be treated as delimiters, not as Blogger article content.
+- Blog template preview may still return `ok=false` when the rendered article is too short or structurally incomplete.
+- Blogger draft payload preview and draft save preflight should inherit the same SEO blockers through `validateHtmlCandidate`.
+- Publish readiness should report quality failure when SEO article required checks fail.
+- Content Detail should display SEO grade, score, visible text length, and blocker count in HTML candidate validation and Blogger draft save preflight sections.
+- Future local/stepwise generation runs should use the fixed SEO section key set: `intro`, `summary`, `problem_context`, `check_method_1`, `check_method_2`, `beginner_mistakes`, `service_use_case`, `faq`, `risk_disclaimer`, `cta`.
+- Required smoke:
+  - bad `<pre><code># ... ## ...</code></pre>` candidate fails with `html_is_code_block` and raw Markdown blockers
+  - fenced Markdown template preview has no `<pre>`/`<code>` in rendered HTML
+  - saved bad second fixture `draftHtml` is blocked by draft save preflight
+  - no Blogger write/publish, `posts.update`, token refresh, LLM call, content mutation, deploy, push, or raw token/Blogger response output occurs
+
 ## Patch 9F-5A / 9F-5B Post-Publish Duplicate Prevention Hardening
 
 - For published content item `daily_fixture_cmqlr1v1y0001iwj2gpv2875r`, publish preflight should include `content_status_not_planned` and `content_already_published`.

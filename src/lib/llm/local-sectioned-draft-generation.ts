@@ -2,6 +2,7 @@ import { createHash } from "crypto";
 import type { ContentAssetAdmin } from "@/lib/content/asset-types";
 import type { ContentItemAdmin } from "@/lib/content/admin-types";
 import type { DraftMediaMapping, DraftPromptPreview } from "@/lib/content/draft-preview";
+import { buildSeoSectionPromptContract, DEFAULT_SEO_ARTICLE_SECTION_KEYS, SEO_ARTICLE_TEMPLATE_V1, type SeoArticleSectionKey } from "@/lib/content/seo-article-template";
 import { safeErrorMessage } from "@/lib/llm/redaction";
 
 export interface LocalSectionedDraftCallResult {
@@ -436,13 +437,14 @@ function buildSkeletonPrompt(input: LocalSectionedDraftInput): DraftPromptPrevie
       "For investment or finance content, keep services framed as informational/reference tools only.",
       "Do not include buy/sell recommendations, guaranteed profit, return examples, success stories, or risk-free wording.",
       "Never create duplicate H1 headings.",
-      faqItems.length > 0 ? "The saved planJson has FAQ items. Include a dedicated conclusion_cta_faq or faq section in the skeleton." : "Include FAQ structure only when the saved plan asks for it."
+      "Use the fixed SEO article template section keys. The LLM should fill sections, not invent the article structure.",
+      faqItems.length > 0 ? "The saved planJson has FAQ items. Include a dedicated faq section in the skeleton." : "Keep the faq section for likely search follow-up questions."
     ].join("\n"),
     user: JSON.stringify(buildPromptContext(input), null, 2),
     outputFormat: [
       "Return JSON only.",
-      'Shape: {"title":"...","sections":[{"key":"intro","heading":"...","goal":"..."},{"key":"body_1","heading":"...","goal":"..."},{"key":"body_2","heading":"...","goal":"..."},{"key":"conclusion_cta_faq","heading":"...","goal":"..."}]}',
-      faqItems.length > 0 ? "Use a conclusion_cta_faq section that explicitly preserves a dedicated FAQ block." : "Use 4 sections unless a risk_disclaimer section is clearly needed.",
+      'Shape: {"title":"...","sections":[{"key":"intro","heading":"...","goal":"..."},{"key":"summary","heading":"...","goal":"..."},{"key":"problem_context","heading":"...","goal":"..."},{"key":"check_method_1","heading":"...","goal":"..."},{"key":"check_method_2","heading":"...","goal":"..."},{"key":"beginner_mistakes","heading":"...","goal":"..."},{"key":"service_use_case","heading":"...","goal":"..."},{"key":"faq","heading":"...","goal":"..."},{"key":"risk_disclaimer","heading":"...","goal":"..."},{"key":"cta","heading":"...","goal":"..."}]}',
+      `Use these section keys exactly: ${DEFAULT_SEO_ARTICLE_SECTION_KEYS.join(", ")}.`,
       "Section keys must be lowercase snake_case. Do not include body prose."
     ].join("\n")
   };
@@ -456,12 +458,15 @@ function buildSectionPrompt(
   isRetry = false
 ): DraftPromptPreview {
   const faqItems = getFaqItems(input.planJson);
-  const sectionNeedsFaq = faqItems.length > 0 && isFaqSectionKey(section.key);
+  const sectionNeedsFaq = section.key === "faq" || (faqItems.length > 0 && isFaqSectionKey(section.key));
+  const seoContract = buildSeoSectionPromptContract(section.key as SeoArticleSectionKey, input.contentItem);
   return {
     system: [
       "You are a careful Korean Markdown section writer.",
       "Write only the requested section fragment.",
       "Do not write an H1. Use H2/H3 and paragraphs only.",
+      "Write concrete, useful, search-intent-matching prose. Do not stop at an outline.",
+      `The full article target is at least ${SEO_ARTICLE_TEMPLATE_V1.targetVisibleTextLength} visible Korean characters; make this section substantial.`,
       "Do not include aggressive CTA wording or investment recommendations.",
       "Preserve or include media placeholders only when relevant.",
       sectionNeedsFaq
@@ -472,6 +477,7 @@ function buildSectionPrompt(
     user: JSON.stringify(
       {
         context: buildPromptContext(input),
+        seoSectionContract: seoContract,
         skeleton: {
           title: skeleton.title,
           sections: skeleton.sections
@@ -601,7 +607,7 @@ function parseSkeletonPlan(value: string, input: LocalSectionedDraftInput): Skel
   const sections = rawSections
     .map((item, index) => normalizeSkeletonSection(item, index))
     .filter((section): section is SkeletonSection => Boolean(section))
-    .slice(0, 5);
+    .slice(0, DEFAULT_SEO_ARTICLE_SECTION_KEYS.length);
 
   return {
     title,
@@ -616,13 +622,13 @@ function ensureFaqSkeletonSection(skeleton: SkeletonPlan, faqItems: FaqItem[]): 
   return {
     ...skeleton,
     sections: [
-      ...skeleton.sections.slice(0, 4),
+      ...skeleton.sections,
       {
-        key: "conclusion_cta_faq",
+        key: "faq",
         heading: "정리와 FAQ",
         goal: "핵심 내용을 정리하고 정보성 CTA 뒤에 별도 FAQ section을 포함합니다."
       }
-    ].slice(0, 5)
+    ].slice(0, DEFAULT_SEO_ARTICLE_SECTION_KEYS.length)
   };
 }
 
@@ -655,9 +661,15 @@ function buildDefaultSections(planJson: Record<string, unknown>): SkeletonSectio
   const outlineText = outline.map((item) => (typeof item === "string" ? item : JSON.stringify(item))).filter(Boolean);
   return [
     { key: "intro", heading: "문제 상황과 핵심 관점", goal: outlineText[0] ?? "독자의 문제 상황과 글의 핵심 관점을 소개합니다." },
-    { key: "body_1", heading: "놓치기 쉬운 판단 기준", goal: outlineText[1] ?? "본문의 첫 번째 핵심 기준을 설명합니다." },
-    { key: "body_2", heading: "실제로 점검할 요소", goal: outlineText[2] ?? "실제 검토 과정에서 확인할 요소를 설명합니다." },
-    { key: "conclusion_cta_faq", heading: "정리와 다음 확인 사항", goal: "핵심 내용을 정리하고 정보성 CTA, FAQ, 참고/면책 문구를 포함합니다." }
+    { key: "summary", heading: "핵심 요약", goal: "독자가 먼저 기억해야 할 기준을 요약합니다." },
+    { key: "problem_context", heading: "초보자가 놓치기 쉬운 배경", goal: outlineText[1] ?? "문제의 원인과 흔한 오해를 설명합니다." },
+    { key: "check_method_1", heading: "첫 번째 확인 기준", goal: outlineText[2] ?? "실제로 확인할 첫 번째 기준을 설명합니다." },
+    { key: "check_method_2", heading: "두 번째 확인 기준", goal: outlineText[3] ?? "첫 번째 기준과 함께 볼 보조 기준을 설명합니다." },
+    { key: "beginner_mistakes", heading: "초보자가 자주 하는 실수", goal: "과잉 확신과 리스크 무시를 피하는 방법을 설명합니다." },
+    { key: "service_use_case", heading: "급등포착 활용 예시", goal: "서비스를 정보 확인 보조 도구로 자연스럽게 연결합니다." },
+    { key: "faq", heading: "FAQ", goal: "검색자가 이어서 물을 질문에 답합니다." },
+    { key: "risk_disclaimer", heading: "투자 유의사항", goal: "금융/투자 콘텐츠의 한계와 사용자 책임을 안내합니다." },
+    { key: "cta", heading: "다음 확인 사항", goal: "과도한 광고 없이 다음 행동을 안내합니다." }
   ];
 }
 

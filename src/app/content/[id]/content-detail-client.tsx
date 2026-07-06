@@ -4368,6 +4368,13 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
                   <DetailItem label="HTML Errors" value={String(bloggerDraftSavePreflightResult.htmlValidation.errorCount)} />
                   <DetailItem label="HTML Warnings" value={String(bloggerDraftSavePreflightResult.htmlValidation.warningCount)} />
                   <DetailItem label="Unsafe Patterns" value={String(bloggerDraftSavePreflightResult.htmlValidation.unsafePatternCount)} />
+                  {bloggerDraftSavePreflightResult.htmlValidation.seoArticle ? (
+                    <>
+                      <DetailItem label="SEO Article" value={`${bloggerDraftSavePreflightResult.htmlValidation.seoArticle.grade} (${bloggerDraftSavePreflightResult.htmlValidation.seoArticle.score})`} />
+                      <DetailItem label="Visible Text" value={String(bloggerDraftSavePreflightResult.htmlValidation.seoArticle.visibleTextLength)} />
+                      <DetailItem label="SEO Blockers" value={String(bloggerDraftSavePreflightResult.htmlValidation.seoArticle.blockingReasons.length)} />
+                    </>
+                  ) : null}
                   <DetailItem label="Quality Grade" value={bloggerDraftSavePreflightResult.qualitySummary.grade} />
                   <DetailItem label="Quality Score Preview" value={String(bloggerDraftSavePreflightResult.qualitySummary.scorePreview)} />
                   <DetailItem label="Quality Required Fails" value={String(bloggerDraftSavePreflightResult.qualitySummary.requiredFailCount)} />
@@ -5293,7 +5300,12 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
                         {htmlCandidateValidation.metadata.mediaReferenceCount} / matched:{" "}
                         {htmlCandidateValidation.metadata.matchedMediaReferenceCount} / unmatched:{" "}
                         {htmlCandidateValidation.metadata.unmatchedMediaReferenceCount} / unsafe patterns: {htmlCandidateValidation.metadata.unsafePatternCount}
+                        {" / "}SEO: {htmlCandidateValidation.metadata.seoArticle.grade} ({htmlCandidateValidation.metadata.seoArticle.score}) / visible text:{" "}
+                        {htmlCandidateValidation.metadata.seoArticle.facts.visibleTextLength}
                       </p>
+                      {htmlCandidateValidation.metadata.seoArticle.blockingReasons.length > 0 ? (
+                        <p className="muted">SEO blockers: {htmlCandidateValidation.metadata.seoArticle.blockingReasons.join(", ")}</p>
+                      ) : null}
                     </div>
                     {htmlDirty ? (
                       <div className="notice warning">복사 또는 편집된 HTML 후보는 재검증 후 draftHtml에 반영할 수 있습니다.</div>
@@ -5382,7 +5394,12 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
                         {htmlCandidateValidation.metadata.mediaReferenceCount} / matched:{" "}
                         {htmlCandidateValidation.metadata.matchedMediaReferenceCount} / unmatched:{" "}
                         {htmlCandidateValidation.metadata.unmatchedMediaReferenceCount} / unsafe patterns: {htmlCandidateValidation.metadata.unsafePatternCount}
+                        {" / "}SEO: {htmlCandidateValidation.metadata.seoArticle.grade} ({htmlCandidateValidation.metadata.seoArticle.score}) / visible text:{" "}
+                        {htmlCandidateValidation.metadata.seoArticle.facts.visibleTextLength}
                       </p>
+                      {htmlCandidateValidation.metadata.seoArticle.blockingReasons.length > 0 ? (
+                        <p className="muted">SEO blockers: {htmlCandidateValidation.metadata.seoArticle.blockingReasons.join(", ")}</p>
+                      ) : null}
                     </div>
                     {htmlDirty ? (
                       <div className="notice warning">복사 또는 편집된 HTML 후보는 재검증 후 draftHtml에 반영할 수 있습니다.</div>
