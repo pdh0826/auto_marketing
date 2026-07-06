@@ -1,5 +1,43 @@
 # 13_CHANGELOG
 
+## Patch 9F-4A / 9F-4B / 9F-4C Second Fixture Publish Gate Preparation
+
+Completed the second fixture publish preflight, publish approval snapshot, and publish execution attempt planning gates.
+
+- Target content item: `daily_fixture_cmqlr1v1y0002iwj27df8ac5a`.
+- Initial publish preflight reported the access token expired.
+- Ran the existing Blogger token refresh route once with reason `publish_oauth_gate`; it did not call Blogger publish/write.
+- Re-ran publish preflight and confirmed OAuth blockers were cleared.
+- Publish approval preview produced snapshot hash `f0ca5d60e9bddc86f1328cb53b028c310562414334d67e855372005bec82a757`.
+- Saved local publish approval `cmr9d98zm00035lmc25l1245z`.
+- Publish execution attempt preview produced plan hash `d2c1bbd6b59c583670fe533973a2131e3aaa55d3c535c55c371bcafb08a0f195`.
+- Saved local publish execution attempt `cmr9d9v2m00055lmcsc6a247c` with status `planned_only`.
+- Guarded publish dry-run matched approval, attempt, content hashes, target Blogger blog, and Blogger post id.
+
+Current second fixture publish metadata:
+
+- Blogger post id: `411073211994805417`.
+- Target Blogger blog id/name: `3065973490356135805` / `급등포착`.
+- Content Markdown md5: `b62b37748074bcfcf6c7b25b6852d064`.
+- Content HTML md5: `dbfed22f5d7e57be3449ade45eb30f6a`.
+- Content HTML length: `1505`.
+
+Verified side effects:
+
+- `blogger_publish_approvals` increased by one, from `2` to `3`.
+- `blogger_publish_execution_attempts` increased by one, from `2` to `3`.
+- The second fixture remains `planned`.
+- `draftMarkdown`, `draftHtml`, `qualityScore`, `publishedAt`, and `scheduledAt` were not changed.
+- `llm_call_logs` remained `26`.
+
+Not executed:
+
+- Blogger live publish, scheduled publish, `posts.update`, extra draft save, OAuth reconnect, LLM call, deploy, push, content item mutation, publish attempt success mutation, raw Blogger response storage, or raw token output.
+
+Blocked / waiting:
+
+- 9F-4D live publish was not executed. A live-mode publish request with the confirmation phrase was rejected by the safety review because it would perform an external Blogger publish. Continue only after a separate explicit approval for `9F-4D guarded live Blogger publish` acknowledging that it will publish the Blogger post.
+
 ## Patch 9F-3U / 9F-3V / 9F-3W Second Fixture Blogger Draft Save Completion
 
 Completed the guarded Blogger draft save flow for the second daily fixture after the operator completed Blogger OAuth reconnect in the local UI.

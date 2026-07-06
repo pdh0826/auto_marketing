@@ -1,6 +1,48 @@
 # 14_NEXT_SESSION_BRIEF
 
-## Current State: Patch 9F-3U / 9F-3V / 9F-3W Second Fixture Blogger Draft Save Completed
+## Current State: Patch 9F-4A / 9F-4B / 9F-4C Second Fixture Publish Gate Preparation Completed
+
+The second daily fixture now has local publish approval and publish execution attempt records. Live Blogger publish has not been executed.
+
+Runtime smoke target:
+
+- Content item: `daily_fixture_cmqlr1v1y0002iwj27df8ac5a`.
+- Blogger post id: `411073211994805417`.
+- Blogger target blog id/name: `3065973490356135805` / `급등포착`.
+
+Observed result:
+
+- Initial publish preflight reported an expired access token.
+- Existing Blogger token refresh route was run once with reason `publish_oauth_gate`; it did not call Blogger publish/write.
+- Re-run publish preflight cleared OAuth blockers.
+- Publish approval preview hash: `f0ca5d60e9bddc86f1328cb53b028c310562414334d67e855372005bec82a757`.
+- Saved local publish approval `cmr9d98zm00035lmc25l1245z`.
+- Publish execution attempt preview hash: `d2c1bbd6b59c583670fe533973a2131e3aaa55d3c535c55c371bcafb08a0f195`.
+- Saved local publish execution attempt `cmr9d9v2m00055lmcsc6a247c` with status `planned_only`.
+- Guarded publish dry-run matched approval, attempt, content hashes, target Blogger blog, and Blogger post id.
+
+Verified side effects:
+
+- `blogger_publish_approvals` increased from `2` to `3`.
+- `blogger_publish_execution_attempts` increased from `2` to `3`.
+- The second fixture remains `planned`.
+- `draftMarkdown` length remains `1094`; `draftHtml` length remains `1505`.
+- `qualityScore=null`, `publishedAt=null`, and `scheduledAt=null`.
+- `llm_call_logs=26`.
+
+Not executed:
+
+- No Blogger live publish, scheduled publish, `posts.update`, extra draft save, OAuth reconnect, LLM call, deploy, push, content item mutation, publish attempt success mutation, raw Blogger response storage, or raw token output occurred.
+
+Blocked / waiting:
+
+- 9F-4D live publish requires a separate explicit approval acknowledging that the next guarded live-mode request will externally publish Blogger post `411073211994805417`.
+
+Next recommended patch:
+
+- `9F-4D — guarded live Blogger publish for the second fixture`, only after explicit live-publish approval.
+
+## Previous State: Patch 9F-3U / 9F-3V / 9F-3W Second Fixture Blogger Draft Save Completed
 
 The second daily fixture now has a successful guarded Blogger draft save.
 

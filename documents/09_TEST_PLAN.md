@@ -8,6 +8,21 @@ npm run typecheck
 npm run build
 ```
 
+## Patch 9F-4A / 9F-4B / 9F-4C second fixture publish gate preparation 검증
+
+- Target content item: `daily_fixture_cmqlr1v1y0002iwj27df8ac5a`.
+- Initial publish preflight can report `access_token_expired_reauth_required`; if so, only the existing Blogger token refresh route may be called with reason `publish_oauth_gate`.
+- Token refresh must not call Blogger publish/write and must not print or return raw token material.
+- Post-refresh publish preflight should clear OAuth blockers while keeping implementation blockers such as `publish_not_implemented`, `scheduled_publish_not_implemented`, `publish_approval_not_implemented`, and `content_item_mutation_policy_not_implemented`.
+- Publish approval preview should produce snapshot hash `f0ca5d60e9bddc86f1328cb53b028c310562414334d67e855372005bec82a757`.
+- Publish approval save should create local approval `cmr9d98zm00035lmc25l1245z` for Blogger post `411073211994805417`.
+- Publish execution attempt preview should produce plan hash `d2c1bbd6b59c583670fe533973a2131e3aaa55d3c535c55c371bcafb08a0f195`.
+- Publish execution attempt save should create local attempt `cmr9d9v2m00055lmcsc6a247c` with status `planned_only`.
+- Guarded publish dry-run must not call Blogger write/publish and should match approval id, attempt id, content hashes, target blog, and Blogger post id.
+- 9F-4D live publish must not be executed until a separate explicit approval acknowledges that the next live-mode guarded publish request will externally publish Blogger post `411073211994805417`.
+- Content item `draftMarkdown`, `draftHtml`, status, `qualityScore`, `publishedAt`, and `scheduledAt` must remain unchanged through 9F-4C.
+- Blogger live publish, scheduled publish, `posts.update`, extra draft save, OAuth reconnect, LLM call, deploy, push, content mutation, raw Blogger response storage, and raw token output must not occur through 9F-4C.
+
 ## Patch 9F-3U / 9F-3V / 9F-3W second fixture Blogger draft save completion 검증
 
 - Target content item: `daily_fixture_cmqlr1v1y0002iwj27df8ac5a`.
