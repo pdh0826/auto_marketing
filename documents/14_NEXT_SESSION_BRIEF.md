@@ -1,6 +1,46 @@
 # 14_NEXT_SESSION_BRIEF
 
-## Current State: Patch 9F-3S / 9F-3T Second Fixture Draft Approval And Preflight Completed
+## Current State: Patch 9F-3U / 9F-3V / 9F-3W Second Fixture Blogger Draft Save Completed
+
+The second daily fixture now has a successful guarded Blogger draft save.
+
+Runtime smoke target:
+
+- Content item: `daily_fixture_cmqlr1v1y0002iwj27df8ac5a`.
+- Blog target: `cmqc0ugaz00001yek2ve7fv3x` (`급등포착 블로그`).
+- Blogger target blog id: `3065973490356135805`.
+
+Observed result:
+
+- Operator completed Blogger OAuth reconnect in the local UI before execution.
+- Re-run draft save preflight returned `canSaveDraft=true`, `blockingReasons=[]`, approval snapshot match, draft payload ready, and duplicate save false.
+- Guarded Blogger draft save route was called exactly once.
+- Local draft save id: `cmr9atnfz00075lzxhay26282`.
+- Draft save status: `success`.
+- Approval id: `cmr8xwn2200015l7u8q3rmajv`.
+- Blogger draft post id: `411073211994805417`.
+- Snapshot prefix: `28a2c54e2cb7`.
+- Draft HTML hash prefix: `f27737115a62`.
+- Post-save preflight returns `canSaveDraft=false`, blocker `blogger_draft_already_saved_for_approval`, and `duplicateSaveBlocked=true`.
+- Publish readiness reports `contentReady=true`, `bloggerDraftSaved=true`, and stage `draft_saved_publish_not_implemented`.
+
+Verified side effects:
+
+- `blogger_draft_saves` increased from `2` to `3`.
+- The second fixture remains `planned`.
+- `draftMarkdown` length remains `1094`; `draftHtml` length remains `1505`.
+- `qualityScore=null`, `publishedAt=null`, and `scheduledAt=null`.
+- `llm_call_logs=26`.
+
+Not executed:
+
+- No Blogger publish, scheduled publish, `posts.update`, extra draft save, token refresh by Codex, LLM call, deploy, push, content item status mutation, quality score mutation, publish timestamp mutation, or raw Blogger response/token/code storage occurred.
+
+Next recommended patch:
+
+- `9F-4A — publish readiness final preflight after saved Blogger draft` for the second fixture.
+
+## Previous State: Patch 9F-3S / 9F-3T Second Fixture Draft Approval And Preflight Completed
 
 The second daily fixture now has a fresh local Blogger draft approval snapshot, but guarded Blogger draft save is blocked by an expired access token.
 

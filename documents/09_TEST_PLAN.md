@@ -8,6 +8,33 @@ npm run typecheck
 npm run build
 ```
 
+## Patch 9F-3U / 9F-3V / 9F-3W second fixture Blogger draft save completion 검증
+
+- Target content item: `daily_fixture_cmqlr1v1y0002iwj27df8ac5a`.
+- After operator OAuth reconnect, preflight must return:
+  - `canSaveDraft=true`
+  - `blockingReasons=[]`
+  - approval snapshot matches current preview
+  - draft payload ready
+  - duplicate save blocked false before execution
+- `POST /api/content-items/daily_fixture_cmqlr1v1y0002iwj27df8ac5a/blogger-draft-save` may be called exactly once after the passing preflight.
+- Runtime result:
+  - local draft save id `cmr9atnfz00075lzxhay26282`
+  - status `success`
+  - approval id `cmr8xwn2200015l7u8q3rmajv`
+  - target Blogger blog id `3065973490356135805`
+  - Blogger draft post id `411073211994805417`
+  - snapshot hash prefix `28a2c54e2cb7`
+  - draftHtml hash prefix `f27737115a62`
+- Post-save preflight must return:
+  - `canSaveDraft=false`
+  - `blockingReasons=["blogger_draft_already_saved_for_approval"]`
+  - `successfulSaveForCurrentApproval=true`
+  - `duplicateSaveBlocked=true`
+- Publish readiness should report `contentReady=true`, `bloggerDraftSaved=true`, draft post id `411073211994805417`, and stage `draft_saved_publish_not_implemented`.
+- Content item `draftMarkdown`, `draftHtml`, status, `qualityScore`, `publishedAt`, and `scheduledAt` must remain unchanged.
+- Blogger publish, scheduled publish, `posts.update`, extra draft save, token refresh by Codex, LLM calls, deploy, push, content status mutation, quality score mutation, publish timestamp mutation, and raw Blogger response/token/code storage must not occur.
+
 ## Patch 9F-3S / 9F-3T second fixture draft approval and preflight 검증
 
 - Target content item: `daily_fixture_cmqlr1v1y0002iwj27df8ac5a`.

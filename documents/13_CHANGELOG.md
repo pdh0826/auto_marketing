@@ -1,5 +1,36 @@
 # 13_CHANGELOG
 
+## Patch 9F-3U / 9F-3V / 9F-3W Second Fixture Blogger Draft Save Completion
+
+Completed the guarded Blogger draft save flow for the second daily fixture after the operator completed Blogger OAuth reconnect in the local UI.
+
+- Target content item: `daily_fixture_cmqlr1v1y0002iwj27df8ac5a`.
+- Re-ran Blogger draft save preflight and confirmed `canSaveDraft=true`, `blockingReasons=[]`, approval snapshot match, draft payload ready, and no duplicate save.
+- Executed `POST /api/content-items/daily_fixture_cmqlr1v1y0002iwj27df8ac5a/blogger-draft-save` exactly once.
+- Blogger draft save succeeded with local save id `cmr9atnfz00075lzxhay26282`.
+- Blogger draft post id: `411073211994805417`.
+- Target Blogger blog id/name: `3065973490356135805` / `급등포착`.
+- Approval id: `cmr8xwn2200015l7u8q3rmajv`.
+- Snapshot prefix: `28a2c54e2cb7`.
+- Draft HTML hash prefix: `f27737115a62`.
+- Post-save preflight now returns `canSaveDraft=false`, blocker `blogger_draft_already_saved_for_approval`, and `duplicateSaveBlocked=true`.
+- Publish readiness now reports `contentReady=true`, `bloggerDraftSaved=true`, `bloggerDraftPostId=411073211994805417`, and stage `draft_saved_publish_not_implemented`.
+
+Verified side effects:
+
+- `blogger_draft_saves` increased by one, from `2` to `3`.
+- The second fixture remains `planned`.
+- `draftMarkdown`, `draftHtml`, `qualityScore`, `publishedAt`, and `scheduledAt` were not changed.
+- `llm_call_logs` remained `26`.
+
+Not executed:
+
+- Blogger publish, scheduled publish, `posts.update`, extra draft save, token refresh by Codex, LLM call, deploy, push, content item status mutation, quality score mutation, publish timestamp mutation, or raw Blogger response/token/code storage.
+
+Next recommended patch:
+
+- `9F-4A — publish readiness final preflight after saved Blogger draft` for the second fixture.
+
 ## Patch 9F-3S / 9F-3T Second Fixture Draft Approval And Preflight
 
 Completed the second fixture Blogger draft payload approval refresh and read-only draft save preflight.
