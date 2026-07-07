@@ -1,5 +1,31 @@
 # 14_NEXT_SESSION_BRIEF
 
+## Current State: Patch 9G-7 User Wizard UI
+
+The app now has wizard-first entrypoints for ordinary user work:
+
+- `/wizard/new` for step-by-step new article creation.
+- `/wizard/edit/[id]` for guided edits with dry-run validation and explicit manual apply.
+- `/wizard/publish/[id]` for SEO/Blogger readiness checks before any guarded save/publish action.
+
+Navigation updates:
+
+- `/`, `/auto`, `/content/new`, and `/content/[id]` now expose the wizard routes.
+- Advanced admin/detail screens remain available but are no longer the primary operator path.
+
+Safety:
+
+- Page load/navigation does not call Blogger draft save, Blogger publish, scheduled publish, token refresh, or LLM providers.
+- Content mutation still requires explicit button clicks and existing guarded APIs.
+
+Recommended next patch:
+
+- Browser-pass polish for the wizard pages:
+  - improve compact layout and mobile readability;
+  - add latest-content shortcuts;
+  - add disabled-state reasons for approval/preflight buttons;
+  - consider collapsing advanced content detail sections by default.
+
 ## Current State: Patch 9G-6A Guided SEO Article Prep UI
 
 Patch 9G-6A added an app-based guided action for preparing a new SEO article from `/content/new`.

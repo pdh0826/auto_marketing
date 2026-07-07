@@ -1,5 +1,28 @@
 # 13_CHANGELOG
 
+## Patch 9G-7 User Wizard UI
+
+Added wizard-first UI routes so normal article work can proceed without jumping across scattered admin panels.
+
+- New route: `/wizard/new`.
+  - Guides the user through article type, topic, source/materials, structure options, generation confirmation, and completion.
+  - Uses the existing guided SEO article prep route only after the explicit `진행` button.
+- New route: `/wizard/edit/[id]`.
+  - Guides the user through edit goal, edit scope, candidate review, dry-run validation, and explicit manual apply.
+  - Reuses the existing guarded SEO editorial candidate apply route and requires `APPLY_SEO_EDITORIAL_CANDIDATE` for content mutation.
+- New route: `/wizard/publish/[id]`.
+  - Guides the user through SEO workflow, Blogger draft payload preview, manual draft approval snapshot, and draft save preflight.
+  - Does not run actual Blogger draft save or publish.
+- Dashboard, `/auto`, `/content/new`, and content detail navigation now point users toward the wizard-first flows.
+
+Safety:
+
+- No automatic Blogger draft save.
+- No automatic Blogger publish or scheduled publish.
+- No token refresh.
+- No LLM call.
+- Existing guarded routes remain responsible for any explicit DB mutation.
+
 ## Patch 9G-6A Guided SEO Article Prep UI
 
 Added an app-based guided action so a new SEO article can be prepared from `/content/new` without terminal orchestration.

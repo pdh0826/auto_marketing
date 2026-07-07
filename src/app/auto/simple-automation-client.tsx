@@ -111,6 +111,9 @@ export function SimpleAutomationClient() {
           <Link className="button secondary" href="/settings/blogger">
             Blogger 설정
           </Link>
+          <Link className="button" href="/wizard/new">
+            새 글 마법사
+          </Link>
           <Link className="button secondary" href="/settings/llm">
             LLM 설정
           </Link>
@@ -226,6 +229,12 @@ export function SimpleAutomationClient() {
             <div className="button-row">
               <Link className="button" href={result.links.contentDetail}>
                 글 상세에서 발행 준비
+              </Link>
+              <Link className="button secondary" href={`/wizard/edit/${result.contentItemId}`}>
+                수정 마법사
+              </Link>
+              <Link className="button secondary" href={`/wizard/publish/${result.contentItemId}`}>
+                발행 준비 마법사
               </Link>
               <Link className="button secondary" href="/auto">
                 같은 화면에서 계속 준비

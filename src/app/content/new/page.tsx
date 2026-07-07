@@ -6,6 +6,7 @@ export default function Page() {
       <nav className="nav">
         <a href="/">대시보드</a>
         <a href="/auto">간편 자동화</a>
+        <a href="/wizard/new">새 글 마법사</a>
         <a href="/blogs">블로그</a>
         <a href="/brands">서비스 프로필</a>
         <a href="/content/new">글 생성</a>

@@ -1904,13 +1904,19 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
       <section className="card">
         <span className="badge">Patch 6C</span>
         <h1>글 생성 요청 상세</h1>
-        <p className="muted">수동으로 기획 JSON을 작성하고 planned 상태로 전환합니다. 자동 생성과 품질검사는 후속 패치에서 연결합니다.</p>
+        <p className="muted">고급 상세 화면입니다. 일반 작업은 수정 마법사와 발행 준비 마법사를 우선 사용하세요.</p>
         <div className="form-actions">
+          <Link className="button" href={`/wizard/edit/${contentItemId}`}>
+            수정 마법사
+          </Link>
+          <Link className="button" href={`/wizard/publish/${contentItemId}`}>
+            발행 준비 마법사
+          </Link>
           <Link className="button secondary" href="/content/new">
-            글 생성 목록
+            상세 글 생성 목록
           </Link>
           <button className="button secondary" type="button" disabled>
-            기획서 자동 생성은 후속 패치에서 연결 예정
+            고급 기획 기능
           </button>
           <button className="button secondary" type="button" disabled>
             본문 초안 생성은 아래 섹션에서 실행

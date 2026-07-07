@@ -8,6 +8,23 @@ npm run typecheck
 npm run build
 ```
 
+## Patch 9G-7 user wizard UI 검증
+
+- `/wizard/new`:
+  - Article type, topic, source/materials, structure options, and confirmation steps render.
+  - The generation action only runs after the explicit `진행` button.
+  - Expected mutation is limited to the existing guided SEO prep content item creation.
+- `/wizard/edit/[id]`:
+  - Edit goal and edit scope steps render.
+  - Metadata save is separate from draftMarkdown/draftHtml candidate apply.
+  - Candidate apply requires dry-run validation and `APPLY_SEO_EDITORIAL_CANDIDATE`.
+- `/wizard/publish/[id]`:
+  - SEO workflow, Blogger draft payload preview, manual approval snapshot, and draft save preflight are manually triggered.
+  - Actual Blogger draft save and publish are not executed from the wizard.
+- Navigation:
+  - `/`, `/auto`, `/content/new`, and `/content/[id]` expose the wizard routes.
+- This patch must not automatically call Blogger draft save, Blogger publish, scheduled publish, token refresh, or LLM providers.
+
 ## Patch 9G-3/9G-4/9G-5 bundled SEO production flow 검증
 
 - SEO long-form quality policy:

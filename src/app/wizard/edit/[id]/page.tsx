@@ -1,4 +1,4 @@
-import { ContentDetailClient } from "./content-detail-client";
+import { EditArticleWizardClient } from "./edit-article-wizard-client";
 
 interface PageProps {
   params: {
@@ -15,13 +15,9 @@ export default function Page({ params }: PageProps) {
         <a href="/wizard/new">새 글 마법사</a>
         <a href={`/wizard/edit/${params.id}`}>수정 마법사</a>
         <a href={`/wizard/publish/${params.id}`}>발행 준비</a>
-        <a href="/blogs">블로그</a>
-        <a href="/brands">서비스 프로필</a>
-        <a href="/content/new">상세 글 생성</a>
-        <a href="/settings/llm">LLM 설정</a>
-        <a href="/settings/blogger">Blogger 설정</a>
+        <a href={`/content/${params.id}`}>상세 화면</a>
       </nav>
-      <ContentDetailClient contentItemId={params.id} />
+      <EditArticleWizardClient contentItemId={params.id} />
     </main>
   );
 }

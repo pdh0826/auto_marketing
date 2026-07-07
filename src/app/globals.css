@@ -58,6 +58,11 @@ a {
   box-shadow: 0 8px 24px rgba(24, 24, 27, 0.04);
 }
 
+.selected-card {
+  border-color: #27272a;
+  background: #f4f4f5;
+}
+
 .admin-section {
   margin-top: 18px;
   border: 1px solid var(--border);
