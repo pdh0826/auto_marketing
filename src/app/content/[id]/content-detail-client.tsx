@@ -5088,7 +5088,33 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
                         <DetailItem label="Assets Without Placeholder" value={String(blogPostTemplatePreviewResult.validationSummary.assetWithoutPlaceholderCount)} />
                         <DetailItem label="Unsafe Patterns" value={String(blogPostTemplatePreviewResult.validationSummary.unsafePatternCount)} />
                         <DetailItem label="Raw HTML Escaped" value={blogPostTemplatePreviewResult.validationSummary.rawHtmlEscaped ? "yes" : "no"} />
+                        <DetailItem
+                          label="SEO Editorial"
+                          value={`${blogPostTemplatePreviewResult.validationSummary.seoEditorialGrade} (${blogPostTemplatePreviewResult.validationSummary.seoEditorialScore})`}
+                        />
+                        <DetailItem label="Broken Expressions" value={String(blogPostTemplatePreviewResult.validationSummary.editorialBrokenExpressionCount)} />
+                        <DetailItem
+                          label="Brand Repetition"
+                          value={`${blogPostTemplatePreviewResult.validationSummary.editorialBrandMentionCount} / 1000자당 ${blogPostTemplatePreviewResult.validationSummary.editorialBrandMentionsPerThousandChars}`}
+                        />
+                        <DetailItem label="Trading Signals" value={String(blogPostTemplatePreviewResult.validationSummary.editorialDirectTradingSignalCount)} />
                       </div>
+                      {blogPostTemplatePreviewResult.validationSummary.seoEditorialBlockingReasons.length > 0 ? (
+                        <ValidationList
+                          title="SEO Editorial Blockers"
+                          items={blogPostTemplatePreviewResult.validationSummary.seoEditorialBlockingReasons}
+                          emptyText="SEO editorial blocker가 없습니다."
+                          isError
+                        />
+                      ) : null}
+                      {blogPostTemplatePreviewResult.validationSummary.seoEditorialWarnings.length > 0 ? (
+                        <ValidationList
+                          title="SEO Editorial Warnings"
+                          items={blogPostTemplatePreviewResult.validationSummary.seoEditorialWarnings}
+                          emptyText="SEO editorial warning이 없습니다."
+                          isWarning
+                        />
+                      ) : null}
                       <ValidationList
                         title="Template Preview Errors"
                         items={blogPostTemplatePreviewResult.validationSummary.errors}
@@ -5493,6 +5519,13 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
                   <DetailItem label="Media Refs" value={String(qualityPreviewResult.metadata.mediaReferenceCount)} />
                   <DetailItem label="Matched Media" value={String(qualityPreviewResult.metadata.matchedMediaReferenceCount)} />
                   <DetailItem label="External Links" value={String(qualityPreviewResult.metadata.externalLinkCount)} />
+                  <DetailItem label="SEO Editorial" value={`${qualityPreviewResult.metadata.seoEditorialGrade} (${qualityPreviewResult.metadata.seoEditorialScore})`} />
+                  <DetailItem label="Broken Expressions" value={String(qualityPreviewResult.metadata.editorialBrokenExpressionCount)} />
+                  <DetailItem
+                    label="Brand Repetition"
+                    value={`${qualityPreviewResult.metadata.editorialBrandMentionCount} / 1000자당 ${qualityPreviewResult.metadata.editorialBrandMentionsPerThousandChars}`}
+                  />
+                  <DetailItem label="Trading Signals" value={String(qualityPreviewResult.metadata.editorialDirectTradingSignalCount)} />
                 </div>
                 <QualitySummary checks={qualityPreviewResult.checks} />
                 <QualityGroupTable title="Structure" checks={qualityPreviewResult.groups.structure} />

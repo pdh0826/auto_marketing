@@ -1,5 +1,48 @@
 # 13_CHANGELOG
 
+## Patch 9G-1C SEO Editorial Gate and Candidate Polish
+
+Added a human-editor oriented SEO quality layer on top of the existing structural article gate.
+
+- Added `src/lib/content/seo-editorial-quality.ts` to detect:
+  - broken/mixed-language expressions such as `报表` or repeated typo patterns
+  - risky finance phrasing
+  - direct buy/sell signal phrasing overuse
+  - excessive brand and primary keyword repetition
+  - weak practical checklist/example/disclaimer signals
+- Wired editorial quality into:
+  - `src/lib/content/seo-article-quality.ts`
+  - `src/lib/content/html-quality-preview.ts`
+  - `src/lib/blog-renderer/blog-post-template-renderer.ts`
+  - Content Detail template preview / quality preview UI
+- Added `scripts/generate_9g1c_seo_editorial_candidate.mjs`.
+- Generated preview-only artifacts:
+  - `documents/generated/9g-1c-seo-editorial-candidate.md`
+  - `documents/generated/9g-1c-seo-editorial-candidate-preview.html`
+  - `documents/generated/9g-1c-seo-editorial-review.json`
+
+Editorial candidate result:
+
+- Grade/score: `pass / 100`
+- Visible text length: `6029`
+- Markdown length: `6143`
+- HTML length: `7150`
+- H1/H2/H3: `1 / 12 / 4`
+- Paragraph count: `41`
+- Brand mentions: `7`, per 1000 chars `1.16`
+- Primary keyword mentions: `6`, per 1000 chars `1`
+- Broken expression count: `0`
+- Risky finance phrase count: `0`
+- Direct trading signal count: `0`
+- Checklist/example/disclaimer signals: `16 / 15 / 16`
+- Blockers/warnings: `[] / []`
+
+Not executed:
+
+- No content item `draftMarkdown` or `draftHtml` mutation.
+- No Blogger draft save, Blogger publish/write, scheduled publish, `posts.update`, OAuth reconnect, token refresh, deploy, push, quality score mutation, or raw token/Blogger response output.
+- No external LLM provider call was made by this patch; the candidate was generated deterministically by the local script.
+
 ## Patch 9G-1B SEO-Sectioned Candidate Generation Smoke
 
 Generated and validated one new SEO-sectioned candidate without saving it to `content_items` and without Blogger API write/publish.

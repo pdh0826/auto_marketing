@@ -45,6 +45,17 @@ export interface HtmlQualityPreviewResult {
     seoArticleGrade: "pass" | "warn" | "fail";
     seoArticleScore: number;
     seoArticleBlockingReasonCount: number;
+    seoEditorialGrade: "pass" | "warn" | "fail";
+    seoEditorialScore: number;
+    seoEditorialBlockingReasonCount: number;
+    seoEditorialWarningCount: number;
+    editorialBrokenExpressionCount: number;
+    editorialBrandMentionCount: number;
+    editorialBrandMentionsPerThousandChars: number;
+    editorialPrimaryKeywordMentionCount: number | null;
+    editorialPrimaryKeywordMentionsPerThousandChars: number | null;
+    editorialDirectTradingSignalCount: number;
+    editorialGenericHelpPhraseCount: number;
     rawMarkdownHeadingCount: number;
     rawMarkdownListLineCount: number;
     codeBlockTextRatio: number;
@@ -116,6 +127,17 @@ export function buildHtmlQualityPreview(contentItem: ContentItemAdmin, assets: C
       seoArticleGrade: seoArticle.grade,
       seoArticleScore: seoArticle.score,
       seoArticleBlockingReasonCount: seoArticle.blockingReasons.length,
+      seoEditorialGrade: seoArticle.editorial.grade,
+      seoEditorialScore: seoArticle.editorial.score,
+      seoEditorialBlockingReasonCount: seoArticle.editorial.blockingReasons.length,
+      seoEditorialWarningCount: seoArticle.editorial.warnings.length,
+      editorialBrokenExpressionCount: seoArticle.editorial.facts.brokenExpressionCount,
+      editorialBrandMentionCount: seoArticle.editorial.facts.brandMentionCount,
+      editorialBrandMentionsPerThousandChars: seoArticle.editorial.facts.brandMentionsPerThousandChars,
+      editorialPrimaryKeywordMentionCount: seoArticle.editorial.facts.primaryKeywordMentionCount,
+      editorialPrimaryKeywordMentionsPerThousandChars: seoArticle.editorial.facts.primaryKeywordMentionsPerThousandChars,
+      editorialDirectTradingSignalCount: seoArticle.editorial.facts.directTradingSignalCount,
+      editorialGenericHelpPhraseCount: seoArticle.editorial.facts.genericHelpPhraseCount,
       rawMarkdownHeadingCount: seoArticle.facts.rawMarkdownHeadingCount,
       rawMarkdownListLineCount: seoArticle.facts.rawMarkdownListLineCount,
       codeBlockTextRatio: seoArticle.facts.codeBlockTextRatio
@@ -399,6 +421,35 @@ function buildSeoArticleTemplateChecks(seoArticle: ReturnType<typeof analyzeSeoA
       seoArticle.facts.preBlockCount === 0 && seoArticle.facts.codeBlockTextRatio < 0.05
         ? "일반 블로그 글 본문이 code block 중심이 아닙니다."
         : `code block 중심 HTML로 보입니다: pre ${seoArticle.facts.preBlockCount}, ratio ${seoArticle.facts.codeBlockTextRatio.toFixed(2)}`
+    ),
+    makeCheck(
+      "seo_editorial_quality_gate",
+      "SEO editorial quality gate",
+      "seo",
+      seoArticle.editorial.ok ? "pass" : "fail",
+      "required",
+      seoArticle.editorial.ok
+        ? `SEO editorial gate 통과: score ${seoArticle.editorial.score}, brand mentions ${seoArticle.editorial.facts.brandMentionCount}`
+        : `SEO editorial blocker가 있습니다: ${seoArticle.editorial.blockingReasons.join(", ")}`
+    ),
+    makeCheck(
+      "seo_editorial_practicality",
+      "SEO practical examples",
+      "seo",
+      seoArticle.editorial.warnings.includes("editorial_practical_checklist_signal_low") ||
+        seoArticle.editorial.warnings.includes("editorial_example_signal_low")
+        ? "warn"
+        : "pass",
+      "recommended",
+      `checklist signals ${seoArticle.editorial.facts.checklistSignalCount}, example signals ${seoArticle.editorial.facts.exampleSignalCount}`
+    ),
+    makeCheck(
+      "seo_editorial_brand_repetition",
+      "Brand repetition",
+      "seo",
+      seoArticle.editorial.blockingReasons.includes("editorial_brand_repetition_too_high") ? "fail" : "pass",
+      "required",
+      `brand mentions ${seoArticle.editorial.facts.brandMentionCount}, per 1000 chars ${seoArticle.editorial.facts.brandMentionsPerThousandChars}`
     )
   ];
 }

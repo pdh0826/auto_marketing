@@ -36,6 +36,17 @@ export interface BlogPostTemplatePreviewResult {
     seoArticleScore: number;
     seoArticleBlockingReasons: string[];
     seoArticleWarnings: string[];
+    seoEditorialGrade: "pass" | "warn" | "fail";
+    seoEditorialScore: number;
+    seoEditorialBlockingReasons: string[];
+    seoEditorialWarnings: string[];
+    editorialBrokenExpressionCount: number;
+    editorialBrandMentionCount: number;
+    editorialBrandMentionsPerThousandChars: number;
+    editorialPrimaryKeywordMentionCount: number | null;
+    editorialPrimaryKeywordMentionsPerThousandChars: number | null;
+    editorialDirectTradingSignalCount: number;
+    editorialGenericHelpPhraseCount: number;
   };
   metadata: {
     previewOnly: true;
@@ -151,7 +162,18 @@ export function buildBlogPostTemplatePreview(input: BuildBlogPostTemplatePreview
       seoArticleGrade: seoArticle.grade,
       seoArticleScore: seoArticle.score,
       seoArticleBlockingReasons: seoArticle.blockingReasons,
-      seoArticleWarnings: seoArticle.warnings
+      seoArticleWarnings: seoArticle.warnings,
+      seoEditorialGrade: seoArticle.editorial.grade,
+      seoEditorialScore: seoArticle.editorial.score,
+      seoEditorialBlockingReasons: seoArticle.editorial.blockingReasons,
+      seoEditorialWarnings: seoArticle.editorial.warnings,
+      editorialBrokenExpressionCount: seoArticle.editorial.facts.brokenExpressionCount,
+      editorialBrandMentionCount: seoArticle.editorial.facts.brandMentionCount,
+      editorialBrandMentionsPerThousandChars: seoArticle.editorial.facts.brandMentionsPerThousandChars,
+      editorialPrimaryKeywordMentionCount: seoArticle.editorial.facts.primaryKeywordMentionCount,
+      editorialPrimaryKeywordMentionsPerThousandChars: seoArticle.editorial.facts.primaryKeywordMentionsPerThousandChars,
+      editorialDirectTradingSignalCount: seoArticle.editorial.facts.directTradingSignalCount,
+      editorialGenericHelpPhraseCount: seoArticle.editorial.facts.genericHelpPhraseCount
     },
     metadata: {
       previewOnly: true,

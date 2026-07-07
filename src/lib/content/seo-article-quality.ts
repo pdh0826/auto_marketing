@@ -1,4 +1,5 @@
 import type { ContentItemAdmin } from "@/lib/content/admin-types";
+import { analyzeSeoEditorialQuality } from "@/lib/content/seo-editorial-quality";
 import { SEO_ARTICLE_TEMPLATE_V1, buildSeoSearchIntentSpec } from "@/lib/content/seo-article-template";
 
 export type SeoArticleGrade = "pass" | "warn" | "fail";
@@ -27,7 +28,19 @@ export interface SeoArticleQualityAnalysis {
     ctaSignalCount: number;
     financeDisclaimerDetected: boolean;
     targetKeywordPresent: boolean | null;
+    editorialGrade: "pass" | "warn" | "fail";
+    editorialScore: number;
+    editorialBlockingReasonCount: number;
+    editorialWarningCount: number;
+    editorialBrokenExpressionCount: number;
+    editorialBrandMentionCount: number;
+    editorialBrandMentionsPerThousandChars: number;
+    editorialPrimaryKeywordMentionCount: number | null;
+    editorialPrimaryKeywordMentionsPerThousandChars: number | null;
+    editorialDirectTradingSignalCount: number;
+    editorialGenericHelpPhraseCount: number;
   };
+  editorial: ReturnType<typeof analyzeSeoEditorialQuality>;
   templatePolicy: {
     version: string;
     targetVisibleTextLength: number;
@@ -47,7 +60,14 @@ export function analyzeSeoArticleHtml(html: string, contentItem?: ContentItemAdm
   const safeHtml = typeof html === "string" ? html : "";
   const visibleText = extractVisibleText(safeHtml);
   const codeText = extractCodeBlockText(safeHtml);
-  const targetKeyword = contentItem ? buildSeoSearchIntentSpec(contentItem).targetKeyword : null;
+  const intent = contentItem ? buildSeoSearchIntentSpec(contentItem) : null;
+  const targetKeyword = intent?.targetKeyword ?? null;
+  const brandName = contentItem?.brandProfile?.serviceName ?? contentItem?.brandProfile?.name ?? null;
+  const editorial = analyzeSeoEditorialQuality({
+    text: visibleText,
+    brandName,
+    primaryKeyword: targetKeyword
+  });
   const facts = {
     htmlLength: safeHtml.length,
     visibleTextLength: visibleText.length,
@@ -65,10 +85,21 @@ export function analyzeSeoArticleHtml(html: string, contentItem?: ContentItemAdm
     faqQuestionCount: countFaqQuestions(safeHtml, visibleText),
     ctaSignalCount: countMatches(visibleText, CTA_PATTERN),
     financeDisclaimerDetected: DISCLAIMER_PATTERN.test(visibleText),
-    targetKeywordPresent: targetKeyword ? visibleText.toLowerCase().includes(targetKeyword.toLowerCase()) : null
+    targetKeywordPresent: targetKeyword ? visibleText.toLowerCase().includes(targetKeyword.toLowerCase()) : null,
+    editorialGrade: editorial.grade,
+    editorialScore: editorial.score,
+    editorialBlockingReasonCount: editorial.blockingReasons.length,
+    editorialWarningCount: editorial.warnings.length,
+    editorialBrokenExpressionCount: editorial.facts.brokenExpressionCount,
+    editorialBrandMentionCount: editorial.facts.brandMentionCount,
+    editorialBrandMentionsPerThousandChars: editorial.facts.brandMentionsPerThousandChars,
+    editorialPrimaryKeywordMentionCount: editorial.facts.primaryKeywordMentionCount,
+    editorialPrimaryKeywordMentionsPerThousandChars: editorial.facts.primaryKeywordMentionsPerThousandChars,
+    editorialDirectTradingSignalCount: editorial.facts.directTradingSignalCount,
+    editorialGenericHelpPhraseCount: editorial.facts.genericHelpPhraseCount
   };
-  const blockingReasons = buildBlockingReasons(safeHtml, facts);
-  const warnings = buildWarnings(facts);
+  const blockingReasons = buildBlockingReasons(safeHtml, facts, editorial);
+  const warnings = buildWarnings(facts, editorial);
   const score = calculateSeoScore(blockingReasons, warnings, facts);
   const grade: SeoArticleGrade = blockingReasons.length > 0 || score < 70 ? "fail" : warnings.length > 0 || score < 85 ? "warn" : "pass";
 
@@ -79,6 +110,7 @@ export function analyzeSeoArticleHtml(html: string, contentItem?: ContentItemAdm
     blockingReasons,
     warnings,
     facts,
+    editorial,
     templatePolicy: {
       version: SEO_ARTICLE_TEMPLATE_V1.version,
       targetVisibleTextLength: SEO_ARTICLE_TEMPLATE_V1.targetVisibleTextLength,
@@ -90,7 +122,7 @@ export function analyzeSeoArticleHtml(html: string, contentItem?: ContentItemAdm
   };
 }
 
-function buildBlockingReasons(html: string, facts: SeoArticleQualityAnalysis["facts"]) {
+function buildBlockingReasons(html: string, facts: SeoArticleQualityAnalysis["facts"], editorial: SeoArticleQualityAnalysis["editorial"]) {
   const blockers: string[] = [];
 
   if (!html.trim()) blockers.push("draft_html_missing");
@@ -104,11 +136,12 @@ function buildBlockingReasons(html: string, facts: SeoArticleQualityAnalysis["fa
   if (facts.paragraphCount < SEO_ARTICLE_TEMPLATE_V1.minParagraphCount) blockers.push("html_paragraph_count_too_low");
   if (facts.faqQuestionCount < SEO_ARTICLE_TEMPLATE_V1.minFaqCount) blockers.push("html_faq_count_too_low");
   if (!facts.financeDisclaimerDetected) blockers.push("html_finance_disclaimer_missing");
+  blockers.push(...editorial.blockingReasons);
 
   return Array.from(new Set(blockers));
 }
 
-function buildWarnings(facts: SeoArticleQualityAnalysis["facts"]) {
+function buildWarnings(facts: SeoArticleQualityAnalysis["facts"], editorial: SeoArticleQualityAnalysis["editorial"]) {
   const warnings: string[] = [];
 
   if (facts.visibleTextLength >= SEO_ARTICLE_TEMPLATE_V1.minVisibleTextLengthToPublish && facts.visibleTextLength < SEO_ARTICLE_TEMPLATE_V1.minVisibleTextLengthWarning) {
@@ -123,6 +156,7 @@ function buildWarnings(facts: SeoArticleQualityAnalysis["facts"]) {
   if (facts.listCount === 0) {
     warnings.push("html_list_structure_missing");
   }
+  warnings.push(...editorial.warnings);
 
   return Array.from(new Set(warnings));
 }

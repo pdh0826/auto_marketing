@@ -1,6 +1,48 @@
 # 14_NEXT_SESSION_BRIEF
 
-## Current State: Patch 9G-1B SEO-Sectioned Candidate Generation Smoke Completed
+## Current State: Patch 9G-1C SEO Editorial Gate and Candidate Polish Completed
+
+Patch 9G-1C added an editorial SEO quality layer because the 9G-1B candidate passed structural gates but still had human-visible quality problems.
+
+Implemented:
+
+- New deterministic analyzer: `src/lib/content/seo-editorial-quality.ts`.
+- The analyzer flags broken Korean/mixed-language expressions, risky finance phrases, direct trading signal overuse, brand/keyword repetition, and weak practical/example/disclaimer signals.
+- `seo-article-quality`, `html-quality-preview`, and `blog-post-template-renderer` now include editorial grade/score and safe summary facts.
+- Content Detail template preview and quality preview now surface editorial score, broken expression count, brand repetition, and direct trading signal count.
+- Added `scripts/generate_9g1c_seo_editorial_candidate.mjs` for a deterministic SEO editorial candidate artifact.
+
+Generated artifacts:
+
+- Candidate Markdown: `documents/generated/9g-1c-seo-editorial-candidate.md`.
+- Candidate HTML preview: `documents/generated/9g-1c-seo-editorial-candidate-preview.html`.
+- Review JSON: `documents/generated/9g-1c-seo-editorial-review.json`.
+
+Candidate review:
+
+- Grade/score: `pass / 100`
+- Visible text length: `6029`
+- Markdown/HTML length: `6143 / 7150`
+- H1/H2/H3: `1 / 12 / 4`
+- Paragraph count: `41`
+- Brand mentions: `7`, per 1000 chars `1.16`
+- Primary keyword mentions: `6`, per 1000 chars `1`
+- Broken expressions/risky finance phrases/direct trading signals: `0 / 0 / 0`
+- Checklist/example/disclaimer signals: `16 / 15 / 16`
+- Blockers/warnings: `[] / []`
+
+Not executed:
+
+- No content item `draftMarkdown`, `draftHtml`, status, quality score, `publishedAt`, or `scheduledAt` mutation.
+- No Blogger draft save, Blogger publish/write, scheduled publish, `posts.update`, OAuth reconnect, token refresh, deploy, push, or raw token/Blogger response output.
+- No external LLM provider call was made by this patch.
+
+Next recommended patch:
+
+- `9G-1D`: guarded manual apply of the 9G-1C Markdown/HTML candidate to the target content item with explicit hash checks, then regenerate Blogger draft approval/preflight.
+- Do not save/publish the 9G-1B candidate; it should now be considered editorially rejected because of broken expressions and over-repetition.
+
+## Previous State: Patch 9G-1B SEO-Sectioned Candidate Generation Smoke Completed
 
 One new SEO-sectioned candidate was generated and validated without applying it to a content item and without Blogger write/publish.
 

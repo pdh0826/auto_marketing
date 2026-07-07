@@ -8,6 +8,25 @@ npm run typecheck
 npm run build
 ```
 
+## Patch 9G-1C SEO editorial gate / candidate polish 검증
+
+- Run `node scripts/generate_9g1c_seo_editorial_candidate.mjs`.
+- Expected generated artifacts:
+  - `documents/generated/9g-1c-seo-editorial-candidate.md`
+  - `documents/generated/9g-1c-seo-editorial-candidate-preview.html`
+  - `documents/generated/9g-1c-seo-editorial-review.json`
+- Expected review summary:
+  - grade `pass`
+  - score `100`
+  - visible text length at least `3000`
+  - broken expression count `0`
+  - risky finance phrase count `0`
+  - direct trading signal count `0`
+  - brand mentions per 1000 chars <= `3`
+  - blockers/warnings `[] / []`
+- Existing 9G-1B style candidates with broken expressions, high brand repetition, or direct trading-signal overuse should fail or warn through the shared SEO editorial gate.
+- This patch must not mutate `content_items`, create `llm_call_logs`, call Blogger APIs, save Blogger drafts, publish posts, refresh tokens, deploy, or push.
+
 ## Patch 9F-4D / 9F-4E second fixture live publish completion 검증
 
 - Target content item: `daily_fixture_cmqlr1v1y0002iwj27df8ac5a`.

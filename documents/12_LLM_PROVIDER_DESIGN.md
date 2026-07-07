@@ -44,6 +44,20 @@ Content Tasks
 - 로그에 API Key 출력 금지
 - 민감 자료는 로컬 LLM 우선 처리 가능해야 함
 
+## Patch 9G-1C SEO Editorial Gate
+
+Patch 9G-1C does not use an LLM provider.
+
+The SEO editorial quality gate is deterministic and local. It checks rendered article text for broken expressions, risky finance phrases, direct trading-signal overuse, brand/keyword repetition, and practical checklist/example/disclaimer signals. It must not:
+
+- call OpenAI, local HTTP, Ollama, CLI, or any LLM provider
+- create `llm_call_logs`
+- store provider prompts or raw responses
+- mutate `content_items`
+- call Blogger draft save/publish/write APIs
+
+The generated `9g-1c` candidate artifacts are local preview artifacts only. Applying them to `draftMarkdown` or `draftHtml` requires a separate guarded persistence patch.
+
 ## Patch 9F-1E Operation Profile Policy Simulation
 
 Patch 9F-1E does not use an LLM provider.
