@@ -27,6 +27,21 @@ npm run build
 - Existing 9G-1B style candidates with broken expressions, high brand repetition, or direct trading-signal overuse should fail or warn through the shared SEO editorial gate.
 - This patch must not mutate `content_items`, create `llm_call_logs`, call Blogger APIs, save Blogger drafts, publish posts, refresh tokens, deploy, or push.
 
+## Patch 9G-1D guarded SEO editorial candidate apply route 검증
+
+- Route: `POST /api/content-items/[id]/seo-editorial-candidate-apply`.
+- Default `mode=dry_run` must not write DB.
+- `mode=apply` is allowed only when:
+  - content item status is `planned`
+  - confirmation phrase is exactly `APPLY_SEO_EDITORIAL_CANDIDATE`
+  - Markdown candidate is present
+  - rendered blog template preview is ready
+  - rendered HTML validation is ready
+  - provided current/candidate hash guards match
+- For currently published content items, both dry-run and apply-negative smoke should report `content_item_not_planned`; apply mode must return 400 and `sideEffectSummary.dbWrite=false`.
+- Any successful future apply may mutate only `content_items.draftMarkdown` and `content_items.draftHtml`.
+- It must not mutate status, `qualityScore`, `publishedAt`, `scheduledAt`, Blogger tables, publish attempts, or `llm_call_logs`.
+
 ## Patch 9F-4D / 9F-4E second fixture live publish completion 검증
 
 - Target content item: `daily_fixture_cmqlr1v1y0002iwj27df8ac5a`.

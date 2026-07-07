@@ -1,6 +1,35 @@
 # 14_NEXT_SESSION_BRIEF
 
-## Current State: Patch 9G-1C SEO Editorial Gate and Candidate Polish Completed
+## Current State: Patch 9G-1D Guarded SEO Editorial Candidate Apply Route Completed
+
+Patch 9G-1D added the guarded apply route for the 9G-1C SEO editorial candidate.
+
+Implemented:
+
+- Route: `POST /api/content-items/[id]/seo-editorial-candidate-apply`.
+- Default `mode=dry_run` is read-only.
+- `mode=apply` requires:
+  - content item status `planned`
+  - exact confirmation phrase `APPLY_SEO_EDITORIAL_CANDIDATE`
+  - candidate Markdown present
+  - blog template preview ready
+  - HTML validation ready
+  - optional current draft and candidate hash guards to match when supplied
+- Successful apply may mutate only `content_items.draftMarkdown` and `content_items.draftHtml`.
+- Side-effect summary explicitly reports no Blogger write/draft save/publish, scheduled publish, `posts.update`, token refresh, or LLM call.
+
+Important current blocker:
+
+- Existing content items are already `published`.
+- The 9G-1C candidate should not be applied to `cmqc2xqbr00011y70sxmgl65v` because that local item is already published.
+- Negative smoke is expected to block with `content_item_not_planned`.
+
+Next recommended patch:
+
+- Create or select a new `planned` content item for the SEO editorial candidate, then run the guarded route with hash checks.
+- After candidate persistence, regenerate Blogger draft approval/preflight before any draft save.
+
+## Previous State: Patch 9G-1C SEO Editorial Gate and Candidate Polish Completed
 
 Patch 9G-1C added an editorial SEO quality layer because the 9G-1B candidate passed structural gates but still had human-visible quality problems.
 

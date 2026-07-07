@@ -1,5 +1,31 @@
 # 13_CHANGELOG
 
+## Patch 9G-1D Guarded SEO Editorial Candidate Apply Route
+
+Added a guarded route for moving an SEO editorial Markdown candidate into `content_items.draftMarkdown` and rendered `draftHtml`.
+
+- New route: `POST /api/content-items/[id]/seo-editorial-candidate-apply`.
+- Default mode is `dry_run`.
+- `mode=apply` requires:
+  - content item status `planned`
+  - exact confirmation phrase `APPLY_SEO_EDITORIAL_CANDIDATE`
+  - candidate Markdown present
+  - blog template preview ready
+  - HTML validation ready
+  - optional current draft/candidate hash guards to match when provided
+- If applied, only `draftMarkdown` and `draftHtml` may mutate.
+- The route returns safe summaries only: current hashes, candidate hashes, validation status, SEO article/editorial scores, blockers, and side-effect flags.
+
+Current DB state:
+
+- All existing local content items are already `published`.
+- Therefore the 9G-1C candidate must not be applied to the existing published content item until a new planned content item or an explicit correction/update policy exists.
+- Negative smoke should report `content_item_not_planned` and no DB write.
+
+Not executed:
+
+- No Blogger draft save, Blogger publish/write, scheduled publish, `posts.update`, OAuth reconnect, token refresh, deploy, push, external LLM call, quality score mutation, publish timestamp mutation, or raw token/Blogger response output.
+
 ## Patch 9G-1C SEO Editorial Gate and Candidate Polish
 
 Added a human-editor oriented SEO quality layer on top of the existing structural article gate.
