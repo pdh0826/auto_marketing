@@ -1,5 +1,41 @@
 # 14_NEXT_SESSION_BRIEF
 
+## Current State: Patch 9G-2A SEO Editorial Publish Workflow Readback
+
+Patch 9G-2A added a read-only workflow readback for the SEO editorial publish path.
+
+Implemented:
+
+- Route: `POST /api/content-items/[id]/seo-editorial-publish-workflow`.
+- Helper: `src/lib/content/seo-editorial-publish-workflow.ts`.
+- Content detail UI block: "SEO Editorial Publish Workflow".
+
+The workflow readback summarizes:
+
+- content item status, title, draft Markdown/HTML lengths, and hash prefixes
+- quality and SEO editorial score/grade
+- Blogger connection count and selected blog readiness
+- draft payload readiness
+- draft approval snapshot status and current-preview match
+- Blogger draft save presence
+- publish approval readiness
+- publish execution attempt status
+- post-publish reconciliation status
+- ordered workflow steps and next recommended action
+
+Safety:
+
+- Read-only route and UI action.
+- `dbRead=true`.
+- DB write, content mutation, Blogger API read/write, Blogger draft save, Blogger publish, token refresh, and LLM call are all reported `false`.
+- No raw token, secret, prompt, full article body, or raw Blogger response is returned.
+
+Next recommended work:
+
+- Use the workflow UI as the normal operator checkpoint for the next SEO article.
+- Then add a guided "new SEO editorial article run" UI that creates/selects a planned item and walks the operator through candidate apply, preflight, draft save, publish approval, dry-run, live publish, and reconciliation without terminal orchestration.
+- Separately audit the public post visually and in Search Console style terms: title, snippet, first viewport, disclaimer, CTA, and mobile readability.
+
 ## Current State: Patch 9G-1E through 9G-1O SEO Editorial Candidate Published
 
 The 9G-1C SEO editorial candidate was carried through the full guarded draft/save/publish/reconciliation path.

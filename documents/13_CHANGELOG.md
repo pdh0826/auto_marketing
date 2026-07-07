@@ -1,5 +1,23 @@
 # 13_CHANGELOG
 
+## Patch 9G-2A SEO Editorial Publish Workflow Readback
+
+Added a read-only workflow readback so the successful SEO editorial publish path can be inspected from the content detail UI instead of being reconstructed from terminal steps.
+
+- New route: `POST /api/content-items/[id]/seo-editorial-publish-workflow`.
+- New helper: `src/lib/content/seo-editorial-publish-workflow.ts`.
+- Content detail UI now includes a "SEO Editorial Publish Workflow" block with:
+  - safe content/draft hash and length summary
+  - quality and SEO editorial summary
+  - Blogger connection/blog selection readiness
+  - draft approval/save, publish approval/attempt, and reconciliation status
+  - ordered step table and next recommended action
+- The route is read-only and returns side-effect flags showing no DB write, content mutation, Blogger API read/write, draft save, publish, token refresh, or LLM call.
+
+Not executed:
+
+- No Blogger draft save, Blogger publish/write, scheduled publish, `posts.update`, OAuth reconnect, token refresh, deploy, push, external LLM call, quality score mutation, publish timestamp mutation, or raw token/Blogger response output.
+
 ## Patch 9G-1E through 9G-1O SEO Editorial Candidate Publish Completion
 
 Completed the full guarded path for the 9G-1C SEO editorial candidate.

@@ -8,6 +8,29 @@ npm run typecheck
 npm run build
 ```
 
+## Patch 9G-2A SEO editorial publish workflow readback 검증
+
+- Route: `POST /api/content-items/[id]/seo-editorial-publish-workflow`.
+- The route must be read-only and return only safe workflow summaries:
+  - content status and safe title
+  - draft Markdown/HTML lengths and hash prefixes
+  - quality/SEO editorial summary
+  - Blogger connection/blog selection readiness
+  - draft approval, draft save, publish approval, execution attempt, and reconciliation status
+  - next recommended action
+- Expected side-effect summary:
+  - `dbRead=true`
+  - `dbWrite=false`
+  - `contentMutation=false`
+  - `bloggerApiRead=false`
+  - `bloggerApiWrite=false`
+  - `bloggerDraftSave=false`
+  - `bloggerPublish=false`
+  - `tokenRefresh=false`
+  - `llmCall=false`
+- Content detail UI should show a "SEO Editorial Publish Workflow" block with step status and next action.
+- This patch must not mutate `content_items`, create `llm_call_logs`, call Blogger APIs, save Blogger drafts, publish posts, refresh tokens, deploy, or push.
+
 ## Patch 9G-1C SEO editorial gate / candidate polish 검증
 
 - Run `node scripts/generate_9g1c_seo_editorial_candidate.mjs`.

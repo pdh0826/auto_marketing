@@ -33,6 +33,7 @@ import type { HtmlQualityRepairPreviewResult } from "@/lib/content/html-quality-
 import type { HtmlCandidateValidationResult, HtmlPreviewDryRunResult } from "@/lib/content/html-preview";
 import { formatPlanJson, hasUsablePlanJson } from "@/lib/content/plan-template";
 import type { PublishReadinessResult } from "@/lib/content/publish-readiness";
+import type { SeoEditorialPublishWorkflowResponse } from "@/lib/content/seo-editorial-publish-workflow";
 import { ApiResult, requestJson } from "@/lib/form-utils";
 import type { LlmTaskRouteAdmin } from "@/lib/llm/admin-types";
 import { getApiFormatLabel, getInvocationModeLabel } from "@/lib/llm/constants";
@@ -283,6 +284,7 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
   const [guardedPublishExecutionResult, setGuardedPublishExecutionResult] = useState<GuardedPublishExecutionResponse | null>(null);
   const [publishResultReadbackResult, setPublishResultReadbackResult] = useState<PublishResultReadbackResponse | null>(null);
   const [postPublishReconciliationResult, setPostPublishReconciliationResult] = useState<PostPublishReconciliationResponse | null>(null);
+  const [seoEditorialPublishWorkflowResult, setSeoEditorialPublishWorkflowResult] = useState<SeoEditorialPublishWorkflowResponse | null>(null);
   const [bloggerDraftPreviewResult, setBloggerDraftPreviewResult] = useState<BloggerDraftPayloadPreview | null>(null);
   const [bloggerDraftSavePreflightResult, setBloggerDraftSavePreflightResult] = useState<BloggerDraftSavePreflight | null>(null);
   const [stepwiseRuns, setStepwiseRuns] = useState<StepwiseDraftGenerationRunSummary[]>([]);
@@ -353,6 +355,7 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
   const [runningGuardedPublishExecution, setRunningGuardedPublishExecution] = useState(false);
   const [runningPublishResultReadback, setRunningPublishResultReadback] = useState(false);
   const [runningPostPublishReconciliation, setRunningPostPublishReconciliation] = useState(false);
+  const [runningSeoEditorialPublishWorkflow, setRunningSeoEditorialPublishWorkflow] = useState(false);
   const [runningBloggerDraftPreview, setRunningBloggerDraftPreview] = useState(false);
   const [runningBloggerDraftSavePreflight, setRunningBloggerDraftSavePreflight] = useState(false);
   const [approvingBloggerDraft, setApprovingBloggerDraft] = useState(false);
@@ -387,6 +390,7 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
   const [guardedPublishExecutionError, setGuardedPublishExecutionError] = useState<string | null>(null);
   const [publishResultReadbackError, setPublishResultReadbackError] = useState<string | null>(null);
   const [postPublishReconciliationError, setPostPublishReconciliationError] = useState<string | null>(null);
+  const [seoEditorialPublishWorkflowError, setSeoEditorialPublishWorkflowError] = useState<string | null>(null);
   const [bloggerDraftPreviewError, setBloggerDraftPreviewError] = useState<string | null>(null);
   const [bloggerDraftSavePreflightError, setBloggerDraftSavePreflightError] = useState<string | null>(null);
   const [bloggerDraftSaveError, setBloggerDraftSaveError] = useState<string | null>(null);
@@ -429,6 +433,7 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
   const canRunGuardedPublishExecution = Boolean(!runningGuardedPublishExecution);
   const canRunPublishResultReadback = Boolean(!runningPublishResultReadback);
   const canRunPostPublishReconciliation = Boolean(!runningPostPublishReconciliation);
+  const canRunSeoEditorialPublishWorkflow = Boolean(!runningSeoEditorialPublishWorkflow);
   const publishApprovalPreviewMatchesOptions = Boolean(
     publishApprovalPreviewResult &&
       publishApprovalPreviewResult.approvalSnapshotPreview.publishMode === publishApprovalMode &&
@@ -1580,6 +1585,25 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
       setPostPublishReconciliationError(caught instanceof Error ? caught.message : "Post-publish DB reconciliation preview에 실패했습니다.");
     } finally {
       setRunningPostPublishReconciliation(false);
+    }
+  }
+
+  async function runSeoEditorialPublishWorkflow() {
+    setNotice(null);
+    setSeoEditorialPublishWorkflowError(null);
+    setRunningSeoEditorialPublishWorkflow(true);
+
+    try {
+      const result = await requestJson<ApiResult<SeoEditorialPublishWorkflowResponse>>(`/api/content-items/${contentItemId}/seo-editorial-publish-workflow`, {
+        method: "POST",
+        body: JSON.stringify({})
+      });
+      setSeoEditorialPublishWorkflowResult(result.data);
+      setNotice("SEO editorial publish workflow를 읽었습니다. DB write, Blogger API, token refresh, LLM 호출은 수행하지 않았습니다.");
+    } catch (caught) {
+      setSeoEditorialPublishWorkflowError(caught instanceof Error ? caught.message : "SEO editorial publish workflow readback에 실패했습니다.");
+    } finally {
+      setRunningSeoEditorialPublishWorkflow(false);
     }
   }
 
@@ -4211,6 +4235,74 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
           <section className="admin-section">
             <div className="section-heading">
               <div>
+                <h2>SEO Editorial Publish Workflow</h2>
+                <p className="muted">
+                  SEO-sectioned candidate부터 Blogger draft save, guarded publish, post-publish reconciliation까지 현재 글의 절차 상태를 읽습니다.
+                </p>
+              </div>
+              <button className="button secondary" type="button" disabled={!canRunSeoEditorialPublishWorkflow} onClick={() => void runSeoEditorialPublishWorkflow()}>
+                {runningSeoEditorialPublishWorkflow ? "Workflow 확인 중" : "Workflow 상태 확인"}
+              </button>
+            </div>
+            <div className="notice">
+              이 블록은 read-only입니다. DB write, content mutation, Blogger API read/write, draft save, publish, token refresh, LLM 호출을 수행하지 않습니다.
+            </div>
+            {seoEditorialPublishWorkflowError ? <div className="notice error">{seoEditorialPublishWorkflowError}</div> : null}
+            {seoEditorialPublishWorkflowResult ? (
+              <div className="read-block">
+                <div className={seoEditorialPublishWorkflowResult.nextAction.blocked ? "notice warning" : "notice"}>
+                  <strong>Next Recommended Action</strong>
+                  <p>
+                    {seoEditorialPublishWorkflowResult.nextAction.label}: {seoEditorialPublishWorkflowResult.nextAction.action}
+                  </p>
+                </div>
+                <div className="detail-grid">
+                  <DetailItem label="Patch" value={seoEditorialPublishWorkflowResult.patchVersion} />
+                  <DetailItem label="Generated At" value={formatDate(seoEditorialPublishWorkflowResult.generatedAt)} />
+                  <DetailItem label="Content Status" value={seoEditorialPublishWorkflowResult.contentStatus} />
+                  <DetailItem label="Draft Markdown" value={`${seoEditorialPublishWorkflowResult.summary.draftMarkdownLength} chars`} />
+                  <DetailItem label="Draft Markdown Hash" value={seoEditorialPublishWorkflowResult.summary.draftMarkdownHashPrefix ?? "-"} />
+                  <DetailItem label="Draft HTML" value={`${seoEditorialPublishWorkflowResult.summary.draftHtmlLength} chars`} />
+                  <DetailItem label="Draft HTML Hash" value={seoEditorialPublishWorkflowResult.summary.draftHtmlHashPrefix ?? "-"} />
+                  <DetailItem
+                    label="Quality"
+                    value={`${seoEditorialPublishWorkflowResult.summary.qualityGrade} (${seoEditorialPublishWorkflowResult.summary.qualityScorePreview})`}
+                  />
+                  <DetailItem
+                    label="SEO Editorial"
+                    value={`${seoEditorialPublishWorkflowResult.summary.seoEditorialGrade} (${seoEditorialPublishWorkflowResult.summary.seoEditorialScore})`}
+                  />
+                  <DetailItem label="Draft Payload Ready" value={seoEditorialPublishWorkflowResult.summary.draftPayloadReady ? "yes" : "no"} />
+                  <DetailItem label="Blogger Connections" value={String(seoEditorialPublishWorkflowResult.summary.bloggerConnectionCount)} />
+                  <DetailItem label="Selected Blog Ready" value={seoEditorialPublishWorkflowResult.summary.selectedBlogReady ? "yes" : "no"} />
+                  <DetailItem label="Draft Approval" value={seoEditorialPublishWorkflowResult.summary.draftApprovalStatus} />
+                  <DetailItem label="Approval Match" value={seoEditorialPublishWorkflowResult.summary.draftApprovalMatchesCurrentPreview ? "yes" : "no"} />
+                  <DetailItem label="Draft Saved" value={seoEditorialPublishWorkflowResult.summary.bloggerDraftSaved ? "yes" : "no"} />
+                  <DetailItem label="Publish Approval" value={seoEditorialPublishWorkflowResult.summary.publishApprovalReady ? "ready" : "missing"} />
+                  <DetailItem label="Publish Attempt" value={seoEditorialPublishWorkflowResult.summary.publishExecutionAttemptStatus ?? "-"} />
+                  <DetailItem label="Reconciled" value={seoEditorialPublishWorkflowResult.summary.postPublishReconciled ? "yes" : "no"} />
+                </div>
+                <SeoEditorialWorkflowStepTable steps={seoEditorialPublishWorkflowResult.steps} />
+                <div className="detail-grid">
+                  <DetailItem label="DB Read" value={String(seoEditorialPublishWorkflowResult.sideEffectSummary.dbRead)} />
+                  <DetailItem label="DB Write" value={String(seoEditorialPublishWorkflowResult.sideEffectSummary.dbWrite)} />
+                  <DetailItem label="Content Mutation" value={String(seoEditorialPublishWorkflowResult.sideEffectSummary.contentMutation)} />
+                  <DetailItem label="Blogger API Read" value={String(seoEditorialPublishWorkflowResult.sideEffectSummary.bloggerApiRead)} />
+                  <DetailItem label="Blogger API Write" value={String(seoEditorialPublishWorkflowResult.sideEffectSummary.bloggerApiWrite)} />
+                  <DetailItem label="Blogger Draft Save" value={String(seoEditorialPublishWorkflowResult.sideEffectSummary.bloggerDraftSave)} />
+                  <DetailItem label="Blogger Publish" value={String(seoEditorialPublishWorkflowResult.sideEffectSummary.bloggerPublish)} />
+                  <DetailItem label="Token Refresh" value={String(seoEditorialPublishWorkflowResult.sideEffectSummary.tokenRefresh)} />
+                  <DetailItem label="LLM Call" value={String(seoEditorialPublishWorkflowResult.sideEffectSummary.llmCall)} />
+                </div>
+              </div>
+            ) : (
+              <div className="notice warning">Workflow 상태 확인을 실행하면 현재 글의 다음 작업과 완료된 gate를 read-only로 보여줍니다.</div>
+            )}
+          </section>
+
+          <section className="admin-section">
+            <div className="section-heading">
+              <div>
                 <h2>Blogger Draft Payload Preview</h2>
                 <p className="muted">
                   저장된 draftHtml과 검증된 Blogger blog 선택 metadata로 draft payload 후보를 확인하고, 승인된 snapshot만 Blogger draft로 저장합니다.
@@ -6281,6 +6373,41 @@ function QualitySummary({ checks }: { checks: HtmlQualityPreviewResult["checks"]
       )}
     </div>
   );
+}
+
+function SeoEditorialWorkflowStepTable({ steps }: { steps: SeoEditorialPublishWorkflowResponse["steps"] }) {
+  return (
+    <div className="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Step</th>
+            <th>Status</th>
+            <th>Message</th>
+            <th>Action</th>
+            <th>Evidence</th>
+          </tr>
+        </thead>
+        <tbody>
+          {steps.map((step) => (
+            <tr key={step.key}>
+              <td>{step.label}</td>
+              <td>{step.status}</td>
+              <td>{step.message}</td>
+              <td>{step.action}</td>
+              <td>{formatWorkflowEvidence(step.evidence)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function formatWorkflowEvidence(evidence: SeoEditorialPublishWorkflowResponse["steps"][number]["evidence"]) {
+  return Object.entries(evidence)
+    .map(([key, value]) => `${key}: ${value ?? "-"}`)
+    .join(" / ");
 }
 
 function countRequiredQualityFails(result: HtmlQualityPreviewResult) {
