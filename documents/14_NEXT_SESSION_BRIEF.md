@@ -1,5 +1,50 @@
 # 14_NEXT_SESSION_BRIEF
 
+## Current State: Patch 9G-3/9G-4/9G-5 Bundled SEO Production Flow
+
+The next three SEO production improvements were bundled into one patch.
+
+Implemented:
+
+- 9G-3 quality engine tightening:
+  - SEO article publish floor is now `3000` visible Korean characters.
+  - SEO article target is now `5000` visible Korean characters.
+  - Structural expectations are now at least `8` H2 sections and `16` paragraphs.
+  - Local sectioned and stepwise draft prompts now require section-level expansion, not thin outlines.
+- 9G-4 operator UI tightening:
+  - Content detail's SEO Editorial Publish Workflow block explains the three big work units.
+  - Blog template preview displays visible text length, publish floor, SEO target, and long-form gate status.
+- 9G-5 next article dry-run:
+  - Deterministic long-form candidate script: `scripts/generate_9g3_longform_seo_candidate.mjs`.
+  - Generated candidate artifacts in `documents/generated/`.
+
+Dry-run review:
+
+- Candidate: `documents/generated/9g-3-longform-seo-candidate.md`
+- Preview HTML: `documents/generated/9g-3-longform-seo-candidate-preview.html`
+- Review JSON: `documents/generated/9g-3-longform-seo-review.json`
+- grade `pass`
+- score `100`
+- visible text length `6239`
+- blockers `[]`
+- warnings `[]`
+
+Safety:
+
+- No Blogger API call.
+- No Blogger draft save.
+- No Blogger publish.
+- No scheduled publish.
+- No token refresh.
+- No LLM call.
+- No existing content item mutation.
+
+Next recommended work:
+
+- Use the 9G-3 long-form candidate as the quality baseline for the next real SEO article.
+- Build one guided UI action that creates/selects a planned item and runs candidate apply + HTML preview + readiness without terminal commands.
+- Execute live Blogger publish only after the user approves the exact content item and target Blogger post.
+
 ## Current State: Patch 9G-2A SEO Editorial Publish Workflow Readback
 
 Patch 9G-2A added a read-only workflow readback for the SEO editorial publish path.

@@ -43,18 +43,18 @@ export interface SeoSearchIntentSpec {
 
 export const SEO_ARTICLE_TEMPLATE_V1: SeoArticleTemplateSpec = {
   version: "seo_article_template_v1",
-  targetVisibleTextLength: 3500,
-  minVisibleTextLengthToPublish: 2500,
-  minVisibleTextLengthWarning: 3000,
-  minH2Count: 5,
-  minParagraphCount: 10,
+  targetVisibleTextLength: 5000,
+  minVisibleTextLengthToPublish: 3000,
+  minVisibleTextLengthWarning: 4200,
+  minH2Count: 8,
+  minParagraphCount: 16,
   minFaqCount: 3,
   sections: [
     {
       key: "intro",
       heading: "도입부",
       purpose: "검색자가 왜 이 주제를 찾는지 짚고 글에서 얻을 내용을 약속합니다.",
-      minVisibleTextLength: 350,
+      minVisibleTextLength: 450,
       minParagraphCount: 2,
       required: true
     },
@@ -62,47 +62,47 @@ export const SEO_ARTICLE_TEMPLATE_V1: SeoArticleTemplateSpec = {
       key: "summary",
       heading: "핵심 요약",
       purpose: "초보 독자가 먼저 기억해야 할 기준을 짧은 목록으로 정리합니다.",
-      minVisibleTextLength: 250,
-      minParagraphCount: 1,
+      minVisibleTextLength: 350,
+      minParagraphCount: 2,
       required: true
     },
     {
       key: "problem_context",
       heading: "문제 상황 이해",
       purpose: "초보자가 왜 판단을 놓치는지 상황, 원인, 흔한 오해를 설명합니다.",
-      minVisibleTextLength: 450,
-      minParagraphCount: 2,
+      minVisibleTextLength: 650,
+      minParagraphCount: 3,
       required: true
     },
     {
       key: "check_method_1",
       heading: "첫 번째 확인 기준",
       purpose: "실제 판단에 쓸 수 있는 첫 번째 체크 기준과 해석 방법을 설명합니다.",
-      minVisibleTextLength: 450,
-      minParagraphCount: 2,
+      minVisibleTextLength: 650,
+      minParagraphCount: 3,
       required: true
     },
     {
       key: "check_method_2",
       heading: "두 번째 확인 기준",
       purpose: "첫 번째 기준과 함께 봐야 하는 보조 기준, 예시, 반례를 설명합니다.",
-      minVisibleTextLength: 450,
-      minParagraphCount: 2,
+      minVisibleTextLength: 650,
+      minParagraphCount: 3,
       required: true
     },
     {
       key: "beginner_mistakes",
       heading: "초보자가 자주 하는 실수",
       purpose: "잘못된 해석, 과잉 확신, 리스크 무시를 피하는 방법을 설명합니다.",
-      minVisibleTextLength: 350,
-      minParagraphCount: 2,
+      minVisibleTextLength: 550,
+      minParagraphCount: 3,
       required: true
     },
     {
       key: "service_use_case",
       heading: "급등포착 활용 예시",
       purpose: "서비스를 투자 판단 대체가 아닌 정보 확인 보조 도구로 자연스럽게 연결합니다.",
-      minVisibleTextLength: 300,
+      minVisibleTextLength: 420,
       minParagraphCount: 2,
       required: true
     },
@@ -110,7 +110,7 @@ export const SEO_ARTICLE_TEMPLATE_V1: SeoArticleTemplateSpec = {
       key: "faq",
       heading: "FAQ",
       purpose: "검색자가 이어서 물을 만한 질문 3개 이상에 답합니다.",
-      minVisibleTextLength: 300,
+      minVisibleTextLength: 450,
       minParagraphCount: 3,
       required: true
     },
@@ -118,16 +118,16 @@ export const SEO_ARTICLE_TEMPLATE_V1: SeoArticleTemplateSpec = {
       key: "risk_disclaimer",
       heading: "투자 유의사항",
       purpose: "금융/투자 주제의 한계와 사용자의 최종 판단 책임을 명확히 안내합니다.",
-      minVisibleTextLength: 180,
-      minParagraphCount: 1,
+      minVisibleTextLength: 260,
+      minParagraphCount: 2,
       required: true
     },
     {
       key: "cta",
       heading: "다음 확인 사항",
       purpose: "과도한 광고 없이 다음 행동을 안내합니다.",
-      minVisibleTextLength: 120,
-      minParagraphCount: 1,
+      minVisibleTextLength: 220,
+      minParagraphCount: 2,
       required: true
     }
   ]
@@ -179,7 +179,9 @@ export function buildSeoSectionPromptContract(sectionKey: SeoArticleSectionKey, 
     searchIntent: intent,
     writingRules: [
       "Write only this section, not the full article.",
-      "Use Korean natural prose with concrete explanations, examples, beginner mistakes, and practical checks.",
+      `Meet or exceed this section's minVisibleTextLength and minParagraphCount. Treat those as hard lower bounds, not suggestions.`,
+      "Use Korean natural prose with concrete explanations, examples, beginner mistakes, practical checks, and a clear takeaway.",
+      "Do not output a thin outline. Expand the section with scenario, why it matters, how to check, and what mistake to avoid.",
       "Do not wrap output in code fences.",
       "Do not output HTML.",
       "Do not include raw JSON.",

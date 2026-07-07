@@ -8,6 +8,35 @@ npm run typecheck
 npm run build
 ```
 
+## Patch 9G-3/9G-4/9G-5 bundled SEO production flow 검증
+
+- SEO long-form quality policy:
+  - `SEO_ARTICLE_TEMPLATE_V1.minVisibleTextLengthToPublish=3000`
+  - `SEO_ARTICLE_TEMPLATE_V1.targetVisibleTextLength=5000`
+  - H2 minimum `8`
+  - paragraph minimum `16`
+- Local and stepwise sectioned draft prompts must require section-level expansion:
+  - section minimum visible text length
+  - section minimum paragraph count
+  - reader problem, concrete scenario, practical checks, beginner mistake, takeaway
+- Content detail UI should show:
+  - 9G-3/9G-4/9G-5 big-unit workflow guidance
+  - long-form publish floor and SEO target
+  - template preview visible text length and long-form gate status
+- Deterministic dry-run artifact:
+  - Run `node scripts/generate_9g3_longform_seo_candidate.mjs`.
+  - Expected generated artifacts:
+    - `documents/generated/9g-3-longform-seo-candidate.md`
+    - `documents/generated/9g-3-longform-seo-candidate-preview.html`
+    - `documents/generated/9g-3-longform-seo-review.json`
+  - Expected review summary:
+    - grade `pass`
+    - score `100`
+    - visible text length at least `5000`
+    - blockers `[]`
+    - warnings `[]`
+- This bundled patch must not call Blogger APIs, save Blogger drafts, publish posts, refresh tokens, deploy, push, mutate existing content items, or create `llm_call_logs`.
+
 ## Patch 9G-2A SEO editorial publish workflow readback 검증
 
 - Route: `POST /api/content-items/[id]/seo-editorial-publish-workflow`.

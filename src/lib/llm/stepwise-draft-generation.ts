@@ -775,6 +775,7 @@ function buildSkeletonStepPrompt(
       "You are a careful Korean long-form article architect for Blog Growth Agent.",
       "Create only a concise Markdown skeleton for a future article. Do not write body prose.",
       "Use helpful, original, people-first structure. Do not copy competitor articles.",
+      `Design for a real long-form SEO article: target at least ${SEO_ARTICLE_TEMPLATE_V1.targetVisibleTextLength} visible Korean characters and never below ${SEO_ARTICLE_TEMPLATE_V1.minVisibleTextLengthToPublish}.`,
       "For investment or finance content, frame all services as informational/reference tools only.",
       "Do not include buy/sell recommendations, guaranteed profit, return examples, success stories, or risk-free wording.",
       "Use the exact section keys requested. Do not create an H1."
@@ -814,7 +815,12 @@ function buildSectionStepPrompt(input: {
       "Write only the requested section fragment.",
       "Do not write an H1. Use H2/H3 and paragraphs only.",
       "Each non-FAQ section must include concrete context, practical criteria, beginner mistakes or examples, and a clear takeaway.",
-      `The full article target is at least ${SEO_ARTICLE_TEMPLATE_V1.targetVisibleTextLength} visible Korean characters. Make this section substantial enough for the template.`,
+      "Do not output a thin outline or placeholder. This step is where the article gets its substance.",
+      `The full article target is at least ${SEO_ARTICLE_TEMPLATE_V1.targetVisibleTextLength} visible Korean characters and the publish floor is ${SEO_ARTICLE_TEMPLATE_V1.minVisibleTextLengthToPublish}.`,
+      seoContract.section
+        ? `This section minimum is ${seoContract.section.minVisibleTextLength} visible Korean characters and ${seoContract.section.minParagraphCount} paragraphs. Meet or exceed it.`
+        : "Make this section substantial enough to support a long-form SEO article.",
+      "Use this expansion pattern: reader problem, concrete scenario, practical checks, beginner mistake, takeaway.",
       "Do not include aggressive CTA wording or investment recommendations.",
       "Do not include guaranteed outcomes, return examples, risk-free wording, or buy/sell recommendations.",
       "Do not delete media placeholders.",
@@ -834,7 +840,14 @@ function buildSectionStepPrompt(input: {
               required: true,
               format: "Use ## FAQ, then ### question headings with natural answers based on savedPlanJson.faq."
             }
-          : { required: false }
+          : { required: false },
+        sectionExpansionContract: seoContract.section
+          ? {
+              minVisibleTextLength: seoContract.section.minVisibleTextLength,
+              minParagraphCount: seoContract.section.minParagraphCount,
+              expansionPattern: ["reader_problem", "concrete_scenario", "practical_checks", "beginner_mistake", "takeaway"]
+            }
+          : null
       },
       null,
       2
@@ -924,6 +937,8 @@ function buildStepwiseFinalPolishPrompt(input: {
     system: [
       "You are a careful Korean Markdown final editor for Blog Growth Agent.",
       "Polish the assembled draft for tone, transitions, repetition, CTA balance, and disclaimer clarity.",
+      `The final article must remain long-form: at least ${SEO_ARTICLE_TEMPLATE_V1.minVisibleTextLengthToPublish} visible Korean characters, preferably ${SEO_ARTICLE_TEMPLATE_V1.targetVisibleTextLength}+ characters.`,
+      "If a section is thin, expand it with examples, practical checks, and reader-oriented explanations instead of only rewording.",
       "Do not add unsupported claims, investment recommendations, guaranteed outcomes, return examples, success stories, or aggressive sign-up language.",
       "Use neutral, informational phrasing for finance or investment-related content.",
       "Do not delete media placeholders.",

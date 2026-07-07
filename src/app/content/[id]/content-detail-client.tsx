@@ -33,6 +33,7 @@ import type { HtmlQualityRepairPreviewResult } from "@/lib/content/html-quality-
 import type { HtmlCandidateValidationResult, HtmlPreviewDryRunResult } from "@/lib/content/html-preview";
 import { formatPlanJson, hasUsablePlanJson } from "@/lib/content/plan-template";
 import type { PublishReadinessResult } from "@/lib/content/publish-readiness";
+import { SEO_ARTICLE_TEMPLATE_V1 } from "@/lib/content/seo-article-template";
 import type { SeoEditorialPublishWorkflowResponse } from "@/lib/content/seo-editorial-publish-workflow";
 import { ApiResult, requestJson } from "@/lib/form-utils";
 import type { LlmTaskRouteAdmin } from "@/lib/llm/admin-types";
@@ -4247,6 +4248,15 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
             <div className="notice">
               이 블록은 read-only입니다. DB write, content mutation, Blogger API read/write, draft save, publish, token refresh, LLM 호출을 수행하지 않습니다.
             </div>
+            <div className="notice">
+              <strong>큰 작업 단위</strong>
+              <p>
+                9G-3 글 품질 엔진: 최소 {SEO_ARTICLE_TEMPLATE_V1.minVisibleTextLengthToPublish}자 / 목표 {SEO_ARTICLE_TEMPLATE_V1.targetVisibleTextLength}자 long-form
+                기준과 섹션별 살붙이기 계약을 적용합니다.
+              </p>
+              <p>9G-4 운영 UI: 아래 workflow table에서 지금 완료된 gate와 다음 operator action을 확인합니다.</p>
+              <p>9G-5 다음 글 검증: live publish 전에는 dry-run/readback만 실행하고, 실제 공개 발행은 별도 명시 승인 후에만 진행합니다.</p>
+            </div>
             {seoEditorialPublishWorkflowError ? <div className="notice error">{seoEditorialPublishWorkflowError}</div> : null}
             {seoEditorialPublishWorkflowResult ? (
               <div className="read-block">
@@ -4264,6 +4274,10 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
                   <DetailItem label="Draft Markdown Hash" value={seoEditorialPublishWorkflowResult.summary.draftMarkdownHashPrefix ?? "-"} />
                   <DetailItem label="Draft HTML" value={`${seoEditorialPublishWorkflowResult.summary.draftHtmlLength} chars`} />
                   <DetailItem label="Draft HTML Hash" value={seoEditorialPublishWorkflowResult.summary.draftHtmlHashPrefix ?? "-"} />
+                  <DetailItem
+                    label="Long-form Floor"
+                    value={`${SEO_ARTICLE_TEMPLATE_V1.minVisibleTextLengthToPublish} visible chars minimum / ${SEO_ARTICLE_TEMPLATE_V1.targetVisibleTextLength} target`}
+                  />
                   <DetailItem
                     label="Quality"
                     value={`${seoEditorialPublishWorkflowResult.summary.qualityGrade} (${seoEditorialPublishWorkflowResult.summary.qualityScorePreview})`}
@@ -5162,6 +5176,10 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
                           {blogPostTemplatePreviewResult.validationSummary.htmlLength} / title: {blogPostTemplatePreviewResult.sourceSummary.titleCandidate}
                         </p>
                         <p>
+                          visible text: {blogPostTemplatePreviewResult.validationSummary.visibleTextLength} / publish floor:{" "}
+                          {SEO_ARTICLE_TEMPLATE_V1.minVisibleTextLengthToPublish} / SEO target: {SEO_ARTICLE_TEMPLATE_V1.targetVisibleTextLength}
+                        </p>
+                        <p>
                           preview-only: {blogPostTemplatePreviewResult.metadata.previewOnly ? "yes" : "no"} / DB mutation:{" "}
                           {blogPostTemplatePreviewResult.metadata.dbMutation ? "yes" : "no"} / LLM call:{" "}
                           {blogPostTemplatePreviewResult.metadata.llmCall ? "yes" : "no"} / Blogger API:{" "}
@@ -5173,6 +5191,19 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
                         <DetailItem label="H2" value={String(blogPostTemplatePreviewResult.validationSummary.h2Count)} />
                         <DetailItem label="H3" value={String(blogPostTemplatePreviewResult.validationSummary.h3Count)} />
                         <DetailItem label="Paragraphs" value={String(blogPostTemplatePreviewResult.validationSummary.paragraphCount)} />
+                        <DetailItem label="Visible Text" value={String(blogPostTemplatePreviewResult.validationSummary.visibleTextLength)} />
+                        <DetailItem
+                          label="Long-form Gate"
+                          value={
+                            blogPostTemplatePreviewResult.validationSummary.visibleTextLength >= SEO_ARTICLE_TEMPLATE_V1.targetVisibleTextLength
+                              ? "target met"
+                              : blogPostTemplatePreviewResult.validationSummary.visibleTextLength >= SEO_ARTICLE_TEMPLATE_V1.minVisibleTextLengthToPublish
+                                ? "publish floor met"
+                                : "too short"
+                          }
+                        />
+                        <DetailItem label="Publish Floor" value={String(SEO_ARTICLE_TEMPLATE_V1.minVisibleTextLengthToPublish)} />
+                        <DetailItem label="SEO Target" value={String(SEO_ARTICLE_TEMPLATE_V1.targetVisibleTextLength)} />
                         <DetailItem label="FAQ Headings" value={String(blogPostTemplatePreviewResult.validationSummary.faqHeadingCount)} />
                         <DetailItem label="Media Placeholders" value={String(blogPostTemplatePreviewResult.validationSummary.mediaPlaceholderCount)} />
                         <DetailItem label="Matched Media" value={String(blogPostTemplatePreviewResult.validationSummary.matchedMediaCount)} />
@@ -5230,6 +5261,19 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
                       {blogPostTemplatePreviewResult.validationSummary.errors.length > 0 ? (
                         <div className="notice error">Template preview error가 있어 HTML 후보로 가져올 수 없습니다. 초안 후보를 수정한 뒤 preview를 다시 생성하세요.</div>
                       ) : null}
+                      {blogPostTemplatePreviewResult.validationSummary.visibleTextLength < SEO_ARTICLE_TEMPLATE_V1.minVisibleTextLengthToPublish ? (
+                        <div className="notice error">
+                          본문 visible text가 {SEO_ARTICLE_TEMPLATE_V1.minVisibleTextLengthToPublish}자 미만입니다. 섹션별 사례, 점검 기준, 초보자 실수, FAQ 답변을 보강한 뒤
+                          다시 preview를 생성하세요.
+                        </div>
+                      ) : blogPostTemplatePreviewResult.validationSummary.visibleTextLength < SEO_ARTICLE_TEMPLATE_V1.targetVisibleTextLength ? (
+                        <div className="notice warning">
+                          발행 최소 기준은 통과했지만 SEO target {SEO_ARTICLE_TEMPLATE_V1.targetVisibleTextLength}자에는 부족합니다. 경쟁 글보다 얇어 보이면 섹션별 살붙이기를
+                          더 진행하세요.
+                        </div>
+                      ) : (
+                        <div className="notice">Long-form SEO target을 충족했습니다. 그래도 최종 발행 전 제목, 첫 문단, CTA, disclaimer를 직접 검토하세요.</div>
+                      )}
                       <div className="form-actions">
                         <button
                           className="button secondary"

@@ -434,6 +434,7 @@ function buildSkeletonPrompt(input: LocalSectionedDraftInput): DraftPromptPrevie
       "You are a careful Korean long-form article architect for Blog Growth Agent.",
       "Create only a concise JSON skeleton for a Markdown article. Do not write body prose.",
       "Use helpful, original, people-first structure. Do not copy competitor articles.",
+      `Design for a real long-form SEO article: target at least ${SEO_ARTICLE_TEMPLATE_V1.targetVisibleTextLength} visible Korean characters and never below ${SEO_ARTICLE_TEMPLATE_V1.minVisibleTextLengthToPublish}.`,
       "For investment or finance content, keep services framed as informational/reference tools only.",
       "Do not include buy/sell recommendations, guaranteed profit, return examples, success stories, or risk-free wording.",
       "Never create duplicate H1 headings.",
@@ -465,8 +466,12 @@ function buildSectionPrompt(
       "You are a careful Korean Markdown section writer.",
       "Write only the requested section fragment.",
       "Do not write an H1. Use H2/H3 and paragraphs only.",
-      "Write concrete, useful, search-intent-matching prose. Do not stop at an outline.",
-      `The full article target is at least ${SEO_ARTICLE_TEMPLATE_V1.targetVisibleTextLength} visible Korean characters; make this section substantial.`,
+      "Write concrete, useful, search-intent-matching prose. Do not stop at an outline or bullet skeleton.",
+      `The full article target is at least ${SEO_ARTICLE_TEMPLATE_V1.targetVisibleTextLength} visible Korean characters and the publish floor is ${SEO_ARTICLE_TEMPLATE_V1.minVisibleTextLengthToPublish}.`,
+      seoContract.section
+        ? `This section minimum is ${seoContract.section.minVisibleTextLength} visible Korean characters and ${seoContract.section.minParagraphCount} paragraphs. Meet or exceed it.`
+        : "Make this section substantial enough to support a long-form SEO article.",
+      "Use this expansion pattern: explain the reader problem, give one concrete scenario, list practical checks, explain a beginner mistake, then close with a takeaway.",
       "Do not include aggressive CTA wording or investment recommendations.",
       "Preserve or include media placeholders only when relevant.",
       sectionNeedsFaq
@@ -490,7 +495,14 @@ function buildSectionPrompt(
               count: faqItems.length,
               format: "Use ## FAQ, then ### question headings with natural answers based on savedPlanJson.faq."
             }
-          : { required: false }
+          : { required: false },
+        sectionExpansionContract: seoContract.section
+          ? {
+              minVisibleTextLength: seoContract.section.minVisibleTextLength,
+              minParagraphCount: seoContract.section.minParagraphCount,
+              expansionPattern: ["reader_problem", "concrete_scenario", "practical_checks", "beginner_mistake", "takeaway"]
+            }
+          : null
       },
       null,
       2
@@ -512,6 +524,8 @@ function buildFinalPolishPrompt(input: LocalSectionedDraftInput, assembledDraft:
     system: [
       "You are a careful Korean Markdown final editor.",
       "Polish the assembled draft for tone, transitions, logical flow, repetition, CTA balance, and disclaimer clarity.",
+      `The final article must remain long-form: at least ${SEO_ARTICLE_TEMPLATE_V1.minVisibleTextLengthToPublish} visible Korean characters, preferably ${SEO_ARTICLE_TEMPLATE_V1.targetVisibleTextLength}+ characters.`,
+      "If the assembled draft is thin, expand underdeveloped sections with examples, practical checks, and reader-oriented explanations instead of only rewording.",
       "Do not add unsupported claims, investment recommendations, guaranteed outcomes, or aggressive sign-up language.",
       "Never use unsafe investment or promotion phrases such as 안전한 투자, 안전하게 매수, 성공, 성공 사례, 수익 보장, 확실한 수익, 수익률 예시, 매수 추천, 매도 추천, 원금 보장, 손실 없음, 리스크 없음.",
       "Use neutral alternatives such as 신중한 판단, 참고용 정보, 투자 결과, 판단 보조, 기능 살펴보기, 공식 페이지에서 확인.",

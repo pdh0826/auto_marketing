@@ -1,5 +1,44 @@
 # 13_CHANGELOG
 
+## Patch 9G-3/9G-4/9G-5 Bundled SEO Production Flow
+
+Bundled the next three SEO production improvements into one larger patch so the project stops accumulating tiny approval-only steps.
+
+9G-3 글 품질 엔진:
+
+- Raised the SEO article publish floor to `3000` visible Korean characters.
+- Raised the SEO article target to `5000` visible Korean characters.
+- Raised structural expectations to at least `8` H2 sections and `16` paragraphs.
+- Strengthened local sectioned and stepwise draft prompts so each section must be expanded with:
+  - reader problem
+  - concrete scenario
+  - practical checks
+  - beginner mistake
+  - takeaway
+
+9G-4 운영 UI:
+
+- Content detail now shows the bundled 9G-3/9G-4/9G-5 workflow intent in the SEO Editorial Publish Workflow block.
+- Blog template preview now exposes visible text length, publish floor, SEO target, and long-form gate status.
+
+9G-5 다음 글 dry-run:
+
+- Added deterministic dry-run script `scripts/generate_9g3_longform_seo_candidate.mjs`.
+- Generated artifacts:
+  - `documents/generated/9g-3-longform-seo-candidate.md`
+  - `documents/generated/9g-3-longform-seo-candidate-preview.html`
+  - `documents/generated/9g-3-longform-seo-review.json`
+- Dry-run review result:
+  - grade `pass`
+  - score `100`
+  - visible text length `6239`
+  - blockers `[]`
+  - warnings `[]`
+
+Not executed:
+
+- No Blogger draft save, Blogger publish/write, scheduled publish, `posts.update`, OAuth reconnect, token refresh, deploy, push, external LLM call, content item mutation, quality score mutation, publish timestamp mutation, or raw token/Blogger response output.
+
 ## Patch 9G-2A SEO Editorial Publish Workflow Readback
 
 Added a read-only workflow readback so the successful SEO editorial publish path can be inspected from the content detail UI instead of being reconstructed from terminal steps.
