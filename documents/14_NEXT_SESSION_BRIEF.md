@@ -1,6 +1,66 @@
 # 14_NEXT_SESSION_BRIEF
 
-## Current State: Patch 9G-1D Guarded SEO Editorial Candidate Apply Route Completed
+## Current State: Patch 9G-1E through 9G-1O SEO Editorial Candidate Published
+
+The 9G-1C SEO editorial candidate was carried through the full guarded draft/save/publish/reconciliation path.
+
+Final public post:
+
+- URL: `https://mathlearningappl.blogspot.com/2026/07/5.html`
+- Blogger post id: `3766964499360138555`
+- Blogger published/updated timestamp: `2026-07-07T13:02:11-07:00`
+
+Runtime rows:
+
+- Content item: `cmrb2i6o100015lz6g0alf8c8`
+- Blogger draft approval: `cmrb2k8he00035lz614h9k49l`
+- Blogger draft save: `cmrb2mg1f00075lz6c7v0czzp`
+- Publish approval: `cmrb2om1500095lz6mhag01tg`
+- Publish execution attempt: `cmrb2pe8s000b5lz6qn1anl58`
+
+Final local state:
+
+- Content item status: `published`
+- `publishedAt`: `2026-07-07T20:02:11.000Z`
+- `scheduledAt=null`
+- `qualityScore=null`
+- `draftMarkdown` md5: `57d697d00345139442289ebfb7cb5f71`
+- `draftHtml` md5: `3caa4f6a7d4d4f17d83c0f9843303531`
+- `draftHtml` length: `7301`
+- publish execution attempt status: `success`
+- redacted readback metadata stored; raw Blogger response was not stored.
+
+Quality/readiness:
+
+- Quality ready `true`
+- Quality grade `warn`
+- Quality score `96`
+- SEO article score `100`
+- SEO editorial score `100`
+- Draft payload ready `true`
+
+Operational notes:
+
+- A guarded Blogger token refresh was needed once because the first draft-save preflight found `access_token_expired_reauth_required`.
+- The refresh called the Google token endpoint and updated local token metadata, but did not call Blogger write/publish.
+- One Blogger draft save was executed.
+- One guarded live Blogger publish was executed.
+- Post-publish reconciliation applied only after Blogger readback matched the expected post id, URL, published timestamp, updated timestamp, approval, attempt, draft save, and target blog.
+
+Not executed:
+
+- No Blogger `posts.update`.
+- No scheduled publish.
+- No extra draft save after duplicate protection was active.
+- No LLM call.
+- No raw token, secret, or Blogger raw response output.
+
+Next recommended work:
+
+- Audit the public post visually in Blogger and Search Console style terms: title, snippet, first viewport, disclaimer, CTA, and mobile readability.
+- Add a reusable "SEO editorial candidate publish runbook" or a one-click guided UI flow so this successful path does not require terminal orchestration next time.
+
+## Previous State: Patch 9G-1D Guarded SEO Editorial Candidate Apply Route Completed
 
 Patch 9G-1D added the guarded apply route for the 9G-1C SEO editorial candidate.
 

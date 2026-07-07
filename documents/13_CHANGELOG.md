@@ -1,5 +1,68 @@
 # 13_CHANGELOG
 
+## Patch 9G-1E through 9G-1O SEO Editorial Candidate Publish Completion
+
+Completed the full guarded path for the 9G-1C SEO editorial candidate.
+
+Runtime target:
+
+- New planned content item: `cmrb2i6o100015lz6g0alf8c8`.
+- Title: `주식 초보자가 매수 타이밍을 놓치는 이유: 급하게 사기 전에 확인할 5가지`.
+- Target Blogger blog: `3065973490356135805` / `급등포착`.
+
+Completed steps:
+
+- 9G-1E: created one new `planned` content item instead of mutating an already published item.
+- 9G-1F: applied the 9G-1C candidate through `seo-editorial-candidate-apply`.
+  - Mutated only `draftMarkdown` and `draftHtml`.
+  - `draftMarkdown` md5 `57d697d00345139442289ebfb7cb5f71`.
+  - `draftHtml` md5 `3caa4f6a7d4d4f17d83c0f9843303531`.
+  - `draftHtml` length `7301`.
+- 9G-1G: quality/readiness/draft payload rechecks passed.
+  - quality ready `true`, grade `warn`, score `96`.
+  - SEO article/editorial score `100 / 100`.
+  - draft payload ready `true`.
+- 9G-1H: created Blogger draft approval `cmrb2k8he00035lz614h9k49l`.
+- 9G-1I: first draft save preflight blocked on expired access token; then a guarded token refresh was executed once.
+  - Refresh changed access token state to `valid`.
+  - No Blogger write/publish occurred during refresh.
+  - Re-run preflight returned `canSaveDraft=true`.
+- 9G-1J: executed one guarded Blogger draft save.
+  - Draft save id `cmrb2mg1f00075lz6c7v0czzp`.
+  - Blogger post id `3766964499360138555`.
+  - Draft save status `success`.
+- 9G-1K: post-save preflight blocked duplicate draft save with `blogger_draft_already_saved_for_approval`; publish readiness reported `bloggerDraftSaved=true`.
+- 9G-1L: saved publish approval and execution attempt.
+  - Publish approval id `cmrb2om1500095lz6mhag01tg`.
+  - Publish execution attempt id `cmrb2pe8s000b5lz6qn1anl58`.
+- 9G-1M: guarded publish dry-run passed all metadata/OAuth/final-preflight matches while keeping Blogger publish disabled.
+- 9G-1N: executed one guarded live Blogger publish with `BLOGGER_GUARDED_PUBLISH_LIVE_ENABLED=true`.
+  - Public URL: `https://mathlearningappl.blogspot.com/2026/07/5.html`.
+  - Blogger published/updated timestamp: `2026-07-07T13:02:11-07:00`.
+- 9G-1O: publish result readback matched Blogger post id, URL, published timestamp, updated timestamp, approval, attempt, draft save, and target blog.
+  - Reconciliation marked content item `published`.
+  - Local `publishedAt`: `2026-07-07T20:02:11.000Z`.
+  - Publish execution attempt marked `success` with redacted readback metadata.
+
+Final DB state:
+
+- Content item status `published`.
+- `draftMarkdown` / `draftHtml` hashes unchanged after apply.
+- `qualityScore=null`.
+- `scheduledAt=null`.
+- `llm_call_logs=27`.
+- `blogger_draft_saves=4`.
+- `blogger_publish_execution_attempts=4`.
+
+Safety notes:
+
+- No `posts.update` call.
+- No scheduled publish.
+- No raw Blogger response storage.
+- No raw token/secret output.
+- No LLM call during 9G-1E through 9G-1O.
+- Content mutation after live publish was limited to post-publish reconciliation: status and `publishedAt`.
+
 ## Patch 9G-1D Guarded SEO Editorial Candidate Apply Route
 
 Added a guarded route for moving an SEO editorial Markdown candidate into `content_items.draftMarkdown` and rendered `draftHtml`.
