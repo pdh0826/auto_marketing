@@ -1,5 +1,42 @@
 # 13_CHANGELOG
 
+## Patch 9G-6A Guided SEO Article Prep UI
+
+Added an app-based guided action so a new SEO article can be prepared from `/content/new` without terminal orchestration.
+
+- New route: `POST /api/content-items/guided-seo-article-prep`.
+- New helper: `src/lib/content/guided-seo-article-prep.ts`.
+- New `/content/new` UI block: `Guided SEO Article Prep`.
+- The guided action creates one new `planned` content item with:
+  - deterministic long-form `draftMarkdown`
+  - Blogger-ready `draftHtml`
+  - `planJson`
+  - quality/workflow summary
+- The UI links directly to the created content detail page.
+
+Runtime smoke:
+
+- `/content/new`: 200
+- `POST /api/content-items/guided-seo-article-prep`: 201
+- Created content item: `cmrb3vwg200015lek6r4bobps`
+- Status: `planned`
+- Title: `급등주 알림을 봤을 때 바로 사지 말고 확인할 7가지`
+- `draftMarkdown` length `6331`
+- `draftHtml` length `7378`
+- visible text length `6293`
+- quality ready `true`, grade `warn`, score `94`
+- SEO editorial score `100`
+
+Safety:
+
+- This patch performs only the intended local content item creation.
+- No Blogger API read/write.
+- No Blogger draft save.
+- No Blogger publish.
+- No scheduled publish.
+- No token refresh.
+- No LLM call or `llm_call_logs` creation.
+
 ## Patch 9G-3/9G-4/9G-5 Bundled SEO Production Flow
 
 Bundled the next three SEO production improvements into one larger patch so the project stops accumulating tiny approval-only steps.

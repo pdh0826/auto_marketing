@@ -12,6 +12,7 @@ import {
 } from "@/lib/content/asset-types";
 import type { ContentItemAdmin } from "@/lib/content/admin-types";
 import { CONTENT_MODE_OPTIONS, CONTENT_STATUS_OPTIONS, getContentModeHint, getContentModeLabel } from "@/lib/content/constants";
+import type { GuidedSeoArticlePrepResponse } from "@/lib/content/guided-seo-article-prep";
 import type { ContentMode, ContentStatus } from "@/lib/content/types";
 import { ApiResult, optionalString, requestJson } from "@/lib/form-utils";
 
@@ -67,9 +68,12 @@ export function ContentRequestClient() {
   const [assetsLoading, setAssetsLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [assetSaving, setAssetSaving] = useState(false);
+  const [runningGuidedSeoPrep, setRunningGuidedSeoPrep] = useState(false);
   const [suggestingAssetId, setSuggestingAssetId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [assetError, setAssetError] = useState<string | null>(null);
+  const [guidedSeoPrepError, setGuidedSeoPrepError] = useState<string | null>(null);
+  const [guidedSeoPrepResult, setGuidedSeoPrepResult] = useState<GuidedSeoArticlePrepResponse | null>(null);
   const [assetSuggestion, setAssetSuggestion] = useState<ContentAssetMetadataSuggestion | null>(null);
 
   const blogById = useMemo(() => new Map(blogs.map((blog) => [blog.id, blog])), [blogs]);
@@ -162,6 +166,46 @@ export function ContentRequestClient() {
       setError(caught instanceof Error ? caught.message : "글 생성 요청을 저장하지 못했습니다.");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function runGuidedSeoArticlePrep() {
+    setGuidedSeoPrepError(null);
+    setGuidedSeoPrepResult(null);
+
+    const blogId = form.blogId || blogs[0]?.id || "";
+    const brandProfileId = form.brandProfileId || brandProfiles[0]?.id || "";
+    const targetKeyword = form.targetKeyword.trim() || "급등주 알림";
+    const title = form.title.trim() || `${targetKeyword}을 봤을 때 바로 사지 말고 확인할 7가지`;
+
+    if (!blogId) {
+      setGuidedSeoPrepError("Blog profile이 필요합니다. 먼저 Blog를 선택하거나 생성하세요.");
+      return;
+    }
+    if (!brandProfileId) {
+      setGuidedSeoPrepError("Brand profile이 필요합니다. 먼저 Brand Profile을 선택하거나 생성하세요.");
+      return;
+    }
+
+    setRunningGuidedSeoPrep(true);
+    try {
+      const result = await requestJson<ApiResult<GuidedSeoArticlePrepResponse>>("/api/content-items/guided-seo-article-prep", {
+        method: "POST",
+        body: JSON.stringify({
+          blogId,
+          brandProfileId,
+          title,
+          targetKeyword,
+          sourceMemo: form.sourceMemo.trim() || undefined
+        })
+      });
+      setGuidedSeoPrepResult(result.data);
+      setSelectedContentItemId(result.data.contentItemId);
+      await loadAll();
+    } catch (caught) {
+      setGuidedSeoPrepError(caught instanceof Error ? caught.message : "Guided SEO article prep에 실패했습니다.");
+    } finally {
+      setRunningGuidedSeoPrep(false);
     }
   }
 
@@ -397,6 +441,48 @@ export function ContentRequestClient() {
 
         {modeHint ? <div className="notice">{modeHint}</div> : null}
         {guidance ? <div className="notice">{guidance}</div> : null}
+
+        <div className="read-block">
+          <div className="section-heading compact">
+            <div>
+              <h3>Guided SEO Article Prep</h3>
+              <p className="muted">
+                입력한 Blog/Brand/Keyword로 새 planned content item을 만들고, long-form draftMarkdown과 Blogger-ready draftHtml 후보까지 준비합니다.
+              </p>
+            </div>
+            <button className="button secondary" type="button" disabled={runningGuidedSeoPrep || loading} onClick={() => void runGuidedSeoArticlePrep()}>
+              {runningGuidedSeoPrep ? "SEO 글 준비 중" : "새 SEO 글 준비"}
+            </button>
+          </div>
+          <div className="notice">
+            이 guided action은 새 content item 1개를 생성하고 draftMarkdown/draftHtml 후보를 저장합니다. Blogger API, draft save, publish, token refresh, LLM 호출은 실행하지
+            않습니다.
+          </div>
+          {guidedSeoPrepError ? <div className="notice error">{guidedSeoPrepError}</div> : null}
+          {guidedSeoPrepResult ? (
+            <div className="notice">
+              <strong>Guided SEO prep 완료</strong>
+              <p>
+                {guidedSeoPrepResult.title} / visible text {guidedSeoPrepResult.visibleTextLength} / quality{" "}
+                {guidedSeoPrepResult.qualitySummary.grade} ({guidedSeoPrepResult.qualitySummary.scorePreview}) / SEO editorial{" "}
+                {guidedSeoPrepResult.qualitySummary.seoEditorialGrade} ({guidedSeoPrepResult.qualitySummary.seoEditorialScore})
+              </p>
+              <p>
+                다음 단계: {guidedSeoPrepResult.workflowNextAction.label} - {guidedSeoPrepResult.workflowNextAction.action}
+              </p>
+              <p>
+                Side effects: Blogger write {String(guidedSeoPrepResult.sideEffectSummary.bloggerApiWrite)} / publish{" "}
+                {String(guidedSeoPrepResult.sideEffectSummary.bloggerPublish)} / token refresh {String(guidedSeoPrepResult.sideEffectSummary.tokenRefresh)} / LLM{" "}
+                {String(guidedSeoPrepResult.sideEffectSummary.llmCall)}
+              </p>
+              <div className="form-actions">
+                <Link className="button" href={guidedSeoPrepResult.links.contentDetail}>
+                  준비된 글 상세로 이동
+                </Link>
+              </div>
+            </div>
+          ) : null}
+        </div>
 
         <div className="table-wrap">
           <table>

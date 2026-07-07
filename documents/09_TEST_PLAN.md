@@ -37,6 +37,38 @@ npm run build
     - warnings `[]`
 - This bundled patch must not call Blogger APIs, save Blogger drafts, publish posts, refresh tokens, deploy, push, mutate existing content items, or create `llm_call_logs`.
 
+## Patch 9G-6A guided SEO article prep UI 검증
+
+- Route: `POST /api/content-items/guided-seo-article-prep`.
+- UI: `/content/new`의 `Guided SEO Article Prep` block.
+- The route intentionally creates one new `planned` content item with:
+  - deterministic long-form `draftMarkdown`
+  - Blogger-ready `draftHtml`
+  - `planJson` summary
+  - selected/default Blog and Brand Profile
+- Expected side effects:
+  - `content_items` increases by 1 per explicit guided action
+  - `dbWrite=true`
+  - `createdContentItem=true`
+  - `updatedExistingContentItem=false`
+  - `bloggerApiRead=false`
+  - `bloggerApiWrite=false`
+  - `bloggerDraftSave=false`
+  - `bloggerPublish=false`
+  - `tokenRefresh=false`
+  - `llmCall=false`
+  - `llmCallLogCreated=false`
+- Runtime smoke created local content item `cmrb3vwg200015lek6r4bobps`:
+  - status `planned`
+  - title `급등주 알림을 봤을 때 바로 사지 말고 확인할 7가지`
+  - draftMarkdown length `6331`
+  - draftHtml length `7378`
+  - visible text length `6293`
+  - quality ready `true`
+  - quality grade `warn`
+  - SEO editorial score `100`
+- This patch must not call Blogger APIs, save Blogger drafts, publish posts, refresh tokens, deploy, push, or create `llm_call_logs`.
+
 ## Patch 9G-2A SEO editorial publish workflow readback 검증
 
 - Route: `POST /api/content-items/[id]/seo-editorial-publish-workflow`.

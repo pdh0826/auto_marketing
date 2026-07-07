@@ -1,5 +1,55 @@
 # 14_NEXT_SESSION_BRIEF
 
+## Current State: Patch 9G-6A Guided SEO Article Prep UI
+
+Patch 9G-6A added an app-based guided action for preparing a new SEO article from `/content/new`.
+
+Implemented:
+
+- Route: `POST /api/content-items/guided-seo-article-prep`.
+- Helper: `src/lib/content/guided-seo-article-prep.ts`.
+- UI block: `/content/new` -> `Guided SEO Article Prep`.
+
+The guided action:
+
+- creates a new `planned` content item
+- writes deterministic long-form `draftMarkdown`
+- writes Blogger-ready `draftHtml`
+- creates safe `planJson`
+- returns quality summary, workflow next action, and side-effect summary
+- links the operator to `/content/[id]`
+
+Runtime smoke created:
+
+- Content item: `cmrb3vwg200015lek6r4bobps`
+- Status: `planned`
+- Title: `급등주 알림을 봤을 때 바로 사지 말고 확인할 7가지`
+- `draftMarkdown` length: `6331`
+- `draftHtml` length: `7378`
+- visible text length: `6293`
+- quality ready: `true`
+- quality grade: `warn`
+- quality score: `94`
+- SEO editorial score: `100`
+- Workflow next action: create/confirm Blogger draft approval snapshot.
+
+Safety:
+
+- No Blogger API call.
+- No Blogger draft save.
+- No Blogger publish.
+- No scheduled publish.
+- No token refresh.
+- No LLM call.
+- No `llm_call_logs` creation.
+
+Next recommended work:
+
+- Open `/content/cmrb3vwg200015lek6r4bobps`.
+- Run Blogger Draft Payload Preview and review the prepared HTML.
+- Create manual Blogger draft approval only after the user reviews the content.
+- Draft save/publish still require the existing explicit guarded approvals.
+
 ## Current State: Patch 9G-3/9G-4/9G-5 Bundled SEO Production Flow
 
 The next three SEO production improvements were bundled into one patch.
