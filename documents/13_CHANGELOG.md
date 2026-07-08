@@ -3375,3 +3375,19 @@ Not executed or not implemented:
 
 - Blogger publish/write, Blogger `posts.update`, additional draft save, content item mutation, publish approval mutation, publish execution attempt mutation, LLM call, deploy, push, or external service write beyond the Google OAuth token endpoint.
 - R1 does not automatically refresh from publish readback or guarded publish execution; that remains a candidate for 9E-9C-R2.
+## Patch 9G-8B: Daily UpSignal Live Capture And Guided Run-All
+
+Implemented after Patch 9G-8A:
+
+- Added Playwright as a dev dependency for Daily UpSignal screenshot capture.
+- Hardened Daily Brief captures with target metadata, selector-used metadata, capture dimensions, and safe placeholder fallback warnings.
+- Added capture profiles for the Korean signal board, top stock signal-chart area, and ETF signal board.
+- Improved UpSignal stock/ETF parsing by preferring embedded page data for symbol, name, price, entry, target, stop-loss, score, and detail URLs, with the previous HTML-link parser kept as fallback.
+- Added Daily Brief generation readiness checks before content item creation.
+- Enabled `POST /api/daily-brief/runs/[runId]/run-all` to execute the staged read-only collection flow and then create the local content item/draft when readiness passes.
+- Improved `/wizard/daily-brief` with a one-button “전체 준비 실행” flow, capture mode/count/selector display, and safety copy.
+
+Not implemented or not executed:
+
+- Blogger draft save, Blogger publish, scheduled publish, token refresh, OAuth reconnect, LLM calls, `llm_call_logs`, external writes outside read-only web fetches and local content item/asset creation.
+- Investment recommendation, competitor article copying, or raw news/article body storage.

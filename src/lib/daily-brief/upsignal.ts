@@ -13,6 +13,11 @@ export async function fetchEtfPicks(limit: number) {
 }
 
 export function parseKrStockPicks(html: string, limit: number): DailyBriefStockPick[] {
+  const embedded = parseEmbeddedKrStockPicks(html, limit);
+  if (embedded.length > 0) {
+    return embedded;
+  }
+
   const linkRegex = /<a[^>]+href="([^"]*\/kr\/stocks\/([^"?/]+)[^"]*)"[^>]*>([\s\S]*?)<\/a>/g;
   const picks: DailyBriefStockPick[] = [];
   let match = linkRegex.exec(html);
@@ -50,6 +55,11 @@ export function parseKrStockPicks(html: string, limit: number): DailyBriefStockP
 }
 
 export function parseEtfPicks(html: string, limit: number): DailyBriefEtfPick[] {
+  const embedded = parseEmbeddedEtfPicks(html, limit);
+  if (embedded.length > 0) {
+    return embedded;
+  }
+
   const linkRegex = /<a[^>]+href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/g;
   const picks: DailyBriefEtfPick[] = [];
   let match = linkRegex.exec(html);
@@ -71,7 +81,7 @@ export function parseEtfPicks(html: string, limit: number): DailyBriefEtfPick[] 
     const currentPrice = text.match(/현재가\s*([\d,]+)/)?.[1] ?? null;
     picks.push({
       rank: picks.length + 1,
-      name,
+      name: cleanEtfName(name),
       code: codeMatch[1],
       category: extractEtfCategory(text),
       statusLabel: extractStatus(text),
@@ -86,6 +96,125 @@ export function parseEtfPicks(html: string, limit: number): DailyBriefEtfPick[] 
   }
 
   return picks;
+}
+
+function parseEmbeddedKrStockPicks(html: string, limit: number): DailyBriefStockPick[] {
+  return extractEmbeddedObjects(html)
+    .filter((item) => field(item, "market") === "KR" && field(item, "asset_type") === "stock")
+    .slice(0, limit)
+    .map((item, index) => {
+      const code = field(item, "symbol") ?? "";
+      return {
+        rank: index + 1,
+        name: cleanEtfName(field(item, "name") ?? code),
+        code,
+        market: "KR",
+        statusLabel: field(item, "recommendation_state") ?? field(item, "action_badge"),
+        currentPrice: formatNumber(numberField(item, "close_price")),
+        entryPrice: formatNumber(planNumberField(item, "entry")),
+        targetPrice: formatNumber(planNumberField(item, "target") ?? numberField(item, "target_price")),
+        stopLoss: formatNumber(planNumberField(item, "stop")),
+        trendScore: formatScore(numberField(item, "market_attention_score")),
+        totalScore: formatScore(numberField(item, "total_score")),
+        detailUrl: `${UPSIGNAL_ORIGIN}/kr/stocks/${code}?tab=chart&horizon=swing`,
+        chartCaptureId: null
+      };
+    })
+    .filter((pick) => pick.code.length > 0);
+}
+
+function parseEmbeddedEtfPicks(html: string, limit: number): DailyBriefEtfPick[] {
+  return extractEmbeddedObjects(html)
+    .filter((item) => field(item, "asset_type") === "etf" || field(item, "category") !== null)
+    .slice(0, limit)
+    .map((item, index) => {
+      const code = field(item, "symbol") ?? "";
+      return {
+        rank: index + 1,
+        name: field(item, "name") ?? code,
+        code,
+        category: field(item, "category") ?? field(item, "group_label"),
+        statusLabel: field(item, "recommendation_state") ?? field(item, "action_badge"),
+        currentPrice: formatNumber(numberField(item, "close_price")),
+        targetPotential: formatPercent(numberField(item, "target_upside_pct")),
+        recentBuyDate: field(item, "latest_signal_date"),
+        currentReturn: formatPercent(numberField(item, "strategy_return_pct")),
+        totalScore: formatScore(numberField(item, "total_score"))
+      };
+    })
+    .filter((pick) => pick.code.length > 0);
+}
+
+function extractEmbeddedObjects(html: string) {
+  const normalized = decodeEscapedPageData(html);
+  const fragments = normalized.split("{\"symbol\":\"").slice(1);
+  const seen = new Set<string>();
+  const objects: string[] = [];
+
+  for (const fragment of fragments) {
+    const objectText = `{"symbol":"${fragment.split(",\"scoreTone\"")[0]}`;
+    const symbol = field(objectText, "symbol");
+    if (!symbol || seen.has(symbol)) {
+      continue;
+    }
+    seen.add(symbol);
+    objects.push(objectText);
+  }
+
+  return objects;
+}
+
+function decodeEscapedPageData(value: string) {
+  return value
+    .replace(/\\"/g, "\"")
+    .replace(/\\u0026/g, "&")
+    .replace(/\\u003c/g, "<")
+    .replace(/\\u003e/g, ">")
+    .replace(/\\n/g, " ");
+}
+
+function field(objectText: string, key: string) {
+  return objectText.match(new RegExp(`"${escapeRegExp(key)}":"([^"]*)"`))?.[1] ?? null;
+}
+
+function numberField(objectText: string, key: string) {
+  const raw = objectText.match(new RegExp(`"${escapeRegExp(key)}":(-?\\d+(?:\\.\\d+)?|null)`))?.[1] ?? null;
+  return raw && raw !== "null" ? Number(raw) : null;
+}
+
+function planNumberField(objectText: string, key: string) {
+  const planMatch = objectText.match(/"plan":\{([^}]*)\}/)?.[1] ?? "";
+  return numberField(planMatch, key);
+}
+
+function formatNumber(value: number | null) {
+  return typeof value === "number" && Number.isFinite(value) ? Math.round(value).toLocaleString("ko-KR") : null;
+}
+
+function formatScore(value: number | null) {
+  return typeof value === "number" && Number.isFinite(value) ? value.toFixed(1).replace(/\.0$/, "") : null;
+}
+
+function formatPercent(value: number | null) {
+  return typeof value === "number" && Number.isFinite(value) ? `${value >= 0 ? "+" : ""}${value.toFixed(1)}%` : null;
+}
+
+function cleanEtfName(value: string) {
+  const noisyBadges = [
+    "미국 대표지수",
+    "배당·커버드콜",
+    "채권·금리",
+    "배당·인컴",
+    "미국·해외",
+    "현금성",
+    "방어형",
+    "인컴"
+  ];
+  let next = value;
+  for (const badge of noisyBadges) {
+    next = next.replace(new RegExp(`\\s*${escapeRegExp(badge)}\\s*`, "g"), " ");
+  }
+  return next.replace(/\s+/g, " ").trim();
 }
 
 async function fetchText(url: string) {
@@ -116,6 +245,10 @@ function absoluteUrl(value: string) {
     return value;
   }
   return `${UPSIGNAL_ORIGIN}${value.startsWith("/") ? "" : "/"}${value}`;
+}
+
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function stripTags(value: string) {

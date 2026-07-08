@@ -26,7 +26,8 @@ export async function POST(_request: Request, { params }: RouteContext) {
       kind: "etf_board",
       label: `${run.marketDate} ETF 시그널보드`,
       sourceUrl: run.etfBoardUrl,
-      fileName: "etf-signal-board.png"
+      fileName: "etf-signal-board.png",
+      target: "etf_signal_board"
     });
     const next = await saveDailyBriefRun({
       ...run,

@@ -17,6 +17,12 @@ interface GenerateContentResponse {
     grade: "pass" | "warn" | "fail";
     scorePreview: number;
   };
+  readiness?: {
+    ready: boolean;
+    blockingReasons: string[];
+    warnings: string[];
+    counts: Record<string, number>;
+  };
   links: {
     editWizard: string;
     publishWizard: string;
@@ -80,6 +86,21 @@ export function DailyBriefWizardClient() {
     });
   }
 
+  async function runAll() {
+    if (!run) {
+      setError("먼저 Daily Brief Run을 생성하세요.");
+      return;
+    }
+    await runAction("run-all", async () => {
+      const response = await requestJson<ApiResult<GenerateContentResponse>>(`/api/daily-brief/runs/${run.id}/run-all`, {
+        method: "POST",
+        body: JSON.stringify({})
+      });
+      setRun(response.data.run);
+      setGenerated(response.data);
+    });
+  }
+
   async function runAction(label: string, action: () => Promise<void>) {
     setRunning(label);
     setError(null);
@@ -104,6 +125,9 @@ export function DailyBriefWizardClient() {
         </p>
         <div className="notice">
           이 마법사는 read-only 수집과 로컬 content item 생성까지만 수행합니다. Blogger draft save/publish, scheduled publish, token refresh, LLM 호출은 실행하지 않습니다.
+        </div>
+        <div className="notice warning">
+          실제 투자 조언이 아니라 정보성 콘텐츠 초안입니다. 최종 발행 전 종목명, 가격 기준, 뉴스 맥락, 투자 유의사항을 사람이 검토해야 합니다.
         </div>
       </section>
 
@@ -133,8 +157,25 @@ export function DailyBriefWizardClient() {
         <section className="admin-section">
           <div className="section-heading">
             <div>
-              <h2>2. 수집 단계</h2>
-              <p className="muted">각 단계는 명시 버튼을 눌렀을 때만 실행됩니다.</p>
+              <h2>2. 자동 준비</h2>
+              <p className="muted">바쁘면 이 버튼 하나로 자료 수집부터 글 후보 생성까지 순서대로 실행합니다.</p>
+            </div>
+            <button className="button" type="button" disabled={Boolean(running) || Boolean(run.contentItemId)} onClick={() => void runAll()}>
+              {running === "run-all" ? "전체 준비 중" : "전체 준비 실행"}
+            </button>
+          </div>
+          <div className="notice">
+            전체 준비 실행은 UpSignal/뉴스 read-only 조회와 로컬 content item 생성만 수행합니다. Blogger 저장/발행, token refresh, LLM 호출은 실행하지 않습니다.
+          </div>
+        </section>
+      ) : null}
+
+      {run ? (
+        <section className="admin-section">
+          <div className="section-heading">
+            <div>
+              <h2>3. 세부 단계</h2>
+              <p className="muted">필요하면 각 단계를 따로 다시 실행해 자료를 갱신할 수 있습니다.</p>
             </div>
           </div>
           <div className="card-grid">
@@ -178,7 +219,7 @@ export function DailyBriefWizardClient() {
         <section className="admin-section">
           <div className="section-heading">
             <div>
-              <h2>3. 글 생성</h2>
+              <h2>4. 글 생성</h2>
               <p className="muted">수집 자료를 SEO 템플릿에 넣어 content item, draftMarkdown, draftHtml, 이미지 assets를 생성합니다.</p>
             </div>
             <button className="button" type="button" disabled={Boolean(running) || run.stockPicks.length === 0} onClick={() => void generateContent()}>
@@ -193,6 +234,12 @@ export function DailyBriefWizardClient() {
                 draftMarkdown {generated.draftMarkdownLength}자 / draftHtml {generated.draftHtmlLength}자 / visible text {generated.visibleTextLength}자 / quality{" "}
                 {generated.quality.grade} {generated.quality.scorePreview}점
               </p>
+              {generated.readiness ? (
+                <p>
+                  readiness {generated.readiness.ready ? "ready" : "blocked"} / live captures{" "}
+                  {generated.readiness.counts.liveCaptureCount ?? 0} / placeholder captures {generated.readiness.counts.placeholderCaptureCount ?? 0}
+                </p>
+              ) : null}
               <div className="button-row">
                 <Link className="button" href={generated.links.editWizard}>
                   수정 마법사
@@ -238,12 +285,36 @@ function StepCard({
 
 function DailyBriefRunSummary({ run }: { run: DailyBriefRun }) {
   const captureModes = Array.from(new Set(run.captures.map((capture) => capture.mode)));
+  const liveCaptureCount = run.captures.filter((capture) => capture.mode === "live_screenshot").length;
+  const placeholderCaptureCount = run.captures.filter((capture) => capture.mode === "placeholder").length;
   return (
     <div className="read-block">
       <p><strong>Run</strong>: {run.id} / {run.status}</p>
       <p><strong>종목</strong>: {run.stockPicks.length}개 / <strong>ETF</strong>: {run.etfPicks.length}개 / <strong>뉴스 후보</strong>: {run.researchItems.length}개</p>
-      <p><strong>캡처</strong>: {run.captures.length}개 / mode {captureModes.join(", ") || "-"}</p>
+      <p><strong>캡처</strong>: {run.captures.length}개 / live {liveCaptureCount}개 / placeholder {placeholderCaptureCount}개 / mode {captureModes.join(", ") || "-"}</p>
       {run.warnings.length ? <div className="notice warning">Warnings: {run.warnings.join(", ")}</div> : null}
+      {run.captures.length ? (
+        <table>
+          <thead>
+            <tr>
+              <th>캡처</th>
+              <th>모드</th>
+              <th>셀렉터</th>
+              <th>크기</th>
+            </tr>
+          </thead>
+          <tbody>
+            {run.captures.map((capture) => (
+              <tr key={capture.id}>
+                <td>{capture.label}</td>
+                <td>{capture.mode}</td>
+                <td>{capture.selectorUsed ?? "-"}</td>
+                <td>{capture.width && capture.height ? `${capture.width}x${capture.height}` : "-"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      ) : null}
       {run.stockPicks.length ? (
         <table>
           <thead>

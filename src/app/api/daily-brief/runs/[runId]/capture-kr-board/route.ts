@@ -26,7 +26,8 @@ export async function POST(_request: Request, { params }: RouteContext) {
       kind: "kr_board",
       label: `${run.marketDate} 한국장 시그널보드`,
       sourceUrl: run.krBoardUrl,
-      fileName: "kr-signal-board.png"
+      fileName: "kr-signal-board.png",
+      target: "kr_signal_board"
     });
     const next = await saveDailyBriefRun({
       ...run,

@@ -2351,3 +2351,22 @@ Expected preflight condition after the successful save:
 - A saved Blogger draft is not publish-ready. Publish and scheduled publish need separate approval/preflight/side-effect/audit/rollback policy before implementation.
 - Expired access token handling is currently OAuth re-connection guidance only; do not call refresh/token endpoints without a later explicit patch.
 - `.env.local`, `.env.local.backup*`, secret backup files, tokens, client secrets, and encrypted values must not be read, modified, printed, or staged.
+## Current Daily UpSignal Automation Status
+
+- Patch 9G-8B adds the first usable app-driven Daily UpSignal flow.
+- Entry point: `/wizard/daily-brief`.
+- The recommended user flow is:
+  1. Create a Daily Brief Run.
+  2. Click `전체 준비 실행`.
+  3. Review live/placeholder capture status, parsed stock/ETF tables, news candidates, and generated quality score.
+  4. Open the edit wizard or content detail before any Blogger draft/publish action.
+- The run-all flow may create a local `content_items` row and `content_assets` rows after readiness passes.
+- It must not call Blogger draft save, Blogger publish, scheduled publish, token refresh, OAuth reconnect, LLM, or create `llm_call_logs`.
+
+Next recommended patches:
+
+1. Improve screenshot selectors/cropping after visual QA on several market days.
+2. Add an article review screen that previews Daily Brief captures and SEO sections before Blogger draft save.
+3. Add a Daily Brief quality gate that blocks draft-save preparation if visible text, FAQ, risk copy, or media placement falls below policy.
+4. Add optional disclosure/news source enrichment without storing full external article bodies.
+5. Only after review passes, reconnect OAuth if needed and use the existing guarded Blogger draft-save/publish flow.

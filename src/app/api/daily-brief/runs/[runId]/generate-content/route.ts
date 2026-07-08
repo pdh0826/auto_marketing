@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createDailyBriefContentItem } from "@/lib/daily-brief/content";
+import { buildDailyBriefGenerationReadiness, createDailyBriefContentItem } from "@/lib/daily-brief/content";
 import { getDailyBriefRun, saveDailyBriefRun } from "@/lib/daily-brief/store";
 import { safeErrorMessage } from "@/lib/llm/redaction";
 
@@ -19,6 +19,10 @@ export async function POST(_request: Request, { params }: RouteContext) {
     }
     if (run.contentItemId) {
       return NextResponse.json({ error: "daily_brief_content_already_generated", contentItemId: run.contentItemId }, { status: 409 });
+    }
+    const readiness = buildDailyBriefGenerationReadiness(run);
+    if (!readiness.ready) {
+      return NextResponse.json({ error: "daily_brief_not_ready", readiness }, { status: 400 });
     }
 
     const result = await createDailyBriefContentItem(run);
@@ -50,6 +54,7 @@ export async function POST(_request: Request, { params }: RouteContext) {
           grade: result.quality.grade,
           scorePreview: result.quality.scorePreview
         },
+        readiness,
         links: {
           editWizard: `/wizard/edit/${result.contentItem.id}`,
           publishWizard: `/wizard/publish/${result.contentItem.id}`,

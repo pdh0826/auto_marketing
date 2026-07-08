@@ -30,7 +30,8 @@ export async function POST(_request: Request, { params }: RouteContext) {
         kind: "stock_chart",
         label: `${pick.name} 신호차트`,
         sourceUrl: pick.detailUrl,
-        fileName: `${pick.code}-chart.png`
+        fileName: `${pick.code}-chart.png`,
+        target: "stock_signal_chart"
       });
       pick.chartCaptureId = capture.id;
       captures.push(capture);

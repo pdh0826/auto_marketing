@@ -1,5 +1,6 @@
 export type DailyBriefRunStatus = "created" | "captured" | "researched" | "content_generated" | "failed";
 export type DailyBriefCaptureMode = "live_screenshot" | "placeholder";
+export type DailyBriefCaptureTarget = "kr_signal_board" | "stock_signal_chart" | "etf_signal_board";
 
 export interface DailyBriefRun {
   id: string;
@@ -73,10 +74,14 @@ export interface DailyBriefCapture {
   kind: "kr_board" | "stock_chart" | "etf_board";
   label: string;
   sourceUrl: string;
+  target: DailyBriefCaptureTarget;
+  selectorUsed: string | null;
   storagePath: string;
   fileName: string;
   mimeType: "image/png";
   fileSize: number;
+  width: number | null;
+  height: number | null;
   mode: DailyBriefCaptureMode;
   warning: string | null;
   createdAt: string;

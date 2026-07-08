@@ -9,8 +9,9 @@ import { createContentAsset } from "@/lib/db/content-assets";
 import type { DailyBriefCapture, DailyBriefRun } from "./types";
 
 export async function createDailyBriefContentItem(run: DailyBriefRun) {
-  if (run.stockPicks.length === 0) {
-    throw new Error("daily_brief_stock_picks_required");
+  const readiness = buildDailyBriefGenerationReadiness(run);
+  if (!readiness.ready) {
+    throw new Error(`daily_brief_not_ready:${readiness.blockingReasons.join(",")}`);
   }
 
   const defaults = await loadDefaultBlogAndBrand();
@@ -76,6 +77,59 @@ export async function createDailyBriefContentItem(run: DailyBriefRun) {
     html: htmlPreview.html,
     htmlPreview,
     quality
+  };
+}
+
+export function buildDailyBriefGenerationReadiness(run: DailyBriefRun) {
+  const requiredStockChartCount = Math.min(run.stockDetailLimit, run.stockPicks.length);
+  const krBoardCaptureCount = run.captures.filter((capture) => capture.kind === "kr_board").length;
+  const stockChartCaptureCount = run.captures.filter((capture) => capture.kind === "stock_chart").length;
+  const etfBoardCaptureCount = run.captures.filter((capture) => capture.kind === "etf_board").length;
+  const liveCaptureCount = run.captures.filter((capture) => capture.mode === "live_screenshot").length;
+  const placeholderCaptureCount = run.captures.filter((capture) => capture.mode === "placeholder").length;
+  const blockingReasons: string[] = [];
+  const warnings: string[] = [];
+
+  if (run.stockPicks.length === 0) {
+    blockingReasons.push("stock_picks_required");
+  }
+  if (krBoardCaptureCount === 0) {
+    blockingReasons.push("kr_board_capture_required");
+  }
+  if (requiredStockChartCount > 0 && stockChartCaptureCount < requiredStockChartCount) {
+    blockingReasons.push("stock_chart_captures_required");
+  }
+  if (run.includeEtfs && run.etfPicks.length === 0) {
+    blockingReasons.push("etf_picks_required");
+  }
+  if (run.includeEtfs && etfBoardCaptureCount === 0) {
+    blockingReasons.push("etf_board_capture_required");
+  }
+  if (run.researchItems.length === 0) {
+    blockingReasons.push("research_items_required");
+  }
+  if (placeholderCaptureCount > 0) {
+    warnings.push("placeholder_capture_present");
+  }
+  if (liveCaptureCount === 0) {
+    warnings.push("live_capture_not_detected");
+  }
+
+  return {
+    ready: blockingReasons.length === 0,
+    blockingReasons,
+    warnings,
+    counts: {
+      stockPicks: run.stockPicks.length,
+      etfPicks: run.etfPicks.length,
+      researchItems: run.researchItems.length,
+      krBoardCaptureCount,
+      stockChartCaptureCount,
+      etfBoardCaptureCount,
+      liveCaptureCount,
+      placeholderCaptureCount,
+      requiredStockChartCount
+    }
   };
 }
 

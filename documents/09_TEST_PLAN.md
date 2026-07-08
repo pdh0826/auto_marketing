@@ -2578,3 +2578,11 @@ Safety guard:
 - `draftPayloadReady=true`, approval snapshot matches current preview, duplicate save is not the current blocker.
 - Since preflight is blocked, `POST /api/content-items/[id]/blogger-draft-save` must not be called.
 - Side effects should remain false for Blogger API write, Blogger draft save, publish, scheduled publish, token refresh, LLM call, and content item mutation.
+## Patch 9G-8B Daily UpSignal live capture/run-all 검증
+
+- `/wizard/daily-brief`에서 Daily Brief Run을 생성한 뒤 `전체 준비 실행`을 누르면 한국장 보드, 상위 종목 상세 차트, ETF 보드, 뉴스 후보 수집, content item/draft 생성이 순서대로 실행되어야 한다.
+- Playwright/Chrome 실행이 가능한 환경에서는 capture mode가 `live_screenshot`이어야 하며, selectorUsed와 이미지 크기 metadata가 표시되어야 한다.
+- Playwright 실행이 불가능한 환경에서는 placeholder 이미지로 fallback하되 warning을 남기고, Blogger/LLM/publish 관련 side effect는 계속 false여야 한다.
+- `generate-content`는 stock picks, KR board capture, stock chart captures, ETF data/capture, research items가 부족하면 `daily_brief_not_ready`를 반환해야 한다.
+- Generated Daily Brief content should remain an information/SEO draft, include investment-risk disclaimers, avoid direct buy/sell recommendation phrasing, and target visible text above 3,000 characters.
+- Side effects allowed in this flow are UpSignal/news read-only fetches and local content item/content asset creation only. Blogger API write, draft save, publish, scheduled publish, token refresh, OAuth reconnect, LLM calls, and `llm_call_logs` must not occur.
