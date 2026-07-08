@@ -45,7 +45,7 @@ export function DailyBriefWizardClient() {
         method: "POST",
         body: JSON.stringify({
           marketDate,
-          targetKeyword: "오늘의 투자 관심종목",
+          targetKeyword: "오늘의 국내주식 관심종목",
           stockPickLimit: 8,
           stockDetailLimit: 5,
           etfPickLimit: 5,

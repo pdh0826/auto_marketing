@@ -7,14 +7,15 @@ const runRoot = path.join(process.cwd(), "local-data", "daily-brief-runs");
 export async function createDailyBriefRun(input: Partial<DailyBriefRun>) {
   const now = new Date().toISOString();
   const marketDate = input.marketDate ?? now.slice(0, 10);
+  const stockPickLimit = input.stockPickLimit ?? 8;
   const id = `daily-${marketDate}-${Date.now().toString(36)}`;
   const run: DailyBriefRun = {
     id,
     status: "created",
     marketDate,
-    title: input.title ?? `${marketDate} 오늘의 투자 관심종목 TOP 8: 급등포착 시그널보드 기준`,
-    targetKeyword: input.targetKeyword ?? "오늘의 투자 관심종목",
-    stockPickLimit: input.stockPickLimit ?? 8,
+    title: input.title ?? buildDailyBriefSeoTitle(stockPickLimit),
+    targetKeyword: input.targetKeyword ?? "오늘의 국내주식 관심종목",
+    stockPickLimit,
     stockDetailLimit: input.stockDetailLimit ?? 5,
     etfPickLimit: input.etfPickLimit ?? 5,
     includeEtfs: input.includeEtfs ?? true,
@@ -36,6 +37,10 @@ export async function createDailyBriefRun(input: Partial<DailyBriefRun>) {
 
   await saveDailyBriefRun(run);
   return run;
+}
+
+export function buildDailyBriefSeoTitle(stockPickLimit: number) {
+  return `오늘의 국내주식 관심종목 TOP ${stockPickLimit}: 급등포착 시그널보드 분석`;
 }
 
 export async function getDailyBriefRun(id: string) {
