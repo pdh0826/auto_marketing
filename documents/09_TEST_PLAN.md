@@ -8,6 +8,30 @@ npm run typecheck
 npm run build
 ```
 
+## Patch 9G-8 Daily UpSignal Brief Automation 검증
+
+- Open `/wizard/daily-brief`.
+- Create a Daily Brief run.
+- Run staged steps:
+  - `capture-kr-board`
+  - `capture-stock-details`
+  - `capture-etf-board`
+  - `research`
+  - `generate-content`
+- Expected:
+  - stock picks are read from `https://upsignal.co.kr/kr`;
+  - ETF picks are read from `https://upsignal.co.kr/etf/summary`;
+  - captures are stored as live screenshots if Playwright exists, otherwise explicit placeholder PNGs with warnings;
+  - generated content item status is `planned`;
+  - generated draftMarkdown contains TOP 8, TOP 5 details, ETF section, FAQ, and investment disclaimer;
+  - generated draftHtml renders with existing blog post template renderer.
+- Must not:
+  - call Blogger draft save;
+  - publish/schedule publish;
+  - refresh tokens;
+  - call LLM providers;
+  - store news article full bodies.
+
 ## Patch 9G-7 user wizard UI 검증
 
 - `/wizard/new`:

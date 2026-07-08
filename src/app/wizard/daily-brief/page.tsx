@@ -1,4 +1,4 @@
-import { ContentRequestClient } from "./content-request-client";
+import { DailyBriefWizardClient } from "./daily-brief-wizard-client";
 
 export default function Page() {
   return (
@@ -8,13 +8,9 @@ export default function Page() {
         <a href="/auto">간편 자동화</a>
         <a href="/wizard/new">새 글 마법사</a>
         <a href="/wizard/daily-brief">오늘 관심종목</a>
-        <a href="/blogs">블로그</a>
-        <a href="/brands">서비스 프로필</a>
-        <a href="/content/new">글 생성</a>
-        <a href="/settings/llm">LLM 설정</a>
         <a href="/settings/blogger">Blogger 설정</a>
       </nav>
-      <ContentRequestClient />
+      <DailyBriefWizardClient />
     </main>
   );
 }

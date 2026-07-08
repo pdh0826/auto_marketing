@@ -1,6 +1,7 @@
 const links = [
   ["간편 자동화", "/auto"],
   ["새 글 마법사", "/wizard/new"],
+  ["오늘 관심종목", "/wizard/daily-brief"],
   ["블로그", "/blogs"],
   ["서비스 프로필", "/brands"],
   ["글 생성", "/content/new"],
@@ -25,6 +26,7 @@ export default function DashboardPage() {
         </p>
         <div className="button-row">
           <a className="button" href="/wizard/new">새 글 마법사 시작</a>
+          <a className="button" href="/wizard/daily-brief">오늘 관심종목 글 만들기</a>
           <a className="button secondary" href="/auto">간편 자동화</a>
           <a className="button secondary" href="/settings/blogger">Blogger 설정</a>
         </div>
@@ -36,8 +38,8 @@ export default function DashboardPage() {
           <p className="muted">글 형태, 주제, 자료, 구성을 다음 버튼으로 확인하며 준비합니다.</p>
         </div>
         <div className="card">
-          <h2>2. 설정 분리</h2>
-          <p className="muted">Blogger, LLM, Blog, Brand 설정은 별도 화면에서 한 번 관리합니다.</p>
+          <h2>2. 오늘 관심종목</h2>
+          <p className="muted">급등포착 시그널보드와 종목 차트 자료를 데일리 브리프 글로 준비합니다.</p>
         </div>
         <div className="card">
           <h2>3. 수정/발행 준비</h2>

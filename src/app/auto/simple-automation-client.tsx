@@ -114,6 +114,9 @@ export function SimpleAutomationClient() {
           <Link className="button" href="/wizard/new">
             새 글 마법사
           </Link>
+          <Link className="button" href="/wizard/daily-brief">
+            오늘 관심종목
+          </Link>
           <Link className="button secondary" href="/settings/llm">
             LLM 설정
           </Link>

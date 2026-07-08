@@ -1,5 +1,46 @@
 # 14_NEXT_SESSION_BRIEF
 
+## Current State: Patch 9G-8 Daily UpSignal Brief Automation
+
+The app now has `/wizard/daily-brief` for preparing a daily "오늘의 투자 관심종목" article based on UpSignal data.
+
+Implemented:
+
+- File-backed Daily Brief run storage under `local-data/daily-brief-runs`.
+- Read-only UpSignal board parsers for:
+  - `https://upsignal.co.kr/kr`
+  - `https://upsignal.co.kr/etf/summary`
+- Staged APIs for:
+  - run creation
+  - Korean board capture
+  - top stock detail chart capture
+  - ETF board capture
+  - news/search candidate collection
+  - content item generation
+- Daily Brief content generation:
+  - creates a planned content item
+  - attaches board/chart captures as content assets
+  - writes draftMarkdown and draftHtml
+  - includes TOP 8 stocks, TOP 5 detail sections, ETF TOP 5, FAQ, and investment disclaimer
+
+Important limitation:
+
+- Real browser screenshot capture requires Playwright in the runtime. If Playwright is not installed, capture steps create explicit placeholder PNG assets and add warnings. The workflow still proceeds for template/content validation.
+
+Safety:
+
+- No Blogger draft save/publish.
+- No scheduled publish.
+- No token refresh.
+- No LLM call.
+- No article body copying from news sources.
+
+Recommended next patch:
+
+- Install/configure a screenshot runtime or add a first-party UpSignal screenshot export endpoint.
+- Improve selectors/cropping for exact board/chart regions.
+- Add per-news source review controls in the Daily Brief wizard.
+
 ## Current State: Patch 9G-7 User Wizard UI
 
 The app now has wizard-first entrypoints for ordinary user work:

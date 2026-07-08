@@ -1,5 +1,40 @@
 # 13_CHANGELOG
 
+## Patch 9G-8 Daily UpSignal Brief Automation
+
+Added the first vertical slice for a Daily UpSignal Brief workflow.
+
+- New wizard route: `/wizard/daily-brief`.
+- New read-only Daily Brief run APIs:
+  - `POST /api/daily-brief/runs`
+  - `GET /api/daily-brief/runs`
+  - `GET /api/daily-brief/runs/[runId]`
+  - `POST /api/daily-brief/runs/[runId]/capture-kr-board`
+  - `POST /api/daily-brief/runs/[runId]/capture-stock-details`
+  - `POST /api/daily-brief/runs/[runId]/capture-etf-board`
+  - `POST /api/daily-brief/runs/[runId]/research`
+  - `POST /api/daily-brief/runs/[runId]/generate-content`
+  - `POST /api/daily-brief/runs/[runId]/run-all` as intentionally disabled preview.
+- Added UpSignal read-only parsers for Korean stock board and ETF board.
+- Added optional screenshot capture helper:
+  - Uses Playwright if installed in the runtime.
+  - Falls back to explicit placeholder PNG assets with warnings when Playwright is not configured.
+- Added Daily Brief Markdown template:
+  - Korean stock board summary.
+  - TOP 8 table.
+  - TOP 5 stock detail sections.
+  - ETF TOP 5 section.
+  - FAQ and investment disclaimer.
+- Added content generation that creates one planned content item, attaches captured/placeholder images as ContentAssets, renders Blogger-ready HTML, and reports quality preview.
+
+Safety:
+
+- No Blogger draft save.
+- No Blogger publish or scheduled publish.
+- No token refresh.
+- No LLM call.
+- News search stores only title/source/URL/short safe summary, not article bodies.
+
 ## Patch 9G-7 User Wizard UI
 
 Added wizard-first UI routes so normal article work can proceed without jumping across scattered admin panels.
