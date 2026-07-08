@@ -2586,3 +2586,13 @@ Safety guard:
 - `generate-content`는 stock picks, KR board capture, stock chart captures, ETF data/capture, research items가 부족하면 `daily_brief_not_ready`를 반환해야 한다.
 - Generated Daily Brief content should remain an information/SEO draft, include investment-risk disclaimers, avoid direct buy/sell recommendation phrasing, and target visible text above 3,000 characters.
 - Side effects allowed in this flow are UpSignal/news read-only fetches and local content item/content asset creation only. Blogger API write, draft save, publish, scheduled publish, token refresh, OAuth reconnect, LLM calls, and `llm_call_logs` must not occur.
+
+## Patch 9G-9A Daily Brief web scheduler 검증
+
+- `/automation/daily-brief`는 Daily Brief schedule config, timer status, last tick, last run, and side-effect safety summary를 표시해야 한다.
+- `GET /api/automation/daily-brief/scheduler`는 scheduler config/state를 반환해야 하며, config가 enabled이면 서버 프로세스 내부 timer를 보장해야 한다.
+- `PATCH /api/automation/daily-brief/scheduler`는 schedule time, timezone, keyword, pick counts, ETF setting, enabled state를 저장해야 한다.
+- `POST /api/automation/daily-brief/scheduler/start`와 `/stop`은 서버 프로세스 timer를 시작/중지해야 한다.
+- `POST /api/automation/daily-brief/scheduler/run-now`는 현재 날짜에 이미 generated Daily Brief content item이 있으면 `daily_brief_already_generated_for_date`로 skip해야 한다.
+- Scheduler execution may create local Daily Brief content item/assets only when no same-date generated run exists.
+- Blogger draft save, Blogger publish, scheduled publish, token refresh, OAuth reconnect, LLM calls, and `llm_call_logs` must remain false/not executed.

@@ -1,5 +1,6 @@
 const links = [
   ["간편 자동화", "/auto"],
+  ["Daily Brief 스케줄", "/automation/daily-brief"],
   ["새 글 마법사", "/wizard/new"],
   ["오늘 관심종목", "/wizard/daily-brief"],
   ["블로그", "/blogs"],
@@ -27,6 +28,7 @@ export default function DashboardPage() {
         <div className="button-row">
           <a className="button" href="/wizard/new">새 글 마법사 시작</a>
           <a className="button" href="/wizard/daily-brief">오늘 관심종목 글 만들기</a>
+          <a className="button secondary" href="/automation/daily-brief">매일 8시 자동화</a>
           <a className="button secondary" href="/auto">간편 자동화</a>
           <a className="button secondary" href="/settings/blogger">Blogger 설정</a>
         </div>

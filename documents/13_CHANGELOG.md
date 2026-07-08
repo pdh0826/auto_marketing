@@ -3391,3 +3391,20 @@ Not implemented or not executed:
 
 - Blogger draft save, Blogger publish, scheduled publish, token refresh, OAuth reconnect, LLM calls, `llm_call_logs`, external writes outside read-only web fetches and local content item/asset creation.
 - Investment recommendation, competitor article copying, or raw news/article body storage.
+
+## Patch 9G-9A: Daily Brief Web Scheduler Foundation
+
+Implemented after Patch 9G-8B:
+
+- Added `/automation/daily-brief` for browser-based Daily Brief schedule management.
+- Added server-process scheduler APIs under `/api/automation/daily-brief/scheduler`.
+- The scheduler runs inside the Next.js Node process and checks the configured time every minute while the web server remains running.
+- Added persisted local scheduler config/state under `local-data/daily-brief-scheduler`.
+- Added a safe `run-now` path that uses the same Daily Brief run-all implementation and blocks duplicate generation when a Daily Brief content item already exists for the same market date.
+- Refactored Daily Brief run-all into `src/lib/daily-brief/run-all.ts` so manual UI and scheduler execution share one path.
+
+Not implemented or not executed:
+
+- External cron/launchd registration.
+- Automatic Blogger draft save, Blogger publish, scheduled publish, token refresh, OAuth reconnect, LLM calls, or `llm_call_logs`.
+- Automatic duplicate publishing or same-day repeated Daily Brief generation from the scheduler.

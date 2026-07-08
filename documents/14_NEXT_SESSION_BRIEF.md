@@ -2370,3 +2370,18 @@ Next recommended patches:
 3. Add a Daily Brief quality gate that blocks draft-save preparation if visible text, FAQ, risk copy, or media placement falls below policy.
 4. Add optional disclosure/news source enrichment without storing full external article bodies.
 5. Only after review passes, reconnect OAuth if needed and use the existing guarded Blogger draft-save/publish flow.
+
+## Daily Brief Web Scheduler Status
+
+- `/automation/daily-brief` manages the web-server-resident Daily Brief scheduler.
+- The scheduler does not use external cron. It runs only while the Next.js Node process is alive.
+- It checks once per minute and runs at the configured local time, default `08:00` in `Asia/Seoul`.
+- Same-date generated Daily Brief content blocks duplicate scheduler generation.
+- Current automated scope is content item and image asset generation only.
+- Blogger draft save/publish/scheduled publish/token refresh/LLM calls remain out of the scheduler.
+
+Next recommended scheduler patches:
+
+1. Add review notifications/status badge on the dashboard after scheduled generation.
+2. Add a post-generation quality gate that marks runs needing manual review.
+3. Add optional guarded Blogger draft-save automation only after explicit policy and OAuth readiness are confirmed.
