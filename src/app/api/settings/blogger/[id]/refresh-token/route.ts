@@ -41,6 +41,7 @@ async function parseJsonBody(request: Request): Promise<{ reason?: unknown; forc
 function parseRefreshReason(value: unknown): BloggerTokenRefreshReason {
   if (
     value === "manual_settings_refresh" ||
+    value === "blogger_draft_save" ||
     value === "publish_oauth_gate" ||
     value === "publish_result_readback" ||
     value === "guarded_publish_execution" ||

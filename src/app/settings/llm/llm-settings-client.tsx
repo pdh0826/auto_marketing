@@ -383,7 +383,7 @@ export function LlmSettingsClient() {
             Type
             <select
               value={providerForm.providerType}
-              onChange={(event) => setProviderForm({ ...providerForm, providerType: event.target.value as LlmProviderType })}
+              onChange={(event) => setProviderForm(applyProviderTypeDefaults(providerForm, event.target.value as LlmProviderType | ""))}
             >
               <option value="">선택</option>
               {LLM_PROVIDER_TYPES.map((providerType) => (
@@ -1068,6 +1068,47 @@ function defaultEndpointPath(apiFormat: LlmApiFormat) {
     return "/v1/chat/completions";
   }
   return "";
+}
+
+function applyProviderTypeDefaults(form: ProviderFormState, providerType: LlmProviderType | ""): ProviderFormState {
+  if (providerType === "gpt_cli") {
+    return {
+      ...form,
+      providerType,
+      invocationMode: "cli",
+      apiFormat: "custom_cli",
+      baseUrl: "",
+      endpointPath: "",
+      cliExecutable: form.cliExecutable || "gpt",
+      cliArgsJson: form.cliArgsJson === "[]" ? "[\"--model\", \"{model}\"]" : form.cliArgsJson,
+      timeoutSeconds: form.timeoutSeconds || "240"
+    };
+  }
+  if (providerType === "cli") {
+    return {
+      ...form,
+      providerType,
+      invocationMode: "cli",
+      apiFormat: "custom_cli",
+      endpointPath: ""
+    };
+  }
+  if (providerType === "local" || providerType === "local_http") {
+    return {
+      ...form,
+      providerType,
+      invocationMode: "local_http",
+      apiFormat: "ollama_compatible",
+      endpointPath: form.endpointPath || "/api/generate"
+    };
+  }
+  return {
+    ...form,
+    providerType,
+    invocationMode: "external_http",
+    apiFormat: "openai_compatible",
+    endpointPath: form.endpointPath || "/v1/chat/completions"
+  };
 }
 
 function formatRouteTarget(

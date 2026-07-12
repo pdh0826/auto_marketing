@@ -3,6 +3,7 @@ import type { SafeBloggerConnection } from "@/lib/db/blogger-connections";
 import type { ContentAssetAdmin } from "@/lib/content/asset-types";
 import type { ContentItemAdmin } from "@/lib/content/admin-types";
 import { buildBloggerDraftApprovalSummary } from "@/lib/blogger/draft-approval";
+import { buildBloggerPublishableHtml } from "@/lib/blogger/publishable-html";
 import { buildPublishReadiness } from "@/lib/content/publish-readiness";
 import { validateHtmlCandidate } from "@/lib/content/html-preview";
 
@@ -20,6 +21,7 @@ export function buildBloggerDraftPayloadPreview(
   const publishReadiness = buildPublishReadiness(contentItem, assets, connection);
   const html = contentItem.draftHtml ?? "";
   const htmlValidation = validateHtmlCandidate(html, assets, contentItem);
+  const publishableHtml = buildBloggerPublishableHtml(html, assets);
   const titleCandidate = buildTitleCandidate(contentItem);
   const labelsCandidate = buildLabelsCandidate(contentItem);
   const bloggerConnectionReady = connection?.status === "connected";
@@ -33,13 +35,15 @@ export function buildBloggerDraftPayloadPreview(
     titleCandidate,
     htmlValidationOk: htmlValidation.validation.ok,
     contentReady: publishReadiness.contentReady,
-    qualityRequiredFailCount: publishReadiness.metadata.qualityRequiredFailCount
+    qualityRequiredFailCount: publishReadiness.metadata.qualityRequiredFailCount,
+    publishableHtmlBlockingIssues: publishableHtml.summary.blockingIssues
   });
   const warnings = buildWarnings({
     htmlLength: html.length,
     labelsCandidate,
     verifiedAt,
-    publishReadinessWarnings: publishReadiness.warnings.map((warning) => warning.key)
+    publishReadinessWarnings: publishReadiness.warnings.map((warning) => warning.key),
+    publishableHtmlWarnings: publishableHtml.summary.warnings
   });
   const draftPayloadReady =
     bloggerConnectionReady &&
@@ -49,6 +53,7 @@ export function buildBloggerDraftPayloadPreview(
     htmlValidation.validation.ok &&
     publishReadiness.contentReady &&
     publishReadiness.metadata.qualityRequiredFailCount === 0 &&
+    publishableHtml.summary.blockingIssues.length === 0 &&
     blockingIssues.length === 0;
 
   return {
@@ -80,6 +85,7 @@ export function buildBloggerDraftPayloadPreview(
     draftPayloadReady,
     blockingIssues,
     warnings,
+    bloggerPublishableHtmlSummary: publishableHtml.summary,
     approvalSummary: buildBloggerDraftApprovalSummary({
       approval: null,
       currentSnapshotHash: null,
@@ -93,13 +99,13 @@ export function buildBloggerDraftPayloadPreview(
       draftSaveImplemented: true,
       publishImplemented: false,
       scheduledPublishImplemented: false,
-      tokenRefreshImplemented: false
+      tokenRefreshImplemented: true
     },
     bloggerApiWriteImplemented: true,
     bloggerApiReadImplemented: false,
     draftSaveImplemented: true,
     publishImplemented: false,
-    tokenRefreshImplemented: false
+    tokenRefreshImplemented: true
   };
 }
 
@@ -111,7 +117,8 @@ function buildBlockingIssues({
   titleCandidate,
   htmlValidationOk,
   contentReady,
-  qualityRequiredFailCount
+  qualityRequiredFailCount,
+  publishableHtmlBlockingIssues
 }: {
   contentItem: ContentItemAdmin;
   bloggerConnections: SafeBloggerConnection[];
@@ -121,6 +128,7 @@ function buildBlockingIssues({
   htmlValidationOk: boolean;
   contentReady: boolean;
   qualityRequiredFailCount: number;
+  publishableHtmlBlockingIssues: string[];
 }) {
   const issues: string[] = [];
 
@@ -155,21 +163,23 @@ function buildBlockingIssues({
     issues.push("content_readiness_not_passed");
   }
 
-  return Array.from(new Set(issues));
+  return Array.from(new Set([...issues, ...publishableHtmlBlockingIssues]));
 }
 
 function buildWarnings({
   htmlLength,
   labelsCandidate,
   verifiedAt,
-  publishReadinessWarnings
+  publishReadinessWarnings,
+  publishableHtmlWarnings
 }: {
   htmlLength: number;
   labelsCandidate: string[];
   verifiedAt: string | null;
   publishReadinessWarnings: string[];
+  publishableHtmlWarnings: string[];
 }) {
-  const warnings = [...publishReadinessWarnings];
+  const warnings = [...publishReadinessWarnings, ...publishableHtmlWarnings];
 
   if (verifiedAt && isOlderThanDays(verifiedAt, BLOGGER_SELECTION_OLD_DAYS)) {
     warnings.push("blogger_blog_selection_old");

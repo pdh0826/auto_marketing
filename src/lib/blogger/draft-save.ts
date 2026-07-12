@@ -1,4 +1,5 @@
 import { decryptBloggerSecret, isBloggerSecretEncryptionConfigured, safeBloggerSecretError } from "@/lib/blogger/secrets";
+import { refreshBloggerAccessTokenForConnection } from "@/lib/blogger/token-refresh";
 import { getEncryptedBloggerConnectionSecret } from "@/lib/db/blogger-connection-secrets";
 
 const BLOGGER_API_TIMEOUT_MS = 15000;
@@ -46,19 +47,55 @@ export async function saveBloggerDraftPost(input: BloggerDraftSavePostInput): Pr
 }
 
 async function getUsableAccessToken(connectionId: string) {
-  const accessTokenSecret = await getEncryptedBloggerConnectionSecret(connectionId, "access_token");
+  let accessTokenSecret = await getEncryptedBloggerConnectionSecret(connectionId, "access_token");
   if (!accessTokenSecret) {
-    throw new BloggerDraftSaveError("access_token_missing", "Blogger access token is missing. Reconnect OAuth before saving a draft.", {
-      httpStatus: 400,
-      retryable: false
+    const refresh = await refreshBloggerAccessTokenForConnection({
+      connectionId,
+      reason: "blogger_draft_save",
+      force: false
     });
+    if (!refresh.refreshOk) {
+      throw new BloggerDraftSaveError(
+        "access_token_refresh_blocked",
+        `Blogger access token is missing and refresh did not complete. Blockers: ${refresh.blockingReasons.join(", ") || "unknown"}.`,
+        {
+          httpStatus: 400,
+          retryable: false
+        }
+      );
+    }
+    accessTokenSecret = await getEncryptedBloggerConnectionSecret(connectionId, "access_token");
+    if (!accessTokenSecret) {
+      throw new BloggerDraftSaveError("access_token_missing_after_refresh", "Blogger access token is still missing after refresh.", {
+        httpStatus: 400,
+        retryable: false
+      });
+    }
   }
 
   if (accessTokenSecret.expiresAt && accessTokenSecret.expiresAt.getTime() <= Date.now()) {
-    throw new BloggerDraftSaveError("access_token_expired", "Blogger access token is expired. Token refresh is not implemented yet.", {
-      httpStatus: 400,
-      retryable: false
+    const refresh = await refreshBloggerAccessTokenForConnection({
+      connectionId,
+      reason: "blogger_draft_save",
+      force: false
     });
+    if (!refresh.refreshOk) {
+      throw new BloggerDraftSaveError(
+        "access_token_refresh_blocked",
+        `Blogger access token is expired and refresh did not complete. Blockers: ${refresh.blockingReasons.join(", ") || "unknown"}.`,
+        {
+          httpStatus: 400,
+          retryable: false
+        }
+      );
+    }
+    accessTokenSecret = await getEncryptedBloggerConnectionSecret(connectionId, "access_token");
+    if (!accessTokenSecret || (accessTokenSecret.expiresAt && accessTokenSecret.expiresAt.getTime() <= Date.now())) {
+      throw new BloggerDraftSaveError("access_token_expired_after_refresh", "Blogger access token is still expired after refresh.", {
+        httpStatus: 400,
+        retryable: false
+      });
+    }
   }
 
   if (!isBloggerSecretEncryptionConfigured()) {

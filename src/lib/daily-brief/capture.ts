@@ -71,9 +71,12 @@ export async function createDailyBriefCapture(input: {
 interface CaptureProfile {
   selectorCandidates: string[];
   viewport: { width: number; height: number };
+  deviceScaleFactor: number;
   fullPage: boolean;
   settleMs: number;
 }
+
+const HIGH_RES_CAPTURE_DEVICE_SCALE_FACTOR = 2;
 
 function buildCaptureProfile(target: DailyBriefCaptureTarget): CaptureProfile {
   if (target === "stock_signal_chart") {
@@ -84,6 +87,7 @@ function buildCaptureProfile(target: DailyBriefCaptureTarget): CaptureProfile {
         ".container"
       ],
       viewport: { width: 1440, height: 1120 },
+      deviceScaleFactor: HIGH_RES_CAPTURE_DEVICE_SCALE_FACTOR,
       fullPage: false,
       settleMs: 1800
     };
@@ -98,6 +102,7 @@ function buildCaptureProfile(target: DailyBriefCaptureTarget): CaptureProfile {
         ".container"
       ],
       viewport: { width: 1280, height: 980 },
+      deviceScaleFactor: HIGH_RES_CAPTURE_DEVICE_SCALE_FACTOR,
       fullPage: false,
       settleMs: 1400
     };
@@ -111,6 +116,7 @@ function buildCaptureProfile(target: DailyBriefCaptureTarget): CaptureProfile {
       ".container"
     ],
     viewport: { width: 1440, height: 1100 },
+    deviceScaleFactor: HIGH_RES_CAPTURE_DEVICE_SCALE_FACTOR,
     fullPage: false,
     settleMs: 1400
   };
@@ -135,9 +141,11 @@ async function tryPlaywrightScreenshot(
 
   const browser = await launchChromium(chromium);
   try {
-    const page = await (browser as BrowserLike).newPage({ viewport: profile.viewport, deviceScaleFactor: 1 });
+    const page = await (browser as BrowserLike).newPage({ viewport: profile.viewport, deviceScaleFactor: profile.deviceScaleFactor });
     await page.goto(url, { waitUntil: "domcontentloaded", timeout: 45000 });
+    await dismissBlockingOverlays(page);
     await page.waitForTimeout(profile.settleMs);
+    await dismissBlockingOverlays(page);
 
     for (const selector of profile.selectorCandidates) {
       const locator = page.locator(selector).first();
@@ -153,8 +161,8 @@ async function tryPlaywrightScreenshot(
       return {
         bytes: Buffer.from(screenshot),
         selectorUsed: selector,
-        width: Math.round(box.width),
-        height: Math.round(box.height),
+        width: Math.round(box.width * profile.deviceScaleFactor),
+        height: Math.round(box.height * profile.deviceScaleFactor),
         warning: null
       };
     }
@@ -163,14 +171,99 @@ async function tryPlaywrightScreenshot(
     return {
       bytes: Buffer.from(screenshot),
       selectorUsed: "viewport_fallback",
-      width: profile.viewport.width,
-      height: profile.viewport.height,
+      width: profile.viewport.width * profile.deviceScaleFactor,
+      height: profile.viewport.height * profile.deviceScaleFactor,
       warning: null
     };
   } finally {
     await (browser as BrowserLike).close();
   }
 }
+
+async function dismissBlockingOverlays(page: PageLike) {
+  await page.keyboard?.press("Escape").catch(() => undefined);
+
+  for (const selector of closeButtonSelectors) {
+    const locator = page.locator(selector).first();
+    const count = await locator.count().catch(() => 0);
+    if (count === 0) {
+      continue;
+    }
+    await locator.click({ timeout: 1200 }).catch(() => undefined);
+    await page.waitForTimeout(150).catch(() => undefined);
+  }
+
+  await page
+    .evaluate(() => {
+      const closeTextPattern = /닫기|오늘\s*하루|다시\s*보지|확인|close|dismiss|not\s*again/i;
+      const clickableNodes = Array.from(document.querySelectorAll("button,a,[role='button']")) as HTMLElement[];
+      for (const node of clickableNodes) {
+        const text = `${node.innerText || ""} ${node.getAttribute("aria-label") || ""} ${node.getAttribute("title") || ""}`.trim();
+        const box = node.getBoundingClientRect();
+        if (!text || box.width === 0 || box.height === 0) {
+          continue;
+        }
+        if (closeTextPattern.test(text)) {
+          node.click();
+        }
+      }
+
+      const overlaySelectors = [
+        "[role='dialog']",
+        "[aria-modal='true']",
+        ".modal",
+        ".popup",
+        ".popover",
+        ".toast",
+        ".dialog",
+        ".fixed.inset-0"
+      ];
+      for (const selector of overlaySelectors) {
+        for (const node of Array.from(document.querySelectorAll(selector)) as HTMLElement[]) {
+          const style = window.getComputedStyle(node);
+          const box = node.getBoundingClientRect();
+          const coversViewport = box.width > window.innerWidth * 0.35 && box.height > window.innerHeight * 0.2;
+          const isOverlay = style.position === "fixed" || style.position === "sticky" || node.getAttribute("role") === "dialog";
+          if (isOverlay && coversViewport) {
+            node.style.display = "none";
+          }
+        }
+      }
+
+      for (const node of Array.from(document.body.querySelectorAll("*")) as HTMLElement[]) {
+        const style = window.getComputedStyle(node);
+        if (style.position !== "fixed") {
+          continue;
+        }
+        const box = node.getBoundingClientRect();
+        const zIndex = Number.parseInt(style.zIndex || "0", 10);
+        const nearViewportEdge = box.right > window.innerWidth - 96 || box.bottom > window.innerHeight - 96;
+        const smallFloatingWidget = box.width <= 180 && box.height <= 180;
+        if (Number.isFinite(zIndex) && zIndex >= 10 && nearViewportEdge && smallFloatingWidget) {
+          node.style.display = "none";
+        }
+      }
+    })
+    .catch(() => undefined);
+}
+
+const closeButtonSelectors = [
+  "button:has-text('닫기')",
+  "button:has-text('오늘 하루 보지 않기')",
+  "button:has-text('다시 보지 않기')",
+  "button:has-text('확인')",
+  "a:has-text('닫기')",
+  "[role='button']:has-text('닫기')",
+  "[aria-label='닫기']",
+  "[aria-label='Close']",
+  "[title='닫기']",
+  "[title='Close']",
+  ".modal button:has-text('×')",
+  ".popup button:has-text('×')",
+  "button:has-text('×')",
+  "button:has-text('Close')",
+  "button:has-text('Dismiss')"
+];
 
 async function launchChromium(chromium: ChromiumLike) {
   try {
@@ -193,12 +286,17 @@ interface PageLike {
   goto(url: string, options: { waitUntil: string; timeout: number }): Promise<void>;
   waitForTimeout(ms: number): Promise<void>;
   locator(selector: string): LocatorLike;
+  keyboard?: {
+    press(key: string): Promise<void>;
+  };
+  evaluate<T>(callback: () => T): Promise<T>;
   screenshot(options: { type: "png"; fullPage: boolean }): Promise<Buffer | Uint8Array>;
 }
 
 interface LocatorLike {
   first(): LocatorLike;
   count(): Promise<number>;
+  click(options: { timeout: number }): Promise<void>;
   boundingBox(): Promise<{ width: number; height: number } | null>;
   screenshot(options: { type: "png" }): Promise<Buffer | Uint8Array>;
 }

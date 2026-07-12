@@ -72,6 +72,12 @@ export async function POST(_request: Request, { params }: RouteContext) {
     );
     const clientSecretDiagnostic = buildClientSecretDiagnostic(connection?.clientSecretRef ?? null, secretStatus?.hasClientSecret ?? false);
     const accessTokenExpired = isExpired(secretStatus?.accessTokenExpiresAt ?? null);
+    const tokenRefreshAvailable = Boolean(
+      connection &&
+        secretStatus?.hasRefreshToken &&
+        clientSecretDiagnostic.clientSecretConfigured &&
+        isBloggerSecretRefreshPreflightConfigured()
+    );
 
     const blockingReasons = buildBlockingReasons({
       hasDraftHtml: Boolean(safeContentItem.draftHtml?.trim()),
@@ -81,6 +87,7 @@ export async function POST(_request: Request, { params }: RouteContext) {
       hasSelectedBlog: Boolean(connection?.bloggerBlogId && connection.bloggerBlogVerifiedAt),
       hasClientSecret: clientSecretDiagnostic.clientSecretConfigured,
       hasAccessToken: Boolean(secretStatus?.hasAccessToken),
+      tokenRefreshAvailable,
       accessTokenExpired,
       payloadReady: payloadPreview.draftPayloadReady,
       approvalStatus: approvalSummary.approvalStatus,
@@ -155,7 +162,7 @@ export async function POST(_request: Request, { params }: RouteContext) {
         hasRefreshToken: Boolean(secretStatus?.hasRefreshToken),
         accessTokenExpiresAt: secretStatus?.accessTokenExpiresAt ?? null,
         accessTokenExpired,
-        tokenRefreshImplemented: false,
+        tokenRefreshImplemented: true,
         secretMaterialReturned: false
       },
       approvalSnapshotStatus: {
@@ -172,7 +179,8 @@ export async function POST(_request: Request, { params }: RouteContext) {
         draftPayloadReady: payloadPreview.draftPayloadReady,
         blockingIssues: payloadPreview.blockingIssues,
         warnings: payloadPreview.warnings,
-        titleCandidate: payloadPreview.titleCandidate
+        titleCandidate: payloadPreview.titleCandidate,
+        bloggerPublishableHtmlSummary: payloadPreview.bloggerPublishableHtmlSummary
       },
       draftSavePreflightSummary: {
         draftNotSavedYetExpected: !successfulSaveForCurrentApproval,
@@ -227,6 +235,10 @@ function isExpired(value: string | null) {
   return Number.isFinite(time) && time <= Date.now();
 }
 
+function isBloggerSecretRefreshPreflightConfigured() {
+  return Boolean(process.env.BLOGGER_SECRET_ENCRYPTION_KEY?.trim());
+}
+
 function buildBlockingReasons(input: {
   hasDraftHtml: boolean;
   htmlValidationOk: boolean;
@@ -235,6 +247,7 @@ function buildBlockingReasons(input: {
   hasSelectedBlog: boolean;
   hasClientSecret: boolean;
   hasAccessToken: boolean;
+  tokenRefreshAvailable: boolean;
   accessTokenExpired: boolean;
   payloadReady: boolean;
   approvalStatus: string;
@@ -267,7 +280,7 @@ function buildBlockingReasons(input: {
   if (input.bloggerConnectionCount === 1 && !input.hasAccessToken) {
     reasons.push("blogger_access_token_missing");
   }
-  if (input.bloggerConnectionCount === 1 && input.hasAccessToken && input.accessTokenExpired) {
+  if (input.bloggerConnectionCount === 1 && input.hasAccessToken && input.accessTokenExpired && !input.tokenRefreshAvailable) {
     reasons.push("access_token_expired_reauth_required");
   }
   if (input.bloggerConnectionCount === 1 && !input.hasSelectedBlog) {

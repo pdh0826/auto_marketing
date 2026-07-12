@@ -1,5 +1,6 @@
 import { mkdir, readFile, writeFile } from "fs/promises";
 import path from "path";
+import { runDailyBriefPublishAutomation, type DailyBriefPublishAutomationResult, type DailyBriefSchedulerMode } from "@/lib/daily-brief/publish-automation";
 import { runDailyBriefRunAll } from "@/lib/daily-brief/run-all";
 import { buildDailyBriefSeoTitle, createDailyBriefRun, listDailyBriefRuns } from "@/lib/daily-brief/store";
 
@@ -12,12 +13,13 @@ export interface DailyBriefSchedulerConfig {
   enabled: boolean;
   scheduleTime: string;
   timezone: string;
+  businessDaysOnly: boolean;
   targetKeyword: string;
   stockPickLimit: number;
   stockDetailLimit: number;
   etfPickLimit: number;
   includeEtfs: boolean;
-  mode: "content_only";
+  mode: DailyBriefSchedulerMode;
 }
 
 export interface DailyBriefSchedulerState {
@@ -32,6 +34,7 @@ export interface DailyBriefSchedulerState {
   lastContentItemId: string | null;
   lastResult: "idle" | "skipped" | "success" | "failed";
   lastMessage: string | null;
+  lastAutomationResult: DailyBriefPublishAutomationResult | null;
   inFlight: boolean;
 }
 
@@ -41,22 +44,25 @@ export interface DailyBriefSchedulerStatus {
   nextActionSummary: {
     serverProcessTimerActive: boolean;
     webServerMustStayRunning: true;
-    bloggerDraftSave: false;
-    bloggerPublish: false;
+    bloggerDraftSave: boolean;
+    bloggerPublish: boolean;
     tokenRefresh: false;
     llmCall: false;
+    livePublishRequiresEnvFlags: true;
   };
 }
 
 interface SchedulerRuntime {
   timer: NodeJS.Timeout | null;
   inFlight: boolean;
+  lastKnownMode?: DailyBriefSchedulerMode;
 }
 
 const runtime = getSchedulerRuntime();
 
 export async function getDailyBriefSchedulerStatus(): Promise<DailyBriefSchedulerStatus> {
   const config = await getDailyBriefSchedulerConfig();
+  runtime.lastKnownMode = config.mode;
   if (config.enabled && !runtime.timer) {
     await startDailyBriefScheduler();
   }
@@ -75,9 +81,12 @@ export async function getDailyBriefSchedulerConfig(): Promise<DailyBriefSchedule
   await mkdir(schedulerRoot, { recursive: true });
   try {
     const raw = await readFile(configPath, "utf8");
-    return normalizeConfig(JSON.parse(raw) as Partial<DailyBriefSchedulerConfig>);
+    const config = normalizeConfig(JSON.parse(raw) as Partial<DailyBriefSchedulerConfig>);
+    runtime.lastKnownMode = config.mode;
+    return config;
   } catch {
     const config = normalizeConfig({});
+    runtime.lastKnownMode = config.mode;
     await writeDailyBriefSchedulerConfigFile(config);
     return config;
   }
@@ -87,6 +96,7 @@ export async function writeDailyBriefSchedulerConfig(input: Partial<DailyBriefSc
   const current = await getDailyBriefSchedulerConfig().catch(() => normalizeConfig({}));
   const config = normalizeConfig({ ...current, ...input });
   config.enabled = typeof input.enabled === "boolean" ? input.enabled : current.enabled;
+  runtime.lastKnownMode = config.mode;
   await mkdir(schedulerRoot, { recursive: true });
   await writeFile(configPath, JSON.stringify(config, null, 2), "utf8");
   if (config.enabled) {
@@ -158,6 +168,7 @@ export async function tickDailyBriefScheduler(input: { force: boolean }) {
 
   const config = await getDailyBriefSchedulerConfig();
   const localNow = getLocalDateTime(config.timezone);
+  const businessDay = isBusinessDay(localNow.date, config.timezone);
   const due = input.force || (config.enabled && localNow.time === config.scheduleTime);
   await updateDailyBriefSchedulerState({
     lastTickAt: new Date().toISOString(),
@@ -173,8 +184,39 @@ export async function tickDailyBriefScheduler(input: { force: boolean }) {
     return { status: "skipped" as const, reason: "not_due", state };
   }
 
+  if (!input.force && config.businessDaysOnly && !businessDay) {
+    const state = await updateDailyBriefSchedulerState({
+      lastResult: "skipped",
+      lastMessage: `not_business_day:${localNow.date}`
+    });
+    return { status: "skipped" as const, reason: "not_business_day", state };
+  }
+
   const existingRun = await findGeneratedRunForDate(localNow.date);
   if (existingRun) {
+    if (config.mode !== "content_only" && existingRun.contentItemId) {
+      runtime.inFlight = true;
+      const automationResult = await runDailyBriefPublishAutomation({
+        contentItemId: existingRun.contentItemId,
+        mode: config.mode
+      });
+      runtime.inFlight = false;
+      const state = await updateDailyBriefSchedulerState({
+        lastRunDate: localNow.date,
+        lastRunId: existingRun.id,
+        lastContentItemId: existingRun.contentItemId,
+        lastResult: automationResult.status === "failed" ? "failed" : "success",
+        lastMessage: `daily_brief_already_generated_for_date; automation_${automationResult.status}:${automationResult.stage}`,
+        lastAutomationResult: automationResult,
+        inFlight: false
+      });
+      return {
+        status: automationResult.status === "failed" ? ("failed" as const) : ("success" as const),
+        reason: "daily_brief_already_generated_for_date",
+        automationResult,
+        state
+      };
+    }
     const state = await updateDailyBriefSchedulerState({
       lastRunDate: localNow.date,
       lastRunId: existingRun.id,
@@ -190,7 +232,7 @@ export async function tickDailyBriefScheduler(input: { force: boolean }) {
   try {
     const run = await createDailyBriefRun({
       marketDate: localNow.date,
-      title: buildDailyBriefSeoTitle(config.stockPickLimit),
+      title: buildDailyBriefSeoTitle(config.stockPickLimit, { marketDate: localNow.date }),
       targetKeyword: config.targetKeyword,
       stockPickLimit: config.stockPickLimit,
       stockDetailLimit: config.stockDetailLimit,
@@ -211,16 +253,52 @@ export async function tickDailyBriefScheduler(input: { force: boolean }) {
       return { status: "failed" as const, reason: "daily_brief_not_ready", result, state };
     }
 
-    runtime.inFlight = false;
+    const contentItemId = result.contentItemId;
+    if (!contentItemId) {
+      runtime.inFlight = false;
+      const state = await updateDailyBriefSchedulerState({
+        lastRunDate: localNow.date,
+        lastRunId: result.run.id,
+        lastContentItemId: null,
+        lastResult: "failed",
+        lastMessage: "daily_brief_content_item_missing",
+        inFlight: false
+      });
+      return { status: "failed" as const, reason: "daily_brief_content_item_missing", result, state };
+    }
+
     const state = await updateDailyBriefSchedulerState({
       lastRunDate: localNow.date,
       lastRunId: result.run.id,
-      lastContentItemId: result.contentItemId,
+      lastContentItemId: contentItemId,
       lastResult: "success",
-      lastMessage: `content_generated:${result.contentItemId}`,
+      lastMessage: `content_generated:${contentItemId}`,
+      lastAutomationResult: null,
       inFlight: false
     });
-    return { status: "success" as const, result, state };
+    const automationResult = await runDailyBriefPublishAutomation({
+      contentItemId,
+      mode: config.mode
+    });
+    runtime.inFlight = false;
+    const stateAfterAutomation = await updateDailyBriefSchedulerState({
+      lastRunDate: localNow.date,
+      lastRunId: result.run.id,
+      lastContentItemId: contentItemId,
+      lastResult: automationResult.status === "failed" ? "failed" : "success",
+      lastMessage:
+        config.mode === "content_only"
+          ? `content_generated:${contentItemId}`
+          : `content_generated:${contentItemId}; automation_${automationResult.status}:${automationResult.stage}`,
+      lastAutomationResult: automationResult,
+      inFlight: false
+    });
+    return {
+      status: automationResult.status === "failed" ? ("failed" as const) : ("success" as const),
+      result,
+      automationResult,
+      state: stateAfterAutomation
+    };
   } catch (error) {
     runtime.inFlight = false;
     const state = await updateDailyBriefSchedulerState({
@@ -270,14 +348,22 @@ function normalizeConfig(input: Partial<DailyBriefSchedulerConfig>): DailyBriefS
     enabled: input.enabled === true,
     scheduleTime: isTimeString(scheduleTime) ? scheduleTime : "08:00",
     timezone: typeof input.timezone === "string" && input.timezone.trim() ? input.timezone.trim().slice(0, 64) : "Asia/Seoul",
+    businessDaysOnly: input.businessDaysOnly !== false,
     targetKeyword:
       typeof input.targetKeyword === "string" && input.targetKeyword.trim() ? input.targetKeyword.trim().slice(0, 80) : "오늘의 국내주식 관심종목",
     stockPickLimit: clampNumber(input.stockPickLimit, 8, 1, 20),
     stockDetailLimit: clampNumber(input.stockDetailLimit, 5, 1, 10),
     etfPickLimit: clampNumber(input.etfPickLimit, 5, 0, 20),
     includeEtfs: input.includeEtfs !== false,
-    mode: "content_only"
+    mode: normalizeMode(input.mode)
   };
+}
+
+function normalizeMode(value: unknown): DailyBriefSchedulerMode {
+  if (value === "draft_save_only" || value === "publish_live_guarded") {
+    return value;
+  }
+  return "content_only";
 }
 
 function normalizeState(input: Partial<DailyBriefSchedulerState>): DailyBriefSchedulerState {
@@ -293,6 +379,7 @@ function normalizeState(input: Partial<DailyBriefSchedulerState>): DailyBriefSch
     lastContentItemId: input.lastContentItemId ?? null,
     lastResult: input.lastResult ?? "idle",
     lastMessage: input.lastMessage ?? null,
+    lastAutomationResult: input.lastAutomationResult ?? null,
     inFlight: input.inFlight === true
   };
 }
@@ -314,6 +401,14 @@ function getLocalDateTime(timezone: string) {
   };
 }
 
+function isBusinessDay(date: string, timezone: string) {
+  const weekday = new Intl.DateTimeFormat("en-US", {
+    timeZone: timezone,
+    weekday: "short"
+  }).format(new Date(`${date}T12:00:00Z`));
+  return weekday !== "Sat" && weekday !== "Sun";
+}
+
 function clampNumber(value: unknown, fallback: number, min: number, max: number) {
   const parsed = typeof value === "number" ? value : typeof value === "string" ? Number(value) : NaN;
   if (!Number.isFinite(parsed)) {
@@ -327,13 +422,15 @@ function isTimeString(value: unknown): value is string {
 }
 
 function buildSchedulerSideEffectSummary() {
+  const mode = runtime.lastKnownMode ?? "content_only";
   return {
     serverProcessTimerActive: Boolean(runtime.timer),
     webServerMustStayRunning: true as const,
-    bloggerDraftSave: false as const,
-    bloggerPublish: false as const,
+    bloggerDraftSave: mode === "draft_save_only" || mode === "publish_live_guarded",
+    bloggerPublish: mode === "publish_live_guarded",
     tokenRefresh: false as const,
-    llmCall: false as const
+    llmCall: false as const,
+    livePublishRequiresEnvFlags: true as const
   };
 }
 

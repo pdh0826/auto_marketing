@@ -17,8 +17,14 @@ export interface DailyBriefRun {
   stockPicks: DailyBriefStockPick[];
   etfPicks: DailyBriefEtfPick[];
   researchItems: DailyBriefResearchItem[];
+  officialDisclosureItems: DailyBriefOfficialDisclosureItem[];
+  prewriteContextItems: DailyBriefPrewriteContextItem[];
   captures: DailyBriefCapture[];
   contentItemId: string | null;
+  tistoryReviewContentItemId?: string | null;
+  tistoryReviewExportUrl?: string | null;
+  tistoryReviewMode?: DailyTistorySignalReviewMode | null;
+  tistoryReviewOutputs?: Partial<Record<DailyTistorySignalReviewMode, DailyTistoryReviewOutputSummary>>;
   draftMarkdownLength: number | null;
   draftHtmlLength: number | null;
   visibleTextLength: number | null;
@@ -38,6 +44,7 @@ export interface DailyBriefStockPick {
   entryPrice: string | null;
   targetPrice: string | null;
   stopLoss: string | null;
+  recentSignalDate: string | null;
   trendScore: string | null;
   totalScore: string | null;
   detailUrl: string;
@@ -57,6 +64,28 @@ export interface DailyBriefEtfPick {
   totalScore: string | null;
 }
 
+export type DailyTistorySignalReviewMode = "stock_signal_top3_review" | "mixed_stock_etf_review" | "etf_sector_review" | "futures_options_signal_record";
+
+export interface DailyTistorySignalReviewSelection {
+  mode: DailyTistorySignalReviewMode;
+  modeReason: string;
+  recentSignalWindowDays: number;
+  topTwentyCount: number;
+  recentSignalStockCount: number;
+  selectedStockCodes: string[];
+  selectedEtfCodes: string[];
+  warnings: string[];
+}
+
+export interface DailyTistoryReviewOutputSummary {
+  contentItemId: string;
+  previewUrl: string;
+  mode: DailyTistorySignalReviewMode;
+  selectedStockCodes?: string[];
+  selectedEtfCodes?: string[];
+  createdAt: string;
+}
+
 export interface DailyBriefResearchItem {
   symbolCode: string;
   symbolName: string;
@@ -64,9 +93,41 @@ export interface DailyBriefResearchItem {
   searchUrl: string;
   title: string;
   source: string;
+  sourceName?: string | null;
   publishedAt: string | null;
   url: string;
   shortSummary: string;
+}
+
+export interface DailyBriefOfficialDisclosureItem {
+  symbolCode: string;
+  symbolName: string;
+  title: string;
+  source: "dart_openapi";
+  sourceName: "DART 전자공시";
+  publishedAt: string | null;
+  url: string;
+  receiptNo: string | null;
+  shortSummary: string;
+}
+
+export interface DailyBriefPrewriteContextItem {
+  kind:
+    | "market_kr_flow"
+    | "market_us_flow"
+    | "market_supply"
+    | "stock_chart_context"
+    | "stock_upsignal_issue"
+    | "etf_market_context"
+    | "writing_angle";
+  symbolCode?: string | null;
+  symbolName?: string | null;
+  title: string;
+  summary: string;
+  sourceName: string;
+  url?: string | null;
+  publishedAt?: string | null;
+  confidence: "high" | "medium" | "low";
 }
 
 export interface DailyBriefCapture {

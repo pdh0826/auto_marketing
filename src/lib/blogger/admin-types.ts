@@ -128,6 +128,7 @@ export interface BloggerSecretSelfTestResult {
 
 export type BloggerTokenRefreshReason =
   | "manual_settings_refresh"
+  | "blogger_draft_save"
   | "publish_oauth_gate"
   | "publish_result_readback"
   | "guarded_publish_execution"
@@ -270,7 +271,7 @@ export interface BloggerDraftSaveSummary {
   draftSaveImplemented: true;
   publishImplemented: false;
   scheduledPublishImplemented: false;
-  tokenRefreshImplemented: false;
+  tokenRefreshImplemented: boolean;
 }
 
 export interface BloggerDraftPayloadPreview {
@@ -299,13 +300,32 @@ export interface BloggerDraftPayloadPreview {
   draftPayloadReady: boolean;
   blockingIssues: string[];
   warnings: string[];
+  bloggerPublishableHtmlSummary: {
+    checked: true;
+    imageEmbedMode: "public_url" | "inline_data_url" | "compressed_jpeg_data_url" | "none";
+    publicAssetBaseUrl: string | null;
+    publicAssetBaseUrlConfigured: boolean;
+    publicAssetBaseUrlUsableForBlogger: boolean;
+    localAssetUrlCount: number;
+    convertedAssetUrlCount: number;
+    inlineDataUrlAssetCount: number;
+    inlineDataUrlByteCount: number;
+    inlineDataUrlEstimatedHtmlBytes: number;
+    unresolvedLocalAssetUrlCount: number;
+    firstImageSrc: string | null;
+    firstImageAlt: string | null;
+    firstImageAssetId: string | null;
+    firstImageLooksLikeThumbnail: boolean;
+    blockingIssues: string[];
+    warnings: string[];
+  };
   approvalSummary: BloggerDraftApprovalSummary;
   draftSaveSummary: BloggerDraftSaveSummary;
   bloggerApiWriteImplemented: boolean;
   bloggerApiReadImplemented: false;
   draftSaveImplemented: boolean;
   publishImplemented: false;
-  tokenRefreshImplemented: false;
+  tokenRefreshImplemented: boolean;
 }
 
 export interface BloggerDraftSavePreflight {
@@ -382,6 +402,7 @@ export interface BloggerDraftSavePreflight {
     blockingIssues: string[];
     warnings: string[];
     titleCandidate: string | null;
+    bloggerPublishableHtmlSummary: BloggerDraftPayloadPreview["bloggerPublishableHtmlSummary"];
   };
   draftSavePreflightSummary: {
     draftNotSavedYetExpected: boolean;
@@ -947,7 +968,7 @@ export interface GuardedPublishExecutionResponse {
       bloggerPublish: boolean;
       bloggerUpdate: false;
       bloggerDraftSave: false;
-      tokenRefresh: false;
+      tokenRefresh: boolean;
       oauthReconnect: false;
       contentMutation: false;
       approvalMutation: false;

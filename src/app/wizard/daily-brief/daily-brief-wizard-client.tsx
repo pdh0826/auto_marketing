@@ -30,11 +30,74 @@ interface GenerateContentResponse {
   };
 }
 
+interface TistorySignalReviewResponse {
+  run: DailyBriefRun;
+  contentItemId: string;
+  title: string;
+  markdownLength: number;
+  htmlLength: number;
+  visibleTextLength: number;
+  quality: {
+    ready: boolean;
+    grade: "pass" | "warn" | "fail";
+    scorePreview: number;
+  };
+  selection: {
+    mode: "stock_signal_top3_review" | "mixed_stock_etf_review" | "etf_sector_review" | "futures_options_signal_record";
+    modeReason: string;
+    recentSignalWindowDays: number;
+    topTwentyCount: number;
+    recentSignalStockCount: number;
+    selectedStockCodes: string[];
+    selectedEtfCodes: string[];
+    warnings: string[];
+  };
+  captures: Array<{
+    id: string;
+    label: string;
+    mode: string;
+    width: number | null;
+    height: number | null;
+  }>;
+  tistoryExport: {
+    localPreviewUrl: string;
+    project300CategoryLabel: string;
+    project300Tags: string[];
+    assetCount: number;
+    copiedAssetCount: number;
+  };
+  sideEffectSummary: {
+    dbWrite: true;
+    contentItemCreated: true;
+    contentAssetCreated: boolean;
+    localFileWrite: true;
+    upsignalRead: true;
+    newsSearchRead: true;
+    tistoryApiWrite: false;
+    bloggerApiWrite: false;
+    bloggerDraftSave: false;
+    bloggerPublish: false;
+    scheduledPublish: false;
+    tokenRefresh: false;
+    llmCall: false;
+    llmCallLogCreated: false;
+  };
+  links: {
+    contentDetail: string;
+    editWizard: string;
+    tistoryPreview: string;
+  };
+}
+
+type TistoryReviewMode = TistorySignalReviewResponse["selection"]["mode"];
+
 export function DailyBriefWizardClient() {
   const today = new Date().toISOString().slice(0, 10);
   const [marketDate, setMarketDate] = useState(today);
   const [run, setRun] = useState<DailyBriefRun | null>(null);
   const [generated, setGenerated] = useState<GenerateContentResponse | null>(null);
+  const [tistoryReview, setTistoryReview] = useState<TistorySignalReviewResponse | null>(null);
+  const [tistoryReviewMode, setTistoryReviewMode] = useState<TistoryReviewMode>("mixed_stock_etf_review");
   const [running, setRunning] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -54,6 +117,7 @@ export function DailyBriefWizardClient() {
       });
       setRun(response.data);
       setGenerated(null);
+      setTistoryReview(null);
     });
   }
 
@@ -98,6 +162,21 @@ export function DailyBriefWizardClient() {
       });
       setRun(response.data.run);
       setGenerated(response.data);
+    });
+  }
+
+  async function generateTistorySignalReview() {
+    if (!run) {
+      setError("먼저 Daily Brief Run을 생성하세요.");
+      return;
+    }
+    await runAction("tistory-signal-review", async () => {
+      const response = await requestJson<ApiResult<TistorySignalReviewResponse>>(`/api/daily-brief/runs/${run.id}/tistory-signal-review`, {
+        method: "POST",
+        body: JSON.stringify({ forceMode: tistoryReviewMode })
+      });
+      setRun(response.data.run);
+      setTistoryReview(response.data);
     });
   }
 
@@ -255,8 +334,118 @@ export function DailyBriefWizardClient() {
           ) : null}
         </section>
       ) : null}
+
+      {run ? (
+        <section className="admin-section">
+          <div className="section-heading">
+            <div>
+              <h2>5. 티스토리 신호 리뷰</h2>
+              <p className="muted">
+                Blogger Daily Brief와 다른 글로, TOP 20 중 최근 신호 종목을 골라 사람 말투의 집중 리뷰를 만듭니다. 오늘의 관심종목과 이미 사용한 종목/ETF는 다음 카테고리 후보에서 제외합니다.
+              </p>
+            </div>
+            <button className="button" type="button" disabled={Boolean(running) || Boolean(run.tistoryReviewOutputs?.[tistoryReviewMode])} onClick={() => void generateTistorySignalReview()}>
+              {running === "tistory-signal-review" ? "리뷰 생성 중" : run.tistoryReviewOutputs?.[tistoryReviewMode] ? "선택 카테고리 생성됨" : "선택 카테고리 생성"}
+            </button>
+          </div>
+          <label className="form-field">
+            <span>생성할 Project300 카테고리</span>
+            <select value={tistoryReviewMode} onChange={(event) => setTistoryReviewMode(event.target.value as TistoryReviewMode)}>
+              <option value="mixed_stock_etf_review">오늘의 관심종목 리뷰</option>
+              <option value="stock_signal_top3_review">종목별 신호 집중분석</option>
+              <option value="etf_sector_review">ETF 섹터 흐름 리뷰</option>
+              <option value="futures_options_signal_record">선물·옵션 시그널 기록</option>
+            </select>
+          </label>
+          <div className="notice">
+            네 카테고리 모두 증거 수집 → 사전 검증 → 구조 설계 → 생성 → AI 흔적 검수 → 보완 → 재검수 gate를 사용합니다. 종목별 신호 집중분석은 오늘의 관심종목 예약 후보를 피하며, ETF도 앞선 리뷰에서 사용한 코드를 재사용하지 않습니다. 선물·옵션은 급등포착 실제 신호 source가 준비될 때까지 안전하게 차단됩니다.
+          </div>
+          {run.tistoryReviewOutputs && Object.keys(run.tistoryReviewOutputs).length ? (
+            <div className="read-block">
+              <h3>카테고리별 생성 결과</h3>
+              {Object.values(run.tistoryReviewOutputs).map((output) => output ? (
+                <div className="notice success" key={output.mode}>
+                  <strong>{formatTistoryMode(output.mode)}</strong> / <Link href={output.previewUrl}>미리보기</Link> / <Link href={`/content/${output.contentItemId}`}>상세 화면</Link>
+                  <p className="muted">
+                    종목 {output.selectedStockCodes?.join(", ") || "-"} / ETF {output.selectedEtfCodes?.join(", ") || "-"}
+                  </p>
+                </div>
+              ) : null)}
+            </div>
+          ) : null}
+          {run.tistoryReviewContentItemId && !tistoryReview ? (
+            <div className="notice success">
+              <strong>티스토리 신호 리뷰가 이미 생성되어 있습니다.</strong>
+              <p>
+                mode {run.tistoryReviewMode ?? "-"} / preview {run.tistoryReviewExportUrl ?? "-"}
+              </p>
+              <div className="button-row">
+                <Link className="button" href={`/content/${run.tistoryReviewContentItemId}`}>
+                  상세 화면
+                </Link>
+                <Link className="button secondary" href={`/wizard/edit/${run.tistoryReviewContentItemId}`}>
+                  수정 마법사
+                </Link>
+                {run.tistoryReviewExportUrl ? (
+                  <Link className="button secondary" href={run.tistoryReviewExportUrl}>
+                    티스토리 HTML 미리보기
+                  </Link>
+                ) : null}
+              </div>
+            </div>
+          ) : null}
+          {tistoryReview ? (
+            <div className="notice success">
+              <strong>티스토리 신호 리뷰 생성 완료</strong>
+              <p>{tistoryReview.title}</p>
+              <p>
+                mode {formatTistoryMode(tistoryReview.selection.mode)} / 최근 신호 종목 {tistoryReview.selection.recentSignalStockCount}개 / visible text{" "}
+                {tistoryReview.visibleTextLength}자 / quality {tistoryReview.quality.grade} {tistoryReview.quality.scorePreview}점
+              </p>
+              <p>
+                선택 종목 {tistoryReview.selection.selectedStockCodes.join(", ") || "-"} / 선택 ETF{" "}
+                {tistoryReview.selection.selectedEtfCodes.join(", ") || "-"}
+              </p>
+              <p>
+                export assets {tistoryReview.tistoryExport.copiedAssetCount}/{tistoryReview.tistoryExport.assetCount} / side effects: Tistory API{" "}
+                {String(tistoryReview.sideEffectSummary.tistoryApiWrite)}, Blogger publish {String(tistoryReview.sideEffectSummary.bloggerPublish)}, LLM{" "}
+                {String(tistoryReview.sideEffectSummary.llmCall)}
+              </p>
+              <p>
+                project300 추천 카테고리: {tistoryReview.tistoryExport.project300CategoryLabel} / 태그{" "}
+                {tistoryReview.tistoryExport.project300Tags.join(", ")}
+              </p>
+              {tistoryReview.selection.warnings.length ? <p>Warnings: {tistoryReview.selection.warnings.join(", ")}</p> : null}
+              <div className="button-row">
+                <Link className="button" href={tistoryReview.links.tistoryPreview}>
+                  티스토리 HTML 미리보기
+                </Link>
+                <Link className="button secondary" href={tistoryReview.links.editWizard}>
+                  수정 마법사
+                </Link>
+                <Link className="button secondary" href={tistoryReview.links.contentDetail}>
+                  상세 화면
+                </Link>
+              </div>
+            </div>
+          ) : null}
+        </section>
+      ) : null}
     </>
   );
+}
+
+function formatTistoryMode(mode: TistorySignalReviewResponse["selection"]["mode"]) {
+  if (mode === "stock_signal_top3_review") {
+    return "최근 신호 TOP3 집중 리뷰";
+  }
+  if (mode === "mixed_stock_etf_review") {
+    return "종목 신호 + ETF 보강 리뷰";
+  }
+  if (mode === "futures_options_signal_record") {
+    return "선물·옵션 시그널 기록";
+  }
+  return "ETF/섹터 리뷰";
 }
 
 function StepCard({

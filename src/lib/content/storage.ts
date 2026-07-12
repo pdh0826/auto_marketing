@@ -1,4 +1,5 @@
 import { mkdir, readFile, unlink, writeFile } from "fs/promises";
+import { readFileSync } from "fs";
 import path from "path";
 import { randomUUID } from "crypto";
 import { IMAGE_MIME_TYPES, MAX_IMAGE_BYTES, MAX_VIDEO_BYTES, VIDEO_MIME_TYPES, type ContentAssetType } from "./asset-types";
@@ -64,6 +65,10 @@ export async function saveContentAssetFile(contentItemId: string, file: File) {
 
 export async function readContentAssetFile(storagePath: string) {
   return readFile(safeResolve(storagePath));
+}
+
+export function readContentAssetFileSync(storagePath: string) {
+  return readFileSync(safeResolve(storagePath));
 }
 
 export async function deleteContentAssetFile(storagePath: string) {

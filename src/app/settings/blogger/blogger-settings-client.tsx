@@ -8401,6 +8401,14 @@ export function BloggerSettingsClient() {
               <p className="muted">Authorization URL을 생성합니다. Callback에서는 token exchange를 수행하며, Blogger API는 read-only blog list 조회만 별도 버튼으로 수행합니다.</p>
             </div>
           </div>
+          <div className="notice warning">
+            <strong>Google OAuth redirect URI 등록값</strong>
+            <p>
+              Google Cloud Console의 OAuth client에 아래 Redirect URI를 그대로 등록해야 합니다. 현재 로컬 운영 포트는 3004이며, 포트가 다르면
+              redirect_uri_mismatch가 발생합니다.
+            </p>
+            <pre>{oauthDryRun.redirectUri}</pre>
+          </div>
           <div className="detail-grid">
             <DetailItem label="Dry Run" value={oauthDryRun.oauthDryRun ? "yes" : "no"} />
             <DetailItem label="Token Exchange" value={oauthDryRun.tokenExchangeImplemented ? "implemented" : "not implemented"} />
@@ -8412,6 +8420,10 @@ export function BloggerSettingsClient() {
             Authorization URL
             <textarea readOnly value={oauthDryRun.authorizationUrl} />
           </label>
+          <div className="notice">
+            Blogger 발행 이미지까지 검증하려면 별도로 Blogger가 접근 가능한 공개 asset base URL이 필요합니다. draft/publish 전 서버 환경에
+            BLOGGER_PUBLIC_ASSET_BASE_URL을 설정하고, localhost/127.0.0.1이 아닌 공개 URL을 사용하세요.
+          </div>
           <div className="notice">
             URL에는 OAuth state가 포함되지만 stateHash는 응답하지 않습니다. Callback은 authorization code를 token으로 교환하며 code/token 원문을 저장하거나 표시하지 않습니다.
           </div>

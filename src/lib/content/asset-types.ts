@@ -9,6 +9,7 @@ export interface ContentAssetAdmin {
   originalName: string;
   mimeType: string;
   fileSize: number;
+  storagePath: string;
   thumbnailPath: string | null;
   caption: string | null;
   altText: string | null;

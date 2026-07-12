@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { buildBloggerDraftApprovalSnapshotHashes, buildBloggerDraftApprovalSummary } from "@/lib/blogger/draft-approval";
 import { buildBloggerDraftPayloadPreview } from "@/lib/blogger/draft-payload-preview";
 import { BloggerDraftSaveError, saveBloggerDraftPost } from "@/lib/blogger/draft-save";
+import { buildBloggerPublishableHtml } from "@/lib/blogger/publishable-html";
 import { safeBloggerSecretError } from "@/lib/blogger/secrets";
 import type { ContentAssetAdmin } from "@/lib/content/asset-types";
 import type { ContentItemAdmin } from "@/lib/content/admin-types";
@@ -64,7 +65,7 @@ export async function POST(_request: Request, { params }: RouteContext) {
             draftSaveImplemented: true,
             publishImplemented: false,
             scheduledPublishImplemented: false,
-            tokenRefreshImplemented: false
+            tokenRefreshImplemented: true
           }
         },
         { status: 400 }
@@ -76,13 +77,23 @@ export async function POST(_request: Request, { params }: RouteContext) {
     if (!targetBlog?.id || !titleCandidate || !context.contentItem?.draftHtml?.trim()) {
       throw new BloggerDraftSaveGuardError("blogger_draft_payload_not_ready", "Blogger draft payload preview is not ready.");
     }
+    const publishableHtml = buildBloggerPublishableHtml(
+      context.contentItem.draftHtml,
+      context.contentItem.assets as unknown as ContentAssetAdmin[]
+    );
+    if (publishableHtml.summary.blockingIssues.length > 0) {
+      throw new BloggerDraftSaveGuardError(
+        publishableHtml.summary.blockingIssues[0] ?? "blogger_publishable_html_not_ready",
+        "Blogger publishable HTML is not ready. Configure a public asset base URL before saving a Blogger draft with local content assets."
+      );
+    }
 
     try {
       const result = await saveBloggerDraftPost({
         connectionId: context.bloggerConnection.id,
         targetBloggerBlogId: targetBlog.id,
         title: titleCandidate,
-        content: context.contentItem.draftHtml,
+        content: publishableHtml.html,
         labels: context.preview.labelsCandidate
       });
 
@@ -109,7 +120,7 @@ export async function POST(_request: Request, { params }: RouteContext) {
           draftSaveImplemented: true,
           publishImplemented: false,
           scheduledPublishImplemented: false,
-          tokenRefreshImplemented: false
+          tokenRefreshImplemented: true
         }
       });
     } catch (error) {
@@ -139,7 +150,7 @@ export async function POST(_request: Request, { params }: RouteContext) {
               draftSaveImplemented: true,
               publishImplemented: false,
               scheduledPublishImplemented: false,
-              tokenRefreshImplemented: false
+              tokenRefreshImplemented: true
             }
           },
           { status: error.httpStatus }
@@ -160,7 +171,7 @@ export async function POST(_request: Request, { params }: RouteContext) {
             draftSaveImplemented: true,
             publishImplemented: false,
             scheduledPublishImplemented: false,
-            tokenRefreshImplemented: false
+            tokenRefreshImplemented: true
           }
         },
         { status: error.httpStatus }

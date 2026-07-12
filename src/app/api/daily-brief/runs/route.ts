@@ -20,7 +20,7 @@ export async function POST(request: Request) {
     const title =
       typeof body.title === "string" && body.title.trim()
         ? body.title.trim().slice(0, 140)
-        : buildDailyBriefSeoTitle(stockPickLimit);
+        : buildDailyBriefSeoTitle(stockPickLimit, { marketDate });
     const run = await createDailyBriefRun({
       marketDate,
       targetKeyword,

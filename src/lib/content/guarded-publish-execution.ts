@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import type { GuardedPublishExecutionResponse } from "@/lib/blogger/admin-types";
 import { publishExistingBloggerPost } from "@/lib/blogger/publish-post";
 import { decryptBloggerSecret, isBloggerSecretEncryptionConfigured } from "@/lib/blogger/secrets";
+import { refreshBloggerAccessTokenForConnection } from "@/lib/blogger/token-refresh";
 import { buildOperationProfileAdvisorySummary } from "@/lib/blog-operation-profiles/operation-profile-advisory";
 import { buildPublishOAuthGate } from "@/lib/content/publish-oauth-gate";
 import { getEncryptedBloggerConnectionSecret, getBloggerConnectionSecretStatus } from "@/lib/db/blogger-connection-secrets";
@@ -62,11 +63,22 @@ export async function buildGuardedPublishExecutionResponse(
 
   const bloggerConnections = contentItem.blogId ? await listBloggerConnectionsForBlog(contentItem.blogId) : [];
   const bloggerConnection = bloggerConnections.length === 1 ? bloggerConnections[0] : null;
-  const [secretStatus, latestApprovalRaw, latestAttemptRaw] = await Promise.all([
+  let [secretStatus, latestApprovalRaw, latestAttemptRaw] = await Promise.all([
     bloggerConnection ? getBloggerConnectionSecretStatus(bloggerConnection.id) : Promise.resolve(null),
     findLatestBloggerPublishApprovalForContentItem(contentItem.id),
     findLatestBloggerPublishExecutionAttemptForContentItem(contentItem.id)
   ]);
+  const tokenRefreshSummary =
+    request.mode === "live" && bloggerConnection?.id && secretStatus?.accessTokenExpiresAt && new Date(secretStatus.accessTokenExpiresAt).getTime() <= Date.now()
+      ? await refreshBloggerAccessTokenForConnection({
+          connectionId: bloggerConnection.id,
+          reason: "guarded_publish_execution",
+          force: false
+        })
+      : null;
+  if (tokenRefreshSummary?.refreshOk && bloggerConnection?.id) {
+    secretStatus = await getBloggerConnectionSecretStatus(bloggerConnection.id);
+  }
   const latestApproval = latestApprovalRaw ? toBloggerPublishApprovalAdmin(latestApprovalRaw) : null;
   const latestAttempt = latestAttemptRaw ? toBloggerPublishExecutionAttemptAdmin(latestAttemptRaw) : null;
   const latestDraftSave = latestApproval ? await getSuccessfulBloggerDraftSaveByApproval(latestApproval.id) : null;
@@ -158,6 +170,9 @@ export async function buildGuardedPublishExecutionResponse(
   }
   if (!oauthGate.finalPublishExecutionPreflightSummary.finalPreflightReady && oauthGate.oauthGateSummary.accessTokenExpired) {
     warnings.add("oauth_reconnect_required_before_live_publish");
+  }
+  if (tokenRefreshSummary?.refreshOk) {
+    warnings.add("access_token_refreshed_before_live_publish");
   }
   warnings.add(CONTENT_MUTATION_DEFERRED_WARNING);
 
@@ -262,19 +277,19 @@ export async function buildGuardedPublishExecutionResponse(
     ],
     sideEffectSummary: {
       dbRead: true,
-      dbWrite: false,
+      dbWrite: Boolean(tokenRefreshSummary?.sideEffectSummary.dbWrite),
       bloggerRead: false,
       bloggerWrite: liveExecutionAttempted,
       bloggerPublish: liveExecutionAttempted,
       bloggerUpdate: false,
       bloggerDraftSave: false,
-      tokenRefresh: false,
+      tokenRefresh: Boolean(tokenRefreshSummary?.sideEffectSummary.googleTokenEndpointCall),
       oauthReconnect: false,
       contentMutation: false,
       approvalMutation: false,
       attemptMutation: false,
       llmCall: false,
-      externalSend: liveExecutionAttempted
+      externalSend: liveExecutionAttempted || Boolean(tokenRefreshSummary?.sideEffectSummary.googleTokenEndpointCall)
     }
   };
 
@@ -445,20 +460,50 @@ function hasLiveExpectedMetadata(request: ReturnType<typeof normalizeRequest>) {
 }
 
 async function getUsableAccessTokenForPublish(connectionId: string): Promise<{ ok: true; value: string } | { ok: false; errorCode: string; errorMessageRedacted: string }> {
-  const accessTokenSecret = await getEncryptedBloggerConnectionSecret(connectionId, "access_token");
+  let accessTokenSecret = await getEncryptedBloggerConnectionSecret(connectionId, "access_token");
   if (!accessTokenSecret) {
-    return {
-      ok: false,
-      errorCode: "access_token_missing",
-      errorMessageRedacted: "Blogger access token is missing. Reconnect OAuth before live publish."
-    };
+    const refresh = await refreshBloggerAccessTokenForConnection({
+      connectionId,
+      reason: "guarded_publish_execution",
+      force: false
+    });
+    if (!refresh.refreshOk) {
+      return {
+        ok: false,
+        errorCode: "access_token_refresh_blocked",
+        errorMessageRedacted: "Blogger access token is missing and refresh did not complete before live publish."
+      };
+    }
+    accessTokenSecret = await getEncryptedBloggerConnectionSecret(connectionId, "access_token");
+    if (!accessTokenSecret) {
+      return {
+        ok: false,
+        errorCode: "access_token_missing_after_refresh",
+        errorMessageRedacted: "Blogger access token is still missing after refresh."
+      };
+    }
   }
   if (accessTokenSecret.expiresAt && accessTokenSecret.expiresAt.getTime() <= Date.now()) {
-    return {
-      ok: false,
-      errorCode: "access_token_expired_reauth_required",
-      errorMessageRedacted: "Blogger access token is expired. Manual OAuth reconnect is required before live publish."
-    };
+    const refresh = await refreshBloggerAccessTokenForConnection({
+      connectionId,
+      reason: "guarded_publish_execution",
+      force: false
+    });
+    if (!refresh.refreshOk) {
+      return {
+        ok: false,
+        errorCode: "access_token_refresh_blocked",
+        errorMessageRedacted: "Blogger access token is expired and refresh did not complete before live publish."
+      };
+    }
+    accessTokenSecret = await getEncryptedBloggerConnectionSecret(connectionId, "access_token");
+    if (!accessTokenSecret || (accessTokenSecret.expiresAt && accessTokenSecret.expiresAt.getTime() <= Date.now())) {
+      return {
+        ok: false,
+        errorCode: "access_token_expired_after_refresh",
+        errorMessageRedacted: "Blogger access token is still expired after refresh."
+      };
+    }
   }
   if (!isBloggerSecretEncryptionConfigured()) {
     return {

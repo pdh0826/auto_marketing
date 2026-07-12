@@ -138,6 +138,97 @@ interface BloggerDraftSaveApiResult {
   tokenRefreshImplemented: false;
 }
 
+interface TistoryHtmlExportResult {
+  generatedAt: string;
+  contentItemId: string;
+  title: string | null;
+  status: string;
+  exportDir: string;
+  htmlPath: string;
+  inlineHtmlPath: string;
+  titlePath: string;
+  categoryPath: string;
+  tagsPath: string;
+  uploadChecklistPath: string;
+  manifestPath: string;
+  localPreviewPath: string;
+  localPreviewUrl: string;
+  assetCount: number;
+  copiedAssetCount: number;
+  htmlLength: number;
+  inlineHtmlLength: number;
+  project300: {
+    blogName: string;
+    blogUrl: string;
+    channelPurpose: string;
+    recommendedCategoryPath: string[];
+    recommendedCategoryLabel: string;
+    recommendedTags: string[];
+    menuSetupSteps: string[];
+    uploadChecklist: string[];
+    duplicateContentPolicy: string[];
+    tonePolicy: string[];
+    styleProfileVersion: string;
+    layoutTemplate: string[];
+    imageExplanationPolicy: string[];
+    reviewRewriteLoopPolicy: string[];
+    seoReviewChecklist: string[];
+    generationPrompt: string;
+  };
+  project300StyleReview: {
+    ok: boolean;
+    grade: "pass" | "warn" | "fail";
+    score: number;
+    voiceScore: number;
+    explanationScore: number;
+    seoScore: number;
+    safetyScore: number;
+    antiAiScore: number;
+    categoryKind: string;
+    markdownHash: string;
+    markdownLength: number;
+    headingCount: number;
+    imageCount: number;
+    linkCount: number;
+    warnings: string[];
+    blockers: string[];
+  };
+  sideEffectSummary: {
+    dbRead: true;
+    dbWrite: false;
+    localFileWrite: true;
+    tistoryApiWrite: false;
+    bloggerApiWrite: false;
+    publish: false;
+    tokenRefresh: false;
+    llmCall: false;
+    contentMutation: false;
+  };
+  manualSteps: string[];
+}
+
+interface InvestmentWritingReviewResult {
+  judgmentLedger: { userInputPresent: boolean };
+  review: {
+    ok: boolean;
+    grade: "pass" | "warn" | "fail";
+    score: number;
+    antiAiScore: number;
+    blockers: string[];
+    warnings: string[];
+  };
+  publishGate: { ready: boolean; blockers: string[] };
+  sideEffectSummary: {
+    dbRead: true;
+    dbWrite: false;
+    contentMutation: false;
+    llmCall: false;
+    bloggerWrite: false;
+    tistoryWrite: false;
+    publish: false;
+  };
+}
+
 interface ApiErrorWithData extends Error {
   data?: {
     draftSave?: BloggerDraftSaveAdmin | null;
@@ -288,6 +379,12 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
   const [seoEditorialPublishWorkflowResult, setSeoEditorialPublishWorkflowResult] = useState<SeoEditorialPublishWorkflowResponse | null>(null);
   const [bloggerDraftPreviewResult, setBloggerDraftPreviewResult] = useState<BloggerDraftPayloadPreview | null>(null);
   const [bloggerDraftSavePreflightResult, setBloggerDraftSavePreflightResult] = useState<BloggerDraftSavePreflight | null>(null);
+  const [tistoryHtmlExportResult, setTistoryHtmlExportResult] = useState<TistoryHtmlExportResult | null>(null);
+  const [investmentWritingReviewResult, setInvestmentWritingReviewResult] = useState<InvestmentWritingReviewResult | null>(null);
+  const [investmentFirstImpression, setInvestmentFirstImpression] = useState("");
+  const [investmentMainConcern, setInvestmentMainConcern] = useState("");
+  const [investmentRevisitConditions, setInvestmentRevisitConditions] = useState("");
+  const [investmentExclusionConditions, setInvestmentExclusionConditions] = useState("");
   const [stepwiseRuns, setStepwiseRuns] = useState<StepwiseDraftGenerationRunSummary[]>([]);
   const [selectedStepwiseRunId, setSelectedStepwiseRunId] = useState<string | null>(null);
   const [selectedStepwiseRun, setSelectedStepwiseRun] = useState<StepwiseDraftGenerationRunDetail | null>(null);
@@ -359,6 +456,8 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
   const [runningSeoEditorialPublishWorkflow, setRunningSeoEditorialPublishWorkflow] = useState(false);
   const [runningBloggerDraftPreview, setRunningBloggerDraftPreview] = useState(false);
   const [runningBloggerDraftSavePreflight, setRunningBloggerDraftSavePreflight] = useState(false);
+  const [exportingTistoryHtml, setExportingTistoryHtml] = useState(false);
+  const [runningInvestmentWritingReview, setRunningInvestmentWritingReview] = useState(false);
   const [approvingBloggerDraft, setApprovingBloggerDraft] = useState(false);
   const [revokingBloggerDraftApproval, setRevokingBloggerDraftApproval] = useState(false);
   const [savingBloggerDraft, setSavingBloggerDraft] = useState(false);
@@ -394,6 +493,8 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
   const [seoEditorialPublishWorkflowError, setSeoEditorialPublishWorkflowError] = useState<string | null>(null);
   const [bloggerDraftPreviewError, setBloggerDraftPreviewError] = useState<string | null>(null);
   const [bloggerDraftSavePreflightError, setBloggerDraftSavePreflightError] = useState<string | null>(null);
+  const [tistoryHtmlExportError, setTistoryHtmlExportError] = useState<string | null>(null);
+  const [investmentWritingReviewError, setInvestmentWritingReviewError] = useState<string | null>(null);
   const [bloggerDraftSaveError, setBloggerDraftSaveError] = useState<string | null>(null);
   const [stepwiseError, setStepwiseError] = useState<string | null>(null);
   const [stepwiseNotice, setStepwiseNotice] = useState<string | null>(null);
@@ -454,6 +555,7 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
   );
   const canRunBloggerDraftPreview = Boolean(!runningBloggerDraftPreview);
   const canRunBloggerDraftSavePreflight = Boolean(!runningBloggerDraftSavePreflight);
+  const canExportTistoryHtml = Boolean(contentItem?.draftHtml?.trim() && !exportingTistoryHtml);
   const canApproveBloggerDraftPayload = Boolean(
     bloggerDraftPreviewResult?.draftPayloadReady && bloggerDraftPreviewResult.approvalSummary.approvalStatus !== "approved" && !approvingBloggerDraft
   );
@@ -1605,6 +1707,48 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
       setSeoEditorialPublishWorkflowError(caught instanceof Error ? caught.message : "SEO editorial publish workflow readback에 실패했습니다.");
     } finally {
       setRunningSeoEditorialPublishWorkflow(false);
+    }
+  }
+
+  async function runTistoryHtmlExport() {
+    setNotice(null);
+    setTistoryHtmlExportError(null);
+    setExportingTistoryHtml(true);
+
+    try {
+      const result = await requestJson<ApiResult<TistoryHtmlExportResult>>(`/api/content-items/${contentItemId}/tistory-export`, {
+        method: "POST",
+        body: JSON.stringify({})
+      });
+      setTistoryHtmlExportResult(result.data);
+      setNotice("티스토리 HTML 패키지를 로컬에 저장했습니다. DB mutation, Tistory/Blogger API write, publish, token refresh, LLM 호출은 수행하지 않았습니다.");
+    } catch (caught) {
+      setTistoryHtmlExportError(caught instanceof Error ? caught.message : "티스토리 HTML export에 실패했습니다.");
+    } finally {
+      setExportingTistoryHtml(false);
+    }
+  }
+
+  async function runInvestmentWritingReview() {
+    setNotice(null);
+    setInvestmentWritingReviewError(null);
+    setRunningInvestmentWritingReview(true);
+    try {
+      const result = await requestJson<ApiResult<InvestmentWritingReviewResult>>(`/api/content-items/${contentItemId}/investment-writing-review`, {
+        method: "POST",
+        body: JSON.stringify({
+          firstImpression: investmentFirstImpression,
+          mainConcern: investmentMainConcern,
+          revisitConditions: investmentRevisitConditions,
+          exclusionConditions: investmentExclusionConditions
+        })
+      });
+      setInvestmentWritingReviewResult(result.data);
+      setNotice("사용자 판단 메모와 현재 초안을 preview-only로 검수했습니다. 글 저장, LLM 호출, Blogger/Tistory 발행은 수행하지 않았습니다.");
+    } catch (caught) {
+      setInvestmentWritingReviewError(caught instanceof Error ? caught.message : "투자 글 검수에 실패했습니다.");
+    } finally {
+      setRunningInvestmentWritingReview(false);
     }
   }
 
@@ -4516,6 +4660,30 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
                   <DetailItem label="Current draftHtml Hash" value={bloggerDraftSavePreflightResult.approvalSnapshotStatus.currentDraftHtmlHashPrefix ?? "-"} />
                   <DetailItem label="Payload Ready" value={bloggerDraftSavePreflightResult.draftPayloadPreviewSummary.draftPayloadReady ? "yes" : "no"} />
                   <DetailItem label="Title Candidate" value={bloggerDraftSavePreflightResult.draftPayloadPreviewSummary.titleCandidate ?? "-"} />
+                  <DetailItem
+                    label="Public Asset Base URL"
+                    value={bloggerDraftSavePreflightResult.draftPayloadPreviewSummary.bloggerPublishableHtmlSummary.publicAssetBaseUrl ?? "not configured"}
+                  />
+                  <DetailItem
+                    label="Public Asset URL Usable"
+                    value={bloggerDraftSavePreflightResult.draftPayloadPreviewSummary.bloggerPublishableHtmlSummary.publicAssetBaseUrlUsableForBlogger ? "yes" : "no"}
+                  />
+                  <DetailItem
+                    label="Local Asset URLs"
+                    value={String(bloggerDraftSavePreflightResult.draftPayloadPreviewSummary.bloggerPublishableHtmlSummary.localAssetUrlCount)}
+                  />
+                  <DetailItem
+                    label="Converted Asset URLs"
+                    value={String(bloggerDraftSavePreflightResult.draftPayloadPreviewSummary.bloggerPublishableHtmlSummary.convertedAssetUrlCount)}
+                  />
+                  <DetailItem
+                    label="Unresolved Local Asset URLs"
+                    value={String(bloggerDraftSavePreflightResult.draftPayloadPreviewSummary.bloggerPublishableHtmlSummary.unresolvedLocalAssetUrlCount)}
+                  />
+                  <DetailItem
+                    label="First Image Thumbnail"
+                    value={bloggerDraftSavePreflightResult.draftPayloadPreviewSummary.bloggerPublishableHtmlSummary.firstImageLooksLikeThumbnail ? "yes" : "no"}
+                  />
                   <DetailItem label="Draft Not Saved Yet" value={bloggerDraftSavePreflightResult.draftSavePreflightSummary.draftNotSavedYetExpected ? "expected" : "no"} />
                   <DetailItem
                     label="Successful Save For Approval"
@@ -4539,6 +4707,19 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
                         Blogger 설정에서 OAuth 재연결 확인
                       </Link>
                     </div>
+                  </div>
+                ) : null}
+                {bloggerDraftSavePreflightResult.draftPayloadPreviewSummary.bloggerPublishableHtmlSummary.blockingIssues.length > 0 ? (
+                  <div className="notice warning">
+                    <strong>Blogger image URL readiness 필요</strong>
+                    <p>
+                      현재 draftHtml 안의 content asset 이미지가 로컬 URL이면 Blogger가 썸네일/스크린샷을 가져갈 수 없습니다. 서버 환경에
+                      BLOGGER_PUBLIC_ASSET_BASE_URL을 공개 접근 가능한 origin으로 설정한 뒤 preflight를 다시 실행하세요.
+                    </p>
+                    <p>
+                      localhost, 127.0.0.1, .local 주소는 Blogger publishable URL로 인정하지 않습니다. 이 blocker는 깨진 이미지가 포함된 Blogger draft 생성을 막기
+                      위한 안전장치입니다.
+                    </p>
                   </div>
                 ) : null}
                 {bloggerDraftSavePreflightResult.draftSavePreflightSummary.draftNotSavedYetExpected ? (
@@ -4615,11 +4796,30 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
                   <DetailItem label="Quality Grade" value={bloggerDraftPreviewResult.htmlSafetySummary.qualityGrade} />
                   <DetailItem label="Quality Score Preview" value={String(bloggerDraftPreviewResult.htmlSafetySummary.qualityScorePreview)} />
                   <DetailItem label="Quality Required Fails" value={String(bloggerDraftPreviewResult.htmlSafetySummary.qualityRequiredFailCount)} />
+                  <DetailItem label="Public Asset Base URL" value={bloggerDraftPreviewResult.bloggerPublishableHtmlSummary.publicAssetBaseUrl ?? "not configured"} />
+                  <DetailItem
+                    label="Public Asset URL Usable"
+                    value={bloggerDraftPreviewResult.bloggerPublishableHtmlSummary.publicAssetBaseUrlUsableForBlogger ? "yes" : "no"}
+                  />
+                  <DetailItem label="Local Asset URLs" value={String(bloggerDraftPreviewResult.bloggerPublishableHtmlSummary.localAssetUrlCount)} />
+                  <DetailItem label="Converted Asset URLs" value={String(bloggerDraftPreviewResult.bloggerPublishableHtmlSummary.convertedAssetUrlCount)} />
+                  <DetailItem label="Unresolved Local Asset URLs" value={String(bloggerDraftPreviewResult.bloggerPublishableHtmlSummary.unresolvedLocalAssetUrlCount)} />
+                  <DetailItem label="First Image Asset" value={bloggerDraftPreviewResult.bloggerPublishableHtmlSummary.firstImageAssetId ?? "-"} />
+                  <DetailItem label="First Image Thumbnail" value={bloggerDraftPreviewResult.bloggerPublishableHtmlSummary.firstImageLooksLikeThumbnail ? "yes" : "no"} />
                   <DetailItem label="Blogger API Write" value={bloggerDraftPreviewResult.bloggerApiWriteImplemented ? "implemented" : "not implemented"} />
                   <DetailItem label="Blogger API Read" value={bloggerDraftPreviewResult.bloggerApiReadImplemented ? "implemented" : "not implemented"} />
                   <DetailItem label="Draft Save" value={bloggerDraftPreviewResult.draftSaveImplemented ? "implemented" : "not implemented"} />
                   <DetailItem label="Publish" value={bloggerDraftPreviewResult.publishImplemented ? "implemented" : "not implemented"} />
                 </div>
+                {bloggerDraftPreviewResult.bloggerPublishableHtmlSummary.blockingIssues.length > 0 ? (
+                  <div className="notice warning">
+                    <strong>Blogger publishable image URL blocker</strong>
+                    <p>
+                      썸네일/스크린샷 asset URL이 Blogger에서 접근 가능한 공개 URL로 변환되지 않았습니다. BLOGGER_PUBLIC_ASSET_BASE_URL 설정 후 이 preview를 다시
+                      실행해야 manual approval을 생성할 수 있습니다.
+                    </p>
+                  </div>
+                ) : null}
                 <div className={bloggerDraftPreviewResult.draftSaveSummary.draftSaved ? "notice" : "notice warning"}>
                   <strong>Blogger Draft Save</strong>
                   <p>
@@ -5615,6 +5815,147 @@ export function ContentDetailClient({ contentItemId }: ContentDetailClientProps)
                 <div className="notice">draftHtml에 반영해도 Blogger 발행, Blogger draft 저장, LLM 호출, llm_call_logs 생성은 수행하지 않습니다.</div>
               </>
             ) : null}
+          </section>
+
+          <section className="admin-section">
+            <div className="section-heading">
+              <div>
+                <h2>Project300 투자 글 판단 메모 및 AI 흔적 검수</h2>
+                <p className="muted">실제 판단과 다음 행동 조건을 입력한 뒤 현재 초안의 반복 문장, 내부 작업 문구, 근거 없는 1인칭을 검사합니다. 이 단계는 preview-only입니다.</p>
+              </div>
+              <button className="button secondary" type="button" disabled={runningInvestmentWritingReview || !contentItem.draftMarkdown} onClick={() => void runInvestmentWritingReview()}>
+                {runningInvestmentWritingReview ? "검수 중" : "판단 메모로 검수"}
+              </button>
+            </div>
+            <div className="form-grid two-column">
+              <label className="form-field">
+                <span>오늘 화면을 보고 처음 든 생각</span>
+                <textarea value={investmentFirstImpression} onChange={(event) => setInvestmentFirstImpression(event.target.value)} rows={3} placeholder="예: 금융주가 한꺼번에 올라왔는데 둘 다 볼 필요는 없어 보입니다." />
+              </label>
+              <label className="form-field">
+                <span>가장 걸리는 점</span>
+                <textarea value={investmentMainConcern} onChange={(event) => setInvestmentMainConcern(event.target.value)} rows={3} placeholder="예: 다음 거래일 갭이 크게 뜨면 따라가지 않을 생각입니다." />
+              </label>
+              <label className="form-field">
+                <span>다시 볼 조건 (한 줄에 하나)</span>
+                <textarea value={investmentRevisitConditions} onChange={(event) => setInvestmentRevisitConditions(event.target.value)} rows={3} />
+              </label>
+              <label className="form-field">
+                <span>제외할 조건 (한 줄에 하나)</span>
+                <textarea value={investmentExclusionConditions} onChange={(event) => setInvestmentExclusionConditions(event.target.value)} rows={3} />
+              </label>
+            </div>
+            <div className="notice">입력 내용은 이 검수 호출에서만 사용하며 자동 저장하지 않습니다. 실제 경험·판단만 입력하고, 없는 매매 행동은 만들지 마세요.</div>
+            {investmentWritingReviewError ? <div className="notice error">{investmentWritingReviewError}</div> : null}
+            {investmentWritingReviewResult ? (
+              <div className="read-block">
+                <div className={investmentWritingReviewResult.publishGate.ready ? "notice success" : "notice error"}>
+                  <strong>Investment Writing Gate</strong>: {investmentWritingReviewResult.publishGate.ready ? "ready" : "blocked"} / Style {investmentWritingReviewResult.review.score} / Anti-AI {investmentWritingReviewResult.review.antiAiScore}
+                </div>
+                <ValidationList title="발행 차단 항목" items={investmentWritingReviewResult.publishGate.blockers} emptyText="발행 차단 항목이 없습니다." />
+                <ValidationList title="말투·반복 검수 경고" items={investmentWritingReviewResult.review.warnings} emptyText="말투·반복 경고가 없습니다." />
+                <div className="detail-grid">
+                  <DetailItem label="User Judgment" value={String(investmentWritingReviewResult.judgmentLedger.userInputPresent)} />
+                  <DetailItem label="DB Write" value={String(investmentWritingReviewResult.sideEffectSummary.dbWrite)} />
+                  <DetailItem label="LLM Call" value={String(investmentWritingReviewResult.sideEffectSummary.llmCall)} />
+                  <DetailItem label="Publish" value={String(investmentWritingReviewResult.sideEffectSummary.publish)} />
+                </div>
+              </div>
+            ) : null}
+          </section>
+
+          <section className="admin-section">
+            <div className="section-heading">
+              <div>
+                <h2>Tistory HTML Export</h2>
+                <p className="muted">
+                  저장된 draftHtml과 첨부 이미지를 티스토리 에디터에 붙여넣기 좋은 로컬 HTML 패키지로 저장합니다. 티스토리 API 발행은 수행하지 않습니다.
+                </p>
+              </div>
+              <button className="button secondary" type="button" disabled={!canExportTistoryHtml} onClick={() => void runTistoryHtmlExport()}>
+                {exportingTistoryHtml ? "티스토리 HTML 저장 중" : "티스토리 HTML 저장"}
+              </button>
+            </div>
+
+            {!contentItem.draftHtml ? <div className="notice error">저장된 draftHtml이 없습니다. 먼저 HTML 후보를 draftHtml에 반영하세요.</div> : null}
+            {tistoryHtmlExportError ? <div className="notice error">{tistoryHtmlExportError}</div> : null}
+            <div className="notice">
+              이 기능은 티스토리 로그인이나 외부 발행을 자동화하지 않습니다. `post.html`은 이미지 파일을 함께 복사한 패키지용이고, `post-inline.html`은 이미지 data URL을 포함한
+              붙여넣기 실험용입니다. 최종 저장/발행은 티스토리 편집기에서 직접 확인하세요.
+            </div>
+
+            {tistoryHtmlExportResult ? (
+              <div className="read-block">
+                <h3>Tistory Export Result</h3>
+                <div className="detail-grid">
+                  <DetailItem label="Generated At" value={formatDate(tistoryHtmlExportResult.generatedAt)} />
+                  <DetailItem label="Title" value={tistoryHtmlExportResult.title ?? "-"} />
+                  <DetailItem label="Export Dir" value={tistoryHtmlExportResult.exportDir} />
+                  <DetailItem label="post.html" value={tistoryHtmlExportResult.htmlPath} />
+                  <DetailItem label="post-inline.html" value={tistoryHtmlExportResult.inlineHtmlPath} />
+                  <DetailItem label="project300-category.txt" value={tistoryHtmlExportResult.categoryPath} />
+                  <DetailItem label="project300-tags.txt" value={tistoryHtmlExportResult.tagsPath} />
+                  <DetailItem label="project300-upload-checklist.md" value={tistoryHtmlExportResult.uploadChecklistPath} />
+                  <DetailItem label="manifest.json" value={tistoryHtmlExportResult.manifestPath} />
+                  <DetailItem label="Assets" value={`${tistoryHtmlExportResult.copiedAssetCount}/${tistoryHtmlExportResult.assetCount}`} />
+                  <DetailItem label="HTML Length" value={String(tistoryHtmlExportResult.htmlLength)} />
+                  <DetailItem label="Inline HTML Length" value={String(tistoryHtmlExportResult.inlineHtmlLength)} />
+                </div>
+                <div className="notice">
+                  <strong>{tistoryHtmlExportResult.project300.blogName}</strong> 업로드 권장값: {tistoryHtmlExportResult.project300.recommendedCategoryLabel} / 태그{" "}
+                  {tistoryHtmlExportResult.project300.recommendedTags.join(", ")}
+                </div>
+                <div className={tistoryHtmlExportResult.project300StyleReview.ok ? "notice success" : "notice error"}>
+                  <strong>Project300 Style/SEO Review</strong>: {tistoryHtmlExportResult.project300StyleReview.grade} / {tistoryHtmlExportResult.project300StyleReview.score}점
+                  <br />
+                  GPT CLI 최종 재작성 루프는 `/api/content-items/{contentItemId}/project300-style-rewrite-preview`에서 preview-only 기본값으로 확인하고, feature flag와 확인 문구가 있을 때만 실행합니다.
+                </div>
+                <div className="detail-grid">
+                  <DetailItem label="Voice Score" value={String(tistoryHtmlExportResult.project300StyleReview.voiceScore)} />
+                  <DetailItem label="Explanation Score" value={String(tistoryHtmlExportResult.project300StyleReview.explanationScore)} />
+                  <DetailItem label="SEO Score" value={String(tistoryHtmlExportResult.project300StyleReview.seoScore)} />
+                  <DetailItem label="Safety Score" value={String(tistoryHtmlExportResult.project300StyleReview.safetyScore)} />
+                  <DetailItem label="Anti-AI Score" value={String(tistoryHtmlExportResult.project300StyleReview.antiAiScore)} />
+                  <DetailItem label="Category Kind" value={tistoryHtmlExportResult.project300StyleReview.categoryKind} />
+                  <DetailItem label="Markdown Hash" value={tistoryHtmlExportResult.project300StyleReview.markdownHash.slice(0, 12)} />
+                  <DetailItem label="Markdown Length" value={String(tistoryHtmlExportResult.project300StyleReview.markdownLength)} />
+                  <DetailItem label="Images / Links" value={`${tistoryHtmlExportResult.project300StyleReview.imageCount} / ${tistoryHtmlExportResult.project300StyleReview.linkCount}`} />
+                </div>
+                <ValidationList title="Project300 Style Review Warnings" items={tistoryHtmlExportResult.project300StyleReview.warnings} emptyText="스타일/SEO 검수 경고가 없습니다." />
+                <ValidationList title="Investment Writing Blockers" items={tistoryHtmlExportResult.project300StyleReview.blockers} emptyText="사실 출처, 반복, 내부 메모, 근거 없는 1인칭 차단 항목이 없습니다." />
+                <div className="form-actions">
+                  <Link className="button secondary" href={tistoryHtmlExportResult.localPreviewUrl} target="_blank">
+                    티스토리 HTML 미리보기 열기
+                  </Link>
+                  <button className="button secondary" type="button" disabled>
+                    티스토리 API 발행 없음
+                  </button>
+                </div>
+                <div className="detail-grid">
+                  <DetailItem label="DB Write" value={String(tistoryHtmlExportResult.sideEffectSummary.dbWrite)} />
+                  <DetailItem label="Local File Write" value={String(tistoryHtmlExportResult.sideEffectSummary.localFileWrite)} />
+                  <DetailItem label="Tistory API Write" value={String(tistoryHtmlExportResult.sideEffectSummary.tistoryApiWrite)} />
+                  <DetailItem label="Blogger API Write" value={String(tistoryHtmlExportResult.sideEffectSummary.bloggerApiWrite)} />
+                  <DetailItem label="Publish" value={String(tistoryHtmlExportResult.sideEffectSummary.publish)} />
+                  <DetailItem label="Token Refresh" value={String(tistoryHtmlExportResult.sideEffectSummary.tokenRefresh)} />
+                  <DetailItem label="LLM Call" value={String(tistoryHtmlExportResult.sideEffectSummary.llmCall)} />
+                  <DetailItem label="Content Mutation" value={String(tistoryHtmlExportResult.sideEffectSummary.contentMutation)} />
+                </div>
+                <ValidationList title="Manual Tistory Steps" items={tistoryHtmlExportResult.manualSteps} emptyText="수동 단계가 없습니다." />
+                <ValidationList title="project300 Menu Setup" items={tistoryHtmlExportResult.project300.menuSetupSteps} emptyText="메뉴 설정 안내가 없습니다." />
+                <ValidationList title="Duplicate Content Policy" items={tistoryHtmlExportResult.project300.duplicateContentPolicy} emptyText="중복 콘텐츠 정책이 없습니다." />
+                <ValidationList title="Tone Policy" items={tistoryHtmlExportResult.project300.tonePolicy} emptyText="톤 정책이 없습니다." />
+                <ValidationList title="project300 Layout Template" items={tistoryHtmlExportResult.project300.layoutTemplate} emptyText="레이아웃 템플릿이 없습니다." />
+                <ValidationList title="Image + Chart Explanation Policy" items={tistoryHtmlExportResult.project300.imageExplanationPolicy} emptyText="이미지 설명 정책이 없습니다." />
+                <ValidationList title="GPT CLI Review → Rewrite → Re-review Policy" items={tistoryHtmlExportResult.project300.reviewRewriteLoopPolicy} emptyText="재검수 루프 정책이 없습니다." />
+                <ValidationList title="project300 Style + SEO Checklist" items={tistoryHtmlExportResult.project300.seoReviewChecklist} emptyText="SEO 체크리스트가 없습니다." />
+                <div className="notice">
+                  <strong>Style Profile</strong>: {tistoryHtmlExportResult.project300.styleProfileVersion}
+                </div>
+              </div>
+            ) : (
+              <div className="notice">저장된 draftHtml이 있으면 티스토리 HTML 패키지를 로컬에 생성할 수 있습니다.</div>
+            )}
           </section>
 
           <section className="admin-section">
@@ -6697,6 +7038,20 @@ function BloggerDraftSaveReadinessChecklist({
         : "Blogger Draft Payload Preview를 실행해 payload 후보를 확인하세요."
     },
     {
+      key: "public-assets",
+      label: "Blogger image URLs are public",
+      status:
+        result.draftPayloadPreviewSummary.bloggerPublishableHtmlSummary.unresolvedLocalAssetUrlCount === 0 &&
+        result.draftPayloadPreviewSummary.bloggerPublishableHtmlSummary.blockingIssues.length === 0
+          ? "pass"
+          : "fail",
+      message:
+        result.draftPayloadPreviewSummary.bloggerPublishableHtmlSummary.unresolvedLocalAssetUrlCount === 0 &&
+        result.draftPayloadPreviewSummary.bloggerPublishableHtmlSummary.blockingIssues.length === 0
+          ? "Blogger가 접근 가능한 이미지 URL로 변환 가능한 상태입니다."
+          : "Blogger가 썸네일/스크린샷을 읽을 수 있도록 공개 asset base URL을 설정하세요."
+    },
+    {
       key: "manual-approval",
       label: "Manual approval snapshot matches current draftHtml",
       status: result.approvalSnapshotStatus.status === "approved" && result.approvalSnapshotStatus.approvalMatchesCurrentPreview ? "pass" : "fail",
@@ -6983,6 +7338,22 @@ function getBloggerDraftSaveActionItem(reason: string) {
       reason,
       label: "Draft payload preview",
       action: "Draft Payload Preview를 다시 실행하고 blocking issue를 해결하세요."
+    };
+  }
+  if (reason === "blogger_public_asset_base_url_required") {
+    return {
+      reason,
+      label: "Public asset base URL",
+      action:
+        "Blogger가 썸네일/스크린샷 이미지를 가져갈 수 있도록 서버 환경에 BLOGGER_PUBLIC_ASSET_BASE_URL을 공개 origin으로 설정하세요. localhost/127.0.0.1은 사용할 수 없습니다."
+    };
+  }
+  if (reason === "blogger_local_asset_urls_unresolved") {
+    return {
+      reason,
+      label: "Local image URLs unresolved",
+      action:
+        "draftHtml 안의 /api/content-assets/.../file 이미지가 Blogger용 공개 URL로 변환되지 않았습니다. 공개 asset base URL 설정 후 Draft Payload Preview와 Preflight를 다시 실행하세요."
     };
   }
   if (reason === "blogger_draft_already_saved_for_approval") {

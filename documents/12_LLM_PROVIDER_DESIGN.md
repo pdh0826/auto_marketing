@@ -1322,3 +1322,32 @@ Patch 9F-3R-FIX3 is a local read-only diagnosis.
 - It does not create `llm_call_logs`.
 - It does not mutate `content_items`, Blogger connections, or dispatch audit tables.
 - It does not return full saved Markdown/HTML bodies.
+
+## Project300 GPT CLI Style Rewrite Route
+
+Patch 9G adds `gpt_cli` as a distinct `LlmProviderType`.
+
+- `gpt_cli` uses `invocationMode=cli` and `apiFormat=custom_cli`.
+- It is intended for final Project300 style/SEO review rewriting, not for normal Daily Brief generation.
+- The primary task route is `style_rewrite`.
+- `POST /api/content-items/[id]/project300-style-rewrite-preview` is preview-only by default.
+- Live GPT CLI execution requires `PROJECT300_GPT_CLI_STYLE_REWRITE_ENABLED=true` and confirmation phrase `PROJECT300 GPT CLI REWRITE`.
+- Safe logging policy:
+  - Store `phase`, `purpose`, `iteration`, `promptHash`, `promptLength`, `responseHash`, `responseLength`, and scores.
+  - Do not store prompt text, raw response text, candidate Markdown, secrets, tokens, or full draft bodies.
+- Content mutation remains a separate explicit apply step. GPT CLI rewrite preview does not update `content_items`.
+# Investment Writing Independent Review Policy
+
+- 투자 글은 자료 분석, 구조 설계, 문단 작성, 리듬 편집, 독립 검수를 한 번의 호출로 합치지 않는다.
+- 독립 재작성은 새로운 FACT/SYSTEM/JUDGMENT/ACTION을 만들 수 없다.
+- 재작성 후보는 score뿐 아니라 safetyScore, antiAiScore, blocker count가 악화되지 않을 때만 채택한다.
+- prompt/raw response/full candidate는 safe metadata에 저장하지 않고 길이, hash, 점수, blocker count만 기록한다.
+- GPT CLI 검수는 preview-only 기본값을 유지하며 feature flag와 확인 문구가 있는 경우에만 실행한다.
+
+## Multi-channel investment writing targets
+
+- The common evidence/preflight/outline/generate/review/repair/re-review gate registers five Blogger editorial targets and four Tistory targets.
+- Blogger stock review is wired to the existing Daily Brief generator.
+- Blogger ETF review is source-ready but not yet wired to generation or scheduling.
+- Blogger morning, intraday, and close market-signal reviews stay source-blocked until verified market/futures signal data is available.
+- Registering a target does not call an LLM, create a content item, alter a schedule, or publish externally.

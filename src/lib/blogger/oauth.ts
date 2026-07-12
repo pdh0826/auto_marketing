@@ -4,7 +4,7 @@ import { createBloggerOAuthState, consumeBloggerOAuthState, findBloggerOAuthStat
 
 const GOOGLE_OAUTH_AUTHORIZE_URL = "https://accounts.google.com/o/oauth2/v2/auth";
 const DEFAULT_BLOGGER_SCOPE = "https://www.googleapis.com/auth/blogger";
-const DEFAULT_LOCAL_BLOGGER_OAUTH_REDIRECT_ORIGIN = "http://localhost:3013";
+const DEFAULT_LOCAL_BLOGGER_OAUTH_REDIRECT_ORIGIN = "http://localhost:3004";
 const BLOGGER_OAUTH_REDIRECT_ORIGIN_ENV = "BLOGGER_OAUTH_REDIRECT_ORIGIN";
 const STATE_TTL_MINUTES = 10;
 

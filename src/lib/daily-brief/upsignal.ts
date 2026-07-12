@@ -43,6 +43,7 @@ export function parseKrStockPicks(html: string, limit: number): DailyBriefStockP
       entryPrice: numbers[2] ?? null,
       targetPrice: numbers[3] ?? null,
       stopLoss: null,
+      recentSignalDate: null,
       trendScore: numbers[numbers.length - 2] ?? null,
       totalScore: score,
       detailUrl: absoluteUrl(match[1]),
@@ -114,6 +115,7 @@ function parseEmbeddedKrStockPicks(html: string, limit: number): DailyBriefStock
         entryPrice: formatNumber(planNumberField(item, "entry")),
         targetPrice: formatNumber(planNumberField(item, "target") ?? numberField(item, "target_price")),
         stopLoss: formatNumber(planNumberField(item, "stop")),
+        recentSignalDate: field(item, "latest_signal_date"),
         trendScore: formatScore(numberField(item, "market_attention_score")),
         totalScore: formatScore(numberField(item, "total_score")),
         detailUrl: `${UPSIGNAL_ORIGIN}/kr/stocks/${code}?tab=chart&horizon=swing`,
@@ -131,7 +133,7 @@ function parseEmbeddedEtfPicks(html: string, limit: number): DailyBriefEtfPick[]
       const code = field(item, "symbol") ?? "";
       return {
         rank: index + 1,
-        name: field(item, "name") ?? code,
+        name: cleanEtfName(field(item, "name") ?? code),
         code,
         category: field(item, "category") ?? field(item, "group_label"),
         statusLabel: field(item, "recommendation_state") ?? field(item, "action_badge"),
@@ -214,7 +216,10 @@ function cleanEtfName(value: string) {
   for (const badge of noisyBadges) {
     next = next.replace(new RegExp(`\\s*${escapeRegExp(badge)}\\s*`, "g"), " ");
   }
-  return next.replace(/\s+/g, " ").trim();
+  next = next.replace(/\s+/g, " ").trim();
+  next = next.replace(/\(H\s+미국\s*기술주$/i, "(H)");
+  next = next.replace(/\s+미국\s*기술주$/i, "");
+  return next.trim();
 }
 
 async function fetchText(url: string) {

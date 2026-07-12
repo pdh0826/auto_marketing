@@ -1,7 +1,8 @@
 import { createDailyBriefCapture } from "@/lib/daily-brief/capture";
 import { buildDailyBriefGenerationReadiness, createDailyBriefContentItem } from "@/lib/daily-brief/content";
-import { collectDailyBriefResearch } from "@/lib/daily-brief/research";
-import { getDailyBriefRun, saveDailyBriefRun } from "@/lib/daily-brief/store";
+import { collectDailyBriefPrewriteContext } from "@/lib/daily-brief/prewrite-context";
+import { collectDailyBriefOfficialDisclosures, collectDailyBriefResearch } from "@/lib/daily-brief/research";
+import { buildDailyBriefSeoTitle, getDailyBriefRun, isGenericDailyBriefSeoTitle, saveDailyBriefRun } from "@/lib/daily-brief/store";
 import type { DailyBriefCapture } from "@/lib/daily-brief/types";
 import { fetchEtfPicks, fetchKrStockPicks } from "@/lib/daily-brief/upsignal";
 
@@ -15,22 +16,32 @@ export async function runDailyBriefRunAll(runId: string) {
   }
 
   const stockPicks = await fetchKrStockPicks(run.stockPickLimit);
-  const krCapture = await createDailyBriefCapture({
-    runId: run.id,
+  const seoTitle = buildDailyBriefSeoTitle(run.stockPickLimit, {
     marketDate: run.marketDate,
+    stockPicks
+  });
+  const runWithSeoTitle = isGenericDailyBriefSeoTitle(run.title, run.stockPickLimit)
+    ? await saveDailyBriefRun({
+        ...run,
+        title: seoTitle
+      })
+    : run;
+  const krCapture = await createDailyBriefCapture({
+    runId: runWithSeoTitle.id,
+    marketDate: runWithSeoTitle.marketDate,
     kind: "kr_board",
-    label: `${run.marketDate} 한국장 시그널보드`,
-    sourceUrl: run.krBoardUrl,
+    label: `${runWithSeoTitle.marketDate} 한국장 시그널보드`,
+    sourceUrl: runWithSeoTitle.krBoardUrl,
     fileName: "kr-signal-board.png",
     target: "kr_signal_board"
   });
 
   const stockCaptures: DailyBriefCapture[] = [];
   const updatedPicks = [...stockPicks];
-  for (const pick of updatedPicks.slice(0, run.stockDetailLimit)) {
+  for (const pick of updatedPicks.slice(0, runWithSeoTitle.stockDetailLimit)) {
     const capture = await createDailyBriefCapture({
-      runId: run.id,
-      marketDate: run.marketDate,
+      runId: runWithSeoTitle.id,
+      marketDate: runWithSeoTitle.marketDate,
       kind: "stock_chart",
       label: `${pick.name} 신호차트`,
       sourceUrl: pick.detailUrl,
@@ -41,24 +52,35 @@ export async function runDailyBriefRunAll(runId: string) {
     stockCaptures.push(capture);
   }
 
-  const etfPicks = run.includeEtfs ? await fetchEtfPicks(run.etfPickLimit) : [];
+  const etfPicks = runWithSeoTitle.includeEtfs ? await fetchEtfPicks(runWithSeoTitle.etfPickLimit) : [];
   const etfCapture = await createDailyBriefCapture({
-    runId: run.id,
-    marketDate: run.marketDate,
+    runId: runWithSeoTitle.id,
+    marketDate: runWithSeoTitle.marketDate,
     kind: "etf_board",
-    label: `${run.marketDate} ETF 시그널보드`,
-    sourceUrl: run.etfBoardUrl,
+    label: `${runWithSeoTitle.marketDate} ETF 시그널보드`,
+    sourceUrl: runWithSeoTitle.etfBoardUrl,
     fileName: "etf-signal-board.png",
     target: "etf_signal_board"
   });
-  const researchItems = await collectDailyBriefResearch(updatedPicks.slice(0, run.stockDetailLimit));
+  const targetPicks = updatedPicks.slice(0, runWithSeoTitle.stockDetailLimit);
+  const [researchItems, officialDisclosureItems, prewriteContextItems] = await Promise.all([
+    collectDailyBriefResearch(targetPicks),
+    collectDailyBriefOfficialDisclosures(targetPicks, runWithSeoTitle.marketDate),
+    collectDailyBriefPrewriteContext({
+      marketDate: runWithSeoTitle.marketDate,
+      stockPicks: targetPicks,
+      etfPicks
+    })
+  ]);
   const captures = [krCapture, ...stockCaptures, etfCapture];
   const prepared = await saveDailyBriefRun({
-    ...run,
+    ...runWithSeoTitle,
     status: "researched",
     stockPicks: updatedPicks,
     etfPicks,
     researchItems,
+    officialDisclosureItems,
+    prewriteContextItems,
     captures,
     warnings: Array.from(new Set([...run.warnings, ...captures.flatMap((capture) => (capture.warning ? [capture.warning] : []))])),
     sideEffectSummary: {

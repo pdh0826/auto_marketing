@@ -5,7 +5,8 @@ export const LLM_PROVIDER_TYPES: Array<{ value: LlmProviderType; label: string }
   { value: "local", label: "Local LLM" },
   { value: "external_http", label: "External HTTP" },
   { value: "local_http", label: "Local HTTP" },
-  { value: "cli", label: "CLI" }
+  { value: "cli", label: "CLI" },
+  { value: "gpt_cli", label: "GPT CLI" }
 ];
 
 export const LLM_INVOCATION_MODES: Array<{ value: LlmInvocationMode; label: string }> = [

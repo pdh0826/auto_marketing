@@ -14,7 +14,7 @@ interface SchedulerStatus {
     stockDetailLimit: number;
     etfPickLimit: number;
     includeEtfs: boolean;
-    mode: "content_only";
+    mode: "content_only" | "draft_save_only" | "publish_live_guarded";
   };
   state: {
     running: boolean;
@@ -28,15 +28,25 @@ interface SchedulerStatus {
     lastContentItemId: string | null;
     lastResult: "idle" | "skipped" | "success" | "failed";
     lastMessage: string | null;
+    lastAutomationResult: {
+      status: "skipped" | "blocked" | "success" | "failed";
+      stage: string;
+      message: string;
+      bloggerPostId: string | null;
+      bloggerPostUrl: string | null;
+      livePublishAttempted: boolean;
+      blockingReasons: string[];
+    } | null;
     inFlight: boolean;
   };
   nextActionSummary: {
     serverProcessTimerActive: boolean;
     webServerMustStayRunning: true;
-    bloggerDraftSave: false;
-    bloggerPublish: false;
+    bloggerDraftSave: boolean;
+    bloggerPublish: boolean;
     tokenRefresh: false;
     llmCall: false;
+    livePublishRequiresEnvFlags: true;
   };
 }
 
@@ -141,7 +151,7 @@ export function DailyBriefAutomationClient() {
           외부 cron 없이 웹 서버 프로세스가 켜져 있는 동안 매분 시간을 확인하고, 설정된 시간에 급등포착 Daily Brief 글과 이미지를 자동 생성합니다.
         </p>
         <div className="notice warning">
-          현재 자동화 범위는 로컬 content item 생성까지입니다. Blogger draft save, publish, scheduled publish, token refresh, LLM 호출은 자동 실행하지 않습니다.
+          기본값은 로컬 content item 생성만 수행합니다. Blogger draft save/public publish는 선택 모드와 서버 env 안전 플래그가 준비된 경우에만 단계적으로 실행됩니다.
         </div>
       </section>
 
@@ -217,6 +227,26 @@ export function DailyBriefAutomationClient() {
                   <option value="false">제외</option>
                 </select>
               </label>
+              <label>
+                자동화 모드
+                <select
+                  value={form.mode}
+                  onChange={(event) =>
+                    setForm({
+                      ...form,
+                      mode: event.target.value === "publish_live_guarded" ? "publish_live_guarded" : event.target.value === "draft_save_only" ? "draft_save_only" : "content_only"
+                    })
+                  }
+                >
+                  <option value="content_only">글 생성만</option>
+                  <option value="draft_save_only">Blogger draft 저장까지</option>
+                  <option value="publish_live_guarded">Blogger 공개발행 요청까지</option>
+                </select>
+              </label>
+              <div className="notice warning">
+                공개발행 요청 모드는 내부 guard를 통과해야 하며, 서버 env의 live publish 플래그와 확인문구가 없으면 dry-run/block 상태로 멈춥니다.
+                posts.update, scheduled publish, token refresh는 실행하지 않습니다.
+              </div>
               <div className="form-actions">
                 <button className="button" type="button" disabled={Boolean(running)} onClick={() => void saveConfig()}>
                   {running === "save" ? "저장 중" : "설정 저장"}
@@ -248,6 +278,7 @@ export function DailyBriefAutomationClient() {
               <p><strong>Last message</strong>: {status.state.lastMessage ?? "-"}</p>
               <p><strong>Last run</strong>: {status.state.lastRunDate ?? "-"} / {status.state.lastRunId ?? "-"}</p>
               <p><strong>Content item</strong>: {status.state.lastContentItemId ?? "-"}</p>
+              <p><strong>Automation mode</strong>: {status.config.mode}</p>
               {status.state.lastContentItemId ? (
                 <div className="button-row">
                   <Link className="button" href={`/wizard/edit/${status.state.lastContentItemId}`}>
@@ -265,8 +296,17 @@ export function DailyBriefAutomationClient() {
             <div className="notice">
               Side effects: Blogger draft save {String(status.nextActionSummary.bloggerDraftSave)} / publish{" "}
               {String(status.nextActionSummary.bloggerPublish)} / token refresh {String(status.nextActionSummary.tokenRefresh)} / LLM{" "}
-              {String(status.nextActionSummary.llmCall)}
+              {String(status.nextActionSummary.llmCall)} / live publish env guard {String(status.nextActionSummary.livePublishRequiresEnvFlags)}
             </div>
+            {status.state.lastAutomationResult ? (
+              <div className="read-block">
+                <p><strong>Last automation</strong>: {status.state.lastAutomationResult.status} / {status.state.lastAutomationResult.stage}</p>
+                <p><strong>Message</strong>: {status.state.lastAutomationResult.message}</p>
+                <p><strong>Blogger post</strong>: {status.state.lastAutomationResult.bloggerPostId ?? "-"} / {status.state.lastAutomationResult.bloggerPostUrl ?? "-"}</p>
+                <p><strong>Live publish attempted</strong>: {String(status.state.lastAutomationResult.livePublishAttempted)}</p>
+                <p><strong>Blockers</strong>: {status.state.lastAutomationResult.blockingReasons.join(", ") || "-"}</p>
+              </div>
+            ) : null}
           </section>
         </>
       ) : (

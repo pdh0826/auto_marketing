@@ -1,4 +1,4 @@
-export type LlmProviderType = "openai" | "local" | "external_http" | "local_http" | "cli";
+export type LlmProviderType = "openai" | "local" | "external_http" | "local_http" | "cli" | "gpt_cli";
 export type LlmInvocationMode = "external_http" | "local_http" | "cli";
 export type LlmApiFormat = "openai_compatible" | "ollama_compatible" | "custom_http" | "custom_cli";
 export type LlmProviderTestStatus = "untested" | "success" | "failed";

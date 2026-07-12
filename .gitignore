@@ -23,6 +23,8 @@ client_secret*.json
 
 # misc
 .DS_Store
+.run/
+logs/
 *.log
 npm-debug.log*
 yarn-debug.log*
@@ -38,6 +40,7 @@ __pycache__/
 *.sqlite
 *.sqlite3
 local-data/
+public/generated-previews/
 
 # TypeScript build cache
 *.tsbuildinfo

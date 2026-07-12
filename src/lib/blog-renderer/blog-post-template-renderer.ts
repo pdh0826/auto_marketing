@@ -77,6 +77,7 @@ interface RenderState {
   paragraph: string[];
   unorderedItems: string[];
   orderedItems: string[];
+  tableRows: string[][];
   h2Count: number;
   h3Count: number;
   paragraphCount: number;
@@ -192,6 +193,7 @@ function renderMarkdownBody(markdown: string, placeholders: PlaceholderToken[], 
     paragraph: [],
     unorderedItems: [],
     orderedItems: [],
+    tableRows: [],
     h2Count: 0,
     h3Count: 0,
     paragraphCount: 0
@@ -204,6 +206,7 @@ function renderMarkdownBody(markdown: string, placeholders: PlaceholderToken[], 
     if (line.trim().startsWith("```")) {
       flushParagraph(state);
       flushLists(state);
+      flushTable(state);
       continue;
     }
 
@@ -211,6 +214,7 @@ function renderMarkdownBody(markdown: string, placeholders: PlaceholderToken[], 
     if (mediaPlaceholder) {
       flushParagraph(state);
       flushLists(state);
+      flushTable(state);
       const rendered = renderMediaPlaceholder(mediaPlaceholder, assets);
       state.html.push(rendered.html);
       if (rendered.matched) {
@@ -224,13 +228,28 @@ function renderMarkdownBody(markdown: string, placeholders: PlaceholderToken[], 
     if (!line.trim()) {
       flushParagraph(state);
       flushLists(state);
+      flushTable(state);
       continue;
+    }
+
+    if (isMarkdownTableSeparatorLine(line)) {
+      if (state.tableRows.length > 0) {
+        continue;
+      }
+    } else if (isMarkdownTableRow(line)) {
+      flushParagraph(state);
+      flushLists(state);
+      state.tableRows.push(splitMarkdownTableCells(line));
+      continue;
+    } else {
+      flushTable(state);
     }
 
     const headingMatch = line.match(/^(#{1,6})\s+(.+)$/);
     if (headingMatch) {
       flushParagraph(state);
       flushLists(state);
+      flushTable(state);
       const level = headingMatch[1].length;
       if (level === 1 && !skippedFirstH1) {
         skippedFirstH1 = true;
@@ -251,6 +270,7 @@ function renderMarkdownBody(markdown: string, placeholders: PlaceholderToken[], 
     if (blockquoteMatch) {
       flushParagraph(state);
       flushLists(state);
+      flushTable(state);
       state.html.push(`<blockquote>${formatInlineMarkdown(blockquoteMatch[1].trim())}</blockquote>`);
       continue;
     }
@@ -258,6 +278,7 @@ function renderMarkdownBody(markdown: string, placeholders: PlaceholderToken[], 
     const unorderedMatch = line.match(/^[-*]\s+(.+)$/);
     if (unorderedMatch) {
       flushParagraph(state);
+      flushTable(state);
       flushOrderedList(state);
       state.unorderedItems.push(unorderedMatch[1].trim());
       continue;
@@ -266,6 +287,7 @@ function renderMarkdownBody(markdown: string, placeholders: PlaceholderToken[], 
     const orderedMatch = line.match(/^\d+[.)]\s+(.+)$/);
     if (orderedMatch) {
       flushParagraph(state);
+      flushTable(state);
       flushUnorderedList(state);
       state.orderedItems.push(orderedMatch[1].trim());
       continue;
@@ -276,6 +298,7 @@ function renderMarkdownBody(markdown: string, placeholders: PlaceholderToken[], 
 
   flushParagraph(state);
   flushLists(state);
+  flushTable(state);
 
   return {
     html: state.html.join("\n"),
@@ -323,6 +346,20 @@ function flushLists(state: RenderState) {
   flushOrderedList(state);
 }
 
+function flushTable(state: RenderState) {
+  if (state.tableRows.length === 0) {
+    return;
+  }
+
+  const [header, ...bodyRows] = state.tableRows;
+  const headerHtml = header.map((cell) => `<th>${formatInlineMarkdown(cell)}</th>`).join("");
+  const bodyHtml = bodyRows
+    .map((row) => `<tr>${row.map((cell) => `<td>${formatInlineMarkdown(cell)}</td>`).join("")}</tr>`)
+    .join("");
+  state.html.push(`<div class="bga-table-wrap"><table class="bga-markdown-table"><thead><tr>${headerHtml}</tr></thead><tbody>${bodyHtml}</tbody></table></div>`);
+  state.tableRows = [];
+}
+
 function flushUnorderedList(state: RenderState) {
   if (state.unorderedItems.length === 0) {
     return;
@@ -337,6 +374,25 @@ function flushOrderedList(state: RenderState) {
   }
   state.html.push(`<ol>${state.orderedItems.map((item) => `<li>${formatInlineMarkdown(item)}</li>`).join("")}</ol>`);
   state.orderedItems = [];
+}
+
+function isMarkdownTableRow(line: string) {
+  const trimmed = line.trim();
+  return trimmed.startsWith("|") && trimmed.endsWith("|") && splitMarkdownTableCells(trimmed).length >= 2;
+}
+
+function isMarkdownTableSeparatorLine(line: string) {
+  const cells = splitMarkdownTableCells(line);
+  return cells.length >= 2 && cells.every((cell) => /^:?-{3,}:?$/.test(cell.trim()));
+}
+
+function splitMarkdownTableCells(line: string) {
+  return line
+    .trim()
+    .replace(/^\|/, "")
+    .replace(/\|$/, "")
+    .split("|")
+    .map((cell) => cell.trim());
 }
 
 function renderMediaPlaceholder(placeholder: PlaceholderToken, assets: ContentAssetAdmin[]) {
@@ -452,12 +508,34 @@ function formatInlineMarkdown(value: string) {
   output = output.replace(/(^|[\s(])\*([^*\n]+)\*/g, "$1<em>$2</em>");
   output = output.replace(/(^|[\s(])_([^_\n]+)_/g, "$1<em>$2</em>");
   output = output.replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, (_match, text: string, href: string) => {
-    return `<a href="${escapeAttribute(href)}" rel="nofollow noopener noreferrer">${escapeHtml(text)}</a>`;
+    return `<a href="${escapeAttribute(decodeEscapedMarkdownUrl(href))}" rel="nofollow noopener noreferrer">${escapeHtml(decodeHtmlEntitySubset(text))}</a>`;
   });
   codeTokens.forEach((token, index) => {
     output = output.replace(`@@BGA_CODE_${index}@@`, token);
   });
   return output;
+}
+
+function decodeEscapedMarkdownUrl(value: string) {
+  return value.replace(/&amp;/g, "&").replace(/&quot;/g, "\"").replace(/&#39;/g, "'");
+}
+
+function decodeHtmlEntitySubset(value: string) {
+  let decoded = value;
+  for (let index = 0; index < 3; index += 1) {
+    const next = decoded
+      .replace(/&amp;/g, "&")
+      .replace(/&lt;/g, "<")
+      .replace(/&gt;/g, ">")
+      .replace(/&quot;/g, "\"")
+      .replace(/&apos;/g, "'")
+      .replace(/&#39;/g, "'");
+    if (next === decoded) {
+      return decoded;
+    }
+    decoded = next;
+  }
+  return decoded;
 }
 
 function escapeHtml(value: string) {

@@ -2377,11 +2377,215 @@ Next recommended patches:
 - The scheduler does not use external cron. It runs only while the Next.js Node process is alive.
 - It checks once per minute and runs at the configured local time, default `08:00` in `Asia/Seoul`.
 - Same-date generated Daily Brief content blocks duplicate scheduler generation.
-- Current automated scope is content item and image asset generation only.
-- Blogger draft save/publish/scheduled publish/token refresh/LLM calls remain out of the scheduler.
+- Default automated scope is content item and image asset generation only.
+- Scheduler mode can now be changed to `draft_save_only` or `publish_live_guarded`.
+- `draft_save_only` uses the existing Blogger draft approval and guarded draft save route after content generation.
+- `publish_live_guarded` continues through publish approval, publish execution attempt, and guarded publish execution, but live publish is blocked unless the required live env flags and confirmation phrase are present.
+- Daily Brief content generation creates a primary 1200x630 SVG SEO thumbnail with large Korean title/date text and top stock names, then inserts it as the first hero media block before the signal-board/chart screenshots.
+- Scheduled publish, `posts.update`, automatic token refresh, and content item status/publishedAt mutation remain out of the scheduler.
 
 Next recommended scheduler patches:
 
-1. Add review notifications/status badge on the dashboard after scheduled generation.
-2. Add a post-generation quality gate that marks runs needing manual review.
-3. Add optional guarded Blogger draft-save automation only after explicit policy and OAuth readiness are confirmed.
+1. Verify `/automation/daily-brief` mode selection against the intended operating mode.
+2. For live auto-publish, explicitly set the required env flags only after OAuth/readiness is confirmed.
+3. Add post-publish reconciliation/status mutation only after Blogger readback confirms publish success.
+
+## Current Blogger Publish Readiness Follow-Up
+
+Patch 9G-8A~8D readiness UX is now in place:
+
+- Local OAuth redirect defaults to port 3004.
+- `/settings/blogger` shows the exact Google Console redirect URI and public asset URL guidance.
+- `start.sh` forwards non-secret public asset/OAuth redirect environment values into the background server.
+- `check.sh --json` exposes non-secret Blogger readiness fields for monitoring.
+- Content Detail Draft Payload Preview and Draft Save Preflight now show publishable image URL readiness and action items for unresolved local content asset URLs.
+
+Current confirmed image publish path:
+
+1. `BLOGGER_IMAGE_EMBED_MODE=compressed_jpeg_data_url` is now the default in `start.sh`.
+2. Local Daily Brief screenshots can be embedded without a separate public asset host by compressing PNG/JPEG assets to JPEG data URLs before Blogger API draft/publish payload construction.
+3. Full-size raw PNG data URLs are not reliable; Blogger rejected the large payload with HTTP 400.
+4. Compressed JPEG data URLs were verified with a guarded Blogger draft save for `cmrehm0qc00015l2hhx65ifpf`.
+5. The verified original-item preflight showed `imageEmbedMode=compressed_jpeg_data_url`, 8 inline image assets, 428,251 inline image bytes, and 0 unresolved local asset URLs.
+
+Remaining operator/configuration work before live Blogger publish:
+
+1. Keep the server running through `./start.sh` so the default compressed image mode is active.
+2. Reconnect Blogger OAuth only if the refresh-token path cannot recover an expired access token.
+3. Re-run Blogger Draft Payload Preview and Draft Save Preflight for the current Daily Brief content item.
+4. Only after `draftPayloadReady=true` and `canSaveDraft=true`, create a fresh manual draft approval snapshot if needed.
+5. Execute guarded publish only with the existing explicit operator approval/confirmation path.
+
+## Blogger UI export fallback status
+
+- Because Blogger API v3 does not provide a first-class image upload endpoint for post images, the confirmed default path now uses compressed JPEG data URLs in the guarded Blogger API flow.
+- Public asset hosting remains supported as an alternative, but is no longer required for the local Daily Brief automation path.
+- When external hosting is not desired, use the guarded local export fallback:
+  - `node scripts/blogger_ui_publish_content_item.mjs --content-item-id {id} --dry-run`
+  - Optional calibration: `node scripts/blogger_ui_publish_content_item.mjs --content-item-id {id} --open-browser`
+- The export writes `local-data/blogger-ui-publisher/{contentItemId}/post.html`, copied `assets/`, a preview `index.html`, and a safe `manifest.json`.
+- Current status: guarded Blogger UI publish runner exists.
+- `--live-ui` requires `--confirm I_UNDERSTAND_THIS_USES_BLOGGER_WEB_UI_TO_PUBLISH`.
+- `--publish` is required before the runner clicks Blogger publish controls.
+- Scheduler `publish_live_guarded` can use this path when `BLOG_DAILY_BRIEF_AUTO_PUBLISH_METHOD=blogger_ui`, `BLOG_DAILY_BRIEF_BLOGGER_UI_AUTO_PUBLISH_ENABLED=true`, and `BLOG_DAILY_BRIEF_BLOGGER_UI_CONFIRMATION=I_UNDERSTAND_THIS_USES_BLOGGER_WEB_UI_TO_PUBLISH`.
+- The Blogger UI path remains a fallback only. The default path should stay API-based with `BLOGGER_IMAGE_EMBED_MODE=compressed_jpeg_data_url`.
+- Next recommended patch: run the existing guarded API publish flow with compressed image embedding and then inspect the published result for image retention.
+
+## Blogger API publish path refresh status
+
+- The default `publish_live_guarded` scheduler path is now the guarded Blogger API path (`BLOG_DAILY_BRIEF_AUTO_PUBLISH_METHOD=api`).
+- The Blogger UI runner remains available only as an explicit opt-in fallback with `BLOG_DAILY_BRIEF_AUTO_PUBLISH_METHOD=blogger_ui`.
+- Draft payload preview and draft-save preflight report `tokenRefreshImplemented=true`.
+- If a refresh token, client secret, and Blogger secret encryption key are available, an expired access token no longer forces daily browser login/reconnect before draft save.
+- Guarded live publish attempts a safe access-token refresh before final live publish gate evaluation.
+- Remaining publish work is no longer image URL reachability. The current blocker is only the normal guarded publish sequence: fresh preflight, approval match, live confirmation, Blogger OAuth validity/refresh, publish execution, and post-publish readback.
+
+## Current Daily Brief Tone Policy
+
+- Daily Brief content should read like a personal Korean morning market briefing, not a stiff data report.
+- The template now uses `오늘의 투자매력도 TOP 3` and recommendation-style phrases such as `오늘 먼저 눈에 들어온 종목` or `제 기준에서 먼저 볼 만한 종목`.
+- The article may sound confident and useful, but it must not issue direct buy/sell instructions, guarantee returns, or imply certain price movement.
+- Numbers should be concentrated in tables/charts; body prose should explain why a stock is worth checking, what to compare on the chart, and what news/disclosure context to verify.
+- Investment-risk copy stays at the end of the article rather than opening the post with a defensive disclaimer.
+- Compressed Blogger image embedding now targets 1300px JPEG quality 70 to improve screenshot readability while staying inside the guarded publishable HTML path.
+- The latest wording policy pushes the body further toward a human investor-blog voice:
+  - Start with `오늘 아침 브리핑`, not a defensive disclaimer.
+  - Use `오늘 보드는 이렇게 읽었습니다` and `종목별로 제가 보는 포인트`.
+  - Explain stocks in thesis-style paragraphs instead of repeating every metric.
+  - Keep news/disclosure links as verification material, not as copied article bodies.
+  - Use thumbnail footer copy like `오늘 장 전 체크리스트 · 판단은 내 기준으로`.
+
+## Tistory export bridge
+
+- Tistory Open API publishing is not used. The current supported path is manual HTML export.
+- Content Detail includes `Tistory HTML Export`.
+- `POST /api/content-items/[id]/tistory-export` writes:
+  - `local-data/tistory-export/{contentItemId}/post.html`
+  - `local-data/tistory-export/{contentItemId}/post-inline.html`
+  - `local-data/tistory-export/{contentItemId}/post-title.txt`
+  - `local-data/tistory-export/{contentItemId}/manifest.json`
+  - `public/generated-previews/tistory_export_{contentItemId}.html`
+- This path performs local file writes only. It does not call Tistory/Blogger API, publish, refresh tokens, call LLM, or mutate `content_items`.
+- Use `post.html` plus copied `assets/` first; use `post-inline.html` only if a manual Tistory paste test needs image data URLs.
+
+## Tistory recent-signal review path
+
+- Daily Brief wizard now has a separate Tistory signal review action.
+- Route: `POST /api/daily-brief/runs/{runId}/tistory-signal-review`.
+- The route creates a distinct content item and Tistory export package:
+  - If KR TOP 20 has at least 3 recent signal stocks, it writes a focused TOP3 stock review.
+  - If there are 1-2 recent signal stocks, it writes a stock + ETF context review.
+  - If there are no recent signal stocks, it writes an ETF/sector review.
+- Tone policy: human investor-blog review, not a Blogger Daily Brief duplicate and not a data dump.
+- Side effects: DB content/assets and local export files only. No Tistory API write, Blogger write, publish, token refresh, or LLM call.
+
+Next recommended Tistory patches:
+
+1. Run one live Daily Brief run through the new Tistory review generator and inspect the local preview.
+2. Tune the Tistory review template from the preview, especially whether the stock/ETF fallback feels genuinely different from the Blogger Daily Brief.
+3. Add an optional scheduler toggle only after the manual preview path is accepted.
+
+## project300 Tistory channel packaging
+
+- project300 target blog: `https://project300.tistory.com/`.
+- Recommended menu/category structure:
+  - `급등포착 분석자료`
+    - `오늘의 관심종목 리뷰`
+    - `종목별 신호 집중분석`
+    - `ETF/섹터 흐름 리뷰`
+    - `선물·옵션 시그널 기록`
+- Tistory export packages now include:
+  - `project300-category.txt`
+  - `project300-tags.txt`
+  - `project300-upload-checklist.md`
+- Content Detail shows project300 upload hints after `Tistory HTML Export`.
+- Daily Tistory signal review content items store the target blog and recommended category path in safe `planJson` metadata.
+
+Operating policy:
+
+- Blogger remains the daily broad TOP 8 morning brief.
+- project300 Tistory should be used for deeper signal analysis, recent-signal TOP3 reviews, or ETF/sector fallback reviews.
+- The goal is not cross-posting the same article. It should look like a separate system-trading analysis note.
+- Tistory API publishing is still not implemented; upload is manual HTML export only.
+
+Next recommended project300 patches:
+
+1. Regenerate one project300 Tistory review and inspect it against `documents/17_PROJECT300_TISTORY_STYLE_SEO_GUIDE.md`.
+2. Add a style/SEO score preview for project300 Tistory reviews so weak report-like phrases are flagged before export.
+3. Add a project300-specific preview route that displays only the title/category/tags/checklist without regenerating the export.
+4. Only after manual upload is accepted, investigate Tistory API OAuth/API publishing separately.
+
+## project300 Tistory style/SEO guide
+
+- Style guide: `documents/17_PROJECT300_TISTORY_STYLE_SEO_GUIDE.md`
+- Code constants: `src/lib/tistory/project300-style.ts`
+- Active style profile: `project300_personal_investor_voice_v1`
+- Content Detail Tistory export now displays the active style profile, layout template, image explanation policy, and SEO checklist.
+- Tistory category label was aligned with the live blog setup: `ETF 섹터 흐름 리뷰` rather than `ETF/섹터 흐름 리뷰`.
+- Daily Tistory signal review Markdown now follows a stronger project300-style layout:
+  - hero thumbnail
+  - personal opening
+  - summary table
+  - chart image before explanation
+  - chart interpretation
+  - news/disclosure links
+  - weak point and next-check paragraph
+  - final guidance at the end
+
+## Project300 review/rewrite loop status
+
+- New deterministic review helper: `src/lib/tistory/project300-style-review.ts`.
+- New voice variation helper: `src/lib/tistory/project300-voice-variation.ts`.
+- New GPT CLI rewrite preview route: `POST /api/content-items/[id]/project300-style-rewrite-preview`.
+- Default route behavior is preview-only:
+  - no LLM call
+  - no content mutation
+  - no Tistory/Blogger API write
+  - no publish/token refresh
+- Live GPT CLI rewrite requires:
+  - `PROJECT300_GPT_CLI_STYLE_REWRITE_ENABLED=true`
+  - confirmation phrase `PROJECT300 GPT CLI REWRITE`
+  - `style_rewrite` task route with a ready `gpt_cli` provider.
+- `GPT CLI` is now an LLM provider type in settings.
+- Content Detail Tistory export displays Project300 style/SEO score, warnings, and GPT CLI review loop policy.
+
+Next recommended patch:
+
+1. Configure a `GPT CLI` provider and `style_rewrite` route in `/settings/llm`.
+2. Run `project300-style-rewrite-preview` in preview-only mode against a generated Tistory review.
+3. If the preview blockers are clean and the user approves, run one GPT CLI rewrite smoke with the feature flag enabled.
+
+## Project300 three-category readiness smoke
+
+Completed a three-category Project300 readiness smoke while leaving `선물·옵션 시그널 기록` out of generation until the futures/options signal source is ready.
+
+Generated local previews:
+
+- `mixed_stock_etf_review`: `/generated-previews/tistory_export_cmrgimxn900065luux5e4f6uk.html`
+- `stock_signal_top3_review`: `/generated-previews/tistory_export_cmrginnbf000i5luug1t2w94e.html`
+- `etf_sector_review`: `/generated-previews/tistory_export_cmrgioikk000s5luuarr8fkw7.html`
+
+Style review status:
+
+- All three previews passed deterministic Project300 style/SEO review after asset-aware image counting.
+- GPT CLI `style_rewrite` route and provider are configured.
+- Default GPT CLI review route remains preview-only and blocked from actual LLM execution unless the feature flag and confirmation phrase are supplied.
+
+Next recommended work:
+
+1. Visually inspect the three generated previews in the browser.
+2. If the user accepts the tone/layout, run one approved GPT CLI rewrite smoke only when a generated article actually fails the deterministic checklist.
+3. Keep futures/options category generation disabled until UpSignal futures/options signals are complete.
+# Investment Writing Pipeline Status
+
+Patch 9G-Style-1C~1J 구현이 완료되었다. 새 생성기는 검증된 자료와 시스템 값을 구분하고 유사 종목을 비교 구간으로 묶으며, 내부 자동화 문구와 근거 없는 1인칭을 차단한다.
+
+다음 세션에서는 실제 Daily Brief run 1건을 preview-only로 재생성해 기존 후보와 나란히 읽어보는 사람 검수를 수행한다. 외부 발행은 별도 승인 전 실행하지 않는다. 골든 검증은 `/api/automation/daily-brief/investment-writing-golden-review`에서 확인할 수 있다.
+
+## Next: category separation and Blogger cadence
+
+- Tistory category candidates now de-duplicate stock/ETF codes within each Daily Brief run.
+- Generate `오늘의 관심종목 리뷰` and `종목별 신호 집중분석` in either order and verify that their selected stock codes do not overlap.
+- Blogger editorial planning currently resolves to five posts per day: stock, ETF, morning market, intraday market, and close market.
+- Before activating new schedules, confirm whether the intended daily count is four or five and which session should be omitted/merged if four.
+- Keep all market-signal tracks blocked until UpSignal exposes verified futures/options signals; never fabricate a buy/sell timing.

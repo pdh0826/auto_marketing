@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { collectDailyBriefResearch } from "@/lib/daily-brief/research";
+import { collectDailyBriefOfficialDisclosures, collectDailyBriefResearch } from "@/lib/daily-brief/research";
 import { getDailyBriefRun, saveDailyBriefRun } from "@/lib/daily-brief/store";
 import { safeErrorMessage } from "@/lib/llm/redaction";
 
@@ -21,11 +21,20 @@ export async function POST(_request: Request, { params }: RouteContext) {
       return NextResponse.json({ error: "stock_picks_required" }, { status: 400 });
     }
 
-    const researchItems = await collectDailyBriefResearch(run.stockPicks.slice(0, run.stockDetailLimit));
+    const targetPicks = run.stockPicks.slice(0, run.stockDetailLimit);
+    const [researchItems, officialDisclosureItems] = await Promise.all([
+      collectDailyBriefResearch(targetPicks),
+      collectDailyBriefOfficialDisclosures(targetPicks, run.marketDate)
+    ]);
+    const researchWarnings = researchItems.some((item) => item.source === "naver_news_search_link" || item.source === "search_link")
+      ? ["news_search_link_fallback_present"]
+      : [];
     const next = await saveDailyBriefRun({
       ...run,
-      status: "researched",
+      status: run.contentItemId ? "content_generated" : "researched",
       researchItems,
+      officialDisclosureItems,
+      warnings: Array.from(new Set([...run.warnings.filter((warning) => warning !== "news_search_link_fallback_present"), ...researchWarnings])),
       sideEffectSummary: {
         ...run.sideEffectSummary,
         newsSearchRead: true

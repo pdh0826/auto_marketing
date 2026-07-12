@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import type { DailyBriefSchedulerMode } from "@/lib/daily-brief/publish-automation";
 import { getDailyBriefSchedulerStatus, writeDailyBriefSchedulerConfig } from "@/lib/daily-brief/scheduler";
 import { safeErrorMessage } from "@/lib/llm/redaction";
 
@@ -18,11 +19,13 @@ export async function PATCH(request: Request) {
       enabled: parseOptionalBoolean(readParam(body, url, "enabled")),
       scheduleTime: readStringParam(body, url, "scheduleTime"),
       timezone: readStringParam(body, url, "timezone"),
+      businessDaysOnly: parseOptionalBoolean(readParam(body, url, "businessDaysOnly")),
       targetKeyword: readStringParam(body, url, "targetKeyword"),
       stockPickLimit: parseNumber(readParam(body, url, "stockPickLimit")),
       stockDetailLimit: parseNumber(readParam(body, url, "stockDetailLimit")),
       etfPickLimit: parseNumber(readParam(body, url, "etfPickLimit")),
-      includeEtfs: parseOptionalBoolean(readParam(body, url, "includeEtfs"))
+      includeEtfs: parseOptionalBoolean(readParam(body, url, "includeEtfs")),
+      mode: parseSchedulerMode(readStringParam(body, url, "mode"))
     });
     return NextResponse.json({ data: status });
   } catch (error) {
@@ -69,6 +72,13 @@ function parseNumber(value: unknown) {
   if (typeof value === "string" && value.trim()) {
     const parsed = Number(value);
     return Number.isFinite(parsed) ? parsed : undefined;
+  }
+  return undefined;
+}
+
+function parseSchedulerMode(value: unknown): DailyBriefSchedulerMode | undefined {
+  if (value === "content_only" || value === "draft_save_only" || value === "publish_live_guarded") {
+    return value;
   }
   return undefined;
 }

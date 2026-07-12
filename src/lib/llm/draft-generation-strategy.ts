@@ -46,6 +46,7 @@ export function isLocalLikeDraftProvider(provider?: DraftGenerationStrategyProvi
     provider.providerType === "local" ||
     provider.providerType === "local_http" ||
     provider.providerType === "cli" ||
+    provider.providerType === "gpt_cli" ||
     provider.invocationMode === "local_http" ||
     provider.invocationMode === "cli" ||
     provider.apiFormat === "ollama_compatible" ||

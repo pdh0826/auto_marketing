@@ -326,6 +326,7 @@ function convertMarkdownToHtml(markdown: string, placeholders: PlaceholderToken[
   const html: string[] = [];
   let paragraph: string[] = [];
   let listItems: string[] = [];
+  let tableRows: string[][] = [];
 
   const flushParagraph = () => {
     if (paragraph.length === 0) {
@@ -343,10 +344,24 @@ function convertMarkdownToHtml(markdown: string, placeholders: PlaceholderToken[
     listItems = [];
   };
 
+  const flushTable = () => {
+    if (tableRows.length === 0) {
+      return;
+    }
+    const [header, ...bodyRows] = tableRows;
+    const headerHtml = header.map((cell) => `<th>${formatInlineMarkdown(cell)}</th>`).join("");
+    const bodyHtml = bodyRows
+      .map((row) => `<tr>${row.map((cell) => `<td>${formatInlineMarkdown(cell)}</td>`).join("")}</tr>`)
+      .join("");
+    html.push(`<div class="content-preview-table-wrap"><table><thead><tr>${headerHtml}</tr></thead><tbody>${bodyHtml}</tbody></table></div>`);
+    tableRows = [];
+  };
+
   for (const line of lines) {
     if (line.trim().startsWith("```")) {
       flushParagraph();
       flushList();
+      flushTable();
       continue;
     }
 
@@ -354,6 +369,7 @@ function convertMarkdownToHtml(markdown: string, placeholders: PlaceholderToken[
     if (mediaPlaceholder) {
       flushParagraph();
       flushList();
+      flushTable();
       html.push(renderMediaPlaceholder(mediaPlaceholder, assets));
       continue;
     }
@@ -361,13 +377,28 @@ function convertMarkdownToHtml(markdown: string, placeholders: PlaceholderToken[
     if (!line.trim()) {
       flushParagraph();
       flushList();
+      flushTable();
       continue;
+    }
+
+    if (isMarkdownTableSeparatorLine(line)) {
+      if (tableRows.length > 0) {
+        continue;
+      }
+    } else if (isMarkdownTableRow(line)) {
+      flushParagraph();
+      flushList();
+      tableRows.push(splitMarkdownTableCells(line));
+      continue;
+    } else {
+      flushTable();
     }
 
     const headingMatch = line.match(/^(#{1,6})\s+(.+)$/);
     if (headingMatch) {
       flushParagraph();
       flushList();
+      flushTable();
       const level = headingMatch[1].length;
       html.push(`<h${level}>${formatInlineMarkdown(headingMatch[2].trim())}</h${level}>`);
       continue;
@@ -377,6 +408,7 @@ function convertMarkdownToHtml(markdown: string, placeholders: PlaceholderToken[
     if (blockquoteMatch) {
       flushParagraph();
       flushList();
+      flushTable();
       html.push(`<blockquote>${formatInlineMarkdown(blockquoteMatch[1].trim())}</blockquote>`);
       continue;
     }
@@ -384,6 +416,7 @@ function convertMarkdownToHtml(markdown: string, placeholders: PlaceholderToken[
     const listMatch = line.match(/^[-*]\s+(.+)$/);
     if (listMatch) {
       flushParagraph();
+      flushTable();
       listItems.push(listMatch[1].trim());
       continue;
     }
@@ -393,8 +426,28 @@ function convertMarkdownToHtml(markdown: string, placeholders: PlaceholderToken[
 
   flushParagraph();
   flushList();
+  flushTable();
 
   return `<article class="content-preview">\n${html.join("\n")}\n</article>`;
+}
+
+function isMarkdownTableRow(line: string) {
+  const trimmed = line.trim();
+  return trimmed.startsWith("|") && trimmed.endsWith("|") && splitMarkdownTableCells(trimmed).length >= 2;
+}
+
+function isMarkdownTableSeparatorLine(line: string) {
+  const cells = splitMarkdownTableCells(line);
+  return cells.length >= 2 && cells.every((cell) => /^:?-{3,}:?$/.test(cell.trim()));
+}
+
+function splitMarkdownTableCells(line: string) {
+  return line
+    .trim()
+    .replace(/^\|/, "")
+    .replace(/\|$/, "")
+    .split("|")
+    .map((cell) => cell.trim());
 }
 
 function renderMediaPlaceholder(placeholder: PlaceholderToken, assets: ContentAssetAdmin[]) {
@@ -523,13 +576,31 @@ function formatInlineMarkdown(value: string) {
   output = output.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
   output = output.replace(/\*([^*]+)\*/g, "<em>$1</em>");
   output = output.replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, (_match, text: string, href: string) => {
-    return `<a href="${escapeAttribute(href)}" rel="nofollow noopener noreferrer">${escapeHtml(text)}</a>`;
+    return `<a href="${escapeAttribute(href)}" rel="nofollow noopener noreferrer">${escapeHtml(decodeHtmlEntitySubset(text))}</a>`;
   });
   return output;
 }
 
 function escapeHtml(value: string) {
   return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+
+function decodeHtmlEntitySubset(value: string) {
+  let decoded = value;
+  for (let index = 0; index < 3; index += 1) {
+    const next = decoded
+      .replace(/&amp;/g, "&")
+      .replace(/&lt;/g, "<")
+      .replace(/&gt;/g, ">")
+      .replace(/&quot;/g, "\"")
+      .replace(/&apos;/g, "'")
+      .replace(/&#39;/g, "'");
+    if (next === decoded) {
+      return decoded;
+    }
+    decoded = next;
+  }
+  return decoded;
 }
 
 function escapeAttribute(value: string) {

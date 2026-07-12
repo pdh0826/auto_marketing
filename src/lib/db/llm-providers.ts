@@ -145,7 +145,7 @@ function inferInvocationMode(providerType: unknown) {
   if (providerType === "local" || providerType === "local_http") {
     return "local_http";
   }
-  if (providerType === "cli") {
+  if (providerType === "cli" || providerType === "gpt_cli") {
     return "cli";
   }
   return "external_http";
