@@ -1,5 +1,22 @@
 # 13_CHANGELOG
 
+## VIDEO-1L Source Hash and Safety Boundary Test
+
+Pinned the video automation source contract and no-write safety boundary with a deterministic fixture test.
+
+- Added `npm run test:video-automation`.
+- Added a fixture that verifies the Daily Brief source hash is stable across package generation time changes.
+- Added a fixture mutation check that verifies safe source field changes produce a different source hash.
+- Verified capture `storagePath`, token, credential, and client-secret markers are not emitted into the manifest.
+- Verified package/readback guards keep platform uploads, scheduler mutation, external writes, secret reads, DB writes, LLM calls, and operating repo/server touch disabled.
+- Added a static source scan for video automation code to block DB/prisma imports, env access, secret file references, network fetches, and enabled external-write flags.
+
+Safety:
+
+- The test uses an in-memory Daily Brief fixture and does not mutate Daily Brief runs or existing content items.
+- No Blogger/Tistory API write, YouTube/Instagram/TikTok upload, scheduled publish change, token refresh, secret read, DB write, LLM call, or external write is added.
+- The readback check remains read-only.
+
 ## VIDEO-1F-1I Upload Metadata, Workflow, Readback, and Guard
 
 Completed the remaining local-only VIDEO-1 workflow pieces.

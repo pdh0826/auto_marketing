@@ -283,6 +283,30 @@ The video automation module remains guarded:
 
 These are surfaced in package readback so operator review can confirm that video work remains local-only.
 
+## VIDEO-1L Safety Regression Test
+
+Command:
+
+```bash
+npm run test:video-automation
+```
+
+The regression test fixes the current source hash and safety boundary expectations without adding a new runtime write path.
+
+It verifies:
+
+- the package manifest keeps `version: "VIDEO-1B"`
+- the source hash is a SHA-256 hex string
+- source hash generation ignores package generation time
+- source hash generation changes when safe Daily Brief source fields change
+- capture `storagePath` and secret-like markers are excluded from emitted manifests
+- upload readiness and platform upload enablement stay false
+- the base package still describes MP4 as a render plan, not a binary render
+- readback guard flags for operating repo, server 3004, external writes, scheduler mutation, and secret reads stay false
+- preview/readback side-effect summaries keep DB writes, external service writes, platform uploads, scheduler mutation, LLM calls, and secret reads false
+
+The test also statically scans video automation source files for DB/prisma imports, `process.env` access, secret file references, network `fetch` calls, and enabled external-write flags.
+
 ## VIDEO-2A Audio Design
 
 Audio and narration are not implemented yet. See `documents/21_VIDEO_AUDIO_DESIGN.md`.
