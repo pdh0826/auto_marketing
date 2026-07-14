@@ -2,11 +2,11 @@
 
 ## Scope
 
-VIDEO-2A/VIDEO-2B are design only.
+VIDEO-2A/VIDEO-2B are design and contract work.
 
-Audio and narration are not implemented in the current video automation module.
+VIDEO-2C implements free local voiceover rendering only.
 
-VIDEO-2B fixes the contract that must exist before any future audio implementation. It does not add TTS, LLM narration, audio files, audio-included MP4 rendering, provider calls, secret reads, upload, publish, or scheduler mutation.
+The current video automation module can generate a deterministic voiceover script, call a local free TTS command when available, and mux local audio into a local MP4. It still does not use external TTS providers, LLM narration, secrets, upload, publish, or scheduler mutation.
 
 ## Goals
 
@@ -35,34 +35,34 @@ Before any TTS or narration implementation:
 
 ## VIDEO-2B Contract
 
-VIDEO-2B is a contract-only patch.
+VIDEO-2B was a contract-only patch.
 
 Status:
 
-- `audioImplemented=false`
-- `ttsCallImplemented=false`
+- `audioImplemented=true` for free local TTS only
+- `ttsCallImplemented=true` for local command execution only
 - `llmNarrationImplemented=false`
-- `audioIncludedInMp4=false`
+- `audioIncludedInMp4=true` only for `video-with-voiceover.mp4`
 - `externalProviderCallsEnabled=false`
 - `secretReadRequired=false`
 - `uploadEnabled=false`
 
-Allowed in VIDEO-2B:
+Allowed after VIDEO-2C:
 
 - documentation
 - type/interface proposal
 - validation checklist
-- static tests that prove audio is still not implemented
-- UI copy that explains audio is blocked
+- deterministic voiceover script generation
+- local TTS command execution with `say` or `espeak-ng`
+- local audio muxing with `ffmpeg`
+- static tests that prove voiceover remains local-only
+- UI copy that explains uploads remain blocked
 
-Forbidden in VIDEO-2B:
+Forbidden after VIDEO-2C:
 
-- local TTS execution
 - external TTS execution
 - OpenAI or other LLM narration generation
 - API keys, tokens, credentials, or secret reads
-- audio binary writes
-- MP4 audio track muxing
 - platform upload or publish
 - scheduler mutation
 - operating server mutation
@@ -75,7 +75,7 @@ Possible local files:
 - `voiceover.wav` or `voiceover.mp3`
 - `voiceover-report.json`
 
-These files are reserved names only until an explicit implementation patch is approved. The current module must not write them.
+VIDEO-2C may write these files under `local-data/video-automation` only.
 
 `voiceover-script.txt` contract:
 
@@ -167,17 +167,33 @@ Audio may be mixed into MP4 only after:
 - local review passes
 - upload remains disabled
 
+## VIDEO-2C Local Voiceover Implementation
+
+VIDEO-2C adds:
+
+- `POST /api/daily-brief/runs/[runId]/video-package/render-voiceover`
+- deterministic `voiceover-script.txt`
+- local `say` or `espeak-ng` TTS execution when available
+- local `ffmpeg` audio muxing
+- `video-with-voiceover.mp4`
+- `voiceover-render-report.json`
+- upload metadata package preparation with uploads still disabled
+
+Provider policy:
+
+- `subscriptionRequired=false`
+- `externalProvider=false`
+- no API key
+- no secret read
+- no network call
+
+If no local TTS command is available, the route writes the script and report, then blocks with `local_tts_command_not_available`.
+
 ## Forbidden Until Explicit Approval
 
 - external TTS API calls
 - OpenAI or other LLM calls for narration
 - secret reads outside approved provider abstraction
-- local TTS binary execution
-- writing `voiceover-script.txt`
-- writing `voiceover.wav`
-- writing `voiceover.mp3`
-- writing `voiceover-report.json`
-- MP4 audio track muxing
 - automatic upload
 - automatic publishing
 - scheduler mutation
@@ -185,6 +201,6 @@ Audio may be mixed into MP4 only after:
 
 ## Current Decision
 
-Keep VIDEO-1 as silent local video generation. Keep VIDEO-2B as contract-only.
+Keep VIDEO-2C as free local voiceover generation only.
 
-Proceed to implementation only after the provider boundary, cost gate, redaction policy, no-call preview, and local review gate are explicitly approved.
+Proceed to external provider implementation only after the provider boundary, cost gate, redaction policy, no-call preview, and local review gate are explicitly approved.

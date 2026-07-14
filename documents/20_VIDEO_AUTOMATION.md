@@ -381,4 +381,49 @@ It documents:
 - call logging, redaction, and cost gate requirements
 - MP4 audio gate requirements before any future muxing
 
-The safety fixture now statically fails when video automation source introduces voiceover/TTS/audio-provider implementation markers or `audioIncluded: true` before explicit approval.
+The safety fixture now statically fails when video automation source introduces external audio-provider calls, provider URLs, or enabled external-provider flags.
+
+## VIDEO-2C Free Local Voiceover Render
+
+VIDEO-2C adds local-only voiceover rendering after explicit approval for a free TTS path.
+
+Route:
+
+- `POST /api/daily-brief/runs/[runId]/video-package/render-voiceover`
+
+The route:
+
+1. regenerates the VIDEO-1B package
+2. renders card PNGs
+3. renders the silent local MP4
+4. builds `voiceover-script.txt` from Daily Brief article insights
+5. calls a free local TTS command when available
+6. muxes local audio into `video-with-voiceover.mp4`
+7. writes `voiceover-render-report.json`
+8. prepares the manual-review upload metadata package
+
+Free local TTS provider order:
+
+- macOS `say`
+- `espeak-ng`
+
+Generated files may include:
+
+- `voiceover-script.txt`
+- `voiceover.aiff`
+- `voiceover.wav`
+- `voiceover-tts-command.json`
+- `voiceover-mux-command.json`
+- `voiceover-render-report.json`
+- `video-with-voiceover.mp4`
+
+The voiceover script is deterministic and derived from:
+
+- Daily Brief title/date
+- stock, ETF, and futures picks
+- research and disclosure summaries
+- prewrite context
+- package storyboard/subtitle/card counts
+- investment risk note
+
+VIDEO-2C still does not call external TTS APIs, call LLMs, read secrets, mutate source runs, mutate content items, mutate DB rows, schedule publishing, or upload to any platform.

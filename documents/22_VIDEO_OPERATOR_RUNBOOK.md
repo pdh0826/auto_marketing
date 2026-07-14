@@ -33,6 +33,9 @@ Expected review artifacts:
 - `card-render-report.json`
 - `video.mp4`
 - `mp4-render-report.json`
+- `voiceover-script.txt` when local voiceover is requested
+- `voiceover-render-report.json` when local voiceover is requested
+- `video-with-voiceover.mp4` when local TTS and ffmpeg succeed
 - `upload/operator-checklist.md`
 
 ## Required Readback State
@@ -42,8 +45,10 @@ Proceed with local review only when readback shows:
 - `stale=false`
 - current source hash matches the saved manifest source hash
 - `video.mp4` exists and has non-zero bytes
+- if voiceover was requested, `video-with-voiceover.mp4` exists and has non-zero bytes
 - `manifest.json` exists
 - `mp4-render-report.json` exists
+- `voiceover-render-report.json` exists after voiceover rendering
 - `upload/operator-checklist.md` exists
 - operating repo touched is false
 - server 3004 touched is false
@@ -74,7 +79,9 @@ Storyboard and subtitles:
 - Compare `storyboard.json` scene count with card count.
 - Confirm scene order matches the rendered cards.
 - Confirm subtitles do not overflow and match the visible scene context.
-- Confirm the MP4 is silent unless a future approved audio patch explicitly changes that contract.
+- Confirm `video.mp4` remains the silent baseline artifact.
+- If `video-with-voiceover.mp4` exists, confirm the narration matches the visible card sequence and includes the risk note.
+- Confirm the voiceover report says `subscriptionRequired=false` and `externalProvider=false`.
 
 Metadata:
 
@@ -88,6 +95,8 @@ Metadata:
 Do not:
 
 - upload to YouTube, Instagram, TikTok, Blogger, or Tistory
+- call external TTS providers
+- call LLM providers for narration
 - save a Blogger or Tistory draft
 - publish or schedule publish
 - mutate an existing content item

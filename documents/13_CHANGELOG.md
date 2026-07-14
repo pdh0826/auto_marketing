@@ -1,5 +1,25 @@
 # 13_CHANGELOG
 
+## VIDEO-2C Free Local Voiceover Render
+
+Added local-only voiceover automation for Daily Brief video packages.
+
+- Added `POST /api/daily-brief/runs/[runId]/video-package/render-voiceover`.
+- Added deterministic voiceover script generation from Daily Brief article insights: title, stock/ETF/futures picks, research summaries, disclosures, prewrite context, storyboard, and subtitles.
+- Added free local TTS execution using macOS `say` first, then `espeak-ng` when available.
+- Added local audio muxing with `ffmpeg` to create `video-with-voiceover.mp4`.
+- Added `voiceover-script.txt`, local audio file, command records, `voiceover-render-report.json`, and voiced MP4 readback artifacts.
+- The voiceover route also prepares the existing upload metadata package after a successful voiced MP4 render.
+- Added wizard controls and status for free TTS voiceover rendering.
+- Updated the safety fixture to verify voiceover script content and keep TTS/provider execution local-only.
+
+Safety:
+
+- No paid TTS subscription is required by the implementation.
+- No OpenAI, ElevenLabs, Google, AWS, Azure, or other external provider call is added.
+- No secret read, LLM call, DB write, Daily Brief mutation, content item mutation, scheduler mutation, Blogger/Tistory write, or platform upload is added.
+- Upload metadata remains manual-review-only with uploads disabled.
+
 ## VIDEO-2B Audio Contract and No-Call Guard
 
 Extended the design-only audio/narration contract while keeping audio implementation blocked.

@@ -34,6 +34,7 @@ require.extensions[".ts"] = function compileTypeScript(module, filename) {
 
 const { buildDailyBriefVideoPackagePreview } = require("../src/lib/video-automation/daily-brief-package.ts");
 const { readDailyBriefVideoPackage } = require("../src/lib/video-automation/daily-brief-upload-package.ts");
+const { buildDailyBriefVoiceoverScript } = require("../src/lib/video-automation/daily-brief-voiceover-renderer.ts");
 
 const videoOutputRoot = path.join(projectRoot, "local-data", "video-automation", "daily-brief");
 
@@ -100,9 +101,10 @@ async function main() {
   assertSideEffects(readback.sideEffectSummary, false, "readback");
 
   await assertStaleReadbackFixture();
+  assertVoiceoverScript(first, fixture);
 
   assertNoForbiddenSourcePatterns();
-  assertAudioStillDesignOnly();
+  assertVoiceoverLocalOnly();
 
   console.log("video_automation_safety_ok");
 }
@@ -326,14 +328,31 @@ function assertNoForbiddenSourcePatterns() {
   }
 }
 
-function assertAudioStillDesignOnly() {
+function assertVoiceoverScript(videoPackage, fixture) {
+  const script = buildDailyBriefVoiceoverScript(fixture, {
+    cardRender: {
+      package: videoPackage
+    },
+    report: {
+      validation: {
+        ready: true
+      }
+    }
+  });
+  assertIncludes(script, fixture.title, "voiceover script should derive from Daily Brief title");
+  assertIncludes(script, fixture.stockPicks[0].name, "voiceover script should include stock insight");
+  assertIncludes(script, fixture.researchItems[0].shortSummary, "voiceover script should include research insight");
+  assertIncludes(script, "투자 조언이 아닙니다", "voiceover script should include risk note");
+  assert(!script.includes("STORAGE_PATH_SHOULD_NOT_APPEAR"), "voiceover script must not expose capture storagePath values");
+  assert(!script.includes("client_secret"), "voiceover script must not include client secret markers");
+  assert(!script.includes("token.json"), "voiceover script must not include token file markers");
+}
+
+function assertVoiceoverLocalOnly() {
   const forbidden = [
-    { pattern: /audioIncluded:\s*true/, label: "enabled MP4 audio" },
-    { pattern: /\bvoiceover\b/i, label: "voiceover implementation" },
-    { pattern: /\btts\b/i, label: "TTS implementation" },
-    { pattern: /text[-_\s]?to[-_\s]?speech/i, label: "text-to-speech implementation" },
-    { pattern: /\.(?:wav|mp3)\b/i, label: "audio artifact file writes" },
-    { pattern: /\b(?:openai|elevenlabs|polly|azureSpeech|googleTts|speechSynthesis)\b/i, label: "external audio or narration provider" }
+    { pattern: /\b(?:openai|elevenlabs|polly|azureSpeech|googleTts|speechSynthesis)\b/i, label: "external audio or narration provider" },
+    { pattern: /https?:\/\/[^"']*(?:tts|speech|audio|voice|openai|elevenlabs|google|azure|aws)/i, label: "external audio provider URL" },
+    { pattern: /subscriptionRequired:\s*true|externalProvider:\s*true|externalProviderCall:\s*true/, label: "enabled external audio provider flags" }
   ];
 
   for (const file of listVideoAutomationSourceFiles()) {

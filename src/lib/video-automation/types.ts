@@ -15,6 +15,13 @@ export type DailyBriefVideoFileKind =
   | "mp4_render_report_json"
   | "mp4_render_command_json"
   | "mp4_concat_input_txt"
+  | "voiceover_script_txt"
+  | "voiceover_audio_aiff"
+  | "voiceover_audio_wav"
+  | "voiceover_render_report_json"
+  | "voiceover_tts_command_json"
+  | "voiceover_mux_command_json"
+  | "video_with_voiceover_mp4"
   | "upload_youtube_json"
   | "upload_instagram_json"
   | "upload_tiktok_json"
@@ -267,6 +274,68 @@ export interface DailyBriefVideoMp4RenderReport {
 export interface DailyBriefVideoMp4RenderResult {
   cardRender: DailyBriefVideoCardRenderResult;
   report: DailyBriefVideoMp4RenderReport;
+  outputDirectory: string | null;
+  files: DailyBriefVideoPackageFile[];
+}
+
+export interface DailyBriefVideoVoiceoverRenderReport {
+  kind: "daily_brief_video_voiceover_render_report";
+  version: "VIDEO-2C";
+  generatedAt: string;
+  sourceHash: string;
+  sourceHashPrefix: string;
+  status: "rendered" | "blocked" | "failed";
+  script: {
+    fileName: "voiceover-script.txt";
+    hashAlgorithm: "sha256";
+    hash: string;
+    bytes: number;
+    characterCount: number;
+    derivedFrom: string[];
+    contentItemId: string | null;
+    contentItemRead: false;
+  };
+  provider: {
+    mode: "local_tts";
+    name: "say" | "espeak-ng" | null;
+    subscriptionRequired: false;
+    externalProvider: false;
+    commandAvailable: boolean;
+  };
+  renderer: {
+    name: "ffmpeg";
+    audioIncluded: boolean;
+    externalUploadEnabled: false;
+  };
+  validation: {
+    ready: boolean;
+    errors: string[];
+    warnings: string[];
+    expectedVideoDurationSec: number;
+    audioDurationSec: number | null;
+    audioBytes: number | null;
+    outputBytes: number | null;
+    sourceHashMatchesMp4: boolean;
+    uploadMetadataPrepared: boolean;
+  };
+  ttsCommand: {
+    executable: "say" | "espeak-ng";
+    args: string[];
+    exitCode: number | null;
+  } | null;
+  muxCommand: {
+    executable: "ffmpeg";
+    args: string[];
+    exitCode: number | null;
+  } | null;
+  files: DailyBriefVideoPackageFile[];
+  sideEffectSummary: DailyBriefVideoSideEffectSummary;
+}
+
+export interface DailyBriefVideoVoiceoverRenderResult {
+  mp4Render: DailyBriefVideoMp4RenderResult;
+  uploadMetadata: DailyBriefVideoUploadMetadataResult | null;
+  report: DailyBriefVideoVoiceoverRenderReport;
   outputDirectory: string | null;
   files: DailyBriefVideoPackageFile[];
 }

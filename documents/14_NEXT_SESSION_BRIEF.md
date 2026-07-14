@@ -21,6 +21,7 @@ Implemented:
 - VIDEO-1N operator runbook for local-only MP4 review outside the app.
 - VIDEO-1O wizard readback status for full/current/saved source hash, stale state, MP4 artifact, operator checklist, and guard cleanliness.
 - VIDEO-2B audio/narration contract design, voiceover artifact contract, no-call safety guard, and compact wizard local review checklist.
+- VIDEO-2C free local voiceover render with deterministic script, local `say`/`espeak-ng` TTS, ffmpeg audio mux, voiced MP4, upload metadata preparation, and external providers disabled.
 
 Safety:
 
@@ -30,6 +31,7 @@ Safety:
 - Blogger/Tistory publishing and YouTube/Instagram/TikTok uploads remain disabled.
 - Existing content items, scheduler state, and Daily Brief source runs are not mutated by the video package/readback checks.
 - No external service write, token refresh, secret read, DB write, or LLM call is added by the video automation tests.
+- Local voiceover may execute only free local TTS commands and local ffmpeg.
 - The operating `/Users/pdh0826/blog-growth-agent` repo and 3004 server remain out of scope.
 
 Validation:
@@ -42,8 +44,8 @@ Validation:
 
 Recommended next patch:
 
-- Do not implement audio until there is separate explicit approval for a chosen local or external TTS path.
-- If audio is approved later, start with a no-call preview route and provider/cost/redaction gate before any TTS or LLM execution.
+- Run an operator smoke on a real Daily Brief package where local `say` or `espeak-ng` is installed.
+- Do not implement external TTS or LLM narration until there is separate explicit approval and provider/cost/redaction gates are added.
 
 ## Futures publication guard
 

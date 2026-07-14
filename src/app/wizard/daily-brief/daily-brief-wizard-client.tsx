@@ -11,7 +11,8 @@ import type {
   DailyBriefVideoMp4RenderResult,
   DailyBriefVideoPackageReadbackResult,
   DailyBriefVideoPackageResult,
-  DailyBriefVideoUploadMetadataResult
+  DailyBriefVideoUploadMetadataResult,
+  DailyBriefVideoVoiceoverRenderResult
 } from "@/lib/video-automation/types";
 
 interface GenerateContentResponse {
@@ -111,6 +112,7 @@ export function DailyBriefWizardClient() {
   const [videoPackage, setVideoPackage] = useState<DailyBriefVideoPackageResult | null>(null);
   const [videoCardRender, setVideoCardRender] = useState<DailyBriefVideoCardRenderResult | null>(null);
   const [videoMp4Render, setVideoMp4Render] = useState<DailyBriefVideoMp4RenderResult | null>(null);
+  const [videoVoiceoverRender, setVideoVoiceoverRender] = useState<DailyBriefVideoVoiceoverRenderResult | null>(null);
   const [videoUploadMetadata, setVideoUploadMetadata] = useState<DailyBriefVideoUploadMetadataResult | null>(null);
   const [videoReadback, setVideoReadback] = useState<DailyBriefVideoPackageReadbackResult | null>(null);
   const [tistoryReviewMode, setTistoryReviewMode] = useState<TistoryReviewMode>("mixed_stock_etf_review");
@@ -139,6 +141,7 @@ export function DailyBriefWizardClient() {
       setVideoPackage(null);
       setVideoCardRender(null);
       setVideoMp4Render(null);
+      setVideoVoiceoverRender(null);
       setVideoUploadMetadata(null);
       setVideoReadback(null);
     });
@@ -213,6 +216,7 @@ export function DailyBriefWizardClient() {
       setVideoPackage(response.data);
       setVideoCardRender(null);
       setVideoMp4Render(null);
+      setVideoVoiceoverRender(null);
       setVideoUploadMetadata(null);
       setVideoReadback(null);
     });
@@ -231,6 +235,7 @@ export function DailyBriefWizardClient() {
       setVideoPackage(response.data);
       setVideoCardRender(null);
       setVideoMp4Render(null);
+      setVideoVoiceoverRender(null);
       setVideoUploadMetadata(null);
       setVideoReadback(null);
     });
@@ -249,6 +254,7 @@ export function DailyBriefWizardClient() {
       setVideoPackage(response.data.package);
       setVideoCardRender(response.data);
       setVideoMp4Render(null);
+      setVideoVoiceoverRender(null);
     });
   }
 
@@ -265,7 +271,27 @@ export function DailyBriefWizardClient() {
       setVideoPackage(response.data.cardRender.package);
       setVideoCardRender(response.data.cardRender);
       setVideoMp4Render(response.data);
+      setVideoVoiceoverRender(null);
       setVideoUploadMetadata(null);
+      setVideoReadback(null);
+    });
+  }
+
+  async function renderVideoVoiceover() {
+    if (!run) {
+      setError("먼저 Daily Brief Run을 생성하세요.");
+      return;
+    }
+    await runAction("video-voiceover-render", async () => {
+      const response = await requestJson<ApiResult<DailyBriefVideoVoiceoverRenderResult>>(`/api/daily-brief/runs/${run.id}/video-package/render-voiceover`, {
+        method: "POST",
+        body: JSON.stringify({})
+      });
+      setVideoPackage(response.data.mp4Render.cardRender.package);
+      setVideoCardRender(response.data.mp4Render.cardRender);
+      setVideoMp4Render(response.data.mp4Render);
+      setVideoVoiceoverRender(response.data);
+      setVideoUploadMetadata(response.data.uploadMetadata);
       setVideoReadback(null);
     });
   }
@@ -282,6 +308,7 @@ export function DailyBriefWizardClient() {
       });
       setVideoPackage(response.data.package);
       setVideoUploadMetadata(response.data);
+      setVideoVoiceoverRender(null);
       setVideoReadback(null);
     });
   }
@@ -315,6 +342,7 @@ export function DailyBriefWizardClient() {
   const videoUploadOperatorChecklist = videoUploadMetadata?.files.find((file) => file.kind === "operator_checklist_md");
   const videoReadbackManifest = videoReadback?.artifacts.find((artifact) => artifact.kind === "manifest_json");
   const videoReadbackMp4 = videoReadback?.artifacts.find((artifact) => artifact.kind === "video_mp4");
+  const videoReadbackVoiceoverMp4 = videoReadback?.artifacts.find((artifact) => artifact.kind === "video_with_voiceover_mp4");
   const videoReadbackOperatorChecklist = videoReadback?.artifacts.find((artifact) => artifact.kind === "operator_checklist_md");
   const videoReadbackGuardClean = videoReadback
     ? !videoReadback.guard.operatingRepoTouched &&
@@ -503,6 +531,9 @@ export function DailyBriefWizardClient() {
               <button className="button" type="button" disabled={Boolean(running)} onClick={() => void renderVideoMp4()}>
                 {running === "video-mp4-render" ? "MP4 렌더 중" : "MP4 로컬 렌더"}
               </button>
+              <button className="button" type="button" disabled={Boolean(running)} onClick={() => void renderVideoVoiceover()}>
+                {running === "video-voiceover-render" ? "음성 렌더 중" : "무료 TTS 음성 입히기"}
+              </button>
               <button className="button secondary" type="button" disabled={Boolean(running)} onClick={() => void generateVideoUploadMetadata()}>
                 {running === "video-upload-metadata" ? "생성 중" : "업로드 패키지"}
               </button>
@@ -520,6 +551,7 @@ export function DailyBriefWizardClient() {
               <li>source hash: {videoReadback ? videoReadbackHashState : "패키지 조회 전"}</li>
               <li>stale: {videoReadback ? String(videoReadback.stale) : "패키지 조회 전"}</li>
               <li>video.mp4: {videoReadbackMp4?.exists ? `${videoReadbackMp4.bytes ?? 0} bytes` : "missing"}</li>
+              <li>video-with-voiceover.mp4: {videoReadbackVoiceoverMp4?.exists ? `${videoReadbackVoiceoverMp4.bytes ?? 0} bytes` : "optional"}</li>
               <li>operator checklist: {videoReadbackOperatorChecklist?.exists ? "exists" : "missing"}</li>
               <li>guard clean: {videoReadback ? String(videoReadbackGuardClean) : "패키지 조회 전"}</li>
               <li>upload/publish: disabled</li>
@@ -640,6 +672,40 @@ export function DailyBriefWizardClient() {
                 </thead>
                 <tbody>
                   {videoMp4Render.report.files.map((file) => (
+                    <tr key={`${file.kind}-${file.fileName}`}>
+                      <td>{file.relativePath}</td>
+                      <td>{file.kind}</td>
+                      <td>{file.bytes ?? "-"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : null}
+          {videoVoiceoverRender ? (
+            <div className={videoVoiceoverRender.report.validation.ready ? "notice success" : "notice warning"}>
+              <strong>무료 로컬 TTS 음성 렌더 {videoVoiceoverRender.report.status}</strong>
+              <p>
+                provider {videoVoiceoverRender.report.provider.name ?? "not available"} / subscription{" "}
+                {String(videoVoiceoverRender.report.provider.subscriptionRequired)} / external provider{" "}
+                {String(videoVoiceoverRender.report.provider.externalProvider)}
+              </p>
+              <p>
+                script {videoVoiceoverRender.report.script.characterCount}자 / audio bytes {videoVoiceoverRender.report.validation.audioBytes ?? "-"} / voiced MP4 bytes{" "}
+                {videoVoiceoverRender.report.validation.outputBytes ?? "-"} / upload metadata {String(videoVoiceoverRender.report.validation.uploadMetadataPrepared)}
+              </p>
+              {videoVoiceoverRender.report.validation.errors.length ? <p>Errors: {videoVoiceoverRender.report.validation.errors.join(", ")}</p> : null}
+              {videoVoiceoverRender.report.validation.warnings.length ? <p>Warnings: {videoVoiceoverRender.report.validation.warnings.join(", ")}</p> : null}
+              <table>
+                <thead>
+                  <tr>
+                    <th>파일</th>
+                    <th>종류</th>
+                    <th>bytes</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {videoVoiceoverRender.report.files.map((file) => (
                     <tr key={`${file.kind}-${file.fileName}`}>
                       <td>{file.relativePath}</td>
                       <td>{file.kind}</td>
