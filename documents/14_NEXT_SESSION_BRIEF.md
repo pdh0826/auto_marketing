@@ -18,6 +18,7 @@ Implemented:
 - VIDEO-1L `npm run test:video-automation` fixture that pins source hash behavior and safety boundaries.
 - VIDEO-1M `npm run verify:video-automation` and GitHub Actions coverage for VIDEO-related path changes.
 - Saved-package stale source hash readback fixture coverage.
+- VIDEO-1N operator runbook for local-only MP4 review outside the app.
 
 Safety:
 
@@ -39,8 +40,8 @@ Validation:
 
 Recommended next patch:
 
-- Add operator-facing documentation for when local MP4 output may be manually reviewed outside the app.
 - Surface source hash, stale state, and operator checklist status more clearly in the Daily Brief wizard.
+- Add a wizard link to `documents/22_VIDEO_OPERATOR_RUNBOOK.md` or mirror the required local review checklist in UI copy.
 
 ## Futures publication guard
 

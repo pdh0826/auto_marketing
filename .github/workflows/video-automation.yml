@@ -15,6 +15,7 @@ on:
       - "documents/14_NEXT_SESSION_BRIEF.md"
       - "documents/20_VIDEO_AUTOMATION.md"
       - "documents/21_VIDEO_AUDIO_DESIGN.md"
+      - "documents/22_VIDEO_OPERATOR_RUNBOOK.md"
   push:
     branches:
       - "codex/video-automation-v1"
@@ -31,6 +32,7 @@ on:
       - "documents/14_NEXT_SESSION_BRIEF.md"
       - "documents/20_VIDEO_AUTOMATION.md"
       - "documents/21_VIDEO_AUDIO_DESIGN.md"
+      - "documents/22_VIDEO_OPERATOR_RUNBOOK.md"
 
 jobs:
   verify-video-automation:

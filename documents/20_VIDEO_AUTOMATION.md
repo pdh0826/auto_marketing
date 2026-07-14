@@ -331,6 +331,19 @@ The VIDEO-1L safety fixture also includes a stale readback case:
 - verifies readback reports `savedSourceHash`, the current hash, and `stale=true`
 - removes the test-only local artifact before finishing
 
+## VIDEO-1N Operator Runbook
+
+Manual local MP4 review is documented in `documents/22_VIDEO_OPERATOR_RUNBOOK.md`.
+
+The runbook defines:
+
+- manual review outside the app as local-only inspection
+- required artifacts before review
+- required readback state, including `stale=false`
+- source hash, visual, storyboard, subtitle, and metadata review steps
+- forbidden upload, publish, scheduler, secret, operating repo, and server actions
+- failure handling for stale readback, missing MP4, renderer failure, or leaked local paths
+
 ## VIDEO-2A Audio Design
 
 Audio and narration are not implemented yet. See `documents/21_VIDEO_AUDIO_DESIGN.md`.

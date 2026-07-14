@@ -1,5 +1,18 @@
 # 13_CHANGELOG
 
+## VIDEO-1N Operator Runbook
+
+Added operator-facing documentation for local MP4 review.
+
+- Added `documents/22_VIDEO_OPERATOR_RUNBOOK.md`.
+- Documented required local artifacts, readback state, source hash checks, visual review, storyboard/subtitle review, metadata review, forbidden actions, and failure handling.
+- Added the runbook to the VIDEO verification workflow path filter.
+
+Safety:
+
+- Manual review outside the app is defined as local-only inspection.
+- YouTube/Instagram/TikTok uploads, Blogger/Tistory writes, scheduler mutation, content item mutation, Daily Brief source mutation, secret reads, and operating repo/server usage remain forbidden.
+
 ## VIDEO-1M Video Automation Verification Hook
 
 Connected the video automation safety fixture to a reusable verification command and CI workflow.
