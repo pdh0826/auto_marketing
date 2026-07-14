@@ -1,5 +1,45 @@
 # 14_NEXT_SESSION_BRIEF
 
+## Current State: VIDEO-1 Local Video Automation
+
+The branch `codex/video-automation-v1` now contains the first local-only Daily Brief video automation workflow.
+
+Implemented:
+
+- VIDEO-1A package scaffold for read-only Daily Brief reuse.
+- VIDEO-1B deterministic source snapshot and SHA-256 source hash contract.
+- VIDEO-1C local card PNG rendering.
+- VIDEO-1D storyboard, subtitle, card-budget, and closing risk-note quality gates.
+- VIDEO-1E local silent MP4 rendering.
+- VIDEO-1F upload metadata package for manual review only.
+- VIDEO-1G wizard workflow controls.
+- VIDEO-1H package readback for artifact existence, file sizes, current hash, saved hash, and stale state.
+- VIDEO-1I operating guard fields.
+- VIDEO-1L `npm run test:video-automation` fixture that pins source hash behavior and safety boundaries.
+
+Safety:
+
+- The module is internal to Blog Growth Agent and is not a separate operating service.
+- Daily Brief results are reused as read-only input.
+- Generated video artifacts are local files under `local-data/video-automation`.
+- Blogger/Tistory publishing and YouTube/Instagram/TikTok uploads remain disabled.
+- Existing content items, scheduler state, and Daily Brief source runs are not mutated by the video package/readback checks.
+- No external service write, token refresh, secret read, DB write, or LLM call is added by the video automation tests.
+- The operating `/Users/pdh0826/blog-growth-agent` repo and 3004 server remain out of scope.
+
+Validation:
+
+- `npm run test:video-automation`
+- `npm run lint`
+- `npm run typecheck`
+- `npm run build`
+
+Recommended next patch:
+
+- Add a CI/checklist hook so VIDEO changes always run `npm run test:video-automation`.
+- Add fixture coverage for saved-package stale hash readback.
+- Add operator-facing documentation for when local MP4 output may be manually reviewed outside the app.
+
 ## Futures publication guard
 
 - Scheduled futures posts now require a verified instrument/timeframe screenshot. Do not weaken `futures_timeframe_selection_not_confirmed`; a failed selection must stop publication rather than attach a mislabeled chart.

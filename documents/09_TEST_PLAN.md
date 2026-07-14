@@ -25,6 +25,34 @@ npm run typecheck
 npm run build
 ```
 
+## VIDEO-1 Local Video Automation 검증
+
+```bash
+npm run test:video-automation
+```
+
+Expected:
+
+- Daily Brief video package manifest keeps the VIDEO-1B source contract.
+- Source hash is stable when only package generation time changes.
+- Source hash changes when safe Daily Brief source fields change.
+- Capture `storagePath` and secret-like markers are excluded from emitted manifests.
+- Upload readiness and platform upload enablement remain false.
+- MP4 in the base package remains a render plan boundary, not an upload-ready artifact.
+- Package/readback side-effect summaries keep DB writes, external service writes, Blogger/Tistory writes, platform uploads, scheduler mutation, LLM calls, and secret reads false.
+- Readback guards keep operating repo touch, server 3004 touch, external write routes, scheduler mutation, and secret-read requirement false.
+- Static source scan blocks DB/prisma imports, `process.env` access, secret file references, network `fetch` calls, and enabled external-write flags in video automation code.
+
+Must not:
+
+- mutate Daily Brief source runs;
+- mutate existing content items;
+- call Blogger/Tistory writes;
+- upload to YouTube/Instagram/TikTok;
+- change operating scheduler state;
+- read or print secrets;
+- write to external services.
+
 ## Patch 9G-8 Daily UpSignal Brief Automation 검증
 
 - Open `/wizard/daily-brief`.
