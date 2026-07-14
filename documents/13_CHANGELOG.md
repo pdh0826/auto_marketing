@@ -1,5 +1,23 @@
 # 13_CHANGELOG
 
+## VIDEO-1D Storyboard and Subtitle Quality Gate
+
+Hardened deterministic video package quality checks before MP4 rendering.
+
+- Added shortform card budget enforcement with a 9-card limit.
+- Added deterministic stock-card compression while preserving cover, market summary, optional ETF/futures summaries, and final risk note.
+- Added validation that the closing risk note is the final card.
+- Added scene duration bounds of 3 to 7 seconds.
+- Added subtitle cue index sequence, subtitle text length, and on-screen text length checks.
+- Updated `documents/20_VIDEO_AUTOMATION.md` with the VIDEO-1D validation contract.
+
+Safety:
+
+- Daily Brief run JSON remains read-only input.
+- Existing content items, scheduler state, and DB rows are not mutated.
+- MP4 binary rendering and external uploads remain blocked.
+- No Blogger/Tistory API write, YouTube/Instagram/TikTok upload, scheduled publish change, token refresh, secret read, or LLM call.
+
 ## VIDEO-1C Daily Brief Card PNG Render
 
 Added local-only visual rendering for Daily Brief video packages.

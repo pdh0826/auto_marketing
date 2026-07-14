@@ -18,6 +18,10 @@ import type {
 
 const VIDEO_PACKAGE_VERSION = "VIDEO-1B";
 const OUTPUT_ROOT = path.join(process.cwd(), "local-data", "video-automation", "daily-brief");
+const MAX_SHORTFORM_CARD_COUNT = 9;
+const MIN_SCENE_DURATION_SEC = 3;
+const MAX_SCENE_DURATION_SEC = 7;
+const MAX_SUBTITLE_TEXT_LENGTH = 160;
 
 export function buildDailyBriefVideoPackagePreview(run: DailyBriefRun, generatedAt = new Date().toISOString()): DailyBriefVideoPackageResult {
   const packageSlug = sanitizePackageSlug(run.id);
@@ -48,6 +52,7 @@ export function buildDailyBriefVideoPackagePreview(run: DailyBriefRun, generated
     sourceBlockingReasons,
     sourceWarnings: warnings,
     sourceSnapshot,
+    source,
     cards,
     storyboard,
     subtitles,
@@ -321,6 +326,7 @@ function buildPackageValidation(input: {
   sourceBlockingReasons: string[];
   sourceWarnings: string[];
   sourceSnapshot: DailyBriefVideoSourceSnapshot;
+  source: DailyBriefVideoPackageManifest["source"];
   cards: DailyBriefVideoCard[];
   storyboard: DailyBriefVideoStoryboardScene[];
   subtitles: DailyBriefVideoSubtitleCue[];
@@ -334,6 +340,7 @@ function buildPackageValidation(input: {
   const uniqueCaptureReferences = new Set(sourceCaptureReferences);
   const cardIds = input.cards.map((card) => card.id);
   const uniqueCardIds = new Set(cardIds);
+  const stockCardCount = input.cards.filter((card) => card.id.startsWith("stock-")).length;
 
   for (const reason of input.sourceBlockingReasons) {
     addCheck(reason, "fail", `Source Daily Brief run is not package-ready: ${reason}.`);
@@ -359,6 +366,23 @@ function buildPackageValidation(input: {
     "A closing risk note card is required before any video render or upload package can be considered complete."
   );
   addCheck(
+    input.cards[input.cards.length - 1]?.id === "closing-risk-note" ? "risk_note_card_last" : "risk_note_card_not_last",
+    input.cards[input.cards.length - 1]?.id === "closing-risk-note" ? "pass" : "fail",
+    "The closing risk note must be the final card."
+  );
+  addCheck(
+    input.cards.length <= MAX_SHORTFORM_CARD_COUNT ? "shortform_card_count_within_limit" : "shortform_card_count_exceeds_limit",
+    input.cards.length <= MAX_SHORTFORM_CARD_COUNT ? "pass" : "fail",
+    `Shortform packages should stay at or below ${MAX_SHORTFORM_CARD_COUNT} cards.`
+  );
+  addCheck(
+    input.source.stockPickCount > stockCardCount ? "stock_cards_compressed" : "stock_cards_not_compressed",
+    input.source.stockPickCount > stockCardCount ? "warn" : "pass",
+    input.source.stockPickCount > stockCardCount
+      ? "Only the highest-priority stock picks are promoted to individual video cards."
+      : "All stock picks fit within the shortform card budget."
+  );
+  addCheck(
     input.storyboard.length === input.cards.length ? "storyboard_matches_cards" : "storyboard_card_count_mismatch",
     input.storyboard.length === input.cards.length ? "pass" : "fail",
     "Storyboard scene count must match card count."
@@ -371,6 +395,12 @@ function buildPackageValidation(input: {
     return ok;
   });
   addCheck(scenesContinuous ? "storyboard_timing_continuous" : "storyboard_timing_gap", scenesContinuous ? "pass" : "fail", "Storyboard timing must be continuous.");
+  const sceneDurationsWithinBounds = input.storyboard.every((scene) => scene.durationSec >= MIN_SCENE_DURATION_SEC && scene.durationSec <= MAX_SCENE_DURATION_SEC);
+  addCheck(
+    sceneDurationsWithinBounds ? "scene_duration_bounds_ok" : "scene_duration_out_of_bounds",
+    sceneDurationsWithinBounds ? "pass" : "fail",
+    `Each scene duration must stay between ${MIN_SCENE_DURATION_SEC}s and ${MAX_SCENE_DURATION_SEC}s.`
+  );
   addCheck(
     input.subtitles.length === input.storyboard.length ? "subtitle_count_matches_storyboard" : "subtitle_count_mismatch",
     input.subtitles.length === input.storyboard.length ? "pass" : "fail",
@@ -381,6 +411,24 @@ function buildPackageValidation(input: {
     return Boolean(scene && cue.startSec === scene.startSec && cue.endSec === scene.endSec && cue.text.trim());
   });
   addCheck(subtitlesAligned ? "subtitles_aligned" : "subtitles_not_aligned", subtitlesAligned ? "pass" : "fail", "Subtitle cue timing must align with storyboard scenes.");
+  const subtitleIndexSequence = input.subtitles.every((cue, index) => cue.index === index + 1);
+  addCheck(
+    subtitleIndexSequence ? "subtitle_index_sequence_ok" : "subtitle_index_sequence_invalid",
+    subtitleIndexSequence ? "pass" : "fail",
+    "Subtitle cue indexes must be sequential."
+  );
+  const subtitleTextLengthOk = input.subtitles.every((cue) => cue.text.length <= MAX_SUBTITLE_TEXT_LENGTH);
+  addCheck(
+    subtitleTextLengthOk ? "subtitle_text_length_ok" : "subtitle_text_too_long",
+    subtitleTextLengthOk ? "pass" : "fail",
+    `Subtitle cue text must be ${MAX_SUBTITLE_TEXT_LENGTH} characters or fewer.`
+  );
+  const onScreenTextLengthOk = input.storyboard.every((scene) => scene.onScreenText.every((line) => line.length <= 52));
+  addCheck(
+    onScreenTextLengthOk ? "on_screen_text_length_ok" : "on_screen_text_too_long",
+    onScreenTextLengthOk ? "pass" : "fail",
+    "On-screen text lines must stay within the 52-character card layout limit."
+  );
   addCheck(
     input.mp4.status === "render_plan_only" && input.mp4.renderImplemented === false ? "mp4_render_plan_only" : "mp4_render_enabled_unexpectedly",
     input.mp4.status === "render_plan_only" && input.mp4.renderImplemented === false ? "pass" : "fail",
@@ -484,6 +532,8 @@ function buildCoverSpec(run: DailyBriefRun): DailyBriefVideoCoverSpec {
 }
 
 function buildCards(run: DailyBriefRun, cover: DailyBriefVideoCoverSpec): DailyBriefVideoCard[] {
+  const optionalSummaryCardCount = (run.etfPicks.length ? 1 : 0) + (run.futuresPicks?.length ? 1 : 0);
+  const stockCardLimit = Math.max(0, MAX_SHORTFORM_CARD_COUNT - 3 - optionalSummaryCardCount);
   const cards: DailyBriefVideoCard[] = [
     {
       id: "cover",
@@ -504,7 +554,7 @@ function buildCards(run: DailyBriefRun, cover: DailyBriefVideoCoverSpec): DailyB
     }
   ];
 
-  for (const pick of run.stockPicks.slice(0, 5)) {
+  for (const pick of run.stockPicks.slice(0, stockCardLimit)) {
     const chartCapture = findCaptureById(run.captures, pick.chartCaptureId);
     cards.push({
       id: `stock-${pick.code}`,

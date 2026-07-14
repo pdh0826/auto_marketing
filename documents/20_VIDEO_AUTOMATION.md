@@ -160,3 +160,25 @@ VIDEO-1C still does not:
 - change scheduler state
 - call LLMs
 - read secrets
+
+## VIDEO-1D Storyboard and Subtitle Quality
+
+VIDEO-1D strengthens the deterministic package validation before MP4 work.
+
+Additional validation checks:
+
+- closing risk note card must be the final card
+- shortform package card count must stay at or below 9
+- stock cards are compressed when the source Daily Brief has more stock picks than the shortform card budget
+- scene duration must stay between 3 and 7 seconds
+- subtitle cue indexes must be sequential
+- subtitle text must stay at or below 160 characters per cue
+- on-screen text lines must stay at or below 52 characters
+
+Card compression remains deterministic:
+
+- cover, market summary, and closing risk note are always preserved
+- ETF and futures summary cards are preserved when source data exists
+- remaining shortform budget is assigned to the highest-ranked stock cards
+
+VIDEO-1D still does not generate MP4 binaries, call LLMs, read secrets, mutate source runs, mutate DB rows, or perform any external write.
