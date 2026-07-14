@@ -20,6 +20,7 @@ Implemented:
 - Saved-package stale source hash readback fixture coverage.
 - VIDEO-1N operator runbook for local-only MP4 review outside the app.
 - VIDEO-1O wizard readback status for full/current/saved source hash, stale state, MP4 artifact, operator checklist, and guard cleanliness.
+- VIDEO-2B audio/narration contract design, voiceover artifact contract, no-call safety guard, and compact wizard local review checklist.
 
 Safety:
 
@@ -41,8 +42,8 @@ Validation:
 
 Recommended next patch:
 
-- Start VIDEO-2B audio/narration contract design only, keeping TTS/LLM calls unimplemented.
-- Add a wizard-accessible local review checklist if operator feedback shows the runbook path is not enough.
+- Do not implement audio until there is separate explicit approval for a chosen local or external TTS path.
+- If audio is approved later, start with a no-call preview route and provider/cost/redaction gate before any TTS or LLM execution.
 
 ## Futures publication guard
 

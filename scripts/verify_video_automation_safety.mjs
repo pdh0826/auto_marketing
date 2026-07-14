@@ -102,6 +102,7 @@ async function main() {
   await assertStaleReadbackFixture();
 
   assertNoForbiddenSourcePatterns();
+  assertAudioStillDesignOnly();
 
   console.log("video_automation_safety_ok");
 }
@@ -308,10 +309,7 @@ function capture(id, kind, label, target, fileName) {
 }
 
 function assertNoForbiddenSourcePatterns() {
-  const files = [
-    ...listFiles("src/lib/video-automation").filter((file) => file.endsWith(".ts")),
-    ...listFiles("src/app/api/daily-brief/runs/[runId]/video-package").filter((file) => file.endsWith(".ts"))
-  ];
+  const files = listVideoAutomationSourceFiles();
   const forbidden = [
     { pattern: /@\/lib\/db|from\s+["']@prisma\/client["']|\bprisma\./, label: "database write/read imports" },
     { pattern: /process\.env/, label: "environment secret access" },
@@ -326,6 +324,31 @@ function assertNoForbiddenSourcePatterns() {
       assert(!item.pattern.test(source), `${file} must not contain ${item.label}`);
     }
   }
+}
+
+function assertAudioStillDesignOnly() {
+  const forbidden = [
+    { pattern: /audioIncluded:\s*true/, label: "enabled MP4 audio" },
+    { pattern: /\bvoiceover\b/i, label: "voiceover implementation" },
+    { pattern: /\btts\b/i, label: "TTS implementation" },
+    { pattern: /text[-_\s]?to[-_\s]?speech/i, label: "text-to-speech implementation" },
+    { pattern: /\.(?:wav|mp3)\b/i, label: "audio artifact file writes" },
+    { pattern: /\b(?:openai|elevenlabs|polly|azureSpeech|googleTts|speechSynthesis)\b/i, label: "external audio or narration provider" }
+  ];
+
+  for (const file of listVideoAutomationSourceFiles()) {
+    const source = fs.readFileSync(path.join(projectRoot, file), "utf8");
+    for (const item of forbidden) {
+      assert(!item.pattern.test(source), `${file} must not contain ${item.label}`);
+    }
+  }
+}
+
+function listVideoAutomationSourceFiles() {
+  return [
+    ...listFiles("src/lib/video-automation").filter((file) => file.endsWith(".ts")),
+    ...listFiles("src/app/api/daily-brief/runs/[runId]/video-package").filter((file) => file.endsWith(".ts"))
+  ];
 }
 
 function listFiles(relativeDirectory) {

@@ -1,5 +1,18 @@
 # 13_CHANGELOG
 
+## VIDEO-2B Audio Contract and No-Call Guard
+
+Extended the design-only audio/narration contract while keeping audio implementation blocked.
+
+- Expanded `documents/21_VIDEO_AUDIO_DESIGN.md` with VIDEO-2B status flags, allowed/forbidden scope, voiceover artifact contract, provider boundary, cost gate, and MP4 audio gate.
+- Added static safety checks to `npm run test:video-automation` so video automation source fails if audio implementation/provider markers appear before approval.
+- Added a compact local review checklist to `/wizard/daily-brief`.
+
+Safety:
+
+- No TTS execution, LLM narration, voiceover file write, audio binary write, MP4 audio muxing, provider call, secret read, upload, publish, scheduler mutation, DB write, Daily Brief mutation, or content item mutation.
+- VIDEO remains silent local video generation until a separately approved implementation patch changes the contract.
+
 ## VIDEO-1O Wizard Review Status
 
 Improved the Daily Brief wizard video automation status block.

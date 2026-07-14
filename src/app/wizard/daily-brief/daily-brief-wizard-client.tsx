@@ -512,7 +512,18 @@ export function DailyBriefWizardClient() {
             </div>
           </div>
           <div className="notice">
-            VIDEO-1C는 Daily Brief run 파일과 기존 content item을 변경하지 않습니다. PNG 렌더는 local-data에만 쓰고, MP4/YouTube/Instagram/TikTok 업로드는 계속 차단합니다.
+            VIDEO-1은 Daily Brief run 파일과 기존 content item을 변경하지 않습니다. 영상 산출물은 local-data에만 쓰고, MP4 업로드와 YouTube/Instagram/TikTok 발행은 계속 차단합니다.
+          </div>
+          <div className={videoOperatorReviewReady ? "notice success" : "notice warning"}>
+            <strong>로컬 리뷰 체크리스트: {videoOperatorReviewReady ? "ready" : "readback 필요"}</strong>
+            <ul>
+              <li>source hash: {videoReadback ? videoReadbackHashState : "패키지 조회 전"}</li>
+              <li>stale: {videoReadback ? String(videoReadback.stale) : "패키지 조회 전"}</li>
+              <li>video.mp4: {videoReadbackMp4?.exists ? `${videoReadbackMp4.bytes ?? 0} bytes` : "missing"}</li>
+              <li>operator checklist: {videoReadbackOperatorChecklist?.exists ? "exists" : "missing"}</li>
+              <li>guard clean: {videoReadback ? String(videoReadbackGuardClean) : "패키지 조회 전"}</li>
+              <li>upload/publish: disabled</li>
+            </ul>
           </div>
           {videoPackage ? (
             <div className="read-block">

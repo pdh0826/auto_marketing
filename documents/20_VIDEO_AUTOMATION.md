@@ -356,9 +356,29 @@ The Daily Brief wizard video block surfaces operator review state:
 - MP4 artifact existence and bytes
 - operator checklist existence
 - guard cleanliness for operating repo, server 3004, external writes, scheduler mutation, and secret reads
+- compact local review checklist for hash, stale state, MP4, operator checklist, guard cleanliness, and disabled upload/publish
 
 This is UI-only and does not add a write route or enable uploads.
 
 ## VIDEO-2A Audio Design
 
 Audio and narration are not implemented yet. See `documents/21_VIDEO_AUDIO_DESIGN.md`.
+
+## VIDEO-2B Audio Contract
+
+VIDEO-2B is design-only and contract-only.
+
+It documents:
+
+- `audioImplemented=false`
+- `ttsCallImplemented=false`
+- `llmNarrationImplemented=false`
+- `audioIncludedInMp4=false`
+- `externalProviderCallsEnabled=false`
+- `secretReadRequired=false`
+- reserved voiceover artifact names and report fields
+- provider abstraction requirements before any external TTS or narration call
+- call logging, redaction, and cost gate requirements
+- MP4 audio gate requirements before any future muxing
+
+The safety fixture now statically fails when video automation source introduces voiceover/TTS/audio-provider implementation markers or `audioIncluded: true` before explicit approval.

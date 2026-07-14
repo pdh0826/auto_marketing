@@ -43,9 +43,11 @@ Expected:
 - MP4 in the base package remains a render plan boundary, not an upload-ready artifact.
 - `documents/22_VIDEO_OPERATOR_RUNBOOK.md` defines local-only MP4 review and keeps external upload/publish actions forbidden.
 - `/wizard/daily-brief` shows full/current/saved source hash, stale/match state, MP4 artifact status, operator checklist status, and guard cleanliness.
+- `/wizard/daily-brief` shows a compact local review checklist for hash, stale state, MP4, operator checklist, guard cleanliness, and disabled upload/publish.
 - Package/readback side-effect summaries keep DB writes, external service writes, Blogger/Tistory writes, platform uploads, scheduler mutation, LLM calls, and secret reads false.
 - Readback guards keep operating repo touch, server 3004 touch, external write routes, scheduler mutation, and secret-read requirement false.
 - Static source scan blocks DB/prisma imports, `process.env` access, secret file references, network `fetch` calls, and enabled external-write flags in video automation code.
+- Static source scan blocks voiceover/TTS/audio-provider implementation markers and `audioIncluded: true` until audio implementation is explicitly approved.
 - GitHub Actions runs `npm run verify:video-automation` for VIDEO-related path changes.
 
 Must not:
