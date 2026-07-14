@@ -35,6 +35,8 @@ require.extensions[".ts"] = function compileTypeScript(module, filename) {
 const { buildDailyBriefVideoPackagePreview } = require("../src/lib/video-automation/daily-brief-package.ts");
 const { readDailyBriefVideoPackage } = require("../src/lib/video-automation/daily-brief-upload-package.ts");
 
+const videoOutputRoot = path.join(projectRoot, "local-data", "video-automation", "daily-brief");
+
 const forbiddenFalseKeys = [
   "dailyBriefRunWrite",
   "existingContentItemMutation",
@@ -97,12 +99,56 @@ async function main() {
   assertEqual(readback.guard.secretReadRequired, false, "readback guard must not require secret reads");
   assertSideEffects(readback.sideEffectSummary, false, "readback");
 
+  await assertStaleReadbackFixture();
+
   assertNoForbiddenSourcePatterns();
 
   console.log("video_automation_safety_ok");
 }
 
-function buildFixtureRun() {
+async function assertStaleReadbackFixture() {
+  const staleFixture = buildFixtureRun("daily-video-stale-readback-fixture-test-only-2026-07-14");
+  const preview = buildDailyBriefVideoPackagePreview(staleFixture, "2026-07-14T00:00:00.000Z");
+  const packageSlug = preview.manifest.uploadPackage.packageSlug;
+  const outputDirectory = path.join(videoOutputRoot, packageSlug);
+  const staleHash = "0".repeat(64);
+
+  assert(
+    outputDirectory.startsWith(`${videoOutputRoot}${path.sep}`) && packageSlug.includes("stale-readback-fixture-test-only"),
+    "stale fixture output directory must stay inside the dedicated video automation test path"
+  );
+
+  await fs.promises.rm(outputDirectory, { recursive: true, force: true });
+  try {
+    await fs.promises.mkdir(outputDirectory, { recursive: true });
+    await fs.promises.writeFile(
+      path.join(outputDirectory, "manifest.json"),
+      JSON.stringify(
+        {
+          kind: "daily_brief_video_package",
+          version: "VIDEO-1B",
+          sourceSnapshot: {
+            hash: staleHash
+          }
+        },
+        null,
+        2
+      ),
+      "utf8"
+    );
+
+    const readback = await readDailyBriefVideoPackage(staleFixture);
+    assertEqual(readback.currentSourceHash, preview.manifest.sourceSnapshot.hash, "stale fixture current hash should match preview");
+    assertEqual(readback.savedSourceHash, staleHash, "stale fixture should read saved source hash from manifest");
+    assertEqual(readback.stale, true, "stale fixture should report stale=true when saved and current hashes differ");
+    assert(readback.exists, "stale fixture readback should see the saved manifest artifact");
+    assertSideEffects(readback.sideEffectSummary, false, "stale fixture readback");
+  } finally {
+    await fs.promises.rm(outputDirectory, { recursive: true, force: true });
+  }
+}
+
+function buildFixtureRun(id = "daily-video-fixture-2026-07-14") {
   const sideEffectSummary = {
     dbWrite: false,
     contentItemCreated: false,
@@ -120,7 +166,7 @@ function buildFixtureRun() {
   };
 
   return {
-    id: "daily-video-fixture-2026-07-14",
+    id,
     status: "content_generated",
     marketDate: "2026-07-14",
     title: "Daily Brief 영상 자동화 안전성 테스트",

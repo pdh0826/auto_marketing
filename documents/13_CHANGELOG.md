@@ -1,5 +1,20 @@
 # 13_CHANGELOG
 
+## VIDEO-1M Video Automation Verification Hook
+
+Connected the video automation safety fixture to a reusable verification command and CI workflow.
+
+- Added `npm run verify:video-automation`.
+- Added `.github/workflows/video-automation.yml` for VIDEO-related path changes.
+- The workflow runs `npm ci`, `npm run test:video-automation`, `npm run lint`, `npm run typecheck`, and `npm run build` through the verification command.
+- Extended the safety fixture with a saved-manifest stale hash readback case.
+
+Safety:
+
+- The stale-hash test writes and removes only a dedicated fixture manifest under `local-data/video-automation`.
+- No Daily Brief source run, content item, scheduler state, DB row, secret, token, or external service is mutated.
+- External platform uploads and Blogger/Tistory writes remain disabled.
+
 ## VIDEO-1L Source Hash and Safety Boundary Test
 
 Pinned the video automation source contract and no-write safety boundary with a deterministic fixture test.

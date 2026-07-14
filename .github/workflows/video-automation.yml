@@ -1,0 +1,54 @@
+name: Video Automation Safety
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/video-automation.yml"
+      - "package.json"
+      - "package-lock.json"
+      - "scripts/verify_video_automation_safety.mjs"
+      - "src/lib/video-automation/**"
+      - "src/app/api/daily-brief/runs/**/video-package/**"
+      - "src/app/wizard/daily-brief/**"
+      - "documents/09_TEST_PLAN.md"
+      - "documents/13_CHANGELOG.md"
+      - "documents/14_NEXT_SESSION_BRIEF.md"
+      - "documents/20_VIDEO_AUTOMATION.md"
+      - "documents/21_VIDEO_AUDIO_DESIGN.md"
+  push:
+    branches:
+      - "codex/video-automation-v1"
+    paths:
+      - ".github/workflows/video-automation.yml"
+      - "package.json"
+      - "package-lock.json"
+      - "scripts/verify_video_automation_safety.mjs"
+      - "src/lib/video-automation/**"
+      - "src/app/api/daily-brief/runs/**/video-package/**"
+      - "src/app/wizard/daily-brief/**"
+      - "documents/09_TEST_PLAN.md"
+      - "documents/13_CHANGELOG.md"
+      - "documents/14_NEXT_SESSION_BRIEF.md"
+      - "documents/20_VIDEO_AUTOMATION.md"
+      - "documents/21_VIDEO_AUDIO_DESIGN.md"
+
+jobs:
+  verify-video-automation:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify video automation
+        run: npm run verify:video-automation

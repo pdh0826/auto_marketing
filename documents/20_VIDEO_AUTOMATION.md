@@ -307,6 +307,30 @@ It verifies:
 
 The test also statically scans video automation source files for DB/prisma imports, `process.env` access, secret file references, network `fetch` calls, and enabled external-write flags.
 
+## VIDEO-1M Verification Hook
+
+Command:
+
+```bash
+npm run verify:video-automation
+```
+
+The verification command runs:
+
+- `npm run test:video-automation`
+- `npm run lint`
+- `npm run typecheck`
+- `npm run build`
+
+`.github/workflows/video-automation.yml` runs the same verification command for VIDEO-related pull requests and pushes to `codex/video-automation-v1`.
+
+The VIDEO-1L safety fixture also includes a stale readback case:
+
+- writes a dedicated test-only `manifest.json` under `local-data/video-automation`
+- gives the saved manifest a different source hash
+- verifies readback reports `savedSourceHash`, the current hash, and `stale=true`
+- removes the test-only local artifact before finishing
+
 ## VIDEO-2A Audio Design
 
 Audio and narration are not implemented yet. See `documents/21_VIDEO_AUDIO_DESIGN.md`.

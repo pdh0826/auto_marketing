@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "test:video-automation": "node scripts/verify_video_automation_safety.mjs"
+    "test:video-automation": "node scripts/verify_video_automation_safety.mjs",
+    "verify:video-automation": "npm run test:video-automation && npm run lint && npm run typecheck && npm run build"
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",

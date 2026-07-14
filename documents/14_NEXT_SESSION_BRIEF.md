@@ -16,6 +16,8 @@ Implemented:
 - VIDEO-1H package readback for artifact existence, file sizes, current hash, saved hash, and stale state.
 - VIDEO-1I operating guard fields.
 - VIDEO-1L `npm run test:video-automation` fixture that pins source hash behavior and safety boundaries.
+- VIDEO-1M `npm run verify:video-automation` and GitHub Actions coverage for VIDEO-related path changes.
+- Saved-package stale source hash readback fixture coverage.
 
 Safety:
 
@@ -30,15 +32,15 @@ Safety:
 Validation:
 
 - `npm run test:video-automation`
+- `npm run verify:video-automation`
 - `npm run lint`
 - `npm run typecheck`
 - `npm run build`
 
 Recommended next patch:
 
-- Add a CI/checklist hook so VIDEO changes always run `npm run test:video-automation`.
-- Add fixture coverage for saved-package stale hash readback.
 - Add operator-facing documentation for when local MP4 output may be manually reviewed outside the app.
+- Surface source hash, stale state, and operator checklist status more clearly in the Daily Brief wizard.
 
 ## Futures publication guard
 
