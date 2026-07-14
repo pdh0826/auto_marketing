@@ -395,10 +395,18 @@ export function DailyBriefWizardClient() {
                 {videoPackage.manifest.storyboard.length}개 / subtitles {videoPackage.manifest.subtitles.length}개
               </p>
               <p>
+                <strong>Source Hash</strong>: {videoPackage.manifest.sourceSnapshot.hashPrefix} / validation{" "}
+                {videoPackage.manifest.validation.ready ? "ready" : "blocked"} / checks {videoPackage.manifest.validation.checks.length}개 / duration{" "}
+                {videoPackage.manifest.validation.counts.totalDurationSec}s
+              </p>
+              <p>
                 <strong>Output</strong>: {videoPackage.outputDirectory ?? "preview-only"} / local file write{" "}
                 {String(videoPackage.manifest.sideEffectSummary.localFileWrite)} / DB write {String(videoPackage.manifest.sideEffectSummary.dbWrite)} / external write{" "}
                 {String(videoPackage.manifest.sideEffectSummary.externalServiceWrite)}
               </p>
+              {videoPackage.manifest.validation.errors.length ? (
+                <div className="notice error">Validation errors: {videoPackage.manifest.validation.errors.join(", ")}</div>
+              ) : null}
               {videoPackage.manifest.readiness.blockingReasons.length ? (
                 <div className="notice warning">Blockers: {videoPackage.manifest.readiness.blockingReasons.join(", ")}</div>
               ) : null}

@@ -17,6 +17,40 @@ export interface DailyBriefVideoPackageFile {
   bytes: number | null;
 }
 
+export interface DailyBriefVideoSourceSnapshot {
+  schemaVersion: "daily_brief_video_source_v1";
+  hashAlgorithm: "sha256";
+  hash: string;
+  hashPrefix: string;
+  canonicalJsonLength: number;
+  includedFields: string[];
+  excludedFields: string[];
+}
+
+export type DailyBriefVideoValidationStatus = "pass" | "warn" | "fail";
+
+export interface DailyBriefVideoValidationCheck {
+  code: string;
+  status: DailyBriefVideoValidationStatus;
+  message: string;
+}
+
+export interface DailyBriefVideoPackageValidation {
+  ready: boolean;
+  errors: string[];
+  warnings: string[];
+  checks: DailyBriefVideoValidationCheck[];
+  counts: {
+    cardCount: number;
+    storyboardSceneCount: number;
+    subtitleCueCount: number;
+    sourceCaptureReferenceCount: number;
+    uniqueSourceCaptureReferenceCount: number;
+    totalDurationSec: number;
+  };
+  deterministicArtifactFields: string[];
+}
+
 export interface DailyBriefVideoSideEffectSummary {
   dailyBriefRunRead: true;
   dailyBriefRunWrite: false;
@@ -73,6 +107,8 @@ export interface DailyBriefVideoMp4Plan {
   status: "render_plan_only";
   renderImplemented: false;
   targetFileName: string;
+  sourceHash: string;
+  sourceHashPrefix: string;
   resolution: "1080x1920";
   fps: 30;
   totalDurationSec: number;
@@ -92,8 +128,9 @@ export interface DailyBriefVideoUploadPackage {
 
 export interface DailyBriefVideoPackageManifest {
   kind: "daily_brief_video_package";
-  version: "VIDEO-1A";
+  version: "VIDEO-1B";
   generatedAt: string;
+  sourceSnapshot: DailyBriefVideoSourceSnapshot;
   source: Pick<
     DailyBriefRun,
     | "id"
@@ -127,6 +164,7 @@ export interface DailyBriefVideoPackageManifest {
   subtitles: DailyBriefVideoSubtitleCue[];
   mp4: DailyBriefVideoMp4Plan;
   uploadPackage: DailyBriefVideoUploadPackage;
+  validation: DailyBriefVideoPackageValidation;
   files: DailyBriefVideoPackageFile[];
   sideEffectSummary: DailyBriefVideoSideEffectSummary;
 }

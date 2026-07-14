@@ -1,5 +1,23 @@
 # 13_CHANGELOG
 
+## VIDEO-1B Daily Brief Video Source Contract
+
+Hardened the video package contract before any card or MP4 renderer is added.
+
+- Bumped the video package manifest version to `VIDEO-1B`.
+- Added a deterministic Daily Brief source snapshot with SHA-256 hash, hash prefix, canonical JSON length, included fields, and excluded fields.
+- Added package validation checks for card id uniqueness, required risk note, storyboard timing continuity, subtitle alignment, MP4 render-plan-only state, disabled uploads, and side-effect boundary cleanliness.
+- Added source hash and validation summary to the Daily Brief wizard video package block.
+- Updated `documents/20_VIDEO_AUTOMATION.md` with the VIDEO-1B source contract.
+
+Safety:
+
+- Daily Brief run JSON remains read-only input.
+- Existing content items, scheduler state, and DB rows are not mutated.
+- Capture `storagePath`, env files, tokens, credentials, and client secrets are excluded from the source snapshot.
+- MP4 binary rendering and external uploads remain blocked.
+- No Blogger/Tistory API write, YouTube/Instagram/TikTok upload, scheduled publish change, token refresh, secret read, or LLM call.
+
 ## VIDEO-1A Daily Brief Video Package Scaffold
 
 Added the first internal video automation slice for Daily Brief results.

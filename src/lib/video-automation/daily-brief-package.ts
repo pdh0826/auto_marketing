@@ -1,3 +1,4 @@
+import { createHash } from "crypto";
 import { mkdir, writeFile } from "fs/promises";
 import path from "path";
 import type { DailyBriefCapture, DailyBriefRun } from "@/lib/daily-brief/types";
@@ -7,19 +8,23 @@ import type {
   DailyBriefVideoPackageFile,
   DailyBriefVideoPackageManifest,
   DailyBriefVideoPackageResult,
+  DailyBriefVideoPackageValidation,
+  DailyBriefVideoSourceSnapshot,
   DailyBriefVideoSideEffectSummary,
   DailyBriefVideoStoryboardScene,
   DailyBriefVideoSubtitleCue,
   DailyBriefVideoUploadPackage
 } from "./types";
 
-const VIDEO_PACKAGE_VERSION = "VIDEO-1A";
+const VIDEO_PACKAGE_VERSION = "VIDEO-1B";
 const OUTPUT_ROOT = path.join(process.cwd(), "local-data", "video-automation", "daily-brief");
 
 export function buildDailyBriefVideoPackagePreview(run: DailyBriefRun, generatedAt = new Date().toISOString()): DailyBriefVideoPackageResult {
   const packageSlug = sanitizePackageSlug(run.id);
+  const sourceSnapshot = buildSourceSnapshot(run);
   const sourceBlockingReasons = buildSourceBlockingReasons(run);
   const warnings = buildPackageWarnings(run);
+  const source = buildSourceSummary(run);
   const cover = buildCoverSpec(run);
   const cards = buildCards(run, cover);
   const storyboard = buildStoryboard(cards);
@@ -28,6 +33,8 @@ export function buildDailyBriefVideoPackagePreview(run: DailyBriefRun, generated
     status: "render_plan_only" as const,
     renderImplemented: false as const,
     targetFileName: `${packageSlug}.mp4`,
+    sourceHash: sourceSnapshot.hash,
+    sourceHashPrefix: sourceSnapshot.hashPrefix,
     resolution: "1080x1920" as const,
     fps: 30 as const,
     totalDurationSec: storyboard.length ? storyboard[storyboard.length - 1].endSec : 0,
@@ -36,34 +43,31 @@ export function buildDailyBriefVideoPackagePreview(run: DailyBriefRun, generated
   };
   const uploadPackage = buildUploadPackage(run, packageSlug);
   const files = buildPackageFileList(packageSlug);
+  const sideEffectSummary = buildVideoSideEffects({ localFileWrite: false });
+  const validation = buildPackageValidation({
+    sourceBlockingReasons,
+    sourceWarnings: warnings,
+    sourceSnapshot,
+    cards,
+    storyboard,
+    subtitles,
+    mp4,
+    uploadPackage,
+    sideEffectSummary
+  });
+  const blockingReasons = Array.from(new Set([...sourceBlockingReasons, ...validation.errors]));
   const manifest: DailyBriefVideoPackageManifest = {
     kind: "daily_brief_video_package",
     version: VIDEO_PACKAGE_VERSION,
     generatedAt,
-    source: {
-      id: run.id,
-      status: run.status,
-      marketDate: run.marketDate,
-      title: run.title,
-      targetKeyword: run.targetKeyword,
-      contentItemId: run.contentItemId,
-      draftMarkdownLength: run.draftMarkdownLength,
-      draftHtmlLength: run.draftHtmlLength,
-      visibleTextLength: run.visibleTextLength,
-      createdAt: run.createdAt,
-      updatedAt: run.updatedAt,
-      stockPickCount: run.stockPicks.length,
-      etfPickCount: run.etfPicks.length,
-      futuresPickCount: run.futuresPicks?.length ?? 0,
-      researchItemCount: run.researchItems.length,
-      captureCount: run.captures.length
-    },
+    sourceSnapshot,
+    source,
     readiness: {
-      canGeneratePackage: sourceBlockingReasons.length === 0,
+      canGeneratePackage: blockingReasons.length === 0,
       canRenderMp4: false,
       canUpload: false,
-      blockingReasons: sourceBlockingReasons,
-      warnings
+      blockingReasons,
+      warnings: Array.from(new Set([...warnings, ...validation.warnings]))
     },
     cover,
     cards,
@@ -71,8 +75,9 @@ export function buildDailyBriefVideoPackagePreview(run: DailyBriefRun, generated
     subtitles,
     mp4,
     uploadPackage,
+    validation,
     files,
-    sideEffectSummary: buildVideoSideEffects({ localFileWrite: false })
+    sideEffectSummary
   };
 
   return {
@@ -134,6 +139,303 @@ export async function writeDailyBriefVideoPackage(run: DailyBriefRun, generatedA
     manifest,
     outputDirectory,
     files: manifest.files
+  };
+}
+
+function buildSourceSummary(run: DailyBriefRun): DailyBriefVideoPackageManifest["source"] {
+  return {
+    id: run.id,
+    status: run.status,
+    marketDate: run.marketDate,
+    title: run.title,
+    targetKeyword: run.targetKeyword,
+    contentItemId: run.contentItemId,
+    draftMarkdownLength: run.draftMarkdownLength,
+    draftHtmlLength: run.draftHtmlLength,
+    visibleTextLength: run.visibleTextLength,
+    createdAt: run.createdAt,
+    updatedAt: run.updatedAt,
+    stockPickCount: run.stockPicks.length,
+    etfPickCount: run.etfPicks.length,
+    futuresPickCount: run.futuresPicks?.length ?? 0,
+    researchItemCount: run.researchItems.length,
+    captureCount: run.captures.length
+  };
+}
+
+function buildSourceSnapshot(run: DailyBriefRun): DailyBriefVideoSourceSnapshot {
+  const sourceInput = buildCanonicalSourceInput(run);
+  const canonicalJson = JSON.stringify(toCanonicalValue(sourceInput));
+  const hash = createHash("sha256").update(canonicalJson, "utf8").digest("hex");
+  return {
+    schemaVersion: "daily_brief_video_source_v1",
+    hashAlgorithm: "sha256",
+    hash,
+    hashPrefix: hash.slice(0, 12),
+    canonicalJsonLength: Buffer.byteLength(canonicalJson, "utf8"),
+    includedFields: [
+      "run identity/status/date/title/keyword",
+      "run generation counts and content item references",
+      "stock/ETF/futures pick display fields",
+      "research/disclosure/prewrite summaries",
+      "capture safe metadata without storagePath",
+      "Daily Brief safe side-effect summary"
+    ],
+    excludedFields: [
+      "generatedAt",
+      "local output file bytes",
+      "local outputDirectory",
+      "capture storagePath",
+      "any env/secret/token material"
+    ]
+  };
+}
+
+function buildCanonicalSourceInput(run: DailyBriefRun) {
+  return {
+    id: run.id,
+    status: run.status,
+    marketDate: run.marketDate,
+    title: run.title,
+    targetKeyword: run.targetKeyword,
+    stockPickLimit: run.stockPickLimit,
+    stockDetailLimit: run.stockDetailLimit,
+    etfPickLimit: run.etfPickLimit,
+    includeEtfs: run.includeEtfs,
+    krBoardUrl: run.krBoardUrl,
+    etfBoardUrl: run.etfBoardUrl,
+    contentItemId: run.contentItemId,
+    tistoryReviewContentItemId: run.tistoryReviewContentItemId ?? null,
+    tistoryReviewExportUrl: run.tistoryReviewExportUrl ?? null,
+    tistoryReviewMode: run.tistoryReviewMode ?? null,
+    draftMarkdownLength: run.draftMarkdownLength,
+    draftHtmlLength: run.draftHtmlLength,
+    visibleTextLength: run.visibleTextLength,
+    warnings: run.warnings,
+    sideEffectSummary: run.sideEffectSummary,
+    createdAt: run.createdAt,
+    updatedAt: run.updatedAt,
+    stockPicks: run.stockPicks.map((pick) => ({
+      rank: pick.rank,
+      name: pick.name,
+      code: pick.code,
+      market: pick.market,
+      statusLabel: pick.statusLabel,
+      currentPrice: pick.currentPrice,
+      entryPrice: pick.entryPrice,
+      targetPrice: pick.targetPrice,
+      stopLoss: pick.stopLoss,
+      recentSignalDate: pick.recentSignalDate,
+      trendScore: pick.trendScore,
+      totalScore: pick.totalScore,
+      detailUrl: pick.detailUrl,
+      chartCaptureId: pick.chartCaptureId
+    })),
+    etfPicks: run.etfPicks.map((pick) => ({
+      rank: pick.rank,
+      name: pick.name,
+      code: pick.code,
+      category: pick.category,
+      statusLabel: pick.statusLabel,
+      currentPrice: pick.currentPrice,
+      targetPotential: pick.targetPotential,
+      recentBuyDate: pick.recentBuyDate,
+      currentReturn: pick.currentReturn,
+      totalScore: pick.totalScore
+    })),
+    futuresPicks: (run.futuresPicks ?? []).map((pick) => ({
+      rank: pick.rank,
+      symbol: pick.symbol,
+      name: pick.name,
+      exchange: pick.exchange,
+      sourceName: pick.sourceName,
+      statusLabel: pick.statusLabel,
+      currentValue: pick.currentValue,
+      changeRate: pick.changeRate,
+      observedAtLabel: pick.observedAtLabel,
+      strategyName: pick.strategyName,
+      strategyStatus: pick.strategyStatus,
+      timeframe: pick.timeframe,
+      performancePeriod: pick.performancePeriod,
+      signalLabel: pick.signalLabel,
+      marketState: pick.marketState,
+      confidence: pick.confidence,
+      sourceUrl: pick.sourceUrl,
+      dataReady: pick.dataReady,
+      warnings: pick.warnings
+    })),
+    researchItems: run.researchItems.map((item) => ({
+      symbolCode: item.symbolCode,
+      symbolName: item.symbolName,
+      query: item.query,
+      searchUrl: item.searchUrl,
+      title: item.title,
+      source: item.source,
+      sourceName: item.sourceName ?? null,
+      publishedAt: item.publishedAt,
+      url: item.url,
+      shortSummary: item.shortSummary
+    })),
+    officialDisclosureItems: run.officialDisclosureItems.map((item) => ({
+      symbolCode: item.symbolCode,
+      symbolName: item.symbolName,
+      title: item.title,
+      source: item.source,
+      sourceName: item.sourceName,
+      publishedAt: item.publishedAt,
+      url: item.url,
+      receiptNo: item.receiptNo,
+      shortSummary: item.shortSummary
+    })),
+    prewriteContextItems: run.prewriteContextItems.map((item) => ({
+      kind: item.kind,
+      symbolCode: item.symbolCode ?? null,
+      symbolName: item.symbolName ?? null,
+      title: item.title,
+      summary: item.summary,
+      sourceName: item.sourceName,
+      url: item.url ?? null,
+      publishedAt: item.publishedAt ?? null,
+      confidence: item.confidence
+    })),
+    captures: run.captures.map((capture) => ({
+      id: capture.id,
+      kind: capture.kind,
+      label: capture.label,
+      sourceUrl: capture.sourceUrl,
+      target: capture.target,
+      selectorUsed: capture.selectorUsed,
+      fileName: capture.fileName,
+      mimeType: capture.mimeType,
+      fileSize: capture.fileSize,
+      width: capture.width,
+      height: capture.height,
+      mode: capture.mode,
+      warning: capture.warning,
+      createdAt: capture.createdAt
+    }))
+  };
+}
+
+function buildPackageValidation(input: {
+  sourceBlockingReasons: string[];
+  sourceWarnings: string[];
+  sourceSnapshot: DailyBriefVideoSourceSnapshot;
+  cards: DailyBriefVideoCard[];
+  storyboard: DailyBriefVideoStoryboardScene[];
+  subtitles: DailyBriefVideoSubtitleCue[];
+  mp4: DailyBriefVideoPackageManifest["mp4"];
+  uploadPackage: DailyBriefVideoUploadPackage;
+  sideEffectSummary: DailyBriefVideoSideEffectSummary;
+}): DailyBriefVideoPackageValidation {
+  const checks: DailyBriefVideoPackageValidation["checks"] = [];
+  const addCheck = (code: string, status: "pass" | "warn" | "fail", message: string) => checks.push({ code, status, message });
+  const sourceCaptureReferences = input.storyboard.flatMap((scene) => scene.sourceCaptureIds);
+  const uniqueCaptureReferences = new Set(sourceCaptureReferences);
+  const cardIds = input.cards.map((card) => card.id);
+  const uniqueCardIds = new Set(cardIds);
+
+  for (const reason of input.sourceBlockingReasons) {
+    addCheck(reason, "fail", `Source Daily Brief run is not package-ready: ${reason}.`);
+  }
+  for (const warning of input.sourceWarnings) {
+    addCheck(warning, "warn", `Source/package warning: ${warning}.`);
+  }
+
+  addCheck(
+    "source_snapshot_hash_present",
+    /^[a-f0-9]{64}$/.test(input.sourceSnapshot.hash) ? "pass" : "fail",
+    "Source snapshot must include a SHA-256 hash for deterministic package checks."
+  );
+  addCheck(input.cards.length > 0 ? "cards_present" : "cards_missing", input.cards.length > 0 ? "pass" : "fail", "At least one card is required.");
+  addCheck(
+    uniqueCardIds.size === cardIds.length ? "card_ids_unique" : "card_ids_duplicate",
+    uniqueCardIds.size === cardIds.length ? "pass" : "fail",
+    "Card ids must be unique so renderers can address each card deterministically."
+  );
+  addCheck(
+    input.cards.some((card) => card.id === "closing-risk-note") ? "risk_note_card_present" : "risk_note_card_missing",
+    input.cards.some((card) => card.id === "closing-risk-note") ? "pass" : "fail",
+    "A closing risk note card is required before any video render or upload package can be considered complete."
+  );
+  addCheck(
+    input.storyboard.length === input.cards.length ? "storyboard_matches_cards" : "storyboard_card_count_mismatch",
+    input.storyboard.length === input.cards.length ? "pass" : "fail",
+    "Storyboard scene count must match card count."
+  );
+
+  let expectedStartSec = 0;
+  const scenesContinuous = input.storyboard.every((scene) => {
+    const ok = scene.startSec === expectedStartSec && scene.durationSec > 0 && scene.endSec === scene.startSec + scene.durationSec;
+    expectedStartSec = scene.endSec;
+    return ok;
+  });
+  addCheck(scenesContinuous ? "storyboard_timing_continuous" : "storyboard_timing_gap", scenesContinuous ? "pass" : "fail", "Storyboard timing must be continuous.");
+  addCheck(
+    input.subtitles.length === input.storyboard.length ? "subtitle_count_matches_storyboard" : "subtitle_count_mismatch",
+    input.subtitles.length === input.storyboard.length ? "pass" : "fail",
+    "Subtitle cue count must match storyboard scene count."
+  );
+  const subtitlesAligned = input.subtitles.every((cue, index) => {
+    const scene = input.storyboard[index];
+    return Boolean(scene && cue.startSec === scene.startSec && cue.endSec === scene.endSec && cue.text.trim());
+  });
+  addCheck(subtitlesAligned ? "subtitles_aligned" : "subtitles_not_aligned", subtitlesAligned ? "pass" : "fail", "Subtitle cue timing must align with storyboard scenes.");
+  addCheck(
+    input.mp4.status === "render_plan_only" && input.mp4.renderImplemented === false ? "mp4_render_plan_only" : "mp4_render_enabled_unexpectedly",
+    input.mp4.status === "render_plan_only" && input.mp4.renderImplemented === false ? "pass" : "fail",
+    "VIDEO-1B must keep MP4 binary rendering disabled and write only a render plan."
+  );
+  addCheck(
+    input.mp4.sourceHash === input.sourceSnapshot.hash ? "mp4_source_hash_matches" : "mp4_source_hash_mismatch",
+    input.mp4.sourceHash === input.sourceSnapshot.hash ? "pass" : "fail",
+    "MP4 render plan must carry the same source hash as the package manifest."
+  );
+  addCheck(
+    input.uploadPackage.ready === false && input.uploadPackage.platformUploadsEnabled === false ? "platform_uploads_disabled" : "platform_upload_enabled",
+    input.uploadPackage.ready === false && input.uploadPackage.platformUploadsEnabled === false ? "pass" : "fail",
+    "External platform uploads must remain disabled."
+  );
+  const externalWriteDisabled =
+    input.sideEffectSummary.dailyBriefRunWrite === false &&
+    input.sideEffectSummary.existingContentItemMutation === false &&
+    input.sideEffectSummary.dbWrite === false &&
+    input.sideEffectSummary.externalServiceWrite === false &&
+    input.sideEffectSummary.bloggerApiWrite === false &&
+    input.sideEffectSummary.tistoryApiWrite === false &&
+    input.sideEffectSummary.youtubeUpload === false &&
+    input.sideEffectSummary.instagramUpload === false &&
+    input.sideEffectSummary.tiktokUpload === false &&
+    input.sideEffectSummary.scheduledPublishMutation === false &&
+    input.sideEffectSummary.llmCall === false &&
+    input.sideEffectSummary.secretRead === false;
+  addCheck(externalWriteDisabled ? "side_effect_boundary_clean" : "side_effect_boundary_violation", externalWriteDisabled ? "pass" : "fail", "Only local package file writes are allowed.");
+
+  const errors = checks.filter((check) => check.status === "fail").map((check) => check.code);
+  const warnings = checks.filter((check) => check.status === "warn").map((check) => check.code);
+  return {
+    ready: errors.length === 0,
+    errors,
+    warnings,
+    checks,
+    counts: {
+      cardCount: input.cards.length,
+      storyboardSceneCount: input.storyboard.length,
+      subtitleCueCount: input.subtitles.length,
+      sourceCaptureReferenceCount: sourceCaptureReferences.length,
+      uniqueSourceCaptureReferenceCount: uniqueCaptureReferences.size,
+      totalDurationSec: input.mp4.totalDurationSec
+    },
+    deterministicArtifactFields: [
+      "sourceSnapshot.hash",
+      "source",
+      "cover",
+      "cards",
+      "storyboard",
+      "subtitles",
+      "mp4",
+      "uploadPackage"
+    ]
   };
 }
 
@@ -479,6 +781,24 @@ function findCaptureById(captures: DailyBriefCapture[], id: string | null) {
 
 function compactParts(parts: Array<string | null | undefined>) {
   return parts.filter((part): part is string => Boolean(part && part.trim())).join(" · ");
+}
+
+function toCanonicalValue(value: unknown): unknown {
+  if (value === undefined) {
+    return null;
+  }
+  if (value === null || typeof value !== "object") {
+    return value;
+  }
+  if (Array.isArray(value)) {
+    return value.map((item) => toCanonicalValue(item));
+  }
+  const source = value as Record<string, unknown>;
+  const result: Record<string, unknown> = {};
+  for (const key of Object.keys(source).sort()) {
+    result[key] = toCanonicalValue(source[key]);
+  }
+  return result;
 }
 
 function truncateText(value: string, maxLength: number) {
