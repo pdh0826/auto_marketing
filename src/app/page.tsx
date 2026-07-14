@@ -1,6 +1,7 @@
 const links = [
   ["간편 자동화", "/auto"],
   ["Daily Brief 스케줄", "/automation/daily-brief"],
+  ["Tistory 스케줄", "/automation/tistory"],
   ["새 글 마법사", "/wizard/new"],
   ["오늘 관심종목", "/wizard/daily-brief"],
   ["블로그", "/blogs"],

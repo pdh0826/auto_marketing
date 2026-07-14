@@ -71,7 +71,7 @@ export function runInvestmentWritingGoldenFixtures() {
     ],
     disclosureItems: [],
     heroMedia: "> fixture hero image",
-    stockMediaByCode: new Map(stocks.map((item) => [item.code, `> fixture ${item.name} chart`])),
+    stockMediaByCode: new Map(stocks.map((item) => [item.code, `<!-- media:fixture-${item.code} caption:"${item.name} chart" -->`])),
     etfMedia: null
   });
   const review = reviewInvestmentWritingDraft({ markdown, subjectNames: stocks.map((item) => item.name), judgmentLedger: ledger, outline });
@@ -105,7 +105,7 @@ export function runInvestmentWritingGoldenFixtures() {
       exclusionConditions: ledger.exclusionConditions
     },
     heroMedia: "> fixture hero image",
-    stockMediaByCode: new Map(stocks.map((item) => [item.code, `> fixture ${item.name} chart`])),
+    stockMediaByCode: new Map(stocks.map((item) => [item.code, `<!-- media:fixture-${item.code} caption:"${item.name} chart" -->`])),
     etfMedia: null
   });
   const badInternalReview = reviewInvestmentWritingDraft({
@@ -139,14 +139,14 @@ export function runInvestmentWritingGoldenFixtures() {
     { key: "internal_leak_fixture_is_blocked", pass: !badInternalReview.ok && badInternalReview.internalWorkflowLeaks.length > 0 },
     { key: "unsupported_first_person_fixture_is_blocked", pass: !unsupportedFirstPersonReview.ok && unsupportedFirstPersonReview.unsupportedFirstPersonClaims.length > 0 },
     { key: "common_orchestrator_auto_publish_eligible", pass: orchestrated.autoPublishEligible },
-    { key: "all_nine_targets_registered", pass: getInvestmentWritingTargetCoverage().length === 9 },
+    { key: "all_ten_targets_registered", pass: getInvestmentWritingTargetCoverage().length === 10 },
     {
-      key: "blogger_five_editorial_tracks_registered",
-      pass: getInvestmentWritingTargetCoverage().filter((item) => item.channel === "blogger").length === 5
+      key: "blogger_six_editorial_tracks_registered",
+      pass: getInvestmentWritingTargetCoverage().filter((item) => item.channel === "blogger").length === 6
     },
     {
-      key: "futures_target_registered_but_source_blocked",
-      pass: getInvestmentWritingTargetCoverage().some((item) => item.target === "tistory_futures_options_signal_record" && !item.sourceReady)
+      key: "futures_target_registered_and_source_ready",
+      pass: getInvestmentWritingTargetCoverage().some((item) => item.target === "tistory_futures_options_signal_record" && item.sourceReady)
     },
     {
       key: "tistory_stock_categories_do_not_overlap",
@@ -167,6 +167,9 @@ export function runInvestmentWritingGoldenFixtures() {
       generatedMarkdownLength: markdown.length,
       generatedReviewScore: review.antiAiScore,
       generatedReviewBlockerCount: review.blockers.length,
+      orchestratorBlockingReasons: orchestrated.blockingReasons,
+      orchestratorFinalReviewWarnings: orchestrated.finalReview.warnings,
+      orchestratorFinalReviewScore: orchestrated.finalReview.antiAiScore,
       badInternalLeakCount: badInternalReview.internalWorkflowLeaks.length,
       unsupportedFirstPersonCount: unsupportedFirstPersonReview.unsupportedFirstPersonClaims.length,
       orchestratorAutoPublishEligible: orchestrated.autoPublishEligible

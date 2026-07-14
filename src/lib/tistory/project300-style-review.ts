@@ -101,7 +101,8 @@ export function reviewProject300GeneratedPost(input: {
     markdown,
     subjectNames: input.subjectNames ?? [],
     judgmentLedger: input.judgmentLedger,
-    outline: input.investmentOutline
+    outline: input.investmentOutline,
+    allowFirstPerson: true
   });
   const missingRequiredElements = findMissingRequiredElements({
     title: input.title,

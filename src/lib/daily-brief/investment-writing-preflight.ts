@@ -13,6 +13,7 @@ export interface InvestmentWritingPreflightResult {
     marketSessionState: string;
     stockCount: number;
     etfCount: number;
+    futuresCount: number;
     publishableFactCount: number;
     editorOnlyFactCount: number;
     unknownSystemBasisCount: number;
@@ -22,10 +23,14 @@ export interface InvestmentWritingPreflightResult {
 export function validateInvestmentWritingEvidencePack(pack: InvestmentWritingEvidencePack): InvestmentWritingPreflightResult {
   const blockers: string[] = [];
   const warnings: string[] = [];
-  const allFacts = [...pack.marketFacts, ...pack.stocks.flatMap((item) => item.facts), ...pack.etfs.flatMap((item) => item.facts)];
-  const allSystemValues = [...pack.stocks.flatMap((item) => item.systemValues), ...pack.etfs.flatMap((item) => item.systemValues)];
+  const allFacts = [...pack.marketFacts, ...pack.stocks.flatMap((item) => item.facts), ...pack.etfs.flatMap((item) => item.facts), ...pack.futures.flatMap((item) => item.facts)];
+  const allSystemValues = [
+    ...pack.stocks.flatMap((item) => item.systemValues),
+    ...pack.etfs.flatMap((item) => item.systemValues),
+    ...pack.futures.flatMap((item) => item.systemValues)
+  ];
 
-  if (pack.stocks.length === 0 && pack.etfs.length === 0) blockers.push("writing_evidence_subject_required");
+  if (pack.stocks.length === 0 && pack.etfs.length === 0 && pack.futures.length === 0) blockers.push("writing_evidence_subject_required");
   if (pack.temporalContext.marketSessionState === "unknown") warnings.push("market_session_state_not_verified");
   if (!pack.temporalContext.nextTradingDateVerified) warnings.push("next_trading_date_not_verified");
 
@@ -42,7 +47,7 @@ export function validateInvestmentWritingEvidencePack(pack: InvestmentWritingEvi
   leakedInternalNotes.forEach((fact) => blockers.push(`internal_workflow_text_in_publishable_fact:${fact.id}`));
 
   const checklist = [
-    { key: "subject_present", pass: pack.stocks.length + pack.etfs.length > 0, blocking: true },
+    { key: "subject_present", pass: pack.stocks.length + pack.etfs.length + pack.futures.length > 0, blocking: true },
     { key: "publishable_sources_complete", pass: !blockers.some((item) => item.includes("source_incomplete")), blocking: true },
     { key: "price_direction_valid", pass: !blockers.some((item) => item.includes("price_direction")), blocking: true },
     { key: "internal_workflow_text_separated", pass: leakedInternalNotes.length === 0, blocking: true },
@@ -54,13 +59,20 @@ export function validateInvestmentWritingEvidencePack(pack: InvestmentWritingEvi
     version: INVESTMENT_WRITING_PREFLIGHT_VERSION,
     ok: blockers.length === 0,
     blockers: unique(blockers),
-    warnings: unique([...warnings, ...pack.unresolvedIssues, ...pack.stocks.flatMap((item) => item.unresolvedIssues), ...pack.etfs.flatMap((item) => item.unresolvedIssues)]),
+    warnings: unique([
+      ...warnings,
+      ...pack.unresolvedIssues,
+      ...pack.stocks.flatMap((item) => item.unresolvedIssues),
+      ...pack.etfs.flatMap((item) => item.unresolvedIssues),
+      ...pack.futures.flatMap((item) => item.unresolvedIssues)
+    ]),
     checklist,
     safeMetadata: {
       marketDate: pack.temporalContext.dataDate,
       marketSessionState: pack.temporalContext.marketSessionState,
       stockCount: pack.stocks.length,
       etfCount: pack.etfs.length,
+      futuresCount: pack.futures.length,
       publishableFactCount: allFacts.filter((item) => item.publishable).length,
       editorOnlyFactCount: allFacts.filter((item) => !item.publishable).length,
       unknownSystemBasisCount: allSystemValues.filter((item) => item.basis === "unknown").length

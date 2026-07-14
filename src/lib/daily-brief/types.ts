@@ -1,6 +1,11 @@
 export type DailyBriefRunStatus = "created" | "captured" | "researched" | "content_generated" | "failed";
 export type DailyBriefCaptureMode = "live_screenshot" | "placeholder";
-export type DailyBriefCaptureTarget = "kr_signal_board" | "stock_signal_chart" | "etf_signal_board";
+export type DailyBriefCaptureTarget =
+  | "kr_signal_board"
+  | "stock_signal_chart"
+  | "etf_signal_board"
+  | "futures_signal_board"
+  | "futures_signal_detail";
 
 export interface DailyBriefRun {
   id: string;
@@ -16,6 +21,7 @@ export interface DailyBriefRun {
   etfBoardUrl: string;
   stockPicks: DailyBriefStockPick[];
   etfPicks: DailyBriefEtfPick[];
+  futuresPicks?: DailyBriefFuturesPick[];
   researchItems: DailyBriefResearchItem[];
   officialDisclosureItems: DailyBriefOfficialDisclosureItem[];
   prewriteContextItems: DailyBriefPrewriteContextItem[];
@@ -24,7 +30,7 @@ export interface DailyBriefRun {
   tistoryReviewContentItemId?: string | null;
   tistoryReviewExportUrl?: string | null;
   tistoryReviewMode?: DailyTistorySignalReviewMode | null;
-  tistoryReviewOutputs?: Partial<Record<DailyTistorySignalReviewMode, DailyTistoryReviewOutputSummary>>;
+  tistoryReviewOutputs?: Record<string, DailyTistoryReviewOutputSummary>;
   draftMarkdownLength: number | null;
   draftHtmlLength: number | null;
   visibleTextLength: number | null;
@@ -64,6 +70,38 @@ export interface DailyBriefEtfPick {
   totalScore: string | null;
 }
 
+export interface DailyBriefFuturesPick {
+  rank: number;
+  symbol: string;
+  name: string;
+  exchange: string;
+  sourceName: string | null;
+  statusLabel: string | null;
+  currentValue: string | null;
+  changeRate: string | null;
+  observedAtLabel: string | null;
+  strategyName: string | null;
+  strategyStatus: string | null;
+  timeframe: string | null;
+  performancePeriod: string | null;
+  realizedProfit: string | null;
+  realizedProfitMoney: string | null;
+  completedTrades: string | null;
+  winRate: string | null;
+  currentPosition: string | null;
+  entryValue: string | null;
+  unrealizedProfit: string | null;
+  signalLabel: string | null;
+  marketState: string | null;
+  confidence: string | null;
+  indicatorSummary: string | null;
+  upperLevels: string[];
+  lowerLevels: string[];
+  sourceUrl: string;
+  dataReady: boolean;
+  warnings: string[];
+}
+
 export type DailyTistorySignalReviewMode = "stock_signal_top3_review" | "mixed_stock_etf_review" | "etf_sector_review" | "futures_options_signal_record";
 
 export interface DailyTistorySignalReviewSelection {
@@ -74,6 +112,9 @@ export interface DailyTistorySignalReviewSelection {
   recentSignalStockCount: number;
   selectedStockCodes: string[];
   selectedEtfCodes: string[];
+  selectedFuturesSymbols?: string[];
+  marketReportSession?: import("./market-report-session").DailyMarketReportSession;
+  futuresEditorialTrack?: import("./market-report-session").DailyFuturesEditorialTrack;
   warnings: string[];
 }
 
@@ -83,6 +124,9 @@ export interface DailyTistoryReviewOutputSummary {
   mode: DailyTistorySignalReviewMode;
   selectedStockCodes?: string[];
   selectedEtfCodes?: string[];
+  selectedFuturesSymbols?: string[];
+  marketReportSession?: import("./market-report-session").DailyMarketReportSession;
+  futuresEditorialTrack?: import("./market-report-session").DailyFuturesEditorialTrack;
   createdAt: string;
 }
 
@@ -116,6 +160,7 @@ export interface DailyBriefPrewriteContextItem {
     | "market_kr_flow"
     | "market_us_flow"
     | "market_supply"
+    | "futures_market_context"
     | "stock_chart_context"
     | "stock_upsignal_issue"
     | "etf_market_context"
@@ -132,7 +177,7 @@ export interface DailyBriefPrewriteContextItem {
 
 export interface DailyBriefCapture {
   id: string;
-  kind: "kr_board" | "stock_chart" | "etf_board";
+  kind: "kr_board" | "stock_chart" | "etf_board" | "futures_board" | "futures_detail";
   label: string;
   sourceUrl: string;
   target: DailyBriefCaptureTarget;

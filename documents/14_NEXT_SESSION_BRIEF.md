@@ -1,5 +1,11 @@
 # 14_NEXT_SESSION_BRIEF
 
+## Futures publication guard
+
+- Scheduled futures posts now require a verified instrument/timeframe screenshot. Do not weaken `futures_timeframe_selection_not_confirmed`; a failed selection must stop publication rather than attach a mislabeled chart.
+- Futures position tables are intentionally limited to four columns for Blogger readability, with current/strategy/market-state details rendered below the table.
+- Foreign-flow title wording remains conditional on a complete market-flow snapshot.
+
 ## Current State: Patch 9G-8 Daily UpSignal Brief Automation
 
 The app now has `/wizard/daily-brief` for preparing a daily "오늘의 투자 관심종목" article based on UpSignal data.
@@ -2586,6 +2592,51 @@ Patch 9G-Style-1C~1J 구현이 완료되었다. 새 생성기는 검증된 자�
 
 - Tistory category candidates now de-duplicate stock/ETF codes within each Daily Brief run.
 - Generate `오늘의 관심종목 리뷰` and `종목별 신호 집중분석` in either order and verify that their selected stock codes do not overlap.
-- Blogger editorial planning currently resolves to five posts per day: stock, ETF, morning market, intraday market, and close market.
-- Before activating new schedules, confirm whether the intended daily count is four or five and which session should be omitted/merged if four.
-- Keep all market-signal tracks blocked until UpSignal exposes verified futures/options signals; never fabricate a buy/sell timing.
+- Blogger editorial planning now resolves to six tracks: stock, ETF, morning market, Korea intraday, Korea close, and US intraday.
+- Activation remains blocked until the multi-schedule engine, per-track duplicate guard, and verified Korea foreign-flow source are ready.
+- UpSignal futures data is now read from the hydrated `/futures` page. Keep generation blocked only when fewer than three ready futures instruments are collected; never fabricate a buy/sell timing.
+- Recheck generated futures posts for the table-once/narrative-after rule. The body should read like a market briefing, not a product-by-product chart value recap.
+- Futures collection now prioritizes NASDAQ100, S&P500, and KOSPI200. It selects an open 60-minute position first, then 240-minute, then 10-minute fallback, and captures matching detail charts.
+- Verify the generated futures table shows current change and open-position unrealized PnL(pt) as separate columns. Treat PnL as a generation-time snapshot, not realized performance.
+- Market report sessions are now distinct: morning 07:30, Korea intraday 12:20, Korea close 16:10, and US intraday 23:30.
+- Korea intraday/close require `UPSIGNAL_MARKET_FLOW_URL` to return observedAt plus foreign spot/futures/call/put option net-flow values. Until that source exists, the two sessions must remain blocked.
+- The current scheduler still supports one schedule time. Do not activate the six-track editorial plan until a multi-schedule engine and per-track duplicate guard are implemented and explicitly approved.
+- All Blogger/Tistory investment tracks now share `investment-seo-title.ts`; inspect titles through `GET /api/daily-brief/runs/[runId]/seo-title-preview` before generation or publishing.
+- The next full-channel sample review must show generated and blocked tracks separately. Do not fabricate Korea foreign investor flow to fill a preview.
+- Futures data readiness now uses the structured UpSignal board API with `timeframe` and `code` parameters. Do not revert to DOM text as the primary source; DOM automation is for screenshots and fallback only.
+- Futures channel contract: Blogger Korea intraday/close use exactly KOSPI200 + NQ screenshots; Blogger US intraday uses ES + NQ.
+- Tistory futures has four independent output keys: `macro:morning` (07:00), `index:morning` (08:00), `macro:us_preopen` (21:00), and `index:us_preopen` (22:00).
+- Tistory index screenshots are NQ/ES/KOSPI200; macro screenshots are GOLD/WTI/EURUSD. Each instrument contributes one detail screenshot.
+- Keep the timeframe policy at open 60m position first, then 240m, then 10m. The structured API chooses the state and Playwright captures the matching UI.
+- Korea intraday/close preview generation is separate from publish readiness. Do not publish those tracks until verified foreign spot/futures/call/put flow data is available.
+
+## Tistory scheduler handoff
+
+- App-owned Tistory automation UI: `/automation/tistory`.
+- Publisher script: `scripts/tistory_ui_publish_content_item.mjs`.
+- Persistent login profile: `local-data/tistory-ui-publisher/browser-profile` (never commit).
+- Queue/config/state: `local-data/tistory-scheduler` (local operational state).
+- The official Tistory Open API is discontinued, so publishing uses the web editor through Playwright.
+- A human must complete login once in the dedicated profile. Expired login blocks publication safely.
+- Manually created queue entries require explicit per-content approval. Recurring timetable entries use the persisted Tistory automatic-publication approval and record `approvalSource=recurring_schedule`; both paths remain idempotent after success.
+- Current publisher consumes a guarded Tistory HTML export and verifies editor HTML, images, headings, table, body text, and UpSignal links before publish and again on the public page after publish.
+- The 12-slot publication timetable now has an in-process execution scheduler in `src/lib/automation/publication-scheduler.ts`. It records one state entry per `marketDate:slotId`, does not backfill missed slots, retries only up to the configured limit, and never bypasses Blogger/Tistory channel guards.
+- Blogger 08:00 remains delegated to the original Daily Brief scheduler. The extra Blogger ETF/market slots use the existing investment-writing, HTML quality, draft-save, and guarded publish chain.
+- Tistory slots run as `automatic_live_guarded`: they generate the category/session candidate, require `investmentWriting.autoPublishEligible`, HTML quality readiness and at least one image, then use the recurring-schedule approval to enter the persistent-browser publisher queue automatically.
+- Futures slots are execution-time only: never reuse a previously generated candidate. At the scheduled time, collect current signals, select the timeframe, take fresh screenshots, write and review the complete article, then publish immediately through the guarded queue.
+- Futures retries are execution-time only as well. A retry must regenerate current signals/screenshots/body; candidates or charts older than 15 minutes are blocked.
+- If any real-time collection/capture/writing/review step fails, leave the slot blocked/failed and do not publish stale output.
+- Tistory post 32 was repaired in place with the 20:02 macro futures candidate and publicly verified. Do not create another replacement post for the same slot.
+- Publication scheduler also owns the daily 08:30 PDash Telegram report. It summarizes the previous 08:30-exclusive to current 08:30-inclusive window by total, Blogger, and Tistory success counts.
+- The report writes `~/msg/blog-growth-agent-publication-report-YYYY-MM-DD.tmp` first and atomically renames it to `.json`; PDash deletes the final file after successful Telegram delivery.
+- Inspect report status and a no-write preview at `GET /api/automation/publication-report`; `POST` defaults to dry-run.
+- The focused-signal review for 2026-07-13 was published at `https://project300.tistory.com/30`; its scheduler state is success and must not be retried.
+- Publication retries now scan due entries across dates, so late 23:30 retries survive the midnight boundary.
+- OAuth `invalid_grant` and reconnect-required results are terminal: the entry records `retryable=false`, does not repeat token calls, and enqueues a safe PDash blocker alert.
+- For unattended Blogger publishing, move the Google OAuth consent app out of external Testing mode and reconnect once; Testing refresh tokens can expire after seven days.
+- The Tistory publisher now checks its dedicated persistent profile every 30 minutes through a read-only `/manage/newpost/` visit. Its state is visible at `/automation/tistory`.
+- A valid session remains ready without per-post login. If Kakao/Tistory invalidates the session, publication stays blocked and the due queue item sends one PDash Telegram login-required alert.
+- Blogger 08:00 and the additional Blogger schedule both enqueue a safe per-slot Telegram alert when OAuth reconnect is required. Alerts never contain credentials, tokens, cookies, or article bodies.
+# Current automatic recovery policy
+
+Blog Growth Agent now checks recent scheduled slots after a 10-minute grace period. Missing executions and safe transient capture/editor/network failures can be retried by the running web service for up to five total attempts. Recovery processes one slot at a time with a 15-minute cooldown. Successful slots are terminal and are never published again. OAuth or Tistory login blockers are never bypassed.

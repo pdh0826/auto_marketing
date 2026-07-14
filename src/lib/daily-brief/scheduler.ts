@@ -2,7 +2,8 @@ import { mkdir, readFile, writeFile } from "fs/promises";
 import path from "path";
 import { runDailyBriefPublishAutomation, type DailyBriefPublishAutomationResult, type DailyBriefSchedulerMode } from "@/lib/daily-brief/publish-automation";
 import { runDailyBriefRunAll } from "@/lib/daily-brief/run-all";
-import { buildDailyBriefSeoTitle, createDailyBriefRun, listDailyBriefRuns } from "@/lib/daily-brief/store";
+import { buildDailyBriefSeoTitle, createDailyBriefRun, getDailyBriefRun } from "@/lib/daily-brief/store";
+import { enqueuePublicationLoginAlert, findBloggerLoginBlocker } from "@/lib/automation/publication-login-alert";
 
 const schedulerRoot = path.join(process.cwd(), "local-data", "daily-brief-scheduler");
 const configPath = path.join(schedulerRoot, "config.json");
@@ -35,6 +36,8 @@ export interface DailyBriefSchedulerState {
   lastResult: "idle" | "skipped" | "success" | "failed";
   lastMessage: string | null;
   lastAutomationResult: DailyBriefPublishAutomationResult | null;
+  lastLoginAlertDate: string | null;
+  lastLoginAlertAt: string | null;
   inFlight: boolean;
 }
 
@@ -155,7 +158,7 @@ export async function stopDailyBriefScheduler() {
   };
 }
 
-export async function tickDailyBriefScheduler(input: { force: boolean }) {
+export async function tickDailyBriefScheduler(input: { force: boolean; regenerate?: boolean }) {
   if (runtime.inFlight) {
     const state = await updateDailyBriefSchedulerState({
       lastTickAt: new Date().toISOString(),
@@ -192,13 +195,18 @@ export async function tickDailyBriefScheduler(input: { force: boolean }) {
     return { status: "skipped" as const, reason: "not_business_day", state };
   }
 
-  const existingRun = await findGeneratedRunForDate(localNow.date);
+  const existingRun = input.regenerate === true ? null : await findScheduledRunForDate(localNow.date);
   if (existingRun) {
     if (config.mode !== "content_only" && existingRun.contentItemId) {
       runtime.inFlight = true;
       const automationResult = await runDailyBriefPublishAutomation({
         contentItemId: existingRun.contentItemId,
         mode: config.mode
+      });
+      const loginAlertState = await enqueueDailyBriefLoginAlertIfNeeded({
+        automationResult,
+        marketDate: localNow.date,
+        scheduledTime: config.scheduleTime
       });
       runtime.inFlight = false;
       const state = await updateDailyBriefSchedulerState({
@@ -208,6 +216,7 @@ export async function tickDailyBriefScheduler(input: { force: boolean }) {
         lastResult: automationResult.status === "failed" ? "failed" : "success",
         lastMessage: `daily_brief_already_generated_for_date; automation_${automationResult.status}:${automationResult.stage}`,
         lastAutomationResult: automationResult,
+        ...loginAlertState,
         inFlight: false
       });
       return {
@@ -238,6 +247,12 @@ export async function tickDailyBriefScheduler(input: { force: boolean }) {
       stockDetailLimit: config.stockDetailLimit,
       etfPickLimit: config.etfPickLimit,
       includeEtfs: config.includeEtfs
+    });
+    await updateDailyBriefSchedulerState({
+      lastRunDate: localNow.date,
+      lastRunId: run.id,
+      lastContentItemId: null,
+      lastMessage: "scheduler_fresh_run_created"
     });
     const result = await runDailyBriefRunAll(run.id);
     if (!result.ok) {
@@ -280,6 +295,11 @@ export async function tickDailyBriefScheduler(input: { force: boolean }) {
       contentItemId,
       mode: config.mode
     });
+    const loginAlertState = await enqueueDailyBriefLoginAlertIfNeeded({
+      automationResult,
+      marketDate: localNow.date,
+      scheduledTime: config.scheduleTime
+    });
     runtime.inFlight = false;
     const stateAfterAutomation = await updateDailyBriefSchedulerState({
       lastRunDate: localNow.date,
@@ -291,6 +311,7 @@ export async function tickDailyBriefScheduler(input: { force: boolean }) {
           ? `content_generated:${contentItemId}`
           : `content_generated:${contentItemId}; automation_${automationResult.status}:${automationResult.stage}`,
       lastAutomationResult: automationResult,
+      ...loginAlertState,
       inFlight: false
     });
     return {
@@ -337,9 +358,11 @@ async function writeDailyBriefSchedulerState(state: DailyBriefSchedulerState) {
   await writeFile(statePath, JSON.stringify(state, null, 2), "utf8");
 }
 
-async function findGeneratedRunForDate(marketDate: string) {
-  const runs = await listDailyBriefRuns();
-  return runs.find((run) => run.marketDate === marketDate && run.contentItemId) ?? null;
+async function findScheduledRunForDate(marketDate: string) {
+  const state = await getDailyBriefSchedulerState();
+  if (state.lastRunDate !== marketDate || !state.lastRunId) return null;
+  const run = await getDailyBriefRun(state.lastRunId);
+  return run?.marketDate === marketDate && run.contentItemId ? run : null;
 }
 
 function normalizeConfig(input: Partial<DailyBriefSchedulerConfig>): DailyBriefSchedulerConfig {
@@ -380,8 +403,34 @@ function normalizeState(input: Partial<DailyBriefSchedulerState>): DailyBriefSch
     lastResult: input.lastResult ?? "idle",
     lastMessage: input.lastMessage ?? null,
     lastAutomationResult: input.lastAutomationResult ?? null,
+    lastLoginAlertDate: input.lastLoginAlertDate ?? null,
+    lastLoginAlertAt: input.lastLoginAlertAt ?? null,
     inFlight: input.inFlight === true
   };
+}
+
+async function enqueueDailyBriefLoginAlertIfNeeded(input: {
+  automationResult: DailyBriefPublishAutomationResult;
+  marketDate: string;
+  scheduledTime: string;
+}): Promise<Partial<DailyBriefSchedulerState>> {
+  const blocker = findBloggerLoginBlocker(input.automationResult);
+  if (!blocker) return {};
+  const state = await getDailyBriefSchedulerState();
+  if (state.lastLoginAlertDate === input.marketDate) return {};
+  try {
+    await enqueuePublicationLoginAlert({
+      channel: "blogger",
+      marketDate: input.marketDate,
+      slotId: "blogger-stock-review",
+      scheduledTime: input.scheduledTime,
+      label: "오늘의 투자 유망 종목 리뷰",
+      blocker
+    });
+    return { lastLoginAlertDate: input.marketDate, lastLoginAlertAt: new Date().toISOString() };
+  } catch {
+    return {};
+  }
 }
 
 function getLocalDateTime(timezone: string) {

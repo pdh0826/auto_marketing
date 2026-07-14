@@ -1,5 +1,33 @@
 # 13_CHANGELOG
 
+## Tistory session keep-alive and login-required alerts
+
+- Added a 30-minute, read-only Tistory persistent-profile session keep-alive check owned by the web scheduler.
+- Added session status, last check, and next check visibility to `/automation/tistory`.
+- Added one atomic PDash Telegram login-required alert per failed Tistory queue item at its due time.
+- Added the same safe login-required alert to the 08:00 Blogger scheduler and all additional Blogger publication slots when OAuth refresh/reconnect blocks publishing.
+- Fixed partial Tistory config updates so omitted fields no longer disable the scheduler or live-publish guard.
+- Kept passwords, cookies, OAuth tokens, raw provider responses, and article bodies out of alert payloads.
+
+## Blogger OAuth terminal blocker recovery
+
+- Changed publication retry discovery to scan due entries across market-date boundaries, so a 23:30 retry is not orphaned after midnight.
+- Added explicit `retryable` state and stopped repeated attempts for OAuth `invalid_grant`, reconnect-required, and unauthorized-client blockers.
+- Added an atomic PDash blocker alert with only safe schedule/error metadata and links to Blogger settings and automation status.
+- Kept content candidates intact while preventing Blogger draft/publish writes when OAuth recovery is required.
+
+## Futures publication accuracy and readability
+
+- Hardened scheduled Blogger and Tistory futures capture so the requested instrument/timeframe is selected and verified before a screenshot is accepted.
+- Replaced the seven-column futures position table with a four-column summary and explicit `매수 거래`/`매도 거래` direction labels.
+- Kept foreign-flow wording out of SEO titles unless a complete verified market-flow snapshot is available.
+
+## Publication schedule registry
+
+- Registered a single weekday publication timetable for five Blogger and seven Tistory editorial slots.
+- Added `GET /api/automation/publication-schedule` and a full schedule/status view to the Daily Brief automation page.
+- Kept only the existing Blogger 08:00 guarded slot active; all other slots expose their generation, market-flow, recurring queue, or per-content approval blockers without publishing.
+
 ## Patch 9G-13 project300 Tistory Style/SEO Guide
 
 Prepared the reusable project300 Tistory writing standard.
@@ -3828,6 +3856,128 @@ Safety:
 - 실제 source가 준비되지 않은 선물·옵션 카테고리는 명시적인 readiness blocker로 보호했다.
 - Tistory 카테고리별 선택 종목/ETF 코드를 run output에 저장하고, 기존 결과의 `planJson.selection`도 읽어 카테고리 간 후보 중복을 차단했다.
 - 종목별 신호 집중분석은 오늘의 관심종목 예약 후보를 생성 순서와 관계없이 제외하도록 변경했다.
-- Blogger 주식/ETF/아침 시황/장중 시황/장마감 시황의 5개 편집 트랙을 공통 투자 글 파이프라인 대상에 등록했다.
-- 하루 4건 요청과 5개 파생 트랙의 불일치 및 검증된 선물 시그널 source 미준비를 이유로 실제 다중 스케줄 활성화는 보류했다.
+- Blogger 주식/ETF/아침 시황/한국장 장중/한국장 마감/미국장 장중의 6개 편집 트랙을 공통 투자 글 파이프라인 대상에 등록했다.
+- 다중 스케줄 엔진과 검증된 한국장 외국인 수급 source가 준비되지 않아 실제 다중 스케줄 활성화는 보류했다.
 - read-only `GET /api/automation/daily-brief/blogger-editorial-plan`을 추가했다.
+
+## Patch 9G Futures Signal Source + Anti-AI Chart Narrative
+
+- Added a Playwright-backed UpSignal futures collector for the hydrated `https://upsignal.co.kr/futures` page.
+- Added futures evidence to the investment writing contract, preflight, outline, and renderer.
+- Enabled `futures_options_signal_record` generation when at least three futures instruments have ready data.
+- Added futures board/detail screenshot capture targets.
+- Added a futures-market Project300 renderer that writes a market briefing instead of repeating chart values item by item.
+- Hardened anti-AI review against mechanical numeric chart recaps and checklist-style explanations.
+- Updated docs so chart/futures posts use table-once, narrative-after rules.
+
+## Patch 9G Futures Active Signal Capture And PnL Briefing
+
+- Prioritized futures display as NASDAQ100, S&P500, KOSPI200, then commodities/FX.
+- Added per-instrument timeframe selection: open 60-minute position first, then 240-minute, then 10-minute fallback.
+- Added high-resolution detail captures for NASDAQ100, S&P500, and KOSPI200 using the selected timeframe.
+- Added current open-position unrealized PnL in points beside daily change in the summary table.
+- Preserved public strategy names when available and added safe buy/sell/waiting fallback labels.
+- Shortened the futures article and connected US/Korean market direction and profitable recent timing to the UpSignal reference link without promising returns.
+
+## Patch 9G Session-Aware Futures Reports And Korea Foreign Flow Gate
+
+- Added four market report sessions: morning, Korea intraday, Korea close, and US intraday.
+- Added session-specific instrument and timeframe priority policies.
+- Korea intraday/close now inspect KOSPI200 first and fall back to NASDAQ100/S&P500 when no KOSPI200 position is open.
+- Added a structured foreign flow contract for spot, futures, call options, and put options.
+- Korea intraday/close generation is blocked before content creation unless the verified market-flow source is configured and complete.
+- Added composite Tistory output keys so four futures sessions can coexist in one Daily Brief run.
+- Added a read-only market report readiness API and wizard session selector.
+- Registered a US intraday Blogger editorial track, while leaving multi-schedule activation blocked.
+## 2026-07-13 - Channel-specific SEO titles and sample review
+
+- Added a shared SEO title builder for all six Blogger and four Tistory investment-writing targets.
+- Added a read-only per-run title preview API with safe title length, date, keyword, repetition, and punctuation checks.
+- Kept Korea intraday/close samples blocked when verified foreign spot/futures/options flow is unavailable.
+- Fixed a false futures source blocker caused by relying on changed Futures page CSS selectors. Structured `/api/v1/futures/board` data is now the primary DTO source, while Playwright remains the screenshot path and fallback.
+- Regenerated Blogger morning/US intraday and Tistory futures samples from six ready instruments. Korea intraday/close remain blocked only on the separate foreign flow requirement.
+## 2026-07-13 - 선물 채널별 스크린샷 편성 분리
+
+- Blogger 시장 리포트 캡처를 한국장 장중/마감 `KOSPI200 + NQ`, 미국장 장중 `ES + NQ`로 고정했다.
+- Tistory 선물 글을 `index`와 `macro` 트랙으로 분리하고 07:00, 08:00, 21:00, 22:00 네 슬롯을 정의했다.
+- `index`는 NQ/ES/KOSPI200, `macro`는 GOLD/WTI/EURUSD 상세 차트를 각각 1장씩 사용한다.
+- 선물 출력 키에 트랙과 세션을 포함해 같은 날짜에 네 글을 서로 덮어쓰지 않고 생성할 수 있게 했다.
+- 전체 채널 샘플에서 한국장 수급 미연결은 발행 blocker로 유지하되 선물 차트 미리보기는 별도로 확인할 수 있게 했다.
+
+## 2026-07-13 - Tistory app-owned publish scheduler
+
+- 티스토리 공식 Open API 종료에 대응해 Playwright persistent-profile publisher를 추가했다.
+- `/automation/tistory`에서 전용 로그인 창, 공개 발행 설정, 승인 큐, 즉시 실행과 결과 URL을 관리한다.
+- publisher는 기존 `local-data/tistory-export/{contentItemId}`의 inline HTML, 제목, 카테고리, 태그를 재사용한다.
+- 미리보기 이미지/표/heading 검증 후에만 공개 발행하며, 성공한 content item은 중복 발행하지 않는다.
+- DB migration 없이 `local-data/tistory-scheduler`에 config/state/queue를 저장한다.
+## Natural Voice GPT CLI Fallback
+
+- Added an always-on deterministic second-pass review for stiff report-style endings and mechanical transitions.
+- Remaining tone-only issues now recommend an automatic GPT CLI `style_rewrite` minimal-edit pass instead of blocking publication.
+- Blogger and Tistory investment content generation call the fallback only when the second pass still reports an issue.
+- GPT CLI candidates are rejected when numbers, dates, table rows, link URLs, or media placeholders change; prompt, raw response, and candidate bodies are not stored in log metadata.
+- Added the multi-slot publication scheduler that wires the registered Blogger and Tistory timetable to slot-specific generation, readiness checks, guarded publication, date+slot duplicate prevention, bounded retry state, and automation-page status controls.
+- Added scheduled Blogger ETF/market editorial generation and Tistory recurring generation-to-approved-queue execution. Korea intraday/close stays blocked when the verified foreign-flow source is unavailable.
+
+## 2026-07-13 - Real-time futures generation at publish time
+
+- Changed Tistory futures slots to ignore prepared candidates and regenerate from current signals at the scheduled execution time.
+- The scheduled execution now keeps live signal collection, timeframe selection, fresh chart capture, full article generation, review, queueing, and guarded publication in one pipeline.
+- A failed real-time generation no longer falls back to an older futures article.
+- Manually published the approved focused-signal review at `https://project300.tistory.com/30` and recorded the slot success to prevent a duplicate retry.
+
+## 2026-07-13 - Fresh-at-execution publication pipeline
+
+- Changed every scheduled Blogger/Tistory first attempt to create fresh execution artifacts at the slot time instead of reusing a prepared same-day draft.
+- Standardized the execution order as live screenshot capture, current source collection, article generation/review, then guarded publication.
+- Preserved only same-day Tistory subject-selection history between slots so categories avoid duplicate subjects without sharing old images or prose.
+- Kept bounded retries on the already generated content item to prevent duplicate article creation after login or network failures.
+
+## 2026-07-13 - Optional Korea foreign-flow enrichment
+
+- Changed Korea intraday/close foreign spot, futures, call, and put flow from a hard generation gate to optional enrichment.
+- A configured structured source is still used only when all required fields and observation time are present.
+- Missing, failed, or incomplete flow data now omits the entire flow table and narrative without inventing values or blocking the article.
+- Removed the foreign-flow blocker from the Blogger publication timetable and sample-suite readiness.
+
+## 2026-07-13 - Stock chart capture rendering guard
+
+- Fixed blank stock charts caused by capturing before the chart canvas finished painting.
+- Switched Daily Brief screenshots to installed Google Chrome first, with bundled Chromium as fallback.
+- Added chart canvas pixel readiness, client-error detection, and bounded reload attempts.
+- Stock-focused Tistory generation now fails closed when a live chart capture is unavailable instead of publishing a placeholder or error screen.
+
+## 2026-07-13 - Tistory guarded automatic publication
+
+- Changed all seven Tistory timetable slots from `approved_content_queue` to `automatic_live_guarded`.
+- Replaced per-content approval for recurring slots with one persisted recurring-schedule approval while retaining per-content approval for manually queued posts.
+- Added `approvalSource=recurring_schedule` to automatically queued items for safe operational audit.
+- Kept persistent-login, category, image, table, heading, investment-writing, HTML-quality, duplicate, and bounded-retry guards before every live Tistory publish.
+- Updated the automation UI to distinguish guarded automatic publication from manual per-content queueing.
+- Expanded the Tistory ETF selection pool to 15 before same-day category de-duplication so the ETF slot retains up to five unused subjects instead of failing with an empty evidence pack.
+- Moved the Tistory ETF sector review slot from 18:30 to 19:00 Asia/Seoul and shifted the current-day retry to the new scheduled time.
+
+## 2026-07-13 - Tistory futures publication transaction hardening
+
+- 선물 예약 슬롯은 최초 실행뿐 아니라 재시도에서도 이전 후보를 재사용하지 않고 현재 신호와 차트를 다시 수집하도록 변경했다.
+- 생성 후보와 상세 차트에 15분 freshness 한계를 적용하고, 예약 실행과 publisher 실행 직전에 동일한 final guard를 수행한다.
+- 선물 표를 Markdown table로 렌더링하고 상품별 차트·설명·급등포착 링크를 한 묶음으로 배치했다.
+- 열린 포지션을 거래 방향의 기준으로 통일해 표와 상품별 제목/설명이 서로 다르게 표시되는 문제를 막았다.
+- Tistory 편집기 입력을 TinyMCE 본문에 직접 동기화하고, 이미지 업로드만 저장되는 회귀를 editor/preview/public-page 검증으로 차단했다.
+- 잘못 올라간 Tistory 글 32번을 20:02 기준 GOLD·WTI·EURUSD 차트와 전체 본문으로 교체했다. 공개 페이지에서 본문 3,338자, 소제목 14개, 표 1개, 1280px 차트 3개, 급등포착 링크 5개를 확인했다.
+
+## 2026-07-13 - Daily 08:30 PDash publication report
+
+- 매일 08:30 Asia/Seoul에 직전 보고 시각 이후 예정된 Blogger/Tistory 슬롯의 발행 결과를 집계하는 service-owned report scheduler를 추가했다.
+- 전체/Blogger/Tistory 예정 건수와 정상 발행 건수, blocked/failed/missing 원인을 PDash `status` JSON으로 생성한다.
+- Telegram 공용 큐는 `~/msg`를 사용하며 `.tmp` 완성 후 `.json` rename 방식으로만 노출한다.
+- 앱 재기동 후에도 보고일별 중복 전송을 막는 local state를 추가했다.
+- read-only status 및 queue-write 없는 dry-run API `/api/automation/publication-report`를 추가했다.
+- 설치 당일 2026-07-13 보고서는 소급 발송하지 않고, 첫 자동 발송은 다음 08:30부터 수행하도록 초기화했다.
+# 2026-07-14 - Automatic publication recovery
+
+- Added service-side detection for recently missed publication slots and safely retryable failures.
+- Added recovery metadata, cooldown, attempt limits, UI status, and 08:30 report visibility.
+- Preserved date/slot duplicate protection: successful publications are never republished.
+- Authentication failures remain manual and produce login guidance; exhausted recovery produces a PDash/Telegram alert.

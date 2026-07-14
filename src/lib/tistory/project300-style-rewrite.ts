@@ -5,6 +5,11 @@ import { prisma } from "@/lib/db/client";
 import { createLlmCallLog } from "@/lib/db/llm-call-logs";
 import { safeErrorMessage } from "@/lib/llm/redaction";
 import {
+  buildInvestmentWritingNaturalVoiceGptPrompt,
+  preservesInvestmentWritingProtectedContent,
+  reviewInvestmentWritingNaturalVoice
+} from "@/lib/daily-brief/investment-writing-natural-voice";
+import {
   buildProject300RewritePrompt,
   reviewProject300GeneratedPost,
   runProject300ReviewRewriteLoop,
@@ -53,6 +58,81 @@ export interface Project300StyleRewritePreviewResult {
     promptStored: false;
     rawResponseStored: false;
   };
+}
+
+export interface Project300NaturalVoiceGptFallbackResult {
+  attempted: boolean;
+  accepted: boolean;
+  markdown: string;
+  iterationCount: number;
+  reason: string;
+  initialIssueCodes: string[];
+  finalIssueCodes: string[];
+  protectedContentChangedCodes: string[];
+  promptStored: false;
+  rawResponseStored: false;
+}
+
+export async function runProject300NaturalVoiceGptFallback(input: {
+  contentItemId: string;
+  title: string;
+  markdown: string;
+  maxIterations?: number;
+}): Promise<Project300NaturalVoiceGptFallbackResult> {
+  const initialReview = reviewInvestmentWritingNaturalVoice(input.markdown);
+  if (initialReview.ok) return naturalVoiceFallbackResult(input.markdown, false, false, 0, "already_natural", [], [], []);
+
+  const route = await loadStyleRewriteRoute();
+  const provider = route?.primaryProvider ?? null;
+  if (process.env[GPT_CLI_REWRITE_FEATURE_FLAG] !== "true") {
+    return naturalVoiceFallbackResult(input.markdown, false, false, 0, "gpt_cli_feature_flag_disabled", initialReview.issueCodes, initialReview.issueCodes, []);
+  }
+  if (!route?.primaryModel || !isGptCliProviderReady(provider) || !provider) {
+    return naturalVoiceFallbackResult(input.markdown, false, false, 0, "gpt_cli_style_rewrite_route_not_ready", initialReview.issueCodes, initialReview.issueCodes, []);
+  }
+
+  const maxIterations = Math.min(Math.max(input.maxIterations ?? 2, 1), 3);
+  let currentMarkdown = input.markdown;
+  let currentReview = initialReview;
+  let protectedContentChangedCodes: string[] = [];
+
+  for (let iteration = 1; iteration <= maxIterations; iteration += 1) {
+    const prompt = buildInvestmentWritingNaturalVoiceGptPrompt({
+      title: input.title,
+      markdown: currentMarkdown,
+      issueCodes: currentReview.issueCodes
+    });
+    let response: Awaited<ReturnType<typeof callGptCliProvider>>;
+    try {
+      response = await callGptCliProvider({
+        provider,
+        modelName: route.primaryModel.name,
+        prompt,
+        timeoutSeconds: route.timeoutSeconds ?? provider.timeoutSeconds,
+        contentItemId: input.contentItemId,
+        iteration,
+        reviewScore: 0,
+        purpose: "project300_natural_voice_second_pass",
+        phase: "gpt_cli_natural_voice_rewrite"
+      });
+    } catch {
+      return naturalVoiceFallbackResult(input.markdown, true, false, iteration, "gpt_cli_natural_voice_rewrite_failed", initialReview.issueCodes, currentReview.issueCodes, []);
+    }
+    const candidate = stripMarkdownFence(response.text);
+    const protection = preservesInvestmentWritingProtectedContent(input.markdown, candidate);
+    if (!protection.ok) {
+      protectedContentChangedCodes = protection.changedCodes;
+      return naturalVoiceFallbackResult(input.markdown, true, false, iteration, "protected_content_changed", initialReview.issueCodes, currentReview.issueCodes, protectedContentChangedCodes);
+    }
+    const nextReview = reviewInvestmentWritingNaturalVoice(candidate);
+    currentMarkdown = candidate;
+    currentReview = nextReview;
+    if (nextReview.ok) {
+      return naturalVoiceFallbackResult(currentMarkdown, true, true, iteration, "natural_voice_passed", initialReview.issueCodes, [], []);
+    }
+  }
+
+  return naturalVoiceFallbackResult(input.markdown, true, false, maxIterations, "natural_voice_max_iterations", initialReview.issueCodes, currentReview.issueCodes, protectedContentChangedCodes);
 }
 
 export async function previewProject300StyleRewrite(input: {
@@ -184,6 +264,8 @@ async function callGptCliProvider(input: {
   contentItemId: string;
   iteration: number;
   reviewScore: number;
+  purpose?: string;
+  phase?: string;
 }) {
   const startedAt = Date.now();
   const promptHash = hashText(input.prompt);
@@ -207,8 +289,8 @@ async function callGptCliProvider(input: {
       estimatedCost: null,
       errorMessage: null,
       metadata: {
-        purpose: "project300_style_rewrite_review_loop",
-        phase: "gpt_cli_rewrite",
+        purpose: input.purpose ?? "project300_style_rewrite_review_loop",
+        phase: input.phase ?? "gpt_cli_rewrite",
         finalReviewer: "gpt_cli",
         iteration: input.iteration,
         beforeScore: input.reviewScore,
@@ -236,8 +318,8 @@ async function callGptCliProvider(input: {
       estimatedCost: null,
       errorMessage: safeErrorMessage(error instanceof Error ? error.message : "gpt_cli_rewrite_failed", 500),
       metadata: {
-        purpose: "project300_style_rewrite_review_loop",
-        phase: "gpt_cli_rewrite",
+        purpose: input.purpose ?? "project300_style_rewrite_review_loop",
+        phase: input.phase ?? "gpt_cli_rewrite",
         finalReviewer: "gpt_cli",
         iteration: input.iteration,
         beforeScore: input.reviewScore,
@@ -425,4 +507,34 @@ function safeCliError(value: string) {
 
 function hashText(value: string) {
   return createHash("sha256").update(value).digest("hex");
+}
+
+function naturalVoiceFallbackResult(
+  markdown: string,
+  attempted: boolean,
+  accepted: boolean,
+  iterationCount: number,
+  reason: string,
+  initialIssueCodes: string[],
+  finalIssueCodes: string[],
+  protectedContentChangedCodes: string[]
+): Project300NaturalVoiceGptFallbackResult {
+  return {
+    attempted,
+    accepted,
+    markdown,
+    iterationCount,
+    reason,
+    initialIssueCodes,
+    finalIssueCodes,
+    protectedContentChangedCodes,
+    promptStored: false,
+    rawResponseStored: false
+  };
+}
+
+function stripMarkdownFence(value: string) {
+  const trimmed = value.trim();
+  const match = trimmed.match(/^```(?:markdown|md)?\s*\n([\s\S]*?)\n```$/i);
+  return (match?.[1] ?? trimmed).trim();
 }

@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { useState } from "react";
 import { ApiResult, requestJson } from "@/lib/form-utils";
 import type { DailyBriefRun } from "@/lib/daily-brief/types";
+import type { DailyFuturesEditorialTrack, DailyMarketReportSession } from "@/lib/daily-brief/market-report-session";
 
 interface GenerateContentResponse {
   run: DailyBriefRun;
@@ -50,6 +51,9 @@ interface TistorySignalReviewResponse {
     recentSignalStockCount: number;
     selectedStockCodes: string[];
     selectedEtfCodes: string[];
+    selectedFuturesSymbols?: string[];
+    marketReportSession?: DailyMarketReportSession;
+    futuresEditorialTrack?: DailyFuturesEditorialTrack;
     warnings: string[];
   };
   captures: Array<{
@@ -98,6 +102,8 @@ export function DailyBriefWizardClient() {
   const [generated, setGenerated] = useState<GenerateContentResponse | null>(null);
   const [tistoryReview, setTistoryReview] = useState<TistorySignalReviewResponse | null>(null);
   const [tistoryReviewMode, setTistoryReviewMode] = useState<TistoryReviewMode>("mixed_stock_etf_review");
+  const [marketReportSession, setMarketReportSession] = useState<DailyMarketReportSession>("morning");
+  const [futuresEditorialTrack, setFuturesEditorialTrack] = useState<DailyFuturesEditorialTrack>("index");
   const [running, setRunning] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -173,7 +179,7 @@ export function DailyBriefWizardClient() {
     await runAction("tistory-signal-review", async () => {
       const response = await requestJson<ApiResult<TistorySignalReviewResponse>>(`/api/daily-brief/runs/${run.id}/tistory-signal-review`, {
         method: "POST",
-        body: JSON.stringify({ forceMode: tistoryReviewMode })
+        body: JSON.stringify({ forceMode: tistoryReviewMode, reportSession: marketReportSession, futuresEditorialTrack })
       });
       setRun(response.data.run);
       setTistoryReview(response.data);
@@ -344,8 +350,8 @@ export function DailyBriefWizardClient() {
                 Blogger Daily Brief와 다른 글로, TOP 20 중 최근 신호 종목을 골라 사람 말투의 집중 리뷰를 만듭니다. 오늘의 관심종목과 이미 사용한 종목/ETF는 다음 카테고리 후보에서 제외합니다.
               </p>
             </div>
-            <button className="button" type="button" disabled={Boolean(running) || Boolean(run.tistoryReviewOutputs?.[tistoryReviewMode])} onClick={() => void generateTistorySignalReview()}>
-              {running === "tistory-signal-review" ? "리뷰 생성 중" : run.tistoryReviewOutputs?.[tistoryReviewMode] ? "선택 카테고리 생성됨" : "선택 카테고리 생성"}
+            <button className="button" type="button" disabled={Boolean(running) || Boolean(run.tistoryReviewOutputs?.[tistoryOutputKey(tistoryReviewMode, marketReportSession, futuresEditorialTrack)])} onClick={() => void generateTistorySignalReview()}>
+              {running === "tistory-signal-review" ? "리뷰 생성 중" : run.tistoryReviewOutputs?.[tistoryOutputKey(tistoryReviewMode, marketReportSession, futuresEditorialTrack)] ? "선택 리포트 생성됨" : "선택 리포트 생성"}
             </button>
           </div>
           <label className="form-field">
@@ -357,8 +363,26 @@ export function DailyBriefWizardClient() {
               <option value="futures_options_signal_record">선물·옵션 시그널 기록</option>
             </select>
           </label>
+          {tistoryReviewMode === "futures_options_signal_record" ? (
+            <>
+              <label className="form-field">
+                <span>선물 글 묶음</span>
+                <select value={futuresEditorialTrack} onChange={(event) => setFuturesEditorialTrack(event.target.value as DailyFuturesEditorialTrack)}>
+                  <option value="index">선물·옵션 시그널 기록 (나스닥·S&amp;P500·코스피200)</option>
+                  <option value="macro">금·오일·유로달러 시그널 기록</option>
+                </select>
+              </label>
+              <label className="form-field">
+                <span>시장 리포트 시간대</span>
+                <select value={marketReportSession} onChange={(event) => setMarketReportSession(event.target.value as DailyMarketReportSession)}>
+                  <option value="morning">오늘 아침 (지수 08:00 / 금·오일·유로 07:00)</option>
+                  <option value="us_preopen">미국장 시작 전 (지수 22:00 / 금·오일·유로 21:00)</option>
+                </select>
+              </label>
+            </>
+          ) : null}
           <div className="notice">
-            네 카테고리 모두 증거 수집 → 사전 검증 → 구조 설계 → 생성 → AI 흔적 검수 → 보완 → 재검수 gate를 사용합니다. 종목별 신호 집중분석은 오늘의 관심종목 예약 후보를 피하며, ETF도 앞선 리뷰에서 사용한 코드를 재사용하지 않습니다. 선물·옵션은 급등포착 실제 신호 source가 준비될 때까지 안전하게 차단됩니다.
+            선물 리포트는 시간대에 따라 종목과 시간봉 우선순위가 달라집니다. 한국장 장중/마감 리포트는 검증된 외국인 현물·선물·옵션 수급 API가 준비되지 않으면 생성 전에 차단합니다.
           </div>
           {run.tistoryReviewOutputs && Object.keys(run.tistoryReviewOutputs).length ? (
             <div className="read-block">
@@ -367,7 +391,7 @@ export function DailyBriefWizardClient() {
                 <div className="notice success" key={output.mode}>
                   <strong>{formatTistoryMode(output.mode)}</strong> / <Link href={output.previewUrl}>미리보기</Link> / <Link href={`/content/${output.contentItemId}`}>상세 화면</Link>
                   <p className="muted">
-                    종목 {output.selectedStockCodes?.join(", ") || "-"} / ETF {output.selectedEtfCodes?.join(", ") || "-"}
+                    종목 {output.selectedStockCodes?.join(", ") || "-"} / ETF {output.selectedEtfCodes?.join(", ") || "-"} / 선물 {output.selectedFuturesSymbols?.join(", ") || "-"} / 묶음 {output.futuresEditorialTrack ?? "-"} / 시간대 {output.marketReportSession ?? "-"}
                   </p>
                 </div>
               ) : null)}
@@ -433,6 +457,10 @@ export function DailyBriefWizardClient() {
       ) : null}
     </>
   );
+}
+
+function tistoryOutputKey(mode: TistoryReviewMode, session: DailyMarketReportSession, track: DailyFuturesEditorialTrack) {
+  return mode === "futures_options_signal_record" ? `${mode}:${track}:${session}` : mode;
 }
 
 function formatTistoryMode(mode: TistorySignalReviewResponse["selection"]["mode"]) {

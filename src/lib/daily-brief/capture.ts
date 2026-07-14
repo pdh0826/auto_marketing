@@ -15,6 +15,8 @@ export async function createDailyBriefCapture(input: {
   sourceUrl: string;
   fileName: string;
   target: DailyBriefCaptureTarget;
+  futuresInstrumentName?: string;
+  futuresTimeframe?: string;
 }) {
   const relativeDir = path.join("local-data", "daily-brief-captures", input.marketDate, input.runId);
   const absoluteDir = path.resolve(process.cwd(), relativeDir);
@@ -29,7 +31,10 @@ export async function createDailyBriefCapture(input: {
 
   await mkdir(absoluteDir, { recursive: true });
 
-  const liveCapture = await tryPlaywrightScreenshot(input.sourceUrl, buildCaptureProfile(input.target)).catch((error) => ({
+  const liveCapture = await tryPlaywrightScreenshot(input.sourceUrl, buildCaptureProfile(input.target), {
+    futuresInstrumentName: input.futuresInstrumentName,
+    futuresTimeframe: input.futuresTimeframe
+  }).catch((error) => ({
     bytes: null,
     selectorUsed: null,
     width: null,
@@ -74,6 +79,7 @@ interface CaptureProfile {
   deviceScaleFactor: number;
   fullPage: boolean;
   settleMs: number;
+  readiness: "stock_chart" | null;
 }
 
 const HIGH_RES_CAPTURE_DEVICE_SCALE_FACTOR = 2;
@@ -82,6 +88,8 @@ function buildCaptureProfile(target: DailyBriefCaptureTarget): CaptureProfile {
   if (target === "stock_signal_chart") {
     return {
       selectorCandidates: [
+        ".chart-stage.card.hero-card",
+        ".chart-stage-shell.rich-stock-chart",
         "section:has-text('진입가'):has-text('목표가'):has-text('손절선')",
         ".card:has-text('진입가'):has-text('목표가'):has-text('손절선')",
         ".container"
@@ -89,7 +97,8 @@ function buildCaptureProfile(target: DailyBriefCaptureTarget): CaptureProfile {
       viewport: { width: 1440, height: 1120 },
       deviceScaleFactor: HIGH_RES_CAPTURE_DEVICE_SCALE_FACTOR,
       fullPage: false,
-      settleMs: 1800
+      settleMs: 1200,
+      readiness: "stock_chart"
     };
   }
 
@@ -104,7 +113,42 @@ function buildCaptureProfile(target: DailyBriefCaptureTarget): CaptureProfile {
       viewport: { width: 1280, height: 980 },
       deviceScaleFactor: HIGH_RES_CAPTURE_DEVICE_SCALE_FACTOR,
       fullPage: false,
-      settleMs: 1400
+      settleMs: 1400,
+      readiness: null
+    };
+  }
+
+  if (target === "futures_signal_board") {
+    return {
+      selectorCandidates: [
+        "section:has-text('주요 선물 선택')",
+        "section:has-text('KOSPI200 선물'):has-text('E-mini S&P500 선물')",
+        "[class*='FuturesBoard_instrumentGrid']",
+        "[class*='FuturesBoard_shell']",
+        ".container"
+      ],
+      viewport: { width: 1440, height: 1180 },
+      deviceScaleFactor: HIGH_RES_CAPTURE_DEVICE_SCALE_FACTOR,
+      fullPage: false,
+      settleMs: 2400,
+      readiness: null
+    };
+  }
+
+  if (target === "futures_signal_detail") {
+    return {
+      selectorCandidates: [
+        "section:has-text('현재 포지션'):has-text('시장 신호')",
+        "section:has-text('적용 전략'):has-text('누적 실현 손익')",
+        "[class*='FuturesBoard_workspace']",
+        "[class*='FuturesBoard_shell']",
+        ".container"
+      ],
+      viewport: { width: 1440, height: 1180 },
+      deviceScaleFactor: HIGH_RES_CAPTURE_DEVICE_SCALE_FACTOR,
+      fullPage: false,
+      settleMs: 2600,
+      readiness: null
     };
   }
 
@@ -118,13 +162,15 @@ function buildCaptureProfile(target: DailyBriefCaptureTarget): CaptureProfile {
     viewport: { width: 1440, height: 1100 },
     deviceScaleFactor: HIGH_RES_CAPTURE_DEVICE_SCALE_FACTOR,
     fullPage: false,
-    settleMs: 1400
+    settleMs: 1400,
+    readiness: null
   };
 }
 
 async function tryPlaywrightScreenshot(
   url: string,
-  profile: CaptureProfile
+  profile: CaptureProfile,
+  interaction: { futuresInstrumentName?: string; futuresTimeframe?: string } = {}
 ): Promise<{ bytes: Buffer | null; selectorUsed: string | null; width: number | null; height: number | null; warning: string | null }> {
   const importer = new Function("specifier", "return import(specifier)") as (specifier: string) => Promise<unknown>;
   let playwrightModule: unknown;
@@ -142,10 +188,31 @@ async function tryPlaywrightScreenshot(
   const browser = await launchChromium(chromium);
   try {
     const page = await (browser as BrowserLike).newPage({ viewport: profile.viewport, deviceScaleFactor: profile.deviceScaleFactor });
-    await page.goto(url, { waitUntil: "domcontentloaded", timeout: 45000 });
-    await dismissBlockingOverlays(page);
-    await page.waitForTimeout(profile.settleMs);
-    await dismissBlockingOverlays(page);
+    const loadAttempts = profile.readiness === "stock_chart" ? 3 : 1;
+    let lastReadinessError: unknown = null;
+    for (let attempt = 1; attempt <= loadAttempts; attempt += 1) {
+      await page.goto(url, { waitUntil: "domcontentloaded", timeout: 45000 });
+      await dismissBlockingOverlays(page);
+      await page.waitForTimeout(profile.settleMs);
+      await dismissBlockingOverlays(page);
+      try {
+        await waitForCaptureReadiness(page, profile.readiness);
+        lastReadinessError = null;
+        break;
+      } catch (error) {
+        lastReadinessError = error;
+        if (attempt < loadAttempts) {
+          await page.waitForTimeout(1200);
+        }
+      }
+    }
+    if (lastReadinessError) {
+      throw lastReadinessError;
+    }
+    if (interaction.futuresInstrumentName) {
+      await selectFuturesCaptureState(page, interaction.futuresInstrumentName, interaction.futuresTimeframe ?? "60분봉");
+      await page.waitForTimeout(850);
+    }
 
     for (const selector of profile.selectorCandidates) {
       const locator = page.locator(selector).first();
@@ -177,6 +244,101 @@ async function tryPlaywrightScreenshot(
     };
   } finally {
     await (browser as BrowserLike).close();
+  }
+}
+
+async function waitForCaptureReadiness(page: PageLike, readiness: CaptureProfile["readiness"]) {
+  if (readiness !== "stock_chart") {
+    return;
+  }
+
+  const timeoutAt = Date.now() + 15_000;
+  while (Date.now() < timeoutAt) {
+    const status = await page.evaluate(() => {
+      const bodyText = document.body?.innerText || "";
+      if (/Application error|client-side exception/i.test(bodyText)) {
+        return { ready: false, fatal: "stock_detail_client_error" };
+      }
+
+      const canvases = Array.from(document.querySelectorAll("canvas")) as HTMLCanvasElement[];
+      for (const canvas of canvases) {
+        const box = canvas.getBoundingClientRect();
+        if (box.width < 700 || box.height < 320 || canvas.width < 700 || canvas.height < 320) {
+          continue;
+        }
+        try {
+          const context = canvas.getContext("2d");
+          if (!context) {
+            continue;
+          }
+          const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
+          const colors = new Set<string>();
+          let coloredSamples = 0;
+          for (let row = 0; row < 16; row += 1) {
+            for (let column = 0; column < 24; column += 1) {
+              const x = Math.min(canvas.width - 1, Math.floor(((column + 0.5) * canvas.width) / 24));
+              const y = Math.min(canvas.height - 1, Math.floor(((row + 0.5) * canvas.height) / 16));
+              const offset = (y * canvas.width + x) * 4;
+              const red = pixels[offset];
+              const green = pixels[offset + 1];
+              const blue = pixels[offset + 2];
+              const alpha = pixels[offset + 3];
+              colors.add(`${red},${green},${blue},${alpha}`);
+              if (alpha > 0 && (red < 245 || green < 245 || blue < 245)) {
+                coloredSamples += 1;
+              }
+            }
+          }
+          if (colors.size >= 4 && coloredSamples >= 8) {
+            return { ready: true, fatal: null };
+          }
+        } catch {
+          // Keep waiting while the chart library is still painting the canvas.
+        }
+      }
+      return { ready: false, fatal: null };
+    });
+
+    if (status.ready) {
+      return;
+    }
+    if (status.fatal) {
+      throw new Error(status.fatal);
+    }
+    await page.waitForTimeout(500);
+  }
+  throw new Error("stock_chart_not_rendered");
+}
+
+async function selectFuturesCaptureState(page: PageLike, instrumentName: string, timeframe: string) {
+  const instrumentSelected = await page.evaluate((targetInstrument) => {
+    const buttons = Array.from(document.querySelectorAll("button")) as HTMLButtonElement[];
+    const target = buttons.find((button) => (button.textContent || "").includes(targetInstrument));
+    target?.click();
+    return Boolean(target);
+  }, instrumentName);
+  if (!instrumentSelected) {
+    throw new Error("futures_instrument_not_found");
+  }
+  await page.waitForTimeout(350);
+  const timeframeClicked = await page.evaluate((targetTimeframe) => {
+    const buttons = Array.from(document.querySelectorAll("button")) as HTMLButtonElement[];
+    const target = buttons.find((button) => (button.textContent || "").trim() === targetTimeframe);
+    target?.click();
+    return Boolean(target);
+  }, timeframe);
+  if (!timeframeClicked) {
+    throw new Error("futures_timeframe_not_found");
+  }
+  await page.waitForTimeout(500);
+
+  const timeframeSelected = await page.evaluate((targetTimeframe) => {
+    const buttons = Array.from(document.querySelectorAll("[aria-label='시간봉 선택'] button")) as HTMLButtonElement[];
+    const target = buttons.find((button) => (button.textContent || "").trim() === targetTimeframe);
+    return target?.getAttribute("aria-pressed") === "true";
+  }, timeframe);
+  if (!timeframeSelected) {
+    throw new Error("futures_timeframe_selection_not_confirmed");
   }
 }
 
@@ -267,9 +429,9 @@ const closeButtonSelectors = [
 
 async function launchChromium(chromium: ChromiumLike) {
   try {
-    return await chromium.launch({ headless: true });
+    return await chromium.launch({ headless: true, channel: "chrome" });
   } catch {
-    return chromium.launch({ headless: true, channel: "chrome" });
+    return chromium.launch({ headless: true });
   }
 }
 
@@ -289,7 +451,7 @@ interface PageLike {
   keyboard?: {
     press(key: string): Promise<void>;
   };
-  evaluate<T>(callback: () => T): Promise<T>;
+  evaluate<T, TArg = undefined>(callback: (arg: TArg) => T, arg?: TArg): Promise<T>;
   screenshot(options: { type: "png"; fullPage: boolean }): Promise<Buffer | Uint8Array>;
 }
 

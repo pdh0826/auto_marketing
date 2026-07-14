@@ -29,6 +29,7 @@ export function reviewInvestmentWritingDraft(input: {
   subjectNames: string[];
   judgmentLedger?: InvestmentJudgmentLedger | null;
   outline?: InvestmentWritingOutline | null;
+  allowFirstPerson?: boolean;
 }): InvestmentWritingDraftReview {
   const markdown = input.markdown.trim();
   const paragraphs = markdown
@@ -54,6 +55,7 @@ export function reviewInvestmentWritingDraft(input: {
   ]);
   const firstPersonParagraphs = paragraphs.filter((paragraph) => /저는|제가|제\s*기준/.test(paragraph));
   const canUseFirstPerson = Boolean(
+    input.allowFirstPerson ||
     input.judgmentLedger?.judgments.length ||
       input.judgmentLedger?.actions.length ||
       input.judgmentLedger?.firstImpression ||
@@ -70,6 +72,7 @@ export function reviewInvestmentWritingDraft(input: {
     .filter(([, count]) => count >= 2)
     .map(([opening, count]) => `repeated_opening:${opening}:${count}`);
   const repeatedPhraseWarnings = findRepeatedPhrases(markdown);
+  const mechanicalChartWarnings = findMechanicalChartWarnings(markdown);
   const repeatedSentenceWarnings = findRepeatedSentences(markdown);
   const forbiddenMatches = PROJECT300_INVESTMENT_FORBIDDEN_PATTERNS.filter((pattern) => markdown.includes(pattern));
   const blockers = [
@@ -82,11 +85,17 @@ export function reviewInvestmentWritingDraft(input: {
     ...substitutionTestWarnings.map((_, index) => `stock_name_substitution_warning:${index + 1}`),
     ...repeatedOpeningWarnings,
     ...repeatedPhraseWarnings,
+    ...mechanicalChartWarnings,
     ...(input.outline && !input.outline.ready ? ["investment_outline_not_ready"] : [])
   ];
   const uniqueOpeningRatio = openings.length ? new Set(openings).size / openings.length : 1;
   const antiAiScore = clamp(
-    100 - blockers.length * 25 - substitutionTestWarnings.length * 5 - repeatedOpeningWarnings.length * 8 - repeatedPhraseWarnings.length * 5
+    100 -
+      blockers.length * 25 -
+      substitutionTestWarnings.length * 5 -
+      repeatedOpeningWarnings.length * 8 -
+      repeatedPhraseWarnings.length * 5 -
+      mechanicalChartWarnings.length * 8
   );
 
   return {
@@ -133,15 +142,50 @@ function normalizeOpening(paragraph: string, subjectNames: string[]) {
 }
 
 function findRepeatedPhrases(markdown: string) {
-  const phrases = ["먼저 봅니다", "확인해 보겠습니다", "다시 볼", "아쉬운 점", "정리하면", "제 기준", "차트와 뉴스", "흐름이 이어지는지"];
+  const phrases = [
+    "먼저 봅니다",
+    "확인해 보겠습니다",
+    "다시 볼",
+    "아쉬운 점",
+    "정리하면",
+    "차트와 뉴스",
+    "흐름이 이어지는지",
+    "현재가는",
+    "시스템 진입가는",
+    "목표가까지",
+    "손절선은"
+  ];
   return phrases.flatMap((phrase) => {
     const count = markdown.split(phrase).length - 1;
     return count >= 2 ? [`repeated_phrase:${phrase}:${count}`] : [];
   });
 }
 
+function findMechanicalChartWarnings(markdown: string) {
+  const warnings: string[] = [];
+  const paragraphs = markdown
+    .split(/\n\s*\n/)
+    .map((item) => item.replace(/\s+/g, " ").trim())
+    .filter((item) => Boolean(item) && !item.startsWith("|") && !item.startsWith("<table"));
+  const numericChartParagraphs = paragraphs.filter((paragraph) => {
+    const numericCount = (paragraph.match(/[+-]?\d[\d,.]*%?/g) ?? []).length;
+    const chartWords = ["현재가", "진입", "목표가", "손절", "이평선", "볼린저", "신호", "신뢰도"].filter((word) => paragraph.includes(word)).length;
+    return numericCount >= 4 && chartWords >= 3;
+  });
+  if (numericChartParagraphs.length >= 2) warnings.push(`mechanical_numeric_chart_recap:${numericChartParagraphs.length}`);
+  const listLikeExplanations = paragraphs.filter((paragraph) => /첫 번째|두 번째|세 번째|체크는|확인 포인트/.test(paragraph));
+  if (listLikeExplanations.length >= 2) warnings.push(`mechanical_checklist_explanation:${listLikeExplanations.length}`);
+  const indicatorDumpCount = ["EMA", "RSI", "ATR", "MACD", "볼린저"].reduce((count, word) => count + (markdown.split(word).length - 1), 0);
+  if (indicatorDumpCount >= 8) warnings.push(`indicator_term_overuse:${indicatorDumpCount}`);
+  return warnings;
+}
+
 function findRepeatedSentences(markdown: string) {
-  const sentences = markdown
+  const prose = markdown
+    .replace(/<table\b[\s\S]*?<\/table>/gi, " ")
+    .replace(/<style\b[\s\S]*?<\/style>/gi, " ")
+    .replace(/<[^>]+>/g, " ");
+  const sentences = prose
     .replace(/<!--[^>]+-->/g, " ")
     .replace(/^#{1,6}\s+.*$/gm, " ")
     .split(/[.!?]\n?|\n+/)

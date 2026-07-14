@@ -140,6 +140,9 @@ function inferCategoryPath(plan: Record<string, unknown> | null) {
     if (mode === "mixed_stock_etf_review") {
       return PROJECT300_TISTORY_PROFILE.categories.dailyStockReview;
     }
+    if (mode === "futures_options_signal_record") {
+      return PROJECT300_TISTORY_PROFILE.categories.futuresOptionsSignalRecord;
+    }
     return PROJECT300_TISTORY_PROFILE.categories.focusedSignalReview;
   }
   if (plan?.kind === "daily_brief") {
@@ -159,13 +162,17 @@ function inferModeLabel(plan: Record<string, unknown> | null) {
   if (mode === "stock_signal_top3_review") {
     return "TOP3집중분석";
   }
+  if (mode === "futures_options_signal_record") {
+    return "선물시그널";
+  }
   return "분석자료";
 }
 
 function extractSelectedNames(contentItem: Project300ContentItem, plan: Record<string, unknown> | null) {
   const selection = isObject(plan?.selection) ? plan.selection : null;
   const names = Array.isArray(selection?.selectedStockNames) ? selection.selectedStockNames : [];
-  const safeNames = names.filter((item): item is string => typeof item === "string" && item.trim().length > 0);
+  const futuresSymbols = Array.isArray(selection?.selectedFuturesSymbols) ? selection.selectedFuturesSymbols : [];
+  const safeNames = [...names, ...futuresSymbols].filter((item): item is string => typeof item === "string" && item.trim().length > 0);
   if (safeNames.length > 0) {
     return safeNames.map((item) => item.trim());
   }

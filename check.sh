@@ -11,6 +11,7 @@ LOG_FILE="$LOG_DIR/blog-growth-agent-${PORT}.log"
 TMUX_SESSION="blog-growth-agent-${PORT}"
 WEB_URL="http://${HOST}:${PORT}/"
 AUTOMATION_URL="http://${HOST}:${PORT}/automation/daily-brief"
+TISTORY_AUTOMATION_URL="http://${HOST}:${PORT}/automation/tistory"
 BLOGGER_PUBLIC_ASSET_BASE_URL="${BLOGGER_PUBLIC_ASSET_BASE_URL:-}"
 BLOGGER_IMAGE_EMBED_MODE="${BLOGGER_IMAGE_EMBED_MODE:-compressed_jpeg_data_url}"
 BLOGGER_OAUTH_REDIRECT_ORIGIN="${BLOGGER_OAUTH_REDIRECT_ORIGIN:-http://localhost:${PORT}}"
@@ -127,6 +128,9 @@ WEB_HTTP_CODE="${WEB_CHECK##*|}"
 AUTOMATION_CHECK="$(http_check "$AUTOMATION_URL")"
 AUTOMATION_HTTP_STATUS="${AUTOMATION_CHECK%%|*}"
 AUTOMATION_HTTP_CODE="${AUTOMATION_CHECK##*|}"
+TISTORY_AUTOMATION_CHECK="$(http_check "$TISTORY_AUTOMATION_URL")"
+TISTORY_AUTOMATION_HTTP_STATUS="${TISTORY_AUTOMATION_CHECK%%|*}"
+TISTORY_AUTOMATION_HTTP_CODE="${TISTORY_AUTOMATION_CHECK##*|}"
 
 LOG_STATUS="ok"
 LOG_DETAIL="log file exists"
@@ -153,6 +157,7 @@ recommended_action_for() {
 
 WEB_ACTION="$(recommended_action_for "$WEB_HTTP_STATUS")"
 AUTOMATION_ACTION="$(recommended_action_for "$AUTOMATION_HTTP_STATUS")"
+TISTORY_AUTOMATION_ACTION="$(recommended_action_for "$TISTORY_AUTOMATION_HTTP_STATUS")"
 LOG_ACTION="none"
 if [[ "$LOG_STATUS" == "warning" ]]; then
   LOG_ACTION="restart_or_inspect_logs"
@@ -161,7 +166,7 @@ elif [[ "$LOG_STATUS" == "no_log" && "$PROCESS_STATUS" == "stopped" ]]; then
 fi
 
 OVERALL_STATUS="ok"
-if [[ "$WEB_HTTP_STATUS" == "ok" && "$AUTOMATION_HTTP_STATUS" == "ok" && "$LOG_STATUS" != "warning" ]]; then
+if [[ "$WEB_HTTP_STATUS" == "ok" && "$AUTOMATION_HTTP_STATUS" == "ok" && "$TISTORY_AUTOMATION_HTTP_STATUS" == "ok" && "$LOG_STATUS" != "warning" ]]; then
   OVERALL_STATUS="ok"
 elif [[ "$PROCESS_STATUS" == "stopped" && "$WEB_HTTP_STATUS" != "ok" && "$AUTOMATION_HTTP_STATUS" != "ok" ]]; then
   OVERALL_STATUS="down"
@@ -182,6 +187,7 @@ if [[ "$OUTPUT_JSON" -eq 1 ]]; then
   "host": "$(json_escape "$HOST")",
   "web_url": "$(json_escape "$WEB_URL")",
   "automation_url": "$(json_escape "$AUTOMATION_URL")",
+  "tistory_automation_url": "$(json_escape "$TISTORY_AUTOMATION_URL")",
   "blogger_public_asset_base_url_configured": $([[ -n "$BLOGGER_PUBLIC_ASSET_BASE_URL" ]] && printf 'true' || printf 'false'),
   "blogger_public_asset_base_url": "$(json_escape "$BLOGGER_PUBLIC_ASSET_BASE_URL")",
   "blogger_image_embed_mode": "$(json_escape "$BLOGGER_IMAGE_EMBED_MODE")",
@@ -234,6 +240,21 @@ if [[ "$OUTPUT_JSON" -eq 1 ]]; then
       "tmux_session": "$(json_escape "$TMUX_VALUE")",
       "log_file": "$(json_escape "$LOG_FILE")",
       "recommended_action": "$LOG_ACTION"
+    },
+    {
+      "name": "Tistory automation page",
+      "role": "automation_ui",
+      "process_status": "$PROCESS_STATUS",
+      "process_detail": "$(json_escape "$PROCESS_DETAIL")",
+      "pid": "$(json_escape "$PID_VALUE")",
+      "port_status": "$PORT_STATUS",
+      "http_status": "$TISTORY_AUTOMATION_HTTP_STATUS",
+      "http_code": "$TISTORY_AUTOMATION_HTTP_CODE",
+      "url": "$(json_escape "$TISTORY_AUTOMATION_URL")",
+      "pid_file": "$(json_escape "$PID_FILE")",
+      "tmux_session": "$(json_escape "$TMUX_VALUE")",
+      "log_file": "$(json_escape "$LOG_FILE")",
+      "recommended_action": "$TISTORY_AUTOMATION_ACTION"
     }
   ],
   "commands": {
@@ -253,6 +274,7 @@ else
   echo "Blog Growth Agent: $OVERALL_STATUS"
   echo "Web: $WEB_HTTP_STATUS ($WEB_HTTP_CODE) $WEB_URL"
   echo "Automation UI: $AUTOMATION_HTTP_STATUS ($AUTOMATION_HTTP_CODE) $AUTOMATION_URL"
+  echo "Tistory UI: $TISTORY_AUTOMATION_HTTP_STATUS ($TISTORY_AUTOMATION_HTTP_CODE) $TISTORY_AUTOMATION_URL"
   echo "Process: $PROCESS_STATUS ($PROCESS_DETAIL)"
   echo "Log: $LOG_STATUS ($LOG_DETAIL)"
   echo "Recommended action: $WEB_ACTION"

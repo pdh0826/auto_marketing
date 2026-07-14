@@ -76,6 +76,15 @@ export interface InvestmentEtfEvidence {
   unresolvedIssues: string[];
 }
 
+export interface InvestmentFuturesEvidence {
+  symbol: string;
+  name: string;
+  exchange: string;
+  facts: InvestmentFactEvidence[];
+  systemValues: InvestmentSystemEvidence[];
+  unresolvedIssues: string[];
+}
+
 export interface InvestmentWritingEvidencePack {
   version: typeof INVESTMENT_WRITING_CONTRACT_VERSION;
   channel: InvestmentWritingChannel;
@@ -84,6 +93,7 @@ export interface InvestmentWritingEvidencePack {
   marketFacts: InvestmentFactEvidence[];
   stocks: InvestmentStockEvidence[];
   etfs: InvestmentEtfEvidence[];
+  futures: InvestmentFuturesEvidence[];
   unresolvedIssues: string[];
   internalEditorNotes: string[];
 }

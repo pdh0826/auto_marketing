@@ -7,6 +7,7 @@ import type { ContentItemAdmin } from "@/lib/content/admin-types";
 import { buildHtmlQualityPreview } from "@/lib/content/html-quality-preview";
 import { prisma } from "@/lib/db/client";
 import { createContentAsset } from "@/lib/db/content-assets";
+import { runProject300NaturalVoiceGptFallback, type Project300NaturalVoiceGptFallbackResult } from "@/lib/tistory/project300-style-rewrite";
 import { buildDailyBriefMarketNarrativeContext, buildStockChartInterpretation } from "./chart-narrative";
 import { runInvestmentWritingOrchestrator } from "./investment-writing-orchestrator";
 import { summarizePrewriteContextForSymbol, summarizePrewriteMarketContext } from "./prewrite-context";
@@ -50,7 +51,7 @@ export async function createDailyBriefContentItem(run: DailyBriefRun) {
   const thumbnailAsset = await createDailyBriefThumbnailAsset(created.id, run);
   const captureAssets = await attachCapturesAsAssets(created.id, run.captures);
   const assets = [thumbnailAsset, ...captureAssets];
-  const investmentWriting = buildBloggerInvestmentWriting(run, assets);
+  const investmentWriting = await buildBloggerInvestmentWriting(run, assets, created.id);
   const markdown = investmentWriting.markdown;
   const provisional = {
     ...(created as unknown as ContentItemAdmin),
@@ -122,7 +123,7 @@ export async function refreshDailyBriefContentItemFromRun(run: DailyBriefRun) {
   }
 
   const assets = contentItem.assets as unknown as ContentAssetAdmin[];
-  const investmentWriting = buildBloggerInvestmentWriting(run, assets);
+  const investmentWriting = await buildBloggerInvestmentWriting(run, assets, contentItem.id);
   const markdown = investmentWriting.markdown;
   const provisional = {
     ...(contentItem as unknown as ContentItemAdmin),
@@ -233,12 +234,25 @@ export function buildDailyBriefGenerationReadiness(run: DailyBriefRun) {
   };
 }
 
-function buildBloggerInvestmentWriting(run: DailyBriefRun, assets: ContentAssetAdmin[]) {
+async function buildBloggerInvestmentWriting(run: DailyBriefRun, assets: ContentAssetAdmin[], contentItemId: string) {
+  const result = previewBloggerInvestmentWriting(run, assets);
+  if (!result.autoPublishEligible) throw new Error(`daily_brief_investment_writing_not_ready:${result.blockingReasons[0] ?? "unknown"}`);
+  const gptCliNaturalVoiceFallback = result.gptCliNaturalVoiceRewriteRecommended
+    ? await runProject300NaturalVoiceGptFallback({ contentItemId, title: run.title, markdown: result.markdown })
+    : null;
+  return {
+    markdown: gptCliNaturalVoiceFallback?.accepted ? gptCliNaturalVoiceFallback.markdown : result.markdown,
+    safePlanSummary: toJsonValue(buildSafeOrchestratorSummary(result, gptCliNaturalVoiceFallback))
+  };
+}
+
+export function previewBloggerInvestmentWriting(run: DailyBriefRun, assets: ContentAssetAdmin[] = []) {
   const assetByOriginalName = new Map(assets.map((asset) => [asset.originalName, asset]));
+  const boardMedia = mediaPlaceholder(findAsset(assetByOriginalName, "kr-signal-board"), "middle", "오늘의 한국장 시그널보드");
   const stockMediaByCode = new Map(
     run.stockPicks.map((pick) => [pick.code, mediaPlaceholder(findAsset(assetByOriginalName, `${pick.code}-chart`), "middle", `${pick.name} 신호차트`)] as const)
   );
-  const result = runInvestmentWritingOrchestrator({
+  return runInvestmentWritingOrchestrator({
     target: "blogger_daily_brief",
     title: run.title,
     marketDate: run.marketDate,
@@ -249,14 +263,10 @@ function buildBloggerInvestmentWriting(run: DailyBriefRun, assets: ContentAssetA
     disclosureItems: run.officialDisclosureItems,
     prewriteContextItems: run.prewriteContextItems ?? [],
     heroMedia: mediaPlaceholder(findAsset(assetByOriginalName, "daily-brief-thumbnail"), "hero", `${run.marketDate} 급등포착 오늘의 관심종목 썸네일`),
+    boardMedia,
     stockMediaByCode,
     etfMedia: run.includeEtfs ? mediaPlaceholder(findAsset(assetByOriginalName, "etf-signal-board"), "middle", "ETF 시그널보드") : null
   });
-  if (!result.autoPublishEligible) throw new Error(`daily_brief_investment_writing_not_ready:${result.blockingReasons[0] ?? "unknown"}`);
-  return {
-    markdown: result.markdown,
-    safePlanSummary: toJsonValue(buildSafeOrchestratorSummary(result))
-  };
 }
 
 export function buildDailyBriefMarkdown(run: DailyBriefRun, assets: ContentAssetAdmin[]) {
@@ -1065,6 +1075,12 @@ async function attachCapturesAsAssets(contentItemId: string, captures: DailyBrie
   let sortOrder = 1;
 
   for (const capture of captures) {
+    // Failed captures are retained on the run as readiness warnings, but must
+    // never become publishable image assets.
+    if (capture.mode !== "live_screenshot" || capture.warning) {
+      continue;
+    }
+
     const source = path.resolve(process.cwd(), capture.storagePath);
     const relativeDir = path.join("local-data", "uploads", "content-assets", contentItemId);
     const absoluteDir = path.resolve(process.cwd(), relativeDir);
@@ -1243,7 +1259,10 @@ function toJsonValue(value: unknown): Prisma.InputJsonValue {
   return JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue;
 }
 
-function buildSafeOrchestratorSummary(result: ReturnType<typeof runInvestmentWritingOrchestrator>) {
+function buildSafeOrchestratorSummary(
+  result: ReturnType<typeof runInvestmentWritingOrchestrator>,
+  gptCliNaturalVoiceFallback: Project300NaturalVoiceGptFallbackResult | null = null
+) {
   return {
     version: result.version,
     target: result.target,
@@ -1253,9 +1272,18 @@ function buildSafeOrchestratorSummary(result: ReturnType<typeof runInvestmentWri
     outline: result.outline,
     initialReview: result.initialReview,
     repair: result.repair,
+    naturalVoiceSecondPass: result.naturalVoiceSecondPass,
+    gptCliNaturalVoiceRewriteRecommended: result.gptCliNaturalVoiceRewriteRecommended,
+    gptCliNaturalVoiceFallback: summarizeNaturalVoiceGptFallback(gptCliNaturalVoiceFallback),
     finalReview: result.finalReview,
     promptBundle: { version: result.promptBundle.version, safeMetadata: result.promptBundle.safeMetadata },
     autoPublishEligible: result.autoPublishEligible,
     blockingReasons: result.blockingReasons
   };
+}
+
+function summarizeNaturalVoiceGptFallback(result: Project300NaturalVoiceGptFallbackResult | null) {
+  if (!result) return null;
+  const { markdown: _markdown, ...safeResult } = result;
+  return safeResult;
 }

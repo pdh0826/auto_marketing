@@ -63,6 +63,7 @@ interface BuildBlogPostTemplatePreviewInput {
   markdown: string;
   source: BlogPostTemplatePreviewSource;
   theme?: BlogPostTemplateTheme;
+  qualityProfile?: "long_form" | "market_brief";
 }
 
 interface PlaceholderToken {
@@ -125,7 +126,13 @@ export function buildBlogPostTemplatePreview(input: BuildBlogPostTemplatePreview
     bodyHtml: rendered.html,
     contentItem: input.contentItem
   });
-  const seoArticle = analyzeSeoArticleHtml(html, input.contentItem);
+  const seoArticle = analyzeSeoArticleHtml(
+    html,
+    input.contentItem,
+    input.qualityProfile === "market_brief"
+      ? { minVisibleTextLengthToPublish: 2200, targetVisibleTextLength: 3200 }
+      : {}
+  );
 
   if (!html.trim()) {
     errors.push("HTML preview가 비어 있습니다.");

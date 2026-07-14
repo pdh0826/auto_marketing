@@ -3,12 +3,21 @@ import {
   buildInvestmentWritingTemporalContext,
   createInvestmentWritingEvidencePack,
   type InvestmentFactEvidence,
+  type InvestmentFuturesEvidence,
   type InvestmentSourceReference,
   type InvestmentStockEvidence,
   type InvestmentSystemEvidence,
   type InvestmentWritingChannel
 } from "./investment-writing-contract";
-import type { DailyBriefEtfPick, DailyBriefOfficialDisclosureItem, DailyBriefPrewriteContextItem, DailyBriefResearchItem, DailyBriefStockPick } from "./types";
+import type {
+  DailyBriefEtfPick,
+  DailyBriefFuturesPick,
+  DailyBriefOfficialDisclosureItem,
+  DailyBriefPrewriteContextItem,
+  DailyBriefResearchItem,
+  DailyBriefStockPick
+} from "./types";
+import type { DailyForeignMarketFlowSnapshot } from "./market-flow";
 
 export function buildDailyBriefInvestmentEvidencePack(input: {
   channel: InvestmentWritingChannel;
@@ -17,6 +26,8 @@ export function buildDailyBriefInvestmentEvidencePack(input: {
   generatedAt?: string;
   stocks: DailyBriefStockPick[];
   etfs: DailyBriefEtfPick[];
+  futures?: DailyBriefFuturesPick[];
+  marketFlow?: DailyForeignMarketFlowSnapshot | null;
   researchItems: DailyBriefResearchItem[];
   disclosureItems: DailyBriefOfficialDisclosureItem[];
   prewriteContextItems: DailyBriefPrewriteContextItem[];
@@ -48,8 +59,39 @@ export function buildDailyBriefInvestmentEvidencePack(input: {
       })
     ];
   });
+  if (input.marketFlow?.ready) {
+    const flowSource = {
+      sourceName: input.marketFlow.sourceName,
+      url: input.marketFlow.sourceUrl,
+      observedAt: input.marketFlow.observedAt,
+      publishedAt: null
+    };
+    for (const [field, value] of [
+      ["foreign_spot_net", input.marketFlow.foreignSpotNet],
+      ["foreign_futures_net", input.marketFlow.foreignFuturesNet],
+      ["foreign_call_options_net", input.marketFlow.foreignCallOptionsNet],
+      ["foreign_put_options_net", input.marketFlow.foreignPutOptionsNet]
+    ] as const) {
+      if (!value) continue;
+      marketFacts.push({
+        id: `market-flow-${field}`,
+        informationClass: "FACT",
+        subjectCode: "KOREA_MARKET",
+        subjectName: "한국장 외국인 수급",
+        field,
+        value,
+        source: flowSource,
+        confidence: "high",
+        publishable: true,
+        editorNote: null
+      });
+    }
+  } else if (input.marketFlow) {
+    internalEditorNotes.push(...input.marketFlow.warnings.map((warning) => `optional_market_flow_omitted:${warning}`));
+  }
 
   const stocks = input.stocks.map((pick) => buildStockEvidence(pick, input, internalEditorNotes));
+  const futures = (input.futures ?? []).map((pick, index) => buildFuturesEvidence(pick, input, index));
   const etfs = input.etfs.map((pick, index) => ({
     code: pick.code,
     name: normalizeName(pick.name),
@@ -90,9 +132,75 @@ export function buildDailyBriefInvestmentEvidencePack(input: {
     marketFacts,
     stocks,
     etfs,
+    futures,
     unresolvedIssues,
     internalEditorNotes
   });
+}
+
+function buildFuturesEvidence(
+  pick: DailyBriefFuturesPick,
+  input: Parameters<typeof buildDailyBriefInvestmentEvidencePack>[0],
+  index: number
+): InvestmentFuturesEvidence {
+  const source: InvestmentSourceReference = {
+    sourceName: "급등포착 선물 시그널보드",
+    url: pick.sourceUrl,
+    observedAt: input.generatedAt ?? null,
+    publishedAt: pick.observedAtLabel
+  };
+  const facts: InvestmentFactEvidence[] = [];
+  const systemValues: InvestmentSystemEvidence[] = [];
+  const unresolvedIssues: string[] = [...pick.warnings];
+
+  if (pick.currentValue) {
+    facts.push({
+      id: `${pick.symbol}-futures-current`,
+      informationClass: "FACT",
+      subjectCode: pick.symbol,
+      subjectName: pick.name,
+      field: "current_value",
+      value: pick.changeRate ? `${pick.currentValue} (${pick.changeRate})` : pick.currentValue,
+      source,
+      confidence: pick.dataReady ? "high" : "low",
+      publishable: pick.dataReady,
+      editorNote: pick.dataReady ? null : "futures_value_requires_refresh"
+    });
+  } else {
+    unresolvedIssues.push("futures_current_value_missing");
+  }
+
+  for (const item of [
+    systemEvidence(`${pick.symbol}-futures-strategy`, pick.symbol, pick.name, "signal", pick.strategyName, "provider_defined", source.sourceName, pick.sourceUrl),
+    systemEvidence(`${pick.symbol}-futures-position`, pick.symbol, pick.name, "status", pick.currentPosition, "provider_defined", source.sourceName, pick.sourceUrl),
+    systemEvidence(`${pick.symbol}-futures-confidence`, pick.symbol, pick.name, "score", pick.confidence, "provider_defined", source.sourceName, pick.sourceUrl),
+    systemEvidence(`${pick.symbol}-futures-market-state`, pick.symbol, pick.name, "other", pick.marketState, "provider_defined", source.sourceName, pick.sourceUrl),
+    systemEvidence(`${pick.symbol}-futures-entry`, pick.symbol, pick.name, "entry_price", pick.entryValue, "chart_level", source.sourceName, pick.sourceUrl),
+    systemEvidence(`${pick.symbol}-futures-realized`, pick.symbol, pick.name, "other", pick.realizedProfit, "provider_defined", source.sourceName, pick.sourceUrl)
+  ]) {
+    if (item) systemValues.push(item);
+  }
+
+  if (pick.upperLevels.length) {
+    systemValues.push(
+      systemEvidence(`${pick.symbol}-futures-upper-levels`, pick.symbol, pick.name, "target_price", pick.upperLevels.join(" / "), "chart_level", source.sourceName, pick.sourceUrl)!
+    );
+  }
+  if (pick.lowerLevels.length) {
+    systemValues.push(
+      systemEvidence(`${pick.symbol}-futures-lower-levels`, pick.symbol, pick.name, "stop_loss", pick.lowerLevels.join(" / "), "chart_level", source.sourceName, pick.sourceUrl)!
+    );
+  }
+  if (!pick.dataReady) unresolvedIssues.push(`futures_not_ready:${pick.symbol}`);
+
+  return {
+    symbol: pick.symbol,
+    name: pick.name,
+    exchange: pick.exchange,
+    facts,
+    systemValues,
+    unresolvedIssues: Array.from(new Set(unresolvedIssues))
+  };
 }
 
 function buildStockEvidence(

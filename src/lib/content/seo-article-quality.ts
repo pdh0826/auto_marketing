@@ -56,7 +56,11 @@ const DISCLAIMER_PATTERN = /(투자 판단|참고용|사용자.*책임|손실|�
 const RAW_MARKDOWN_HEADING_PATTERN = /(^|\n)\s{0,3}#{1,6}\s+\S/g;
 const RAW_MARKDOWN_LIST_PATTERN = /(^|\n)\s{0,3}[-*]\s+\S/g;
 
-export function analyzeSeoArticleHtml(html: string, contentItem?: ContentItemAdmin | null): SeoArticleQualityAnalysis {
+export function analyzeSeoArticleHtml(
+  html: string,
+  contentItem?: ContentItemAdmin | null,
+  options: { minVisibleTextLengthToPublish?: number; targetVisibleTextLength?: number } = {}
+): SeoArticleQualityAnalysis {
   const safeHtml = typeof html === "string" ? html : "";
   const visibleText = extractVisibleText(safeHtml);
   const codeText = extractCodeBlockText(safeHtml);
@@ -98,9 +102,12 @@ export function analyzeSeoArticleHtml(html: string, contentItem?: ContentItemAdm
     editorialDirectTradingSignalCount: editorial.facts.directTradingSignalCount,
     editorialGenericHelpPhraseCount: editorial.facts.genericHelpPhraseCount
   };
-  const blockingReasons = buildBlockingReasons(safeHtml, facts, editorial);
-  const warnings = buildWarnings(facts, editorial);
-  const score = calculateSeoScore(blockingReasons, warnings, facts);
+  const marketBrief = isFuturesMarketBrief(contentItem?.planJson);
+  const minVisibleTextLengthToPublish = options.minVisibleTextLengthToPublish ?? (marketBrief ? 2200 : SEO_ARTICLE_TEMPLATE_V1.minVisibleTextLengthToPublish);
+  const targetVisibleTextLength = options.targetVisibleTextLength ?? (marketBrief ? 3200 : SEO_ARTICLE_TEMPLATE_V1.targetVisibleTextLength);
+  const blockingReasons = buildBlockingReasons(safeHtml, facts, editorial, minVisibleTextLengthToPublish);
+  const warnings = buildWarnings(facts, editorial, minVisibleTextLengthToPublish, targetVisibleTextLength);
+  const score = calculateSeoScore(blockingReasons, warnings, facts, targetVisibleTextLength);
   const grade: SeoArticleGrade = blockingReasons.length > 0 || score < 70 ? "fail" : warnings.length > 0 || score < 85 ? "warn" : "pass";
 
   return {
@@ -113,8 +120,8 @@ export function analyzeSeoArticleHtml(html: string, contentItem?: ContentItemAdm
     editorial,
     templatePolicy: {
       version: SEO_ARTICLE_TEMPLATE_V1.version,
-      targetVisibleTextLength: SEO_ARTICLE_TEMPLATE_V1.targetVisibleTextLength,
-      minVisibleTextLengthToPublish: SEO_ARTICLE_TEMPLATE_V1.minVisibleTextLengthToPublish,
+      targetVisibleTextLength,
+      minVisibleTextLengthToPublish,
       minH2Count: SEO_ARTICLE_TEMPLATE_V1.minH2Count,
       minParagraphCount: SEO_ARTICLE_TEMPLATE_V1.minParagraphCount,
       minFaqCount: SEO_ARTICLE_TEMPLATE_V1.minFaqCount
@@ -122,14 +129,30 @@ export function analyzeSeoArticleHtml(html: string, contentItem?: ContentItemAdm
   };
 }
 
-function buildBlockingReasons(html: string, facts: SeoArticleQualityAnalysis["facts"], editorial: SeoArticleQualityAnalysis["editorial"]) {
+function isFuturesMarketBrief(planJson: unknown) {
+  if (!planJson || typeof planJson !== "object" || Array.isArray(planJson)) return false;
+  const plan = planJson as Record<string, unknown>;
+  if (plan.kind === "scheduled_blogger_editorial") {
+    return typeof plan.slotId === "string" && ["blogger-korea-intraday", "blogger-korea-close", "blogger-us-intraday"].includes(plan.slotId);
+  }
+  if (plan.kind !== "daily_tistory_signal_review") return false;
+  if (!plan.selection || typeof plan.selection !== "object" || Array.isArray(plan.selection)) return false;
+  return (plan.selection as Record<string, unknown>).mode === "futures_options_signal_record";
+}
+
+function buildBlockingReasons(
+  html: string,
+  facts: SeoArticleQualityAnalysis["facts"],
+  editorial: SeoArticleQualityAnalysis["editorial"],
+  minVisibleTextLengthToPublish: number
+) {
   const blockers: string[] = [];
 
   if (!html.trim()) blockers.push("draft_html_missing");
   if (facts.preBlockCount > 0 && facts.codeBlockTextRatio >= 0.3) blockers.push("html_is_code_block");
   if (facts.rawMarkdownHeadingCount > 0) blockers.push("html_contains_raw_markdown_headings");
   if (facts.rawMarkdownListLineCount >= 4 && facts.paragraphCount < SEO_ARTICLE_TEMPLATE_V1.minParagraphCount) blockers.push("html_contains_raw_markdown_lists");
-  if (facts.visibleTextLength > 0 && facts.visibleTextLength < SEO_ARTICLE_TEMPLATE_V1.minVisibleTextLengthToPublish) blockers.push("html_visible_text_too_short");
+  if (facts.visibleTextLength > 0 && facts.visibleTextLength < minVisibleTextLengthToPublish) blockers.push("html_visible_text_too_short");
   if (facts.articleCount < 1) blockers.push("html_article_structure_invalid");
   if (facts.h1Count !== 1) blockers.push("html_h1_structure_invalid");
   if (facts.h2Count < SEO_ARTICLE_TEMPLATE_V1.minH2Count) blockers.push("html_h2_count_too_low");
@@ -141,10 +164,15 @@ function buildBlockingReasons(html: string, facts: SeoArticleQualityAnalysis["fa
   return Array.from(new Set(blockers));
 }
 
-function buildWarnings(facts: SeoArticleQualityAnalysis["facts"], editorial: SeoArticleQualityAnalysis["editorial"]) {
+function buildWarnings(
+  facts: SeoArticleQualityAnalysis["facts"],
+  editorial: SeoArticleQualityAnalysis["editorial"],
+  minVisibleTextLengthToPublish: number,
+  targetVisibleTextLength: number
+) {
   const warnings: string[] = [];
 
-  if (facts.visibleTextLength >= SEO_ARTICLE_TEMPLATE_V1.minVisibleTextLengthToPublish && facts.visibleTextLength < SEO_ARTICLE_TEMPLATE_V1.minVisibleTextLengthWarning) {
+  if (facts.visibleTextLength >= minVisibleTextLengthToPublish && facts.visibleTextLength < targetVisibleTextLength) {
     warnings.push("html_visible_text_below_seo_target");
   }
   if (facts.targetKeywordPresent === false) {
@@ -161,10 +189,10 @@ function buildWarnings(facts: SeoArticleQualityAnalysis["facts"], editorial: Seo
   return Array.from(new Set(warnings));
 }
 
-function calculateSeoScore(blockers: string[], warnings: string[], facts: SeoArticleQualityAnalysis["facts"]) {
+function calculateSeoScore(blockers: string[], warnings: string[], facts: SeoArticleQualityAnalysis["facts"], targetVisibleTextLength: number) {
   let score = 100 - blockers.length * 14 - warnings.length * 4;
-  if (facts.visibleTextLength < SEO_ARTICLE_TEMPLATE_V1.targetVisibleTextLength) {
-    score -= Math.min(18, Math.ceil((SEO_ARTICLE_TEMPLATE_V1.targetVisibleTextLength - facts.visibleTextLength) / 150));
+  if (facts.visibleTextLength < targetVisibleTextLength) {
+    score -= Math.min(18, Math.ceil((targetVisibleTextLength - facts.visibleTextLength) / 150));
   }
   if (facts.codeBlockTextRatio > 0) {
     score -= Math.ceil(facts.codeBlockTextRatio * 30);

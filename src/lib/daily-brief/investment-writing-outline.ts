@@ -94,6 +94,16 @@ export function buildInvestmentWritingOutline(input: {
           }
         ]
       : []),
+    ...(input.evidencePack.futures.length
+      ? [
+          {
+            key: "futures_market_context",
+            purpose: "선물 신호를 상품별 숫자 나열이 아니라 미국장, 한국장, 원자재, 환율 흐름으로 묶어 해석",
+            subjectCodes: input.evidencePack.futures.map((item) => item.symbol),
+            allowedInformationClasses: ["FACT", "SYSTEM"] as Array<"FACT" | "SYSTEM" | "JUDGMENT" | "ACTION">
+          }
+        ]
+      : []),
     {
       key: "next_conditions",
       purpose: "다음 거래일에 다시 보거나 제외할 조건을 기록",
@@ -104,7 +114,7 @@ export function buildInvestmentWritingOutline(input: {
 
   return {
     version: INVESTMENT_WRITING_OUTLINE_VERSION,
-    ready: input.preflight.ok && (assignments.length > 0 || input.evidencePack.etfs.length > 0),
+    ready: input.preflight.ok && (assignments.length > 0 || input.evidencePack.etfs.length > 0 || input.evidencePack.futures.length > 0),
     centerJudgment,
     centerJudgmentSource: userCenter ? "user" : "evidence",
     titleDirections: buildTitleDirections(centerJudgment, assignments, input.evidencePack.temporalContext.dataDate),
@@ -156,6 +166,7 @@ function buildEvidenceCenterJudgment(assignments: InvestmentStockNarrativeAssign
   if (comparison) return `${comparison.theme} 종목이 함께 잡힌 날이라 개별 숫자 반복보다 후보 간 차이를 먼저 본다.`;
   const first = assignments[0];
   if (first) return `${first.subjectNames.join(", ")}의 최근 신호와 확인된 재료가 같은 방향인지 살펴본다.`;
+  if (pack.futures.length) return "국내외 선물 흐름으로 오늘 장의 방향과 매매 타점을 먼저 확인한다.";
   if (pack.etfs.length) return "종목 신호보다 ETF와 섹터 흐름이 더 분명한 날인지 확인한다.";
   return "확인된 자료만으로 오늘 기록할 중심을 정한다.";
 }
@@ -175,7 +186,7 @@ function buildEtfInclusionReason(pack: InvestmentWritingEvidencePack, assignment
 function buildTitleDirections(center: string, assignments: InvestmentStockNarrativeAssignment[], dataDate: string) {
   const names = assignments.flatMap((item) => item.subjectNames).slice(0, 3);
   if (!assignments.length) {
-    return [`${dataDate} ETF 상위 흐름과 섹터 점검`, "오늘 ETF 순위에서 먼저 볼 상품과 섹터", center];
+    return [`${dataDate} 시장 방향과 매매 타점 점검`, "오늘 선물 신호에서 먼저 볼 흐름", center];
   }
   return [
     `${dataDate} ${names.join("·")} 신호를 다시 본 이유`,

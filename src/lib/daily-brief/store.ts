@@ -1,6 +1,7 @@
 import { mkdir, readFile, readdir, writeFile } from "fs/promises";
 import path from "path";
 import type { DailyBriefRun, DailyBriefRunSummary, DailyBriefSideEffectSummary, DailyBriefStockPick } from "./types";
+import { buildInvestmentSeoTitle } from "./investment-seo-title";
 
 const runRoot = path.join(process.cwd(), "local-data", "daily-brief-runs");
 
@@ -52,18 +53,12 @@ export function buildDailyBriefSeoTitle(
     stockPicks?: Pick<DailyBriefStockPick, "name">[];
   } = {}
 ) {
-  const topNames = (input.stockPicks ?? [])
-    .map((pick) => pick.name.trim())
-    .filter(Boolean)
-    .slice(0, 3);
-  const dateLabel = formatMarketDate(input.marketDate);
-  const suffix = dateLabel ? ` | ${dateLabel} 급등포착` : " | 급등포착";
-
-  if (topNames.length > 0) {
-    return `오늘의 국내주식 관심종목 TOP ${stockPickLimit}: ${topNames.join("·")}${suffix}`;
-  }
-
-  return `오늘의 국내주식 관심종목 TOP ${stockPickLimit}${suffix}`;
+  return buildInvestmentSeoTitle({
+    target: "blogger_daily_brief",
+    marketDate: input.marketDate ?? new Date().toISOString().slice(0, 10),
+    stockNames: (input.stockPicks ?? []).map((pick) => pick.name),
+    stockLimit: stockPickLimit
+  });
 }
 
 export function isGenericDailyBriefSeoTitle(value: string, stockPickLimit: number) {
@@ -74,13 +69,6 @@ export function isGenericDailyBriefSeoTitle(value: string, stockPickLimit: numbe
     /^오늘의 국내주식 관심종목 TOP \d+(?:: 급등포착 시그널보드 분석)?(?: - .+)?$/.test(trimmed) ||
     /^오늘의 국내주식 관심종목 TOP \d+ \| \d{4}\.\d{2}\.\d{2} 급등포착$/.test(trimmed)
   );
-}
-
-function formatMarketDate(value: string | null | undefined) {
-  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-    return null;
-  }
-  return value.replaceAll("-", ".");
 }
 
 export async function getDailyBriefRun(id: string) {

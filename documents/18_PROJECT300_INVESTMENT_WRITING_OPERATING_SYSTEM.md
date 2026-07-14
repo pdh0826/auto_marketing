@@ -528,6 +528,10 @@ npm run build
 
 - 챗에서 얻은 방법론이 문서, 타입, 생성 단계, 검수 단계에 모두 반영됐다.
 - 말투 사전만으로 결과를 통과시키지 않는다.
+- 생성 결과에는 자연스러운 블로그 말투 2차 검수를 항상 적용한다. `한 번만 보겠습니다`, `흐름을 정리합니다`, `유지되는지 확인하겠습니다`처럼 보고서식으로 굳는 표현은 독자에게 함께 살펴보자고 말하는 문장으로 제한적으로 보정한다.
+- 2차 말투 보정은 숫자, 날짜, 표, 링크, 이미지 참조와 사실 관계를 변경하지 않는다.
+- 2차 보정 뒤에도 어색한 문장이 남으면 준비된 말투 사전과 문제 코드만 포함한 최소수정 프롬프트를 GPT CLI `style_rewrite` 라우트로 보낸다.
+- 말투 디테일은 단독 발행 차단 사유가 아니다. GPT CLI가 준비되지 않았거나 결과가 숫자·날짜·표·링크·이미지 참조를 바꾸면 후보를 채택하지 않고 deterministic 교정본으로 계속 진행한다.
 - 실제 판단이 없으면 실제 판단처럼 쓰지 않는다.
 - 반복 템플릿과 내부 메모를 자동으로 차단한다.
 - 새 후보가 기존 후보보다 정보 밀도와 구별 가능성이 높다.
@@ -550,6 +554,29 @@ npm run build
 - Tistory ETF 섹터 흐름 리뷰
 - Tistory 선물·옵션 시그널 기록
 
-선물·옵션 대상은 공정과 카테고리에는 등록되어 있다. 다만 `https://upsignal.co.kr/futures`가 현재 실시간 선물 MVP 준비 상태이므로 실제 신호 source가 제공되기 전에는 `futures_options_signal_source_not_ready`로 생성과 발행을 차단한다. 주식이나 ETF 자료를 선물 신호처럼 대체하지 않는다.
+선물·옵션 대상은 공정과 카테고리에 등록되어 있다. 값과 전략 성과는 `https://upsignal.co.kr/api/v1/futures/board`의 `timeframe`·`code` 구조화 응답을 우선 사용하고, `https://upsignal.co.kr/futures` 화면 자동화는 신호차트 캡처와 API 장애 시 fallback에 사용한다. 코스피200, S&P500, 나스닥, WTI, 금, EUR/USD 중 데이터가 안정적으로 잡힌 항목만 증거팩에 넣고, 3개 미만이면 `futures_options_signal_source_not_ready`로 생성과 발행을 차단한다. 주식이나 ETF 자료를 선물 신호처럼 대체하지 않는다.
+
+선물 글의 본문은 상품별 지표를 일일이 설명하지 않는다. 표는 한 번만 쓰고, 이후에는 미국 지수 선물, 코스피200 선물, 원자재/환율, 국내 종목/ETF 연결 순서로 시장 브리핑처럼 풀어쓴다. 반복적인 `현재가는/진입가는/목표가는/손절선은` 문단은 deterministic anti-AI review에서 감점한다.
+
+선물 evidence 선택은 `60분봉 열린 포지션 -> 240분봉 열린 포지션 -> 10분봉` 순서다. 나스닥, S&P500, KOSPI200을 우선 노출하고 같은 선택 상태로 상세 차트를 캡처한다. 표에는 현재 등락과 별도로 글 작성 시점 미실현 손익(pt), 선택 시간봉, 공개 가능한 전략명 또는 진입 방향을 기록한다. 미실현 손익은 확정 성과가 아니며 생성 시점 snapshot으로만 사용한다.
+
+시간대별 선택은 `daily-brief/market-report-session.ts`가 담당한다. 아침은 미국 야간 신호, 한국장 장중/마감은 KOSPI200 우선, 미국 장중은 나스닥/S&P500 우선으로 분리한다. 한국장 세션에서 KOSPI200에 열린 포지션이 없으면 나스닥과 S&P500을 먼저 보여준다.
+
+한국장 외국인 수급은 `UPSIGNAL_MARKET_FLOW_URL`로 설정된 구조화 API가 있을 때만 선택적으로 사용한다. 포함 조건은 `observedAt`, `foreign.spotNet`, `foreign.futuresNet`, `foreign.callOptionsNet`, `foreign.putOptionsNet`이 모두 존재하는 경우다. 하나라도 없거나 요청이 실패하면 수급 표와 관련 해설 전체를 생략하고, 글 생성과 발행은 다른 검증된 자료로 계속 진행한다. HTML이나 임의 화면 문구에서 숫자를 추정하지 않는다.
+
+`GET /api/automation/daily-brief/market-report-readiness`는 네 세션의 우선순위와 수급 source 설정 여부를 read-only로 반환한다. `GET /api/automation/publication-schedule`은 Blogger 5개와 Tistory 7개 슬롯의 평일 편성, 실행기 설정, 날짜+슬롯 실행 이력을 반환한다. 추가 Blogger 슬롯은 투자 글쓰기/HTML 품질/Blogger guarded publish 체인을 재사용하고, Tistory 슬롯은 카테고리별 생성 후 문체·SEO·이미지·HTML 검수를 통과한 글만 반복 발행 승인 큐에 넣는다. 이미 성공한 날짜+슬롯은 재실행하지 않으며, 한국장 수급처럼 필수 원천이 없으면 해당 슬롯만 차단한다.
 
 생성 후 deterministic 보완기는 내부 작업 문구, 근거 없는 1인칭, 금지 문구, 중복 문단을 제거한 뒤 동일 검수기로 다시 평가한다. 최종 `autoPublishEligible=true`가 아니면 Daily Brief draft-save/publish 자동화는 시작되지 않는다.
+### 선물 시그널 글 편성
+
+| 채널/슬롯 | 발행 시각(Asia/Seoul) | 상세 차트 |
+| --- | ---: | --- |
+| Tistory 금·오일·유로달러 아침 | 07:00 | GOLD, WTI, EURUSD 각 1장 |
+| Tistory 선물·옵션 아침 | 08:00 | NQ, ES, KOSPI200 각 1장 |
+| Tistory 금·오일·유로달러 미국장 시작 전 | 21:00 | GOLD, WTI, EURUSD 각 1장 |
+| Tistory 선물·옵션 미국장 시작 전 | 22:00 | NQ, ES, KOSPI200 각 1장 |
+| Blogger 한국장 장중 | 12:20 | KOSPI200, NQ 각 1장 |
+| Blogger 한국장 마감 | 16:10 | KOSPI200, NQ 각 1장 |
+| Blogger 미국장 장중 | 23:30 | ES, NQ 각 1장 |
+
+본문에서 보드 전체 이미지를 반복하지 않는다. 위 종목별 상세 차트만 사용하고, 선택된 시간봉과 표의 시간봉·포지션·미실현 손익이 일치해야 한다.

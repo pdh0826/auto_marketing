@@ -1,5 +1,22 @@
 # 09_TEST_PLAN
 
+## Futures publication capture and summary
+
+- Futures detail capture passes the requested instrument and timeframe into the browser interaction and confirms the matching timeframe button has `aria-pressed=true` before accepting the screenshot. A caption/timeframe mismatch blocks Blogger and Tistory publication.
+- Futures summaries use a compact four-column table (`상품`, `거래 방향`, `시간봉`, `진입 후 손익`) and render an open short position as `매도 거래` and an open long position as `매수 거래`.
+- Korea-session SEO titles may mention foreign spot/futures/options flow only when the optional market-flow snapshot is complete and `ready=true`.
+
+## Publication schedule registry
+
+- `GET /api/automation/publication-schedule` returns 12 registered weekday slots in `Asia/Seoul`, the multi-slot scheduler config, and date+slot execution history.
+- `POST /api/automation/publication-schedule/run-now` defaults to dry-run. A live forced slot execution requires the explicit confirmation phrase and still uses each channel's publish guards.
+- The recurring scheduler must generate the slot-specific candidate, recheck investment-writing/HTML/image readiness, and block duplicate execution for the same market date and slot.
+- Tistory recurring publication remains blocked until both the Tistory live publisher and `tistoryRecurringPublishApproved` are enabled. Login/data failures are recorded with bounded retry metadata.
+- Blogger stock review at 08:00 is active only when the existing Daily Brief scheduler is enabled at 08:00 in `publish_live_guarded` mode.
+- Blogger ETF/market slots remain registered but blocked until their generation and multi-slot execution paths are wired.
+- Tistory slots remain registered but require both a generated export and explicit per-content publish queue approval.
+- Reading the registry must not generate content, enqueue a Tistory post, call Blogger/Tistory writes, or publish anything.
+
 ## 기본 검증
 
 ```bash
@@ -2836,7 +2853,26 @@ Safety guard:
 - 검증 명령: `git diff --check`, `npm run lint`, `npm run typecheck`, `npm run build`.
 - `GET /api/automation/daily-brief/investment-writing-coverage`에서 Blogger 1개와 Tistory 4개 대상이 모두 등록되어야 한다.
 - Tistory run은 `tistoryReviewOutputs[mode]`에 카테고리별 결과를 별도로 보관해야 한다.
-- 선물·옵션 source가 준비되지 않은 동안 `forceMode=futures_options_signal_record`는 content item을 만들지 않고 `futures_options_signal_source_not_ready`로 차단되어야 한다.
+- 선물 source에서 ready instrument가 3개 미만이면 `forceMode=futures_options_signal_record`는 content item을 만들지 않고 `futures_options_signal_source_not_ready`로 차단되어야 한다.
+- 선물 페이지가 실제 hydrate 데이터를 제공하는 경우 `forceMode=futures_options_signal_record`는 코스피200/S&P500/나스닥/원유/금/환율 중 3개 이상의 ready signal을 수집해야 한다.
+- 선물 글은 표 이후 상품별 숫자 반복 문단을 만들지 않아야 하며, 미국 지수 -> 코스피200 -> 원자재/환율 -> 종목/ETF 연결 흐름으로 작성되어야 한다.
+- `investment-writing-review`는 반복적인 `현재가는/진입가는/목표가는/손절선은` 숫자 해설과 `첫 번째 체크`식 문단을 warning으로 잡아야 한다.
+- 선물 수집 결과는 `NQ`, `ES`, `KOSPI200` 순으로 먼저 정렬되어야 한다.
+- 각 선물은 60분봉에 열린 포지션이 있으면 60분봉을 선택하고, 없으면 240분봉, 그래도 없으면 10분봉을 선택해야 한다.
+- 나스닥/S&P500/KOSPI200 상세 캡처의 label, file name, 화면 선택 시간봉이 수집 결과와 일치해야 한다.
+- 선물 표는 `등락` 다음에 `진입 후 손익(pt)`를 표시하고 누적 실현 손익과 혼동하지 않아야 한다.
+- 전략명이 수집되면 전체 공개 전략명을 표시하고, 전략명이 없을 때만 매수/매도/대기 방향으로 fallback 해야 한다.
+- 선물 글은 급등포착 링크를 포함하고, 양의 미실현 손익을 확정 수익이나 수익 보장으로 표현하지 않아야 한다.
+- `reportSession=morning`은 NQ, ES, KOSPI200 순이며 시간봉 우선순위는 `60, 240, 10`이어야 한다.
+- `reportSession=korea_intraday|korea_close`는 KOSPI200을 `60, 10, 240` 순으로 검사해야 한다.
+- 한국장 세션에서 KOSPI200 열린 포지션이 없으면 최종 표시 순서는 NQ, ES, KOSPI200이어야 한다.
+- `reportSession=us_intraday`은 NQ, ES를 먼저 표시해야 한다.
+- 한국장 장중/마감 세션은 구조화 외국인 수급 source가 없어도 선물 차트와 검증된 시장 자료로 글을 생성해야 한다.
+- 외국인 수급이 준비되면 현물, 선물, 콜옵션, 풋옵션 네 값과 observedAt이 evidence pack에 publishable FACT로 들어가야 한다.
+- 수급 source가 없거나 네 필드 중 하나라도 누락되면 수급 표·해설을 완전히 생략하고 값을 추정하거나 품질 blocker로 만들지 않는다.
+- 수급 표를 생략한 글의 SEO 제목에는 `외국인 수급` 또는 `현물·선물·옵션 수급` 문구를 넣지 않는다.
+- 같은 run에서 futures morning/intraday/close/us_intraday 결과는 composite output key로 서로 덮어쓰지 않아야 한다.
+- `GET /api/automation/daily-brief/market-report-readiness`는 DB/network/LLM/external write 없이 safe metadata만 반환해야 한다.
 
 ## Tistory category de-duplication / Blogger editorial plan
 
@@ -2846,4 +2882,119 @@ Safety guard:
 - Later ETF selections exclude ETF codes already used by another category in the same run.
 - If no unique recent-signal stock remains, generation stops with `unique_recent_signal_stock_not_found_after_category_exclusions` instead of reusing a subject.
 - `GET /api/automation/daily-brief/blogger-editorial-plan` is read-only and must report no schedule/content/Blogger side effect.
-- The Blogger request currently derives five daily tracks from stock, ETF, morning, intraday, and close reviews. Activation remains blocked until the requested count (four) versus derived count (five) is confirmed.
+- The Blogger plan derives six tracks: stock, ETF, morning, Korea intraday, Korea close, and US intraday. Activation remains blocked until multi-schedule and foreign-flow gates are complete.
+## SEO title and full-channel sample review
+
+- `GET /api/daily-brief/runs/[runId]/seo-title-preview` returns the ten Blogger/Tistory target titles and safe SEO checks without DB or external writes.
+- Confirm each title includes its market date and at least one target keyword, stays within 24-68 characters, and avoids repeated phrases or clickbait punctuation.
+- Full-channel sample indexes must distinguish generated previews from source-blocked tracks. A blocked Korea intraday/close track must not be replaced with invented foreign investor flow data.
+- Futures readiness must come from `GET /api/v1/futures/board?timeframe={10m|60m|240m}&code={instrument}` safe structured fields, not CSS class names. Verify at least NQ, ES, and K200 are `dataReady=true` when `quality_status=ok` and a strategy profile is present.
+- Playwright remains responsible for visible board/detail screenshots. A DOM selector change must not downgrade otherwise valid structured futures data to `futures_options_signal_source_not_ready`.
+## 2026-07-13 선물 채널별 캡처 편성 검증
+
+- Blogger 한국장 장중 분석은 `KOSPI200`, `NQ` 상세 차트를 정확히 1장씩 사용한다.
+- Blogger 한국장 마감 분석은 `KOSPI200`, `NQ` 상세 차트를 정확히 1장씩 사용한다.
+- Blogger 미국장 장중 분석은 `ES`, `NQ` 상세 차트를 정확히 1장씩 사용한다.
+- Tistory `index` 아침 슬롯은 08:00에 `NQ`, `ES`, `KOSPI200` 상세 차트를 1장씩 사용한다.
+- Tistory `index` 미국장 시작 전 슬롯은 22:00에 `NQ`, `ES`, `KOSPI200` 상세 차트를 1장씩 사용한다.
+- Tistory `macro` 아침 슬롯은 07:00에 `GOLD`, `WTI`, `EURUSD` 상세 차트를 1장씩 사용한다.
+- Tistory `macro` 미국장 시작 전 슬롯은 21:00에 `GOLD`, `WTI`, `EURUSD` 상세 차트를 1장씩 사용한다.
+- 각 상세 차트는 열린 60분봉 포지션을 우선하고, 없으면 240분봉, 그다음 10분봉을 선택한다.
+- 상세 캡처는 UpSignal 구조화 API에서 선택한 종목/시간봉과 동일한 UI 상태를 Playwright에 적용한 뒤 저장한다.
+- 한국장 장중/마감 샘플은 외국인 현물·선물·콜·풋 수급이 준비되지 않으면 해당 섹션만 생략한다.
+- 샘플 검증 중 Blogger/Tistory API write, publish, token refresh, LLM call을 수행하지 않는다.
+
+## Tistory persistent-profile publisher
+
+- `node scripts/tistory_ui_publish_content_item.mjs --content-item-id {id} --dry-run`은 export/title/category/image count만 확인하고 외부 write를 하지 않는다.
+- `/automation/tistory`는 파일 기반 승인 큐, timer 상태, 로그인 창, 실행 결과와 공개 URL을 표시한다.
+- 수동 큐 등록에는 content item ID, 유효한 dueAt, 공개 발행 체크가 모두 필요하다.
+- 반복 스케줄 승인이 활성화된 예약 슬롯은 글별 체크 없이 `approvalSource=recurring_schedule`로 큐에 등록되며, 로그인·카테고리·이미지·HTML·말투/품질 검증을 모두 통과한 경우에만 공개 발행한다.
+- 발행 편성표의 Tistory 7개 슬롯은 `automatic_live_guarded`로 표시되어야 하며 `perContentTistoryApprovalRequired=false`, `recurringScheduleApprovalRequired=true`, `persistentTistoryLoginRequired=true`를 반환해야 한다.
+- 같은 content item의 성공 기록이 있으면 재등록과 중복 발행을 차단한다.
+- 전용 프로필이 로그아웃 상태면 `tistory_login_required`로 차단하고 다른 글을 실행하지 않는다.
+- live publish 전에 제목, 카테고리, 태그, HTML을 입력하고 미리보기에서 이미지/표/heading을 검증한다.
+- Tistory publisher는 Blogger API, token refresh, LLM call, content item mutation을 수행하지 않는다.
+
+## Real-time futures scheduled publication
+
+- 선물·옵션 예약 슬롯은 기존 `tistoryReviewOutputs` 후보를 재사용하지 않아야 한다.
+- 예약 시각의 단일 실행 안에서 UpSignal 신호 재수집, 선택 시간봉 결정, 새 차트 캡처, 제목/본문 전체 생성, 자연스러운 말투 및 품질 검수, Tistory 발행 순서로 진행되어야 한다.
+- 차트 캡처 시점과 본문에 사용한 신호/PnL 데이터가 같은 실행에서 나온 값인지 확인한다.
+- 생성 또는 검수에 실패하면 이전 후보를 대신 발행하지 않고 해당 슬롯을 blocked/failed로 기록한다.
+- 같은 시장일자와 슬롯에서 성공 기록이 있으면 두 번째 게시물을 만들거나 발행하지 않는다.
+- 모든 Blogger/Tistory 예약 슬롯의 최초 실행은 예약 시각에 새 run을 만들고, 대상 판별 후 새 차트 캡처 -> 최신 자료 수집 -> 본문 생성/검수 -> guarded 발행 순서로 처리한다.
+- 같은 날 Tistory 카테고리 간 종목/ETF 선택 이력만 전달하며, 이전 슬롯의 캡처 이미지와 본문 후보는 재사용하지 않는다.
+- 비선물 슬롯의 네트워크/로그인 실패 재시도는 최초 실행에서 만든 content item을 재사용해 같은 슬롯의 중복 글 생성을 막는다.
+- 선물 슬롯은 재시도 시에도 이전 content item이나 캡처를 재사용하지 않는다. 예약 시각과 15분 이상 차이 나는 후보는 차단하고 현재 신호 재수집 -> 시간봉 재선택 -> 차트 재캡처 -> 본문 재생성/검수 순서를 다시 수행한다.
+- Blogger 한국장 장중/마감 및 미국장 장중 글은 저장 직전 SEO 검사에서도 `market_brief` 길이 프로필을 사용해야 하며 일반 장문 글 최소 길이를 중복 적용하지 않는다.
+- 예약 Blogger 품질 실패 메시지는 본문 없이 required fail check key만 반환해야 한다.
+
+## Stock chart screenshot readiness
+
+- 종목 상세 캡처는 설치된 Google Chrome을 우선 사용한다.
+- 캡처 전 대형 차트 canvas에 실제 색상 픽셀이 그려졌는지 확인하며, 빈 canvas는 성공으로 처리하지 않는다.
+- `Application error` 또는 `client-side exception` 화면은 최대 3회 재로드 후에도 복구되지 않으면 글 생성을 차단한다.
+- 캡처 실패 시 투명 placeholder나 오류 화면을 content asset으로 저장해 발행하지 않는다.
+- 정상 캡처에는 캔들, 이동평균선, 최근 신호와 진입가·목표가·손절선 영역이 보여야 한다.
+
+## Tistory guarded automatic publication
+
+- `POST /api/automation/publication-schedule/run-now`의 기본 dry-run은 Tistory UI write, publish, DB/content mutation을 수행하지 않는다.
+- 예약 실행은 현재 시각의 캡처와 자료로 새 후보를 만든 뒤 `investmentWriting.autoPublishEligible`, HTML quality, 이미지 존재, Tistory 미리보기의 이미지/표/heading을 순서대로 검증한다.
+- 전용 persistent profile이 로그아웃이면 `tistory_login_required`, 카테고리를 찾지 못하면 `tistory_category_not_found`, 미리보기 구성이 부족하면 `tistory_preview_validation_failed`로 차단해야 한다.
+- 성공한 `marketDate:slotId`와 성공한 content item은 다시 발행하지 않는다.
+- 비선물 재시도는 최초 실행에서 만든 content item을 재사용한다. 선물 재시도는 stale 후보 발행을 막기 위해 새 캡처와 새 본문을 생성하되, 성공한 `marketDate:slotId`가 있으면 중복 발행하지 않는다.
+- ETF 섹터 슬롯은 상위 15개 ETF 후보를 수집한 뒤 같은 날 다른 카테고리에서 사용한 ETF를 제외하고 최대 5개를 선택해야 한다. 상위 5개만 수집해 중복 제외 후 subject가 0개가 되는 회귀를 허용하지 않는다.
+- ETF 섹터 슬롯은 평일 19:00 Asia/Seoul에 실행하며 이전 18:30 실패 기록의 재시도가 새 예약 시각보다 먼저 실행되지 않아야 한다.
+
+## Tistory futures final publication guard
+
+- 선물 후보는 생성 시점과 모든 상세 차트의 생성 시점이 발행 검사 시각 기준 15분 이내여야 한다.
+- 선물 글은 정확한 세션/트랙 편성, PNG 상세 차트 3장 이상, HTML table 1개 이상, 차트별 설명과 급등포착 링크를 모두 갖춰야 한다.
+- 세 차트 placeholder가 본문 상단에 연속 배치되거나 raw table HTML이 escaped text로 보이면 발행을 차단한다.
+- 표와 상품별 소제목/설명의 매수·매도 방향이 다르면 발행을 차단한다.
+- Tistory 편집기 입력 직후 editor 내부에서 본문 길이, 소제목, 표, 이미지, 급등포착 링크를 다시 검사한다.
+- 미리보기와 공개 페이지에서도 visible text 1,800자 이상, 소제목 5개 이상, 표 1개 이상, 기대 이미지 수, 급등포착 링크를 확인한다.
+- 이미지 업로드만 성공하고 TinyMCE 본문 동기화가 누락된 경우 공개 발행 성공으로 처리하지 않는다.
+
+## 08:30 PDash publication report
+
+- `POST /api/automation/publication-report` 기본 호출은 dry-run이며 `queueWrite=false`, `telegramWrite=false`, `dbWrite=false`, `contentMutation=false`여야 한다.
+- 보고 기간은 전일 08:30 초과부터 당일 08:30 이하까지이며 같은 슬롯을 다음 날 보고서에서 다시 집계하지 않는다.
+- 영업일 슬롯만 예정 건수에 포함하고 Blogger/Tistory별 예정·성공·미완료 건수를 분리한다.
+- Blogger 08:00 Daily Brief는 별도 scheduler state의 `lastAutomationResult.status`, `bloggerPostUrl`을 사용해 성공 여부를 집계한다.
+- 나머지 슬롯은 publication scheduler의 `marketDate:slotId` entry가 `success`이고 public URL이 있을 때만 정상 발행으로 집계한다.
+- blocked, failed, missing, 성공 URL 누락은 미발행 항목에 슬롯 시각·채널·이름·safe reason과 함께 표시한다.
+- 자동 발송은 `~/msg/blog-growth-agent-publication-report-YYYY-MM-DD.tmp`를 먼저 완성한 뒤 같은 이름의 `.json`으로 rename해야 한다.
+- 같은 보고일의 성공 state가 있으면 재기동이나 반복 tick에서도 큐 파일을 다시 만들지 않는다.
+- 평일 연속 구간은 총 12건, 월요일처럼 전일이 비영업일이면 당일 08:30까지의 실제 슬롯만 집계해야 한다.
+
+## Blogger OAuth blocker and cross-date retry
+
+- 23:30 Blogger 슬롯의 15분 재시도가 자정을 넘기더라도 원래 `marketDate:slotId` entry를 찾아 실행해야 한다.
+- 재시도 탐색은 현재 로컬 날짜의 key만 보지 않고 모든 due `nextRetryAt` entry를 확인해야 한다.
+- `token_refresh_invalid_grant_reconnect_required`, `manual_oauth_reconnect_required`, `oauth_required`, `token_refresh_unauthorized_client`는 자동 반복으로 복구되지 않는 terminal blocker로 처리한다.
+- terminal OAuth blocker는 `retryable=false`, `nextRetryAt=null`이어야 하며 prompt, token, provider raw response를 포함하지 않는 PDash status JSON을 `.tmp`에서 `.json`으로 atomic rename한다.
+- OAuth blocker가 발생한 content item은 draft approval/save, publish approval/execution attempt, Blogger write, content status mutation이 없어야 한다.
+
+## Persistent login keep-alive and publication-time alerts
+
+- Tistory publisher config의 `sessionKeepAliveEnabled=true`, `sessionKeepAliveIntervalMinutes=30`을 저장하고 서버를 재기동해도 유지되는지 확인한다.
+- keep-alive 필드만 PATCH해도 기존 `enabled`, `livePublishEnabled`, `headless` 값이 변경되지 않아야 한다.
+- keep-alive는 전용 persistent profile로 `/manage/newpost/`를 읽기 전용 방문하고 글 입력, 이미지 업로드, 저장, 공개 발행을 수행하지 않아야 한다.
+- 로그인 상태면 `sessionStatus=ready`, `lastSessionCheckAt`, `nextSessionCheckAt`이 갱신되어야 한다.
+- 로그아웃 상태면 `sessionStatus=login_required`로 표시하되 예약 글이나 content item을 변경하지 않아야 한다.
+- Tistory 예약 발행이 `tistory_login_required`로 차단되면 해당 queue item에 `loginAlertedAt`을 기록하고 `~/msg`에 safe PDash JSON을 `.tmp`에서 `.json`으로 atomic rename한다.
+- 같은 queue item의 재시도는 로그인 경고를 중복 생성하지 않아야 한다.
+- 실시간 선물 슬롯이 재시도에서 새 content item을 생성해도 원래 `marketDate:slotId`의 `loginAlertedAt`을 이어받아 같은 예약 실패 경고를 반복하지 않아야 한다.
+- Blogger 08:00 및 추가 Blogger 슬롯에서 OAuth 재연결 blocker가 발생하면 해당 날짜/슬롯별 경고를 1회 생성해야 한다.
+- 경고 JSON에는 password, cookie, access/refresh token, client secret, encrypted value, raw provider response, 본문 전문을 포함하지 않아야 한다.
+# Automatic publication recovery
+
+- After a 10-minute grace period, the web scheduler detects a missing or failed slot within the next 120 minutes.
+- Only transient capture, chart rendering, editor preview, image upload, network, and timeout failures are retried automatically.
+- Basic retries stop at three attempts; guarded recovery may continue up to five total attempts with a 15-minute cooldown.
+- A successful date/slot entry is terminal and must never be republished by recovery.
+- OAuth and login failures must remain blocked and enqueue a login notification instead of bypassing authentication.
+- When recovery is exhausted, enqueue one PDash/Telegram failure notification and preserve the failed entry for inspection.

@@ -11,15 +11,27 @@ import { exportTistoryHtmlForContentItem } from "@/lib/tistory/html-export";
 import { PROJECT300_TISTORY_PROFILE, buildProject300CategoryLinks } from "@/lib/tistory/project300";
 import { reviewProject300GeneratedPost, summarizeProject300StyleReview } from "@/lib/tistory/project300-style-review";
 import { PROJECT300_STYLE_PROFILE_VERSION } from "@/lib/tistory/project300-style";
+import { runProject300NaturalVoiceGptFallback, type Project300NaturalVoiceGptFallbackResult } from "@/lib/tistory/project300-style-rewrite";
 import { inferProject300CategoryKind, selectProject300VoiceVariation } from "@/lib/tistory/project300-voice-variation";
 import { buildMarketNarrativeContextFromPicks, buildStockChartInterpretation } from "./chart-narrative";
 import { createDailyBriefCapture } from "./capture";
+import { fetchFuturesSignals } from "./futures";
+import { fetchDailyForeignMarketFlow } from "./market-flow";
+import {
+  getFuturesSymbolsForTrack,
+  getDailyMarketReportProfile,
+  normalizeDailyFuturesEditorialTrack,
+  normalizeDailyMarketReportSession,
+  resolveDailyMarketReportSession
+} from "./market-report-session";
 import { runInvestmentWritingOrchestrator, type InvestmentWritingTarget } from "./investment-writing-orchestrator";
+import { buildInvestmentSeoTitle } from "./investment-seo-title";
 import { collectDailyBriefPrewriteContext, summarizePrewriteContextForSymbol, summarizePrewriteMarketContext } from "./prewrite-context";
 import { collectDailyBriefEtfResearch, collectDailyBriefOfficialDisclosures, collectDailyBriefResearch } from "./research";
 import type {
   DailyBriefCapture,
   DailyBriefEtfPick,
+  DailyBriefFuturesPick,
   DailyBriefRun,
   DailyBriefStockPick,
   DailyTistorySignalReviewMode,
@@ -81,11 +93,27 @@ export interface DailyTistorySignalReviewResult {
 
 interface CreateDailyTistorySignalReviewOptions {
   forceMode?: string;
+  reportSession?: string;
+  futuresEditorialTrack?: string;
+  replaceExistingOutput?: boolean;
 }
 
 export async function createDailyTistorySignalReview(run: DailyBriefRun, options: CreateDailyTistorySignalReviewOptions = {}): Promise<DailyTistorySignalReviewResult> {
-  const [topTwentyStocks, etfPicks] = await Promise.all([fetchKrStockPicks(20), fetchEtfPicks(Math.max(5, run.etfPickLimit || 5))]);
+  const [topTwentyStocks, etfPicks] = await Promise.all([
+    fetchKrStockPicks(20),
+    fetchEtfPicks(Math.max(15, run.etfPickLimit || 5))
+  ]);
   const forcedMode = normalizeForcedTistoryReviewMode(options.forceMode);
+  const marketReportSession = normalizeDailyMarketReportSession(options.reportSession) ?? resolveDailyMarketReportSession();
+  const futuresEditorialTrack = normalizeDailyFuturesEditorialTrack(options.futuresEditorialTrack);
+  const marketReportProfile = getDailyMarketReportProfile(marketReportSession);
+  const futuresSymbols = getFuturesSymbolsForTrack(futuresEditorialTrack);
+  let futuresPicks: DailyBriefFuturesPick[] = forcedMode === "futures_options_signal_record"
+    ? await fetchFuturesSignals(futuresSymbols.length, { reportSession: marketReportSession, symbols: futuresSymbols })
+    : [];
+  const marketFlow = forcedMode === "futures_options_signal_record" && marketReportProfile.koreaForeignFlowRequired
+    ? await fetchDailyForeignMarketFlow(marketReportSession)
+    : null;
   const previousSelections = await collectPreviousTistorySelections(run);
   const reservedDailyReviewStockCodes = forcedMode === "stock_signal_top3_review"
     ? topTwentyStocks.slice(0, 3).map((pick) => pick.code)
@@ -94,18 +122,28 @@ export async function createDailyTistorySignalReview(run: DailyBriefRun, options
     excludedStockCodes: [...previousSelections.stockCodes, ...reservedDailyReviewStockCodes],
     excludedEtfCodes: previousSelections.etfCodes
   });
-  if (run.tistoryReviewOutputs?.[selection.mode] || (!run.tistoryReviewOutputs && run.tistoryReviewContentItemId && run.tistoryReviewMode === selection.mode)) {
+  const reviewOutputKey = buildTistoryReviewOutputKey(selection.mode, marketReportSession, futuresEditorialTrack);
+  if (!options.replaceExistingOutput && (run.tistoryReviewOutputs?.[reviewOutputKey] || (!run.tistoryReviewOutputs && run.tistoryReviewContentItemId && run.tistoryReviewMode === selection.mode))) {
     throw new Error("daily_tistory_signal_review_already_generated");
   }
   if (selection.mode === "futures_options_signal_record") {
-    throw new Error("futures_options_signal_source_not_ready");
+    if (!futuresPicks.length) {
+      futuresPicks = await fetchFuturesSignals(futuresSymbols.length, { reportSession: marketReportSession, symbols: futuresSymbols });
+    }
+    if (futuresPicks.filter((pick) => pick.dataReady).length < 3) {
+      throw new Error("futures_options_signal_source_not_ready");
+    }
   }
   if (selection.mode === "stock_signal_top3_review" && selection.selectedStockCodes.length === 0) {
     throw new Error("unique_recent_signal_stock_not_found_after_category_exclusions");
   }
   const selectedStocks = topTwentyStocks.filter((pick) => selection.selectedStockCodes.includes(pick.code));
   const selectedEtfs = etfPicks.filter((pick) => selection.selectedEtfCodes.includes(pick.code));
-  const captures = await captureTistoryReviewAssets(run, selection.mode, selectedStocks, selectedEtfs);
+  const selectedFutures = selection.mode === "futures_options_signal_record" ? futuresPicks.filter((pick) => pick.dataReady).slice(0, 3) : [];
+  selection.selectedFuturesSymbols = selectedFutures.map((pick) => pick.symbol);
+  selection.marketReportSession = selection.mode === "futures_options_signal_record" ? marketReportSession : undefined;
+  selection.futuresEditorialTrack = selection.mode === "futures_options_signal_record" ? futuresEditorialTrack : undefined;
+  const captures = await captureTistoryReviewAssets(run, selection.mode, selectedStocks, selectedEtfs, selectedFutures);
   const [stockResearch, stockDisclosures, etfResearch, prewriteContextItems] = await Promise.all([
     collectDailyBriefResearch(selectedStocks, 3),
     collectDailyBriefOfficialDisclosures(selectedStocks, run.marketDate, 2),
@@ -116,7 +154,15 @@ export async function createDailyTistorySignalReview(run: DailyBriefRun, options
       etfPicks: selectedEtfs
     })
   ]);
-  const title = buildTistoryReviewTitle(run.marketDate, selection.mode, selectedStocks, selectedEtfs);
+  const title = buildTistoryReviewTitle(
+    run.marketDate,
+    selection.mode,
+    selectedStocks,
+    selectedEtfs,
+    selectedFutures,
+    marketReportSession,
+    marketFlow?.ready === true
+  );
   const defaults = await loadDefaultBlogAndBrand();
   let createdContentItemId: string | null = null;
   try {
@@ -139,6 +185,9 @@ export async function createDailyTistorySignalReview(run: DailyBriefRun, options
           targetTistoryBlog: PROJECT300_TISTORY_PROFILE.blogUrl,
           recommendedTistoryCategoryPath: project300Category,
           duplicatePolicy: "blogger_daily_brief_summary_vs_project300_signal_review_analysis",
+          generationTimingPolicy: selection.mode === "futures_options_signal_record"
+            ? "collect_capture_write_review_publish_in_same_scheduled_execution"
+            : "prepared_candidate_allowed",
           writingStyleProfile: PROJECT300_STYLE_PROFILE_VERSION,
           seoReviewPolicy: "project300_tistory_style_plus_seo_checklist",
           prewriteContextItemCount: prewriteContextItems.length,
@@ -152,6 +201,9 @@ export async function createDailyTistorySignalReview(run: DailyBriefRun, options
             selectedStockNames,
             selectedEtfCodes: selection.selectedEtfCodes,
             selectedEtfNames,
+            selectedFuturesSymbols: selection.selectedFuturesSymbols ?? [],
+            marketReportSession: selection.marketReportSession ?? null,
+            futuresEditorialTrack: selection.futuresEditorialTrack ?? null,
             warnings: selection.warnings
           },
           tistoryExportOnly: true
@@ -166,7 +218,7 @@ export async function createDailyTistorySignalReview(run: DailyBriefRun, options
     });
     createdContentItemId = created.id;
 
-    const thumbnailAsset = await createTistoryReviewThumbnailAsset(created.id, run.marketDate, selection.mode, selectedStocks, selectedEtfs);
+    const thumbnailAsset = await createTistoryReviewThumbnailAsset(created.id, run.marketDate, selection.mode, selectedStocks, selectedEtfs, selectedFutures);
     const captureAssets = await attachTistoryCapturesAsAssets(created.id, captures);
     const assets = [thumbnailAsset, ...captureAssets];
     const assetByOriginalName = new Map(assets.map((asset) => [asset.originalName, asset]));
@@ -180,6 +232,9 @@ export async function createDailyTistorySignalReview(run: DailyBriefRun, options
       generatedAt: new Date().toISOString(),
       stocks: selectedStocks,
       etfs: selectedEtfs,
+      futures: selectedFutures,
+      marketFlow,
+      marketReportSession,
       researchItems: [...stockResearch, ...etfResearch],
       disclosureItems: stockDisclosures,
       prewriteContextItems,
@@ -187,12 +242,22 @@ export async function createDailyTistorySignalReview(run: DailyBriefRun, options
       stockMediaByCode,
       etfMedia: selectedEtfs.length
         ? mediaPlaceholder(findAsset(assetByOriginalName, "tistory-etf-signal-board"), "middle", "ETF/섹터 신호보드")
+        : null,
+      futuresMedia: selectedFutures.length
+        ? buildFuturesMedia(selectedFutures, assetByOriginalName)
         : null
     });
     if (!investmentWriting.autoPublishEligible) {
       throw new Error(`investment_writing_not_ready:${investmentWriting.blockingReasons[0] ?? "unknown"}`);
     }
-    const markdown = investmentWriting.markdown;
+    const gptCliNaturalVoiceFallback = investmentWriting.gptCliNaturalVoiceRewriteRecommended
+      ? await runProject300NaturalVoiceGptFallback({
+          contentItemId: created.id,
+          title,
+          markdown: investmentWriting.markdown
+        })
+      : null;
+    const markdown = gptCliNaturalVoiceFallback?.accepted ? gptCliNaturalVoiceFallback.markdown : investmentWriting.markdown;
     const styleReview = reviewProject300GeneratedPost({
       title,
       markdown,
@@ -213,7 +278,8 @@ export async function createDailyTistorySignalReview(run: DailyBriefRun, options
       assets,
       markdown,
       source: "manual_draft_candidate",
-      theme: "clean_blog"
+      theme: "clean_blog",
+      qualityProfile: selection.mode === "futures_options_signal_record" ? "market_brief" : "long_form"
     });
     if (!htmlPreview.validationSummary.ok) {
       throw new Error(`tistory_signal_review_template_preview_not_ready:${htmlPreview.validationSummary.errors[0] ?? "unknown"}`);
@@ -227,7 +293,7 @@ export async function createDailyTistorySignalReview(run: DailyBriefRun, options
         planJson: {
           ...(isRecord(created.planJson) ? created.planJson : {}),
           project300StyleReview: summarizeProject300StyleReview(styleReview),
-          investmentWriting: toJsonValue(buildSafeInvestmentWritingSummary(investmentWriting, styleReview.ok)),
+          investmentWriting: toJsonValue(buildSafeInvestmentWritingSummary(investmentWriting, styleReview.ok, gptCliNaturalVoiceFallback)),
           project300FinalReviewer: "gpt_cli",
           project300GptCliRewriteLoop: {
             available: true,
@@ -305,6 +371,14 @@ export async function createDailyTistorySignalReview(run: DailyBriefRun, options
   }
 }
 
+export function buildTistoryReviewOutputKey(
+  mode: DailyTistorySignalReviewMode,
+  session?: import("./market-report-session").DailyMarketReportSession,
+  track?: import("./market-report-session").DailyFuturesEditorialTrack
+) {
+  return mode === "futures_options_signal_record" && session ? `${mode}:${track ?? "index"}:${session}` : mode;
+}
+
 export function selectTistorySignalReviewCandidates(
   topTwentyStocks: DailyBriefStockPick[],
   etfPicks: DailyBriefEtfPick[],
@@ -356,13 +430,14 @@ export function selectTistorySignalReviewCandidates(
     if (forcedMode === "futures_options_signal_record") {
       return {
         mode: "futures_options_signal_record",
-        modeReason: "선물·옵션 시그널 카테고리는 공통 작성 프로세스에 등록됐지만 급등포착 실제 신호 source가 준비될 때까지 생성하지 않습니다.",
+        modeReason: "급등포착 선물 화면에서 국내외 선물 매매 타점을 수집해 시장 브리핑형 기록을 생성합니다.",
         recentSignalWindowDays: RECENT_SIGNAL_WINDOW_DAYS,
         topTwentyCount: topTwentyStocks.length,
         recentSignalStockCount: 0,
         selectedStockCodes: [],
         selectedEtfCodes: [],
-        warnings: [...warnings, "futures_options_signal_source_not_ready"]
+        selectedFuturesSymbols: [],
+        warnings
       };
     }
     return {
@@ -460,7 +535,8 @@ async function captureTistoryReviewAssets(
   run: DailyBriefRun,
   mode: DailyTistorySignalReviewMode,
   selectedStocks: DailyBriefStockPick[],
-  selectedEtfs: DailyBriefEtfPick[]
+  selectedEtfs: DailyBriefEtfPick[],
+  selectedFutures: DailyBriefFuturesPick[] = []
 ) {
   const captures: DailyBriefCapture[] = [];
   for (const pick of selectedStocks.slice(0, 3)) {
@@ -473,10 +549,33 @@ async function captureTistoryReviewAssets(
       fileName: `tistory-${pick.code}-signal-chart.png`,
       target: "stock_signal_chart"
     });
+    if (capture.mode !== "live_screenshot" || capture.warning) {
+      throw new Error(`stock_signal_chart_capture_not_ready:${pick.code}:${capture.warning ?? capture.mode}`);
+    }
     captures.push(capture);
   }
 
-  if (mode !== "stock_signal_top3_review" || selectedEtfs.length > 0) {
+  if (mode === "futures_options_signal_record" || selectedFutures.length > 0) {
+    for (const pick of selectedFutures.slice(0, 3)) {
+      const detailCapture = await createDailyBriefCapture({
+        runId: run.id,
+        marketDate: run.marketDate,
+        kind: "futures_detail",
+        label: `${pick.name} ${pick.timeframe ?? "60분봉"} 최근 매매 시그널`,
+        sourceUrl: "https://upsignal.co.kr/futures",
+        fileName: `tistory-futures-${pick.symbol.toLowerCase()}-${pick.timeframe ?? "60분봉"}-signal-detail.png`,
+        target: "futures_signal_detail",
+        futuresInstrumentName: pick.name,
+        futuresTimeframe: pick.timeframe ?? "60분봉"
+      });
+      if (detailCapture.mode !== "live_screenshot" || detailCapture.warning) {
+        throw new Error(`tistory_futures_capture_not_ready:${pick.symbol}:${detailCapture.warning ?? detailCapture.mode}`);
+      }
+      captures.push(detailCapture);
+    }
+  }
+
+  if ((mode !== "stock_signal_top3_review" && mode !== "futures_options_signal_record") || selectedEtfs.length > 0) {
     const capture = await createDailyBriefCapture({
       runId: run.id,
       marketDate: run.marketDate,
@@ -490,6 +589,21 @@ async function captureTistoryReviewAssets(
   }
 
   return captures;
+}
+
+function buildFuturesMedia(futures: DailyBriefFuturesPick[], assetByOriginalName: Map<string, ContentAssetAdmin>) {
+  const detailMedia = futures
+    .slice(0, 3)
+    .map((item) =>
+      mediaPlaceholder(
+        findAsset(assetByOriginalName, `tistory-futures-${item.symbol.toLowerCase()}-`),
+        "middle",
+        `${item.name} ${item.timeframe ?? "선택 시간봉"} 최근 매매 시그널`
+      )
+    )
+    .filter((value) => !value.startsWith("> 이미지 준비 중"));
+  if (detailMedia.length) return detailMedia.join("\n\n");
+  return mediaPlaceholder(findAsset(assetByOriginalName, "tistory-futures-signal-board"), "middle", "국내외 선물 시그널보드");
 }
 
 function buildTistorySignalReviewMarkdown(input: {
@@ -928,14 +1042,15 @@ async function createTistoryReviewThumbnailAsset(
   marketDate: string,
   mode: DailyTistorySignalReviewMode,
   selectedStocks: DailyBriefStockPick[],
-  selectedEtfs: DailyBriefEtfPick[]
+  selectedEtfs: DailyBriefEtfPick[],
+  selectedFutures: DailyBriefFuturesPick[] = []
 ) {
   const relativeDir = path.join("local-data", "uploads", "content-assets", contentItemId);
   const absoluteDir = path.resolve(process.cwd(), relativeDir);
   const fileName = "tistory-signal-review-thumbnail.svg";
   const relativePath = path.join(relativeDir, fileName);
   const absolutePath = path.resolve(process.cwd(), relativePath);
-  const svg = buildTistoryReviewThumbnailSvg(marketDate, mode, selectedStocks, selectedEtfs);
+  const svg = buildTistoryReviewThumbnailSvg(marketDate, mode, selectedStocks, selectedEtfs, selectedFutures);
 
   await mkdir(absoluteDir, { recursive: true });
   await writeFile(absolutePath, svg, "utf8");
@@ -960,10 +1075,16 @@ async function createTistoryReviewThumbnailAsset(
   return asset as unknown as ContentAssetAdmin;
 }
 
-function buildTistoryReviewThumbnailSvg(marketDate: string, mode: DailyTistorySignalReviewMode, selectedStocks: DailyBriefStockPick[], selectedEtfs: DailyBriefEtfPick[]) {
+function buildTistoryReviewThumbnailSvg(
+  marketDate: string,
+  mode: DailyTistorySignalReviewMode,
+  selectedStocks: DailyBriefStockPick[],
+  selectedEtfs: DailyBriefEtfPick[],
+  selectedFutures: DailyBriefFuturesPick[] = []
+) {
   const dateLabel = marketDate.replaceAll("-", ".");
-  const title = mode === "etf_sector_review" ? "오늘 ETF 흐름 리뷰" : "오늘 신호 종목 TOP 3";
-  const subtitle = (mode === "etf_sector_review" ? selectedEtfs : selectedStocks)
+  const title = mode === "futures_options_signal_record" ? "오늘 선물 매매타점 기록" : mode === "etf_sector_review" ? "오늘 ETF 흐름 리뷰" : "오늘 신호 종목 TOP 3";
+  const subtitle = (mode === "futures_options_signal_record" ? selectedFutures : mode === "etf_sector_review" ? selectedEtfs : selectedStocks)
     .slice(0, 3)
     .map((pick) => normalizeName(pick.name))
     .join(" · ");
@@ -989,19 +1110,47 @@ function buildTistoryReviewThumbnailSvg(marketDate: string, mode: DailyTistorySi
 </svg>`;
 }
 
-function buildTistoryReviewTitle(marketDate: string, mode: DailyTistorySignalReviewMode, selectedStocks: DailyBriefStockPick[], selectedEtfs: DailyBriefEtfPick[]) {
-  const dateLabel = marketDate.replaceAll("-", ".");
+function buildTistoryReviewTitle(
+  marketDate: string,
+  mode: DailyTistorySignalReviewMode,
+  selectedStocks: DailyBriefStockPick[],
+  selectedEtfs: DailyBriefEtfPick[],
+  selectedFutures: DailyBriefFuturesPick[] = [],
+  marketReportSession: import("./market-report-session").DailyMarketReportSession = "morning",
+  marketFlowAvailable = false
+) {
   if (mode === "stock_signal_top3_review") {
-    return `오늘 매매 신호 나온 국내주식 TOP 3: ${selectedStocks.slice(0, 3).map((pick) => normalizeName(pick.name)).join("·")} 집중 분석 | ${dateLabel} 급등포착`;
+    return buildInvestmentSeoTitle({
+      target: "tistory_focused_signal_review",
+      marketDate,
+      stockNames: selectedStocks.map((pick) => normalizeName(pick.name)),
+      stockLimit: 3
+    });
   }
   if (mode === "mixed_stock_etf_review") {
-    const stockText = selectedStocks.map((pick) => normalizeName(pick.name)).join("·") || "신호 종목";
-    return `오늘 신호 종목과 함께 볼 ETF 흐름: ${stockText} + 섹터 리뷰 | ${dateLabel} 급등포착`;
+    return buildInvestmentSeoTitle({
+      target: "tistory_daily_stock_review",
+      marketDate,
+      stockNames: selectedStocks.map((pick) => normalizeName(pick.name)),
+      stockLimit: Math.max(selectedStocks.length, 3)
+    });
   }
   if (mode === "futures_options_signal_record") {
-    return `오늘 국내외 선물·옵션 시그널 기록 | ${dateLabel} 급등포착`;
+    return buildInvestmentSeoTitle({
+      target: "tistory_futures_options_signal_record",
+      marketDate,
+      futuresNames: selectedFutures.map((pick) => pick.name),
+      marketReportSession,
+      marketFlowAvailable,
+      futuresEditorialTrack: selectedFutures.some((pick) => ["GOLD", "WTI", "EURUSD"].includes(pick.symbol)) ? "macro" : "index"
+    });
   }
-  return `오늘은 종목보다 ETF 흐름이 더 중요합니다: 유망 섹터 ETF TOP ${selectedEtfs.length} | ${dateLabel} 급등포착`;
+  return buildInvestmentSeoTitle({
+    target: "tistory_etf_sector_review",
+    marketDate,
+    etfNames: selectedEtfs.map((pick) => normalizeName(pick.name)),
+    etfLimit: selectedEtfs.length
+  });
 }
 
 function buildTistoryTargetKeyword(mode: DailyTistorySignalReviewMode, selectedStocks: DailyBriefStockPick[], selectedEtfs: DailyBriefEtfPick[]) {
@@ -1023,6 +1172,7 @@ function buildTistorySourceMemo(run: DailyBriefRun, selection: DailyTistorySigna
     `Writing Style Profile: ${PROJECT300_STYLE_PROFILE_VERSION}`,
     `Market Date: ${run.marketDate}`,
     `Recent signal window: ${selection.recentSignalWindowDays} days`,
+    `Futures editorial track: ${selection.futuresEditorialTrack ?? "-"}`,
     "정책: Blogger와 중복 본문 생성 금지, 티스토리 HTML export only, 자동 발행 없음"
   ].join("\n");
 }
@@ -1047,7 +1197,11 @@ function mapTistoryModeToInvestmentTarget(mode: DailyTistorySignalReviewMode): I
   return "tistory_daily_stock_review";
 }
 
-function buildSafeInvestmentWritingSummary(result: ReturnType<typeof runInvestmentWritingOrchestrator>, styleReviewOk: boolean) {
+function buildSafeInvestmentWritingSummary(
+  result: ReturnType<typeof runInvestmentWritingOrchestrator>,
+  styleReviewOk: boolean,
+  gptCliNaturalVoiceFallback: Project300NaturalVoiceGptFallbackResult | null = null
+) {
   return {
     version: result.version,
     target: result.target,
@@ -1057,11 +1211,20 @@ function buildSafeInvestmentWritingSummary(result: ReturnType<typeof runInvestme
     outline: result.outline,
     initialReview: result.initialReview,
     repair: result.repair,
+    naturalVoiceSecondPass: result.naturalVoiceSecondPass,
+    gptCliNaturalVoiceRewriteRecommended: result.gptCliNaturalVoiceRewriteRecommended,
+    gptCliNaturalVoiceFallback: summarizeNaturalVoiceGptFallback(gptCliNaturalVoiceFallback),
     finalReview: result.finalReview,
     promptBundle: { version: result.promptBundle.version, safeMetadata: result.promptBundle.safeMetadata },
     autoPublishEligible: result.autoPublishEligible && styleReviewOk,
     blockingReasons: result.blockingReasons
   };
+}
+
+function summarizeNaturalVoiceGptFallback(result: Project300NaturalVoiceGptFallbackResult | null) {
+  if (!result) return null;
+  const { markdown: _markdown, ...safeResult } = result;
+  return safeResult;
 }
 
 function selectEtfCandidates(etfPicks: DailyBriefEtfPick[], limit: number) {
