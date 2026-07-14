@@ -1,5 +1,24 @@
 # 13_CHANGELOG
 
+## VIDEO-1C Daily Brief Card PNG Render
+
+Added local-only visual rendering for Daily Brief video packages.
+
+- Added `POST /api/daily-brief/runs/[runId]/video-package/render-cards`.
+- Added a Playwright-based renderer that regenerates the VIDEO-1B package and writes `cards/cover.png`, one `cards/card-*.png` per manifest card, and `card-render-report.json`.
+- Rendered each card as an isolated `1080x1920` HTML document for stable 9:16 PNG output.
+- Recorded source hash, renderer settings, image dimensions, file sizes, validation errors, overflow warnings, and side-effect summary in the render report.
+- Added a Daily Brief wizard button and result table for card PNG rendering.
+- Updated `documents/20_VIDEO_AUTOMATION.md` with the VIDEO-1C renderer contract.
+
+Safety:
+
+- Daily Brief run JSON remains read-only input.
+- Existing content items, scheduler state, and DB rows are not mutated.
+- PNG rendering writes ignored local files under `local-data/video-automation` only.
+- MP4 binary rendering and external uploads remain blocked.
+- No Blogger/Tistory API write, YouTube/Instagram/TikTok upload, scheduled publish change, token refresh, secret read, or LLM call.
+
 ## VIDEO-1B Daily Brief Video Source Contract
 
 Hardened the video package contract before any card or MP4 renderer is added.

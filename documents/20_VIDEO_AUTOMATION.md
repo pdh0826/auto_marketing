@@ -116,3 +116,47 @@ Validation checks enforce:
 - side-effect boundary clean
 
 VIDEO-1B still does not render card PNGs or MP4 binaries. It only makes later render steps safer by making the Daily Brief input identity explicit and reproducible.
+
+## VIDEO-1C Card PNG Rendering
+
+VIDEO-1C adds local-only PNG rendering for visual review.
+
+Route:
+
+- `POST /api/daily-brief/runs/[runId]/video-package/render-cards`
+
+The route first regenerates the VIDEO-1B package, then renders:
+
+- `cards/cover.png`
+- `cards/card-001-{cardId}.png`
+- `cards/card-002-{cardId}.png`
+- additional card PNGs for every manifest card
+- `card-render-report.json`
+
+Renderer contract:
+
+- Playwright is loaded dynamically.
+- Chromium is launched headless.
+- PNG viewport is `1080x1920`.
+- Each card is rendered as an isolated 9:16 HTML document.
+- The render report keeps the VIDEO-1B `sourceSnapshot.hash`.
+- The report records image dimensions, file bytes, selector used, warnings, and errors.
+
+Validation checks include:
+
+- package validation must be ready before rendering
+- rendered PNG file size must be non-trivial
+- rendered card element must be large enough
+- text/layout overflow is reported as a warning
+- expected card count is recorded
+
+VIDEO-1C still does not:
+
+- generate MP4 binaries
+- upload to YouTube, Instagram, TikTok, Blogger, or Tistory
+- mutate Daily Brief run JSON
+- mutate existing content items
+- write DB rows
+- change scheduler state
+- call LLMs
+- read secrets

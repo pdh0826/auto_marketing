@@ -7,7 +7,10 @@ export type DailyBriefVideoFileKind =
   | "subtitles_vtt"
   | "card_news_html"
   | "cover_html"
-  | "mp4_render_plan_json";
+  | "mp4_render_plan_json"
+  | "cover_png"
+  | "card_png"
+  | "card_render_report_json";
 
 export interface DailyBriefVideoPackageFile {
   kind: DailyBriefVideoFileKind;
@@ -171,6 +174,52 @@ export interface DailyBriefVideoPackageManifest {
 
 export interface DailyBriefVideoPackageResult {
   manifest: DailyBriefVideoPackageManifest;
+  outputDirectory: string | null;
+  files: DailyBriefVideoPackageFile[];
+}
+
+export interface DailyBriefVideoCardRenderImage {
+  kind: "cover_png" | "card_png";
+  cardId: string;
+  fileName: string;
+  relativePath: string;
+  width: number;
+  height: number;
+  bytes: number;
+  selectorUsed: string;
+  warning: string | null;
+}
+
+export interface DailyBriefVideoCardRenderReport {
+  kind: "daily_brief_video_card_render_report";
+  version: "VIDEO-1C";
+  generatedAt: string;
+  sourceHash: string;
+  sourceHashPrefix: string;
+  packageManifestVersion: DailyBriefVideoPackageManifest["version"];
+  status: "rendered" | "blocked" | "failed";
+  renderer: {
+    name: "playwright";
+    viewport: "1080x1920";
+    deviceScaleFactor: 1;
+    pngRenderImplemented: true;
+    mp4RenderImplemented: false;
+  };
+  validation: {
+    ready: boolean;
+    errors: string[];
+    warnings: string[];
+    renderedImageCount: number;
+    expectedCardCount: number;
+  };
+  images: DailyBriefVideoCardRenderImage[];
+  files: DailyBriefVideoPackageFile[];
+  sideEffectSummary: DailyBriefVideoSideEffectSummary;
+}
+
+export interface DailyBriefVideoCardRenderResult {
+  package: DailyBriefVideoPackageResult;
+  report: DailyBriefVideoCardRenderReport;
   outputDirectory: string | null;
   files: DailyBriefVideoPackageFile[];
 }

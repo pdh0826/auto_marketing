@@ -6,7 +6,7 @@ import { useState } from "react";
 import { ApiResult, requestJson } from "@/lib/form-utils";
 import type { DailyBriefRun } from "@/lib/daily-brief/types";
 import type { DailyFuturesEditorialTrack, DailyMarketReportSession } from "@/lib/daily-brief/market-report-session";
-import type { DailyBriefVideoPackageResult } from "@/lib/video-automation/types";
+import type { DailyBriefVideoCardRenderResult, DailyBriefVideoPackageResult } from "@/lib/video-automation/types";
 
 interface GenerateContentResponse {
   run: DailyBriefRun;
@@ -103,6 +103,7 @@ export function DailyBriefWizardClient() {
   const [generated, setGenerated] = useState<GenerateContentResponse | null>(null);
   const [tistoryReview, setTistoryReview] = useState<TistorySignalReviewResponse | null>(null);
   const [videoPackage, setVideoPackage] = useState<DailyBriefVideoPackageResult | null>(null);
+  const [videoCardRender, setVideoCardRender] = useState<DailyBriefVideoCardRenderResult | null>(null);
   const [tistoryReviewMode, setTistoryReviewMode] = useState<TistoryReviewMode>("mixed_stock_etf_review");
   const [marketReportSession, setMarketReportSession] = useState<DailyMarketReportSession>("morning");
   const [futuresEditorialTrack, setFuturesEditorialTrack] = useState<DailyFuturesEditorialTrack>("index");
@@ -127,6 +128,7 @@ export function DailyBriefWizardClient() {
       setGenerated(null);
       setTistoryReview(null);
       setVideoPackage(null);
+      setVideoCardRender(null);
     });
   }
 
@@ -197,6 +199,7 @@ export function DailyBriefWizardClient() {
     await runAction("video-preview", async () => {
       const response = await requestJson<ApiResult<DailyBriefVideoPackageResult>>(`/api/daily-brief/runs/${run.id}/video-package`);
       setVideoPackage(response.data);
+      setVideoCardRender(null);
     });
   }
 
@@ -211,6 +214,22 @@ export function DailyBriefWizardClient() {
         body: JSON.stringify({})
       });
       setVideoPackage(response.data);
+      setVideoCardRender(null);
+    });
+  }
+
+  async function renderVideoCards() {
+    if (!run) {
+      setError("먼저 Daily Brief Run을 생성하세요.");
+      return;
+    }
+    await runAction("video-card-render", async () => {
+      const response = await requestJson<ApiResult<DailyBriefVideoCardRenderResult>>(`/api/daily-brief/runs/${run.id}/video-package/render-cards`, {
+        method: "POST",
+        body: JSON.stringify({})
+      });
+      setVideoPackage(response.data.package);
+      setVideoCardRender(response.data);
     });
   }
 
@@ -383,10 +402,13 @@ export function DailyBriefWizardClient() {
               <button className="button" type="button" disabled={Boolean(running)} onClick={() => void generateVideoPackage()}>
                 {running === "video-package" ? "생성 중" : "로컬 패키지 생성"}
               </button>
+              <button className="button" type="button" disabled={Boolean(running)} onClick={() => void renderVideoCards()}>
+                {running === "video-card-render" ? "렌더 중" : "카드 PNG 렌더"}
+              </button>
             </div>
           </div>
           <div className="notice">
-            VIDEO-1A는 Daily Brief run 파일과 기존 content item을 변경하지 않습니다. MP4는 아직 바이너리 렌더가 아니라 렌더 계획 파일로 만들고, YouTube/Instagram/TikTok 업로드는 항상 차단합니다.
+            VIDEO-1C는 Daily Brief run 파일과 기존 content item을 변경하지 않습니다. PNG 렌더는 local-data에만 쓰고, MP4/YouTube/Instagram/TikTok 업로드는 계속 차단합니다.
           </div>
           {videoPackage ? (
             <div className="read-block">
@@ -427,6 +449,35 @@ export function DailyBriefWizardClient() {
                       <td>{file.relativePath}</td>
                       <td>{file.kind}</td>
                       <td>{file.bytes ?? "-"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : null}
+          {videoCardRender ? (
+            <div className={videoCardRender.report.validation.ready ? "notice success" : "notice warning"}>
+              <strong>카드 PNG 렌더 {videoCardRender.report.status}</strong>
+              <p>
+                source {videoCardRender.report.sourceHashPrefix} / images {videoCardRender.report.validation.renderedImageCount}개 / expected cards{" "}
+                {videoCardRender.report.validation.expectedCardCount}개 / local file write {String(videoCardRender.report.sideEffectSummary.localFileWrite)}
+              </p>
+              {videoCardRender.report.validation.errors.length ? <p>Errors: {videoCardRender.report.validation.errors.join(", ")}</p> : null}
+              {videoCardRender.report.validation.warnings.length ? <p>Warnings: {videoCardRender.report.validation.warnings.join(", ")}</p> : null}
+              <table>
+                <thead>
+                  <tr>
+                    <th>PNG</th>
+                    <th>크기</th>
+                    <th>bytes</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {videoCardRender.report.images.map((image) => (
+                    <tr key={`${image.kind}-${image.cardId}`}>
+                      <td>{image.relativePath}</td>
+                      <td>{image.width}x{image.height}</td>
+                      <td>{image.bytes}</td>
                     </tr>
                   ))}
                 </tbody>
