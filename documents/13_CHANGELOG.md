@@ -1,5 +1,21 @@
 # 13_CHANGELOG
 
+## VIDEO-1A Daily Brief Video Package Scaffold
+
+Added the first internal video automation slice for Daily Brief results.
+
+- Added read-only package preview and local package generation at `/api/daily-brief/runs/[runId]/video-package`.
+- Added deterministic card news, storyboard, subtitles, cover, MP4 render-plan, and upload manifest builders under `src/lib/video-automation`.
+- Added a Daily Brief wizard section for previewing/generating the local package and inspecting file/side-effect summaries.
+- Added `documents/20_VIDEO_AUTOMATION.md` to document the module scope and VIDEO-1A safety boundary.
+
+Safety:
+
+- Daily Brief run JSON is read-only input.
+- Existing content items, scheduler state, and DB rows are not mutated.
+- MP4 binary rendering is not implemented yet; VIDEO-1A writes an MP4 render plan only.
+- No Blogger/Tistory API write, YouTube/Instagram/TikTok upload, scheduled publish change, token refresh, secret read, or LLM call.
+
 ## Tistory session keep-alive and login-required alerts
 
 - Added a 30-minute, read-only Tistory persistent-profile session keep-alive check owned by the web scheduler.

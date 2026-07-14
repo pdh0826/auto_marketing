@@ -6,6 +6,7 @@ import { useState } from "react";
 import { ApiResult, requestJson } from "@/lib/form-utils";
 import type { DailyBriefRun } from "@/lib/daily-brief/types";
 import type { DailyFuturesEditorialTrack, DailyMarketReportSession } from "@/lib/daily-brief/market-report-session";
+import type { DailyBriefVideoPackageResult } from "@/lib/video-automation/types";
 
 interface GenerateContentResponse {
   run: DailyBriefRun;
@@ -101,6 +102,7 @@ export function DailyBriefWizardClient() {
   const [run, setRun] = useState<DailyBriefRun | null>(null);
   const [generated, setGenerated] = useState<GenerateContentResponse | null>(null);
   const [tistoryReview, setTistoryReview] = useState<TistorySignalReviewResponse | null>(null);
+  const [videoPackage, setVideoPackage] = useState<DailyBriefVideoPackageResult | null>(null);
   const [tistoryReviewMode, setTistoryReviewMode] = useState<TistoryReviewMode>("mixed_stock_etf_review");
   const [marketReportSession, setMarketReportSession] = useState<DailyMarketReportSession>("morning");
   const [futuresEditorialTrack, setFuturesEditorialTrack] = useState<DailyFuturesEditorialTrack>("index");
@@ -124,6 +126,7 @@ export function DailyBriefWizardClient() {
       setRun(response.data);
       setGenerated(null);
       setTistoryReview(null);
+      setVideoPackage(null);
     });
   }
 
@@ -183,6 +186,31 @@ export function DailyBriefWizardClient() {
       });
       setRun(response.data.run);
       setTistoryReview(response.data);
+    });
+  }
+
+  async function previewVideoPackage() {
+    if (!run) {
+      setError("먼저 Daily Brief Run을 생성하세요.");
+      return;
+    }
+    await runAction("video-preview", async () => {
+      const response = await requestJson<ApiResult<DailyBriefVideoPackageResult>>(`/api/daily-brief/runs/${run.id}/video-package`);
+      setVideoPackage(response.data);
+    });
+  }
+
+  async function generateVideoPackage() {
+    if (!run) {
+      setError("먼저 Daily Brief Run을 생성하세요.");
+      return;
+    }
+    await runAction("video-package", async () => {
+      const response = await requestJson<ApiResult<DailyBriefVideoPackageResult>>(`/api/daily-brief/runs/${run.id}/video-package`, {
+        method: "POST",
+        body: JSON.stringify({})
+      });
+      setVideoPackage(response.data);
     });
   }
 
@@ -345,7 +373,66 @@ export function DailyBriefWizardClient() {
         <section className="admin-section">
           <div className="section-heading">
             <div>
-              <h2>5. 티스토리 신호 리뷰</h2>
+              <h2>5. 영상 자동화 패키지</h2>
+              <p className="muted">Daily Brief 결과를 read-only로 재사용해 카드뉴스, 스토리보드, 자막, 커버, MP4 렌더 계획, 업로드 manifest를 만듭니다.</p>
+            </div>
+            <div className="button-row">
+              <button className="button secondary" type="button" disabled={Boolean(running)} onClick={() => void previewVideoPackage()}>
+                {running === "video-preview" ? "미리보기 중" : "패키지 미리보기"}
+              </button>
+              <button className="button" type="button" disabled={Boolean(running)} onClick={() => void generateVideoPackage()}>
+                {running === "video-package" ? "생성 중" : "로컬 패키지 생성"}
+              </button>
+            </div>
+          </div>
+          <div className="notice">
+            VIDEO-1A는 Daily Brief run 파일과 기존 content item을 변경하지 않습니다. MP4는 아직 바이너리 렌더가 아니라 렌더 계획 파일로 만들고, YouTube/Instagram/TikTok 업로드는 항상 차단합니다.
+          </div>
+          {videoPackage ? (
+            <div className="read-block">
+              <p>
+                <strong>Package</strong>: {videoPackage.manifest.uploadPackage.packageSlug} / cards {videoPackage.manifest.cards.length}개 / scenes{" "}
+                {videoPackage.manifest.storyboard.length}개 / subtitles {videoPackage.manifest.subtitles.length}개
+              </p>
+              <p>
+                <strong>Output</strong>: {videoPackage.outputDirectory ?? "preview-only"} / local file write{" "}
+                {String(videoPackage.manifest.sideEffectSummary.localFileWrite)} / DB write {String(videoPackage.manifest.sideEffectSummary.dbWrite)} / external write{" "}
+                {String(videoPackage.manifest.sideEffectSummary.externalServiceWrite)}
+              </p>
+              {videoPackage.manifest.readiness.blockingReasons.length ? (
+                <div className="notice warning">Blockers: {videoPackage.manifest.readiness.blockingReasons.join(", ")}</div>
+              ) : null}
+              {videoPackage.manifest.readiness.warnings.length ? (
+                <div className="notice warning">Warnings: {videoPackage.manifest.readiness.warnings.join(", ")}</div>
+              ) : null}
+              <table>
+                <thead>
+                  <tr>
+                    <th>파일</th>
+                    <th>종류</th>
+                    <th>크기</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {videoPackage.files.map((file) => (
+                    <tr key={file.kind}>
+                      <td>{file.relativePath}</td>
+                      <td>{file.kind}</td>
+                      <td>{file.bytes ?? "-"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : null}
+        </section>
+      ) : null}
+
+      {run ? (
+        <section className="admin-section">
+          <div className="section-heading">
+            <div>
+              <h2>6. 티스토리 신호 리뷰</h2>
               <p className="muted">
                 Blogger Daily Brief와 다른 글로, TOP 20 중 최근 신호 종목을 골라 사람 말투의 집중 리뷰를 만듭니다. 오늘의 관심종목과 이미 사용한 종목/ETF는 다음 카테고리 후보에서 제외합니다.
               </p>

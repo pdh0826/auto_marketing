@@ -1,0 +1,138 @@
+import type { DailyBriefRun } from "@/lib/daily-brief/types";
+
+export type DailyBriefVideoFileKind =
+  | "manifest_json"
+  | "storyboard_json"
+  | "subtitles_srt"
+  | "subtitles_vtt"
+  | "card_news_html"
+  | "cover_html"
+  | "mp4_render_plan_json";
+
+export interface DailyBriefVideoPackageFile {
+  kind: DailyBriefVideoFileKind;
+  fileName: string;
+  relativePath: string;
+  mimeType: string;
+  bytes: number | null;
+}
+
+export interface DailyBriefVideoSideEffectSummary {
+  dailyBriefRunRead: true;
+  dailyBriefRunWrite: false;
+  existingContentItemMutation: false;
+  dbWrite: false;
+  localFileWrite: boolean;
+  externalServiceWrite: false;
+  bloggerApiWrite: false;
+  tistoryApiWrite: false;
+  youtubeUpload: false;
+  instagramUpload: false;
+  tiktokUpload: false;
+  scheduledPublishMutation: false;
+  llmCall: false;
+  secretRead: false;
+}
+
+export interface DailyBriefVideoCard {
+  id: string;
+  title: string;
+  bodyLines: string[];
+  visualHint: string;
+  sourceCaptureIds: string[];
+}
+
+export interface DailyBriefVideoStoryboardScene {
+  id: string;
+  startSec: number;
+  endSec: number;
+  durationSec: number;
+  title: string;
+  narration: string;
+  onScreenText: string[];
+  visualSource: string;
+  sourceCaptureIds: string[];
+}
+
+export interface DailyBriefVideoSubtitleCue {
+  index: number;
+  startSec: number;
+  endSec: number;
+  text: string;
+}
+
+export interface DailyBriefVideoCoverSpec {
+  title: string;
+  subtitle: string;
+  marketDate: string;
+  highlightLabels: string[];
+  sourceCaptureIds: string[];
+}
+
+export interface DailyBriefVideoMp4Plan {
+  status: "render_plan_only";
+  renderImplemented: false;
+  targetFileName: string;
+  resolution: "1080x1920";
+  fps: 30;
+  totalDurationSec: number;
+  requiredRenderer: "future_video_renderer";
+  blockingReason: "mp4_binary_rendering_not_implemented_in_video_1a";
+}
+
+export interface DailyBriefVideoUploadPackage {
+  ready: false;
+  packageSlug: string;
+  title: string;
+  description: string;
+  hashtags: string[];
+  blockedReasons: string[];
+  platformUploadsEnabled: false;
+}
+
+export interface DailyBriefVideoPackageManifest {
+  kind: "daily_brief_video_package";
+  version: "VIDEO-1A";
+  generatedAt: string;
+  source: Pick<
+    DailyBriefRun,
+    | "id"
+    | "status"
+    | "marketDate"
+    | "title"
+    | "targetKeyword"
+    | "contentItemId"
+    | "draftMarkdownLength"
+    | "draftHtmlLength"
+    | "visibleTextLength"
+    | "createdAt"
+    | "updatedAt"
+  > & {
+    stockPickCount: number;
+    etfPickCount: number;
+    futuresPickCount: number;
+    researchItemCount: number;
+    captureCount: number;
+  };
+  readiness: {
+    canGeneratePackage: boolean;
+    canRenderMp4: false;
+    canUpload: false;
+    blockingReasons: string[];
+    warnings: string[];
+  };
+  cover: DailyBriefVideoCoverSpec;
+  cards: DailyBriefVideoCard[];
+  storyboard: DailyBriefVideoStoryboardScene[];
+  subtitles: DailyBriefVideoSubtitleCue[];
+  mp4: DailyBriefVideoMp4Plan;
+  uploadPackage: DailyBriefVideoUploadPackage;
+  files: DailyBriefVideoPackageFile[];
+  sideEffectSummary: DailyBriefVideoSideEffectSummary;
+}
+
+export interface DailyBriefVideoPackageResult {
+  manifest: DailyBriefVideoPackageManifest;
+  outputDirectory: string | null;
+  files: DailyBriefVideoPackageFile[];
+}
