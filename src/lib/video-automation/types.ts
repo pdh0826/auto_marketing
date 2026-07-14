@@ -14,7 +14,12 @@ export type DailyBriefVideoFileKind =
   | "video_mp4"
   | "mp4_render_report_json"
   | "mp4_render_command_json"
-  | "mp4_concat_input_txt";
+  | "mp4_concat_input_txt"
+  | "upload_youtube_json"
+  | "upload_instagram_json"
+  | "upload_tiktok_json"
+  | "operator_checklist_md"
+  | "package_readback_json";
 
 export interface DailyBriefVideoPackageFile {
   kind: DailyBriefVideoFileKind;
@@ -264,4 +269,47 @@ export interface DailyBriefVideoMp4RenderResult {
   report: DailyBriefVideoMp4RenderReport;
   outputDirectory: string | null;
   files: DailyBriefVideoPackageFile[];
+}
+
+export interface DailyBriefVideoUploadMetadataResult {
+  package: DailyBriefVideoPackageResult;
+  outputDirectory: string;
+  files: DailyBriefVideoPackageFile[];
+  metadata: {
+    version: "VIDEO-1F";
+    sourceHash: string;
+    sourceHashPrefix: string;
+    uploadEnabled: false;
+    platformUploadsEnabled: false;
+    manualReviewRequired: true;
+    blockedReasons: string[];
+    sideEffectSummary: DailyBriefVideoSideEffectSummary;
+  };
+}
+
+export interface DailyBriefVideoPackageReadbackArtifact {
+  kind: DailyBriefVideoFileKind;
+  fileName: string;
+  relativePath: string;
+  exists: boolean;
+  bytes: number | null;
+}
+
+export interface DailyBriefVideoPackageReadbackResult {
+  version: "VIDEO-1H";
+  package: DailyBriefVideoPackageResult;
+  outputDirectory: string;
+  exists: boolean;
+  currentSourceHash: string;
+  savedSourceHash: string | null;
+  stale: boolean | null;
+  artifacts: DailyBriefVideoPackageReadbackArtifact[];
+  guard: {
+    operatingRepoTouched: false;
+    server3004Touched: false;
+    externalWriteRoutesEnabled: false;
+    schedulerMutationEnabled: false;
+    secretReadRequired: false;
+  };
+  sideEffectSummary: DailyBriefVideoSideEffectSummary;
 }

@@ -1,5 +1,41 @@
 # 13_CHANGELOG
 
+## VIDEO-1F-1I Upload Metadata, Workflow, Readback, and Guard
+
+Completed the remaining local-only VIDEO-1 workflow pieces.
+
+- Added `POST /api/daily-brief/runs/[runId]/video-package/upload-metadata`.
+- Added disabled platform metadata files for YouTube, Instagram, and TikTok plus `operator-checklist.md`.
+- Added `GET /api/daily-brief/runs/[runId]/video-package/readback`.
+- Added local artifact existence, file size, current source hash, saved source hash, and stale-state readback.
+- Added operating guard fields for repo/server touch, external write route enablement, scheduler mutation, and secret-read requirement.
+- Expanded the Daily Brief wizard video workflow with upload metadata and package readback actions.
+- Updated `documents/20_VIDEO_AUTOMATION.md` with VIDEO-1F through VIDEO-1I.
+
+Safety:
+
+- All upload metadata keeps `uploadEnabled=false` and `platformUploadsEnabled=false`.
+- No YouTube, Instagram, TikTok, Blogger, or Tistory API write route was added.
+- Daily Brief run JSON remains read-only input.
+- Existing content items, scheduler state, and DB rows are not mutated.
+- No token refresh, secret read, LLM call, or external write.
+
+## VIDEO-2A Audio Design
+
+Added design-only documentation for future narration/audio support.
+
+- Added `documents/21_VIDEO_AUDIO_DESIGN.md`.
+- Kept audio and narration implementation out of scope.
+- Documented required provider abstraction, call logging, cost policy, and secret redaction requirements before any external TTS or LLM integration.
+
+Safety:
+
+- No TTS call.
+- No LLM call.
+- No audio file generation.
+- No secret read.
+- No external write.
+
 ## VIDEO-1E Local MP4 Render
 
 Added local-only silent MP4 preview rendering.

@@ -218,3 +218,71 @@ Renderer contract:
 - failed renderer availability or execution is recorded as a report instead of triggering any external write
 
 VIDEO-1E still does not upload, publish, schedule, mutate source runs, mutate DB rows, call LLMs, or read secrets.
+
+## VIDEO-1F Upload Metadata Package
+
+VIDEO-1F generates platform metadata files for manual review only.
+
+Route:
+
+- `POST /api/daily-brief/runs/[runId]/video-package/upload-metadata`
+
+Generated files:
+
+- `upload/youtube.json`
+- `upload/instagram.json`
+- `upload/tiktok.json`
+- `upload/operator-checklist.md`
+
+All platform metadata keeps:
+
+- `uploadEnabled=false`
+- `platformUploadsEnabled=false`
+- `manualReviewRequired=true`
+
+No API upload route is created.
+
+## VIDEO-1G Wizard Workflow
+
+The Daily Brief wizard now exposes the video sequence:
+
+1. package preview
+2. local package generation
+3. card PNG render
+4. MP4 local render
+5. upload metadata package
+6. package readback
+
+Each step reports local side effects and keeps external write flags false.
+
+## VIDEO-1H Package Readback
+
+Route:
+
+- `GET /api/daily-brief/runs/[runId]/video-package/readback`
+
+Readback:
+
+- computes the current Daily Brief source hash
+- checks local package artifacts under `local-data/video-automation`
+- reads saved manifest source hash when present
+- reports stale state when saved and current hashes differ
+- reports artifact existence and file sizes
+
+Readback is read-only and does not write files.
+
+## VIDEO-1I Operating Guard
+
+The video automation module remains guarded:
+
+- operating repo touched: false
+- 3004 server touched: false
+- external write routes enabled: false
+- scheduler mutation enabled: false
+- secret read required: false
+
+These are surfaced in package readback so operator review can confirm that video work remains local-only.
+
+## VIDEO-2A Audio Design
+
+Audio and narration are not implemented yet. See `documents/21_VIDEO_AUDIO_DESIGN.md`.

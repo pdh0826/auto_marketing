@@ -6,7 +6,13 @@ import { useState } from "react";
 import { ApiResult, requestJson } from "@/lib/form-utils";
 import type { DailyBriefRun } from "@/lib/daily-brief/types";
 import type { DailyFuturesEditorialTrack, DailyMarketReportSession } from "@/lib/daily-brief/market-report-session";
-import type { DailyBriefVideoCardRenderResult, DailyBriefVideoMp4RenderResult, DailyBriefVideoPackageResult } from "@/lib/video-automation/types";
+import type {
+  DailyBriefVideoCardRenderResult,
+  DailyBriefVideoMp4RenderResult,
+  DailyBriefVideoPackageReadbackResult,
+  DailyBriefVideoPackageResult,
+  DailyBriefVideoUploadMetadataResult
+} from "@/lib/video-automation/types";
 
 interface GenerateContentResponse {
   run: DailyBriefRun;
@@ -105,6 +111,8 @@ export function DailyBriefWizardClient() {
   const [videoPackage, setVideoPackage] = useState<DailyBriefVideoPackageResult | null>(null);
   const [videoCardRender, setVideoCardRender] = useState<DailyBriefVideoCardRenderResult | null>(null);
   const [videoMp4Render, setVideoMp4Render] = useState<DailyBriefVideoMp4RenderResult | null>(null);
+  const [videoUploadMetadata, setVideoUploadMetadata] = useState<DailyBriefVideoUploadMetadataResult | null>(null);
+  const [videoReadback, setVideoReadback] = useState<DailyBriefVideoPackageReadbackResult | null>(null);
   const [tistoryReviewMode, setTistoryReviewMode] = useState<TistoryReviewMode>("mixed_stock_etf_review");
   const [marketReportSession, setMarketReportSession] = useState<DailyMarketReportSession>("morning");
   const [futuresEditorialTrack, setFuturesEditorialTrack] = useState<DailyFuturesEditorialTrack>("index");
@@ -131,6 +139,8 @@ export function DailyBriefWizardClient() {
       setVideoPackage(null);
       setVideoCardRender(null);
       setVideoMp4Render(null);
+      setVideoUploadMetadata(null);
+      setVideoReadback(null);
     });
   }
 
@@ -203,6 +213,8 @@ export function DailyBriefWizardClient() {
       setVideoPackage(response.data);
       setVideoCardRender(null);
       setVideoMp4Render(null);
+      setVideoUploadMetadata(null);
+      setVideoReadback(null);
     });
   }
 
@@ -219,6 +231,8 @@ export function DailyBriefWizardClient() {
       setVideoPackage(response.data);
       setVideoCardRender(null);
       setVideoMp4Render(null);
+      setVideoUploadMetadata(null);
+      setVideoReadback(null);
     });
   }
 
@@ -251,6 +265,36 @@ export function DailyBriefWizardClient() {
       setVideoPackage(response.data.cardRender.package);
       setVideoCardRender(response.data.cardRender);
       setVideoMp4Render(response.data);
+      setVideoUploadMetadata(null);
+      setVideoReadback(null);
+    });
+  }
+
+  async function generateVideoUploadMetadata() {
+    if (!run) {
+      setError("먼저 Daily Brief Run을 생성하세요.");
+      return;
+    }
+    await runAction("video-upload-metadata", async () => {
+      const response = await requestJson<ApiResult<DailyBriefVideoUploadMetadataResult>>(`/api/daily-brief/runs/${run.id}/video-package/upload-metadata`, {
+        method: "POST",
+        body: JSON.stringify({})
+      });
+      setVideoPackage(response.data.package);
+      setVideoUploadMetadata(response.data);
+      setVideoReadback(null);
+    });
+  }
+
+  async function readbackVideoPackage() {
+    if (!run) {
+      setError("먼저 Daily Brief Run을 생성하세요.");
+      return;
+    }
+    await runAction("video-readback", async () => {
+      const response = await requestJson<ApiResult<DailyBriefVideoPackageReadbackResult>>(`/api/daily-brief/runs/${run.id}/video-package/readback`);
+      setVideoPackage(response.data.package);
+      setVideoReadback(response.data);
     });
   }
 
@@ -429,6 +473,12 @@ export function DailyBriefWizardClient() {
               <button className="button" type="button" disabled={Boolean(running)} onClick={() => void renderVideoMp4()}>
                 {running === "video-mp4-render" ? "MP4 렌더 중" : "MP4 로컬 렌더"}
               </button>
+              <button className="button secondary" type="button" disabled={Boolean(running)} onClick={() => void generateVideoUploadMetadata()}>
+                {running === "video-upload-metadata" ? "생성 중" : "업로드 패키지"}
+              </button>
+              <button className="button secondary" type="button" disabled={Boolean(running)} onClick={() => void readbackVideoPackage()}>
+                {running === "video-readback" ? "조회 중" : "패키지 조회"}
+              </button>
             </div>
           </div>
           <div className="notice">
@@ -535,6 +585,65 @@ export function DailyBriefWizardClient() {
                       <td>{file.relativePath}</td>
                       <td>{file.kind}</td>
                       <td>{file.bytes ?? "-"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : null}
+          {videoUploadMetadata ? (
+            <div className="notice success">
+              <strong>업로드 패키지 metadata 생성</strong>
+              <p>
+                source {videoUploadMetadata.metadata.sourceHashPrefix} / upload enabled {String(videoUploadMetadata.metadata.uploadEnabled)} / manual review{" "}
+                {String(videoUploadMetadata.metadata.manualReviewRequired)}
+              </p>
+              <p>Blocked: {videoUploadMetadata.metadata.blockedReasons.join(", ")}</p>
+              <table>
+                <thead>
+                  <tr>
+                    <th>파일</th>
+                    <th>종류</th>
+                    <th>bytes</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {videoUploadMetadata.files.filter((file) => file.kind.startsWith("upload_") || file.kind === "operator_checklist_md").map((file) => (
+                    <tr key={`${file.kind}-${file.fileName}`}>
+                      <td>{file.relativePath}</td>
+                      <td>{file.kind}</td>
+                      <td>{file.bytes ?? "-"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : null}
+          {videoReadback ? (
+            <div className={videoReadback.stale ? "notice warning" : "notice success"}>
+              <strong>영상 패키지 조회</strong>
+              <p>
+                exists {String(videoReadback.exists)} / stale {String(videoReadback.stale)} / current {videoReadback.currentSourceHash.slice(0, 12)} / saved{" "}
+                {videoReadback.savedSourceHash?.slice(0, 12) ?? "-"}
+              </p>
+              <p>
+                guards: external write {String(videoReadback.guard.externalWriteRoutesEnabled)}, scheduler mutation{" "}
+                {String(videoReadback.guard.schedulerMutationEnabled)}, secret read {String(videoReadback.guard.secretReadRequired)}
+              </p>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Artifact</th>
+                    <th>exists</th>
+                    <th>bytes</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {videoReadback.artifacts.map((artifact) => (
+                    <tr key={`${artifact.kind}-${artifact.fileName}`}>
+                      <td>{artifact.relativePath}</td>
+                      <td>{String(artifact.exists)}</td>
+                      <td>{artifact.bytes ?? "-"}</td>
                     </tr>
                   ))}
                 </tbody>
