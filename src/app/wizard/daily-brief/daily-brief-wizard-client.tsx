@@ -6,7 +6,7 @@ import { useState } from "react";
 import { ApiResult, requestJson } from "@/lib/form-utils";
 import type { DailyBriefRun } from "@/lib/daily-brief/types";
 import type { DailyFuturesEditorialTrack, DailyMarketReportSession } from "@/lib/daily-brief/market-report-session";
-import type { DailyBriefVideoCardRenderResult, DailyBriefVideoPackageResult } from "@/lib/video-automation/types";
+import type { DailyBriefVideoCardRenderResult, DailyBriefVideoMp4RenderResult, DailyBriefVideoPackageResult } from "@/lib/video-automation/types";
 
 interface GenerateContentResponse {
   run: DailyBriefRun;
@@ -104,6 +104,7 @@ export function DailyBriefWizardClient() {
   const [tistoryReview, setTistoryReview] = useState<TistorySignalReviewResponse | null>(null);
   const [videoPackage, setVideoPackage] = useState<DailyBriefVideoPackageResult | null>(null);
   const [videoCardRender, setVideoCardRender] = useState<DailyBriefVideoCardRenderResult | null>(null);
+  const [videoMp4Render, setVideoMp4Render] = useState<DailyBriefVideoMp4RenderResult | null>(null);
   const [tistoryReviewMode, setTistoryReviewMode] = useState<TistoryReviewMode>("mixed_stock_etf_review");
   const [marketReportSession, setMarketReportSession] = useState<DailyMarketReportSession>("morning");
   const [futuresEditorialTrack, setFuturesEditorialTrack] = useState<DailyFuturesEditorialTrack>("index");
@@ -129,6 +130,7 @@ export function DailyBriefWizardClient() {
       setTistoryReview(null);
       setVideoPackage(null);
       setVideoCardRender(null);
+      setVideoMp4Render(null);
     });
   }
 
@@ -200,6 +202,7 @@ export function DailyBriefWizardClient() {
       const response = await requestJson<ApiResult<DailyBriefVideoPackageResult>>(`/api/daily-brief/runs/${run.id}/video-package`);
       setVideoPackage(response.data);
       setVideoCardRender(null);
+      setVideoMp4Render(null);
     });
   }
 
@@ -215,6 +218,7 @@ export function DailyBriefWizardClient() {
       });
       setVideoPackage(response.data);
       setVideoCardRender(null);
+      setVideoMp4Render(null);
     });
   }
 
@@ -230,6 +234,23 @@ export function DailyBriefWizardClient() {
       });
       setVideoPackage(response.data.package);
       setVideoCardRender(response.data);
+      setVideoMp4Render(null);
+    });
+  }
+
+  async function renderVideoMp4() {
+    if (!run) {
+      setError("먼저 Daily Brief Run을 생성하세요.");
+      return;
+    }
+    await runAction("video-mp4-render", async () => {
+      const response = await requestJson<ApiResult<DailyBriefVideoMp4RenderResult>>(`/api/daily-brief/runs/${run.id}/video-package/render-mp4`, {
+        method: "POST",
+        body: JSON.stringify({})
+      });
+      setVideoPackage(response.data.cardRender.package);
+      setVideoCardRender(response.data.cardRender);
+      setVideoMp4Render(response.data);
     });
   }
 
@@ -405,6 +426,9 @@ export function DailyBriefWizardClient() {
               <button className="button" type="button" disabled={Boolean(running)} onClick={() => void renderVideoCards()}>
                 {running === "video-card-render" ? "렌더 중" : "카드 PNG 렌더"}
               </button>
+              <button className="button" type="button" disabled={Boolean(running)} onClick={() => void renderVideoMp4()}>
+                {running === "video-mp4-render" ? "MP4 렌더 중" : "MP4 로컬 렌더"}
+              </button>
             </div>
           </div>
           <div className="notice">
@@ -478,6 +502,39 @@ export function DailyBriefWizardClient() {
                       <td>{image.relativePath}</td>
                       <td>{image.width}x{image.height}</td>
                       <td>{image.bytes}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : null}
+          {videoMp4Render ? (
+            <div className={videoMp4Render.report.validation.ready ? "notice success" : "notice warning"}>
+              <strong>MP4 로컬 렌더 {videoMp4Render.report.status}</strong>
+              <p>
+                source {videoMp4Render.report.sourceHashPrefix} / images {videoMp4Render.report.validation.inputImageCount}개 / duration{" "}
+                {videoMp4Render.report.validation.durationSec}s / output bytes {videoMp4Render.report.validation.outputBytes ?? "-"}
+              </p>
+              <p>
+                ffmpeg exit {videoMp4Render.report.command?.exitCode ?? "-"} / audio {String(videoMp4Render.report.renderer.audioIncluded)} / external upload{" "}
+                {String(videoMp4Render.report.renderer.externalUploadEnabled)}
+              </p>
+              {videoMp4Render.report.validation.errors.length ? <p>Errors: {videoMp4Render.report.validation.errors.join(", ")}</p> : null}
+              {videoMp4Render.report.validation.warnings.length ? <p>Warnings: {videoMp4Render.report.validation.warnings.join(", ")}</p> : null}
+              <table>
+                <thead>
+                  <tr>
+                    <th>파일</th>
+                    <th>종류</th>
+                    <th>bytes</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {videoMp4Render.report.files.map((file) => (
+                    <tr key={`${file.kind}-${file.fileName}`}>
+                      <td>{file.relativePath}</td>
+                      <td>{file.kind}</td>
+                      <td>{file.bytes ?? "-"}</td>
                     </tr>
                   ))}
                 </tbody>

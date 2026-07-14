@@ -10,7 +10,11 @@ export type DailyBriefVideoFileKind =
   | "mp4_render_plan_json"
   | "cover_png"
   | "card_png"
-  | "card_render_report_json";
+  | "card_render_report_json"
+  | "video_mp4"
+  | "mp4_render_report_json"
+  | "mp4_render_command_json"
+  | "mp4_concat_input_txt";
 
 export interface DailyBriefVideoPackageFile {
   kind: DailyBriefVideoFileKind;
@@ -220,6 +224,44 @@ export interface DailyBriefVideoCardRenderReport {
 export interface DailyBriefVideoCardRenderResult {
   package: DailyBriefVideoPackageResult;
   report: DailyBriefVideoCardRenderReport;
+  outputDirectory: string | null;
+  files: DailyBriefVideoPackageFile[];
+}
+
+export interface DailyBriefVideoMp4RenderReport {
+  kind: "daily_brief_video_mp4_render_report";
+  version: "VIDEO-1E";
+  generatedAt: string;
+  sourceHash: string;
+  sourceHashPrefix: string;
+  status: "rendered" | "blocked" | "failed";
+  renderer: {
+    name: "ffmpeg";
+    localBinaryRequired: true;
+    audioIncluded: false;
+    externalUploadEnabled: false;
+  };
+  validation: {
+    ready: boolean;
+    errors: string[];
+    warnings: string[];
+    inputImageCount: number;
+    expectedSceneCount: number;
+    outputBytes: number | null;
+    durationSec: number;
+  };
+  command: {
+    executable: "ffmpeg";
+    args: string[];
+    exitCode: number | null;
+  } | null;
+  files: DailyBriefVideoPackageFile[];
+  sideEffectSummary: DailyBriefVideoSideEffectSummary;
+}
+
+export interface DailyBriefVideoMp4RenderResult {
+  cardRender: DailyBriefVideoCardRenderResult;
+  report: DailyBriefVideoMp4RenderReport;
   outputDirectory: string | null;
   files: DailyBriefVideoPackageFile[];
 }

@@ -1,5 +1,24 @@
 # 13_CHANGELOG
 
+## VIDEO-1E Local MP4 Render
+
+Added local-only silent MP4 preview rendering.
+
+- Added `POST /api/daily-brief/runs/[runId]/video-package/render-mp4`.
+- Added an `ffmpeg`-based renderer that uses VIDEO-1C card PNGs and storyboard durations.
+- Added `mp4-concat-input.txt`, `mp4-render-command.json`, `video.mp4`, and `mp4-render-report.json` output records.
+- Added MP4 render status and file summary to the Daily Brief wizard video block.
+- Recorded ffmpeg availability/execution failures as local reports instead of performing any external write.
+- Updated `documents/20_VIDEO_AUTOMATION.md` with the VIDEO-1E renderer contract.
+
+Safety:
+
+- Daily Brief run JSON remains read-only input.
+- Existing content items, scheduler state, and DB rows are not mutated.
+- MP4 rendering writes ignored local files under `local-data/video-automation` only.
+- Rendered MP4 is silent and local preview only.
+- No Blogger/Tistory API write, YouTube/Instagram/TikTok upload, scheduled publish change, token refresh, secret read, or LLM call.
+
 ## VIDEO-1D Storyboard and Subtitle Quality Gate
 
 Hardened deterministic video package quality checks before MP4 rendering.

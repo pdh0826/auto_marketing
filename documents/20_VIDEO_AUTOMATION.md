@@ -182,3 +182,39 @@ Card compression remains deterministic:
 - remaining shortform budget is assigned to the highest-ranked stock cards
 
 VIDEO-1D still does not generate MP4 binaries, call LLMs, read secrets, mutate source runs, mutate DB rows, or perform any external write.
+
+## VIDEO-1E Local MP4 Rendering
+
+VIDEO-1E adds local-only, silent MP4 preview rendering.
+
+Route:
+
+- `POST /api/daily-brief/runs/[runId]/video-package/render-mp4`
+
+The route:
+
+1. regenerates the VIDEO-1B package
+2. renders VIDEO-1C card PNGs
+3. checks card render readiness
+4. checks whether local `ffmpeg` is available
+5. writes a concat input file
+6. writes a command record
+7. writes `video.mp4` when `ffmpeg` succeeds
+8. writes `mp4-render-report.json`
+
+Generated files:
+
+- `mp4-concat-input.txt`
+- `mp4-render-command.json`
+- `video.mp4`
+- `mp4-render-report.json`
+
+Renderer contract:
+
+- renderer is local `ffmpeg`
+- output is silent (`audioIncluded=false`)
+- target video is 1080x1920, 30 fps
+- source hash is carried from the VIDEO-1B manifest
+- failed renderer availability or execution is recorded as a report instead of triggering any external write
+
+VIDEO-1E still does not upload, publish, schedule, mutate source runs, mutate DB rows, call LLMs, or read secrets.
