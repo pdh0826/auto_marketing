@@ -19,6 +19,7 @@ Implemented:
 - VIDEO-1M `npm run verify:video-automation` and GitHub Actions coverage for VIDEO-related path changes.
 - Saved-package stale source hash readback fixture coverage.
 - VIDEO-1N operator runbook for local-only MP4 review outside the app.
+- VIDEO-1O wizard readback status for full/current/saved source hash, stale state, MP4 artifact, operator checklist, and guard cleanliness.
 
 Safety:
 
@@ -40,8 +41,8 @@ Validation:
 
 Recommended next patch:
 
-- Surface source hash, stale state, and operator checklist status more clearly in the Daily Brief wizard.
-- Add a wizard link to `documents/22_VIDEO_OPERATOR_RUNBOOK.md` or mirror the required local review checklist in UI copy.
+- Start VIDEO-2B audio/narration contract design only, keeping TTS/LLM calls unimplemented.
+- Add a wizard-accessible local review checklist if operator feedback shows the runbook path is not enough.
 
 ## Futures publication guard
 

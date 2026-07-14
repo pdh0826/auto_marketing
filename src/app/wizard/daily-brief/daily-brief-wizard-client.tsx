@@ -312,6 +312,36 @@ export function DailyBriefWizardClient() {
     }
   }
 
+  const videoUploadOperatorChecklist = videoUploadMetadata?.files.find((file) => file.kind === "operator_checklist_md");
+  const videoReadbackManifest = videoReadback?.artifacts.find((artifact) => artifact.kind === "manifest_json");
+  const videoReadbackMp4 = videoReadback?.artifacts.find((artifact) => artifact.kind === "video_mp4");
+  const videoReadbackOperatorChecklist = videoReadback?.artifacts.find((artifact) => artifact.kind === "operator_checklist_md");
+  const videoReadbackGuardClean = videoReadback
+    ? !videoReadback.guard.operatingRepoTouched &&
+      !videoReadback.guard.server3004Touched &&
+      !videoReadback.guard.externalWriteRoutesEnabled &&
+      !videoReadback.guard.schedulerMutationEnabled &&
+      !videoReadback.guard.secretReadRequired
+    : false;
+  const videoReadbackHashState = videoReadback
+    ? videoReadback.savedSourceHash
+      ? videoReadback.stale
+        ? "stale"
+        : "match"
+      : "saved hash missing"
+    : "not checked";
+  const videoOperatorReviewReady = Boolean(
+    videoReadback?.exists &&
+      videoReadback.stale === false &&
+      videoReadback.savedSourceHash &&
+      videoReadback.savedSourceHash === videoReadback.currentSourceHash &&
+      videoReadbackManifest?.exists &&
+      videoReadbackMp4?.exists &&
+      (videoReadbackMp4.bytes ?? 0) > 0 &&
+      videoReadbackOperatorChecklist?.exists &&
+      videoReadbackGuardClean
+  );
+
   return (
     <>
       <section className="card">
@@ -500,6 +530,24 @@ export function DailyBriefWizardClient() {
                 {String(videoPackage.manifest.sideEffectSummary.localFileWrite)} / DB write {String(videoPackage.manifest.sideEffectSummary.dbWrite)} / external write{" "}
                 {String(videoPackage.manifest.sideEffectSummary.externalServiceWrite)}
               </p>
+              <dl className="detail-grid">
+                <div>
+                  <dt>Source hash</dt>
+                  <dd>{videoPackage.manifest.sourceSnapshot.hash}</dd>
+                </div>
+                <div>
+                  <dt>Upload enabled</dt>
+                  <dd>{String(videoPackage.manifest.uploadPackage.platformUploadsEnabled)}</dd>
+                </div>
+                <div>
+                  <dt>Can upload</dt>
+                  <dd>{String(videoPackage.manifest.readiness.canUpload)}</dd>
+                </div>
+                <div>
+                  <dt>Runbook</dt>
+                  <dd>documents/22_VIDEO_OPERATOR_RUNBOOK.md</dd>
+                </div>
+              </dl>
               {videoPackage.manifest.validation.errors.length ? (
                 <div className="notice error">Validation errors: {videoPackage.manifest.validation.errors.join(", ")}</div>
               ) : null}
@@ -598,6 +646,9 @@ export function DailyBriefWizardClient() {
                 source {videoUploadMetadata.metadata.sourceHashPrefix} / upload enabled {String(videoUploadMetadata.metadata.uploadEnabled)} / manual review{" "}
                 {String(videoUploadMetadata.metadata.manualReviewRequired)}
               </p>
+              <p>
+                operator checklist {videoUploadOperatorChecklist?.relativePath ?? "-"} / bytes {videoUploadOperatorChecklist?.bytes ?? "-"}
+              </p>
               <p>Blocked: {videoUploadMetadata.metadata.blockedReasons.join(", ")}</p>
               <table>
                 <thead>
@@ -626,6 +677,31 @@ export function DailyBriefWizardClient() {
                 exists {String(videoReadback.exists)} / stale {String(videoReadback.stale)} / current {videoReadback.currentSourceHash.slice(0, 12)} / saved{" "}
                 {videoReadback.savedSourceHash?.slice(0, 12) ?? "-"}
               </p>
+              <div className={videoOperatorReviewReady ? "notice success" : "notice warning"}>
+                <strong>로컬 MP4 리뷰 게이트: {videoOperatorReviewReady ? "ready" : "blocked"}</strong>
+                <p>
+                  hash {videoReadbackHashState} / mp4 {videoReadbackMp4?.exists ? `${videoReadbackMp4.bytes ?? 0} bytes` : "missing"} / checklist{" "}
+                  {videoReadbackOperatorChecklist?.exists ? "exists" : "missing"} / guards clean {String(videoReadbackGuardClean)}
+                </p>
+              </div>
+              <dl className="detail-grid">
+                <div>
+                  <dt>Current hash</dt>
+                  <dd>{videoReadback.currentSourceHash}</dd>
+                </div>
+                <div>
+                  <dt>Saved hash</dt>
+                  <dd>{videoReadback.savedSourceHash ?? "-"}</dd>
+                </div>
+                <div>
+                  <dt>Manifest</dt>
+                  <dd>{videoReadbackManifest?.exists ? `${videoReadbackManifest.bytes ?? 0} bytes` : "missing"}</dd>
+                </div>
+                <div>
+                  <dt>Operator checklist</dt>
+                  <dd>{videoReadbackOperatorChecklist?.exists ? videoReadbackOperatorChecklist.relativePath : "missing"}</dd>
+                </div>
+              </dl>
               <p>
                 guards: external write {String(videoReadback.guard.externalWriteRoutesEnabled)}, scheduler mutation{" "}
                 {String(videoReadback.guard.schedulerMutationEnabled)}, secret read {String(videoReadback.guard.secretReadRequired)}

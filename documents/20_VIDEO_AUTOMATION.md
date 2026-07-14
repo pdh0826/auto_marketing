@@ -344,6 +344,21 @@ The runbook defines:
 - forbidden upload, publish, scheduler, secret, operating repo, and server actions
 - failure handling for stale readback, missing MP4, renderer failure, or leaked local paths
 
+## VIDEO-1O Wizard Review Status
+
+The Daily Brief wizard video block surfaces operator review state:
+
+- full package source hash
+- upload enabled and can-upload flags
+- operator runbook path
+- upload metadata operator checklist path and bytes
+- readback hash state, including stale/match/missing saved hash
+- MP4 artifact existence and bytes
+- operator checklist existence
+- guard cleanliness for operating repo, server 3004, external writes, scheduler mutation, and secret reads
+
+This is UI-only and does not add a write route or enable uploads.
+
 ## VIDEO-2A Audio Design
 
 Audio and narration are not implemented yet. See `documents/21_VIDEO_AUDIO_DESIGN.md`.

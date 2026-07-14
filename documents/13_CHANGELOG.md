@@ -1,5 +1,20 @@
 # 13_CHANGELOG
 
+## VIDEO-1O Wizard Review Status
+
+Improved the Daily Brief wizard video automation status block.
+
+- Added full source hash visibility to the package summary.
+- Added upload-enabled, can-upload, and operator runbook status fields.
+- Added operator-checklist file path and byte summary after upload metadata generation.
+- Added a local MP4 review gate summary in readback, including hash match/stale state, MP4 artifact status, operator checklist status, and guard cleanliness.
+- Added current/saved hash and manifest/checklist artifact details to readback.
+
+Safety:
+
+- UI-only patch.
+- No new API route, DB write, Daily Brief mutation, content item mutation, scheduler mutation, secret read, external service write, upload, publish, or LLM call.
+
 ## VIDEO-1N Operator Runbook
 
 Added operator-facing documentation for local MP4 review.
