@@ -3,6 +3,8 @@ import { spawn } from "child_process";
 import { mkdir, stat, writeFile } from "fs/promises";
 import path from "path";
 import type { DailyBriefRun } from "@/lib/daily-brief/types";
+import { buildDailyBriefVideoSourceBundle } from "./adapters/daily-brief-source";
+import { buildVideoScriptPlan } from "./core/script-builder";
 import { renderDailyBriefVideoMp4 } from "./daily-brief-mp4-renderer";
 import { writeDailyBriefVideoUploadMetadata } from "./daily-brief-upload-package";
 import type {
@@ -15,40 +17,9 @@ import type {
   DailyBriefVideoVoiceoverRenderResult
 } from "./types";
 
-export function buildDailyBriefVoiceoverScript(run: DailyBriefRun, mp4Render: DailyBriefVideoMp4RenderResult) {
-  const manifest = mp4Render.cardRender.package.manifest;
-  const stockLines = run.stockPicks.slice(0, 3).map((pick) => {
-    const score = compactParts([pick.totalScore ? `종합 점수 ${pick.totalScore}` : null, pick.trendScore ? `추세 ${pick.trendScore}` : null]);
-    const price = compactParts([pick.currentPrice ? `현재가 ${pick.currentPrice}` : null, pick.entryPrice ? `진입 기준 ${pick.entryPrice}` : null, pick.targetPrice ? `목표 ${pick.targetPrice}` : null]);
-    return `${pick.rank}순위 ${pick.name}은 ${pick.statusLabel ?? "관심"} 상태입니다. ${score || "점수 확인이 필요합니다"}. ${price || "가격 기준은 원문 표를 확인해야 합니다"}.`;
-  });
-  const etfLines = run.etfPicks.slice(0, 2).map((pick) => {
-    const score = compactParts([pick.category, pick.totalScore ? `종합 점수 ${pick.totalScore}` : null, pick.currentReturn ? `수익률 ${pick.currentReturn}` : null]);
-    return `ETF 관점에서는 ${pick.name}을 확인합니다. ${score || "섹터와 수익률은 원문 표 기준으로 점검합니다"}.`;
-  });
-  const futuresLines = (run.futuresPicks ?? []).slice(0, 1).map((pick) => {
-    const context = compactParts([pick.strategyName, pick.timeframe, pick.marketState, pick.signalLabel]);
-    return `선물 지표는 ${pick.name}을 참고합니다. ${context || "전략 상태와 시간봉 확인이 필요합니다"}.`;
-  });
-  const researchLines = run.researchItems.slice(0, 2).map((item) => `${item.symbolName} 관련 뉴스 포인트는 ${item.shortSummary || item.title}입니다.`);
-  const disclosureLines = run.officialDisclosureItems.slice(0, 1).map((item) => `${item.symbolName} 공시 확인 사항은 ${item.shortSummary || item.title}입니다.`);
-  const contextLines = run.prewriteContextItems.slice(0, 2).map((item) => `${item.title}. ${item.summary}`);
-  const cardCount = manifest.cards.length;
-  const duration = manifest.mp4.totalDurationSec;
-  const body = [
-    `안녕하세요. ${run.marketDate} 데일리 브리프 영상입니다.`,
-    `오늘 블로그 글의 핵심 관점은 ${run.title}입니다.`,
-    `이번 영상은 ${cardCount}개의 카드와 약 ${duration}초 분량으로, 원문 Daily Brief의 주요 인사이트만 짧게 정리합니다.`,
-    ...stockLines,
-    ...etfLines,
-    ...futuresLines,
-    ...researchLines,
-    ...disclosureLines,
-    ...contextLines,
-    "숫자와 차트는 원문 Daily Brief와 로컬 패키지의 source hash가 일치하는지 확인한 뒤 검토해야 합니다.",
-    "이 콘텐츠는 정보 제공 목적이며 투자 조언이 아닙니다. 최종 판단과 책임은 투자자 본인에게 있습니다."
-  ];
-  return normalizeScript(body.join("\n"));
+export function buildDailyBriefVoiceoverScript(run: DailyBriefRun, _mp4Render: DailyBriefVideoMp4RenderResult) {
+  const sourceBundle = buildDailyBriefVideoSourceBundle(run);
+  return normalizeScript(buildVideoScriptPlan(sourceBundle).fullScript);
 }
 
 export async function renderDailyBriefVideoVoiceover(run: DailyBriefRun, generatedAt = new Date().toISOString()): Promise<DailyBriefVideoVoiceoverRenderResult> {
@@ -370,10 +341,6 @@ function fileRecord(kind: DailyBriefVideoFileKind, filePath: string, fileName: s
     mimeType,
     bytes
   };
-}
-
-function compactParts(parts: Array<string | null | undefined>) {
-  return parts.filter((part): part is string => Boolean(part && part.trim())).join(" · ");
 }
 
 function normalizeScript(value: string) {

@@ -569,6 +569,11 @@ export function DailyBriefWizardClient() {
                 {videoPackage.manifest.validation.counts.totalDurationSec}s
               </p>
               <p>
+                <strong>Source Bundle</strong>: {videoPackage.manifest.sourceBundle.sourceType} / insights{" "}
+                {videoPackage.manifest.sourceBundle.insightCount}개 / visuals {videoPackage.manifest.sourceBundle.visualMaterialCount}개 / provenance{" "}
+                {videoPackage.manifest.sourceBundle.provenanceCount}개
+              </p>
+              <p>
                 <strong>Output</strong>: {videoPackage.outputDirectory ?? "preview-only"} / local file write{" "}
                 {String(videoPackage.manifest.sideEffectSummary.localFileWrite)} / DB write {String(videoPackage.manifest.sideEffectSummary.dbWrite)} / external write{" "}
                 {String(videoPackage.manifest.sideEffectSummary.externalServiceWrite)}
@@ -577,6 +582,16 @@ export function DailyBriefWizardClient() {
                 <div>
                   <dt>Source hash</dt>
                   <dd>{videoPackage.manifest.sourceSnapshot.hash}</dd>
+                </div>
+                <div>
+                  <dt>Source type</dt>
+                  <dd>{videoPackage.manifest.sourceBundle.sourceType}</dd>
+                </div>
+                <div>
+                  <dt>Source bundle counts</dt>
+                  <dd>
+                    insights {videoPackage.manifest.sourceBundle.insightCount} / visuals {videoPackage.manifest.sourceBundle.visualMaterialCount}
+                  </dd>
                 </div>
                 <div>
                   <dt>Upload enabled</dt>

@@ -1,7 +1,7 @@
-import { createHash } from "crypto";
 import { mkdir, writeFile } from "fs/promises";
 import path from "path";
 import type { DailyBriefCapture, DailyBriefRun } from "@/lib/daily-brief/types";
+import { buildDailyBriefVideoSourceBundle } from "./adapters/daily-brief-source";
 import type {
   DailyBriefVideoCard,
   DailyBriefVideoCoverSpec,
@@ -15,6 +15,7 @@ import type {
   DailyBriefVideoSubtitleCue,
   DailyBriefVideoUploadPackage
 } from "./types";
+import type { VideoSourceBundle } from "./core/types";
 
 const VIDEO_PACKAGE_VERSION = "VIDEO-1B";
 const OUTPUT_ROOT = path.join(process.cwd(), "local-data", "video-automation", "daily-brief");
@@ -25,7 +26,8 @@ const MAX_SUBTITLE_TEXT_LENGTH = 160;
 
 export function buildDailyBriefVideoPackagePreview(run: DailyBriefRun, generatedAt = new Date().toISOString()): DailyBriefVideoPackageResult {
   const packageSlug = sanitizePackageSlug(run.id);
-  const sourceSnapshot = buildSourceSnapshot(run);
+  const sourceBundle = buildDailyBriefVideoSourceBundle(run);
+  const sourceSnapshot = sourceBundle.sourceSnapshot;
   const sourceBlockingReasons = buildSourceBlockingReasons(run);
   const warnings = buildPackageWarnings(run);
   const source = buildSourceSummary(run);
@@ -66,6 +68,7 @@ export function buildDailyBriefVideoPackagePreview(run: DailyBriefRun, generated
     version: VIDEO_PACKAGE_VERSION,
     generatedAt,
     sourceSnapshot,
+    sourceBundle: buildSourceBundleSummary(sourceBundle),
     source,
     readiness: {
       canGeneratePackage: blockingReasons.length === 0,
@@ -168,157 +171,17 @@ function buildSourceSummary(run: DailyBriefRun): DailyBriefVideoPackageManifest[
   };
 }
 
-function buildSourceSnapshot(run: DailyBriefRun): DailyBriefVideoSourceSnapshot {
-  const sourceInput = buildCanonicalSourceInput(run);
-  const canonicalJson = JSON.stringify(toCanonicalValue(sourceInput));
-  const hash = createHash("sha256").update(canonicalJson, "utf8").digest("hex");
+function buildSourceBundleSummary(bundle: VideoSourceBundle): DailyBriefVideoPackageManifest["sourceBundle"] {
   return {
-    schemaVersion: "daily_brief_video_source_v1",
-    hashAlgorithm: "sha256",
-    hash,
-    hashPrefix: hash.slice(0, 12),
-    canonicalJsonLength: Buffer.byteLength(canonicalJson, "utf8"),
-    includedFields: [
-      "run identity/status/date/title/keyword",
-      "run generation counts and content item references",
-      "stock/ETF/futures pick display fields",
-      "research/disclosure/prewrite summaries",
-      "capture safe metadata without storagePath",
-      "Daily Brief safe side-effect summary"
-    ],
-    excludedFields: [
-      "generatedAt",
-      "local output file bytes",
-      "local outputDirectory",
-      "capture storagePath",
-      "any env/secret/token material"
-    ]
-  };
-}
-
-function buildCanonicalSourceInput(run: DailyBriefRun) {
-  return {
-    id: run.id,
-    status: run.status,
-    marketDate: run.marketDate,
-    title: run.title,
-    targetKeyword: run.targetKeyword,
-    stockPickLimit: run.stockPickLimit,
-    stockDetailLimit: run.stockDetailLimit,
-    etfPickLimit: run.etfPickLimit,
-    includeEtfs: run.includeEtfs,
-    krBoardUrl: run.krBoardUrl,
-    etfBoardUrl: run.etfBoardUrl,
-    contentItemId: run.contentItemId,
-    tistoryReviewContentItemId: run.tistoryReviewContentItemId ?? null,
-    tistoryReviewExportUrl: run.tistoryReviewExportUrl ?? null,
-    tistoryReviewMode: run.tistoryReviewMode ?? null,
-    draftMarkdownLength: run.draftMarkdownLength,
-    draftHtmlLength: run.draftHtmlLength,
-    visibleTextLength: run.visibleTextLength,
-    warnings: run.warnings,
-    sideEffectSummary: run.sideEffectSummary,
-    createdAt: run.createdAt,
-    updatedAt: run.updatedAt,
-    stockPicks: run.stockPicks.map((pick) => ({
-      rank: pick.rank,
-      name: pick.name,
-      code: pick.code,
-      market: pick.market,
-      statusLabel: pick.statusLabel,
-      currentPrice: pick.currentPrice,
-      entryPrice: pick.entryPrice,
-      targetPrice: pick.targetPrice,
-      stopLoss: pick.stopLoss,
-      recentSignalDate: pick.recentSignalDate,
-      trendScore: pick.trendScore,
-      totalScore: pick.totalScore,
-      detailUrl: pick.detailUrl,
-      chartCaptureId: pick.chartCaptureId
-    })),
-    etfPicks: run.etfPicks.map((pick) => ({
-      rank: pick.rank,
-      name: pick.name,
-      code: pick.code,
-      category: pick.category,
-      statusLabel: pick.statusLabel,
-      currentPrice: pick.currentPrice,
-      targetPotential: pick.targetPotential,
-      recentBuyDate: pick.recentBuyDate,
-      currentReturn: pick.currentReturn,
-      totalScore: pick.totalScore
-    })),
-    futuresPicks: (run.futuresPicks ?? []).map((pick) => ({
-      rank: pick.rank,
-      symbol: pick.symbol,
-      name: pick.name,
-      exchange: pick.exchange,
-      sourceName: pick.sourceName,
-      statusLabel: pick.statusLabel,
-      currentValue: pick.currentValue,
-      changeRate: pick.changeRate,
-      observedAtLabel: pick.observedAtLabel,
-      strategyName: pick.strategyName,
-      strategyStatus: pick.strategyStatus,
-      timeframe: pick.timeframe,
-      performancePeriod: pick.performancePeriod,
-      signalLabel: pick.signalLabel,
-      marketState: pick.marketState,
-      confidence: pick.confidence,
-      sourceUrl: pick.sourceUrl,
-      dataReady: pick.dataReady,
-      warnings: pick.warnings
-    })),
-    researchItems: run.researchItems.map((item) => ({
-      symbolCode: item.symbolCode,
-      symbolName: item.symbolName,
-      query: item.query,
-      searchUrl: item.searchUrl,
-      title: item.title,
-      source: item.source,
-      sourceName: item.sourceName ?? null,
-      publishedAt: item.publishedAt,
-      url: item.url,
-      shortSummary: item.shortSummary
-    })),
-    officialDisclosureItems: run.officialDisclosureItems.map((item) => ({
-      symbolCode: item.symbolCode,
-      symbolName: item.symbolName,
-      title: item.title,
-      source: item.source,
-      sourceName: item.sourceName,
-      publishedAt: item.publishedAt,
-      url: item.url,
-      receiptNo: item.receiptNo,
-      shortSummary: item.shortSummary
-    })),
-    prewriteContextItems: run.prewriteContextItems.map((item) => ({
-      kind: item.kind,
-      symbolCode: item.symbolCode ?? null,
-      symbolName: item.symbolName ?? null,
-      title: item.title,
-      summary: item.summary,
-      sourceName: item.sourceName,
-      url: item.url ?? null,
-      publishedAt: item.publishedAt ?? null,
-      confidence: item.confidence
-    })),
-    captures: run.captures.map((capture) => ({
-      id: capture.id,
-      kind: capture.kind,
-      label: capture.label,
-      sourceUrl: capture.sourceUrl,
-      target: capture.target,
-      selectorUsed: capture.selectorUsed,
-      fileName: capture.fileName,
-      mimeType: capture.mimeType,
-      fileSize: capture.fileSize,
-      width: capture.width,
-      height: capture.height,
-      mode: capture.mode,
-      warning: capture.warning,
-      createdAt: capture.createdAt
-    }))
+    sourceType: bundle.sourceType,
+    sourceId: bundle.sourceId,
+    title: bundle.title,
+    insightCount: bundle.insights.length,
+    visualMaterialCount: bundle.visualMaterials.length,
+    provenanceCount: bundle.provenance.length,
+    riskNoteCount: bundle.riskNotes.length,
+    sourceHash: bundle.sourceSnapshot.hash,
+    sourceHashPrefix: bundle.sourceSnapshot.hashPrefix
   };
 }
 
@@ -831,24 +694,6 @@ function findCaptureById(captures: DailyBriefCapture[], id: string | null) {
 
 function compactParts(parts: Array<string | null | undefined>) {
   return parts.filter((part): part is string => Boolean(part && part.trim())).join(" · ");
-}
-
-function toCanonicalValue(value: unknown): unknown {
-  if (value === undefined) {
-    return null;
-  }
-  if (value === null || typeof value !== "object") {
-    return value;
-  }
-  if (Array.isArray(value)) {
-    return value.map((item) => toCanonicalValue(item));
-  }
-  const source = value as Record<string, unknown>;
-  const result: Record<string, unknown> = {};
-  for (const key of Object.keys(source).sort()) {
-    result[key] = toCanonicalValue(source[key]);
-  }
-  return result;
 }
 
 function truncateText(value: string, maxLength: number) {

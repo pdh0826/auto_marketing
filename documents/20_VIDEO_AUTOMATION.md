@@ -15,6 +15,39 @@ It reuses existing Daily Brief run results as read-only input and prepares local
 
 It is not a separate operating service.
 
+## Common Source Pipeline
+
+VIDEO-3 introduces a reusable source pipeline so Daily Brief is not hardwired as the only video domain.
+
+Common contracts:
+
+- `VideoSourceBundle`
+- `VideoSourceSnapshot`
+- `VideoInsight`
+- `VideoVisualMaterial`
+- `VideoScriptPlan`
+- `GenericVideoPackageScaffold`
+
+Adapters:
+
+- `buildDailyBriefVideoSourceBundle(run)`
+- `buildContentItemVideoSourceBundle(contentItem, assets)`
+
+The common source snapshot uses a SHA-256 hash over canonical safe source input. It redacts unsafe flexible values and excludes local paths, asset storage paths, output directories, secret-like markers, and generated artifact bytes.
+
+The common script builder consumes `VideoSourceBundle` insights and risk notes. Daily Brief voiceover now uses this shared script plan instead of a Daily Brief-only narration builder.
+
+The content item adapter is read-only. It accepts an already-loaded content item and optional image asset metadata, extracts title/keyword/source memo/headings/draft snippets, and emits safe image material metadata without `storagePath` or `thumbnailPath`.
+
+The generic package scaffold is intentionally non-publishing:
+
+- `uploadEnabled=false`
+- `platformUploadsEnabled=false`
+- source hash preserved
+- insight/material/script counts exposed
+
+Daily Brief manifests now include `sourceBundle` summary counts so the wizard can show source type, reusable insight count, visual material count, provenance count, and the common source hash.
+
 ## VIDEO-1A Implementation
 
 VIDEO-1A adds the first safe vertical slice:
@@ -419,11 +452,9 @@ Generated files may include:
 
 The voiceover script is deterministic and derived from:
 
-- Daily Brief title/date
-- stock, ETF, and futures picks
-- research and disclosure summaries
-- prewrite context
-- package storyboard/subtitle/card counts
-- investment risk note
+- the common `VideoSourceBundle`
+- Daily Brief title
+- stock, ETF, futures, research, disclosure, and context insights
+- source risk note
 
 VIDEO-2C still does not call external TTS APIs, call LLMs, read secrets, mutate source runs, mutate content items, mutate DB rows, schedule publishing, or upload to any platform.

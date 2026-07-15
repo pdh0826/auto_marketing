@@ -52,7 +52,7 @@ Allowed after VIDEO-2C:
 - documentation
 - type/interface proposal
 - validation checklist
-- deterministic voiceover script generation
+- deterministic voiceover script generation from the common `VideoSourceBundle`
 - local TTS command execution with `say` or `espeak-ng`
 - local audio muxing with `ffmpeg`
 - static tests that prove voiceover remains local-only
@@ -72,15 +72,15 @@ Forbidden after VIDEO-2C:
 Possible local files:
 
 - `voiceover-script.txt`
-- `voiceover.wav` or `voiceover.mp3`
-- `voiceover-report.json`
+- `voiceover.aiff` or `voiceover.wav`
+- `voiceover-render-report.json`
 
 VIDEO-2C may write these files under `local-data/video-automation` only.
 
 `voiceover-script.txt` contract:
 
 - plain UTF-8 text
-- derived only from existing deterministic storyboard/subtitle/card data unless a later approved LLM narration gate exists
+- derived only from the common source bundle and existing deterministic package data unless a later approved LLM narration gate exists
 - no raw news article bodies
 - no secrets, local absolute paths, `storagePath`, provider headers, or tokens
 - includes investment-risk wording consistent with the final video card

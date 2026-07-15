@@ -1,4 +1,5 @@
 import type { DailyBriefRun } from "@/lib/daily-brief/types";
+import type { VideoSourceType } from "./core/types";
 
 export type DailyBriefVideoFileKind =
   | "manifest_json"
@@ -37,13 +38,25 @@ export interface DailyBriefVideoPackageFile {
 }
 
 export interface DailyBriefVideoSourceSnapshot {
-  schemaVersion: "daily_brief_video_source_v1";
+  schemaVersion: "daily_brief_video_source_v1" | "video_source_bundle_v1";
   hashAlgorithm: "sha256";
   hash: string;
   hashPrefix: string;
   canonicalJsonLength: number;
   includedFields: string[];
   excludedFields: string[];
+}
+
+export interface DailyBriefVideoSourceBundleSummary {
+  sourceType: VideoSourceType;
+  sourceId: string;
+  title: string;
+  insightCount: number;
+  visualMaterialCount: number;
+  provenanceCount: number;
+  riskNoteCount: number;
+  sourceHash: string;
+  sourceHashPrefix: string;
 }
 
 export type DailyBriefVideoValidationStatus = "pass" | "warn" | "fail";
@@ -150,6 +163,7 @@ export interface DailyBriefVideoPackageManifest {
   version: "VIDEO-1B";
   generatedAt: string;
   sourceSnapshot: DailyBriefVideoSourceSnapshot;
+  sourceBundle: DailyBriefVideoSourceBundleSummary;
   source: Pick<
     DailyBriefRun,
     | "id"

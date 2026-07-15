@@ -22,6 +22,7 @@ Implemented:
 - VIDEO-1O wizard readback status for full/current/saved source hash, stale state, MP4 artifact, operator checklist, and guard cleanliness.
 - VIDEO-2B audio/narration contract design, voiceover artifact contract, no-call safety guard, and compact wizard local review checklist.
 - VIDEO-2C free local voiceover render with deterministic script, local `say`/`espeak-ng` TTS, ffmpeg audio mux, voiced MP4, upload metadata preparation, and external providers disabled.
+- VIDEO-3A-3H common video source pipeline: reusable source bundle/hash/provenance/insight/material contracts, Daily Brief adapter, content item read-only adapter, common script builder, generic non-upload scaffold, wizard source bundle counts, and expanded safety tests.
 
 Safety:
 
@@ -32,6 +33,8 @@ Safety:
 - Existing content items, scheduler state, and Daily Brief source runs are not mutated by the video package/readback checks.
 - No external service write, token refresh, secret read, DB write, or LLM call is added by the video automation tests.
 - Local voiceover may execute only free local TTS commands and local ffmpeg.
+- Content item video sourcing is adapter-only and read-only; it does not query DB storage or mutate existing content/assets.
+- Common source bundles must exclude local storage paths and redact unsafe flexible values before hashing or serialization.
 - The operating `/Users/pdh0826/blog-growth-agent` repo and 3004 server remain out of scope.
 
 Validation:
@@ -44,8 +47,9 @@ Validation:
 
 Recommended next patch:
 
+- Add a route/UI flow for selecting an existing content item as a video source, still read-only and manual-triggered.
 - Run an operator smoke on a real Daily Brief package where local `say` or `espeak-ng` is installed.
-- Do not implement external TTS or LLM narration until there is separate explicit approval and provider/cost/redaction gates are added.
+- Do not implement external TTS, LLM narration, or platform upload until there is separate explicit approval and provider/cost/redaction gates are added.
 
 ## Futures publication guard
 

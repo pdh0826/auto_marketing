@@ -1,5 +1,24 @@
 # 13_CHANGELOG
 
+## VIDEO-3A-3H Common Video Source Pipeline
+
+Refactored video automation so Daily Brief is one adapter on top of a reusable video source pipeline.
+
+- Added common video source bundle types for source snapshots, provenance, insights, visual materials, risk notes, and generic package scaffolds.
+- Added canonical SHA-256 hashing with redaction for unsafe flexible source values.
+- Moved Daily Brief insight/material extraction into `buildDailyBriefVideoSourceBundle`.
+- Switched voiceover script generation to the common script builder.
+- Added a read-only content item adapter for future videos sourced from existing blog posts and attached image metadata.
+- Added a generic package scaffold that keeps upload flags disabled.
+- Added wizard source bundle counts for operator visibility.
+- Expanded the safety fixture to lock Daily Brief adapter hashes, content item redaction, generic script generation, and disabled upload boundaries.
+
+Safety:
+
+- No Blogger/Tistory publishing, platform upload, scheduler mutation, DB write, Daily Brief mutation, content item mutation, secret read, external service write, or LLM call is added.
+- Content item support is adapter-only and read-only; it accepts already-loaded content/asset metadata and does not query or mutate storage.
+- Asset storage paths and unsafe flexible values are excluded/redacted from emitted source bundles.
+
 ## VIDEO-2C Free Local Voiceover Render
 
 Added local-only voiceover automation for Daily Brief video packages.

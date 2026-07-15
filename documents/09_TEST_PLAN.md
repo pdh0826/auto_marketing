@@ -35,9 +35,16 @@ npm run verify:video-automation
 Expected:
 
 - Daily Brief video package manifest keeps the VIDEO-1B source contract.
+- Daily Brief package source hash comes from the common `video_source_bundle_v1` schema.
+- Daily Brief adapter exposes reusable insights, visual materials, provenance, and risk notes.
+- Daily Brief manifest exposes `sourceBundle` source type, source hash, and insight/material/provenance counts.
 - Source hash is stable when only package generation time changes.
 - Source hash changes when safe Daily Brief source fields change.
 - Saved-package stale hash readback reports `stale=true` when the saved manifest hash differs from the current source hash.
+- Common script builder creates deterministic narration from a `VideoSourceBundle`.
+- Content item adapter creates a safe read-only source bundle from an existing content item plus image asset metadata.
+- Content item source bundle excludes asset storage paths and redacts unsafe flexible source values.
+- Generic video package scaffold preserves source hash and keeps upload flags disabled.
 - Capture `storagePath` and secret-like markers are excluded from emitted manifests.
 - Upload readiness and platform upload enablement remain false.
 - MP4 in the base package remains a render plan boundary, not an upload-ready artifact.

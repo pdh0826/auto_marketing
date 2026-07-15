@@ -35,6 +35,11 @@ require.extensions[".ts"] = function compileTypeScript(module, filename) {
 const { buildDailyBriefVideoPackagePreview } = require("../src/lib/video-automation/daily-brief-package.ts");
 const { readDailyBriefVideoPackage } = require("../src/lib/video-automation/daily-brief-upload-package.ts");
 const { buildDailyBriefVoiceoverScript } = require("../src/lib/video-automation/daily-brief-voiceover-renderer.ts");
+const { buildDailyBriefVideoSourceBundle } = require("../src/lib/video-automation/adapters/daily-brief-source.ts");
+const { buildContentItemVideoSourceBundle } = require("../src/lib/video-automation/adapters/content-item-source.ts");
+const { assertVideoSourceBundleSafe } = require("../src/lib/video-automation/core/source-bundle.ts");
+const { buildGenericVideoPackageScaffold } = require("../src/lib/video-automation/core/package-builder.ts");
+const { buildVideoScriptPlan } = require("../src/lib/video-automation/core/script-builder.ts");
 
 const videoOutputRoot = path.join(projectRoot, "local-data", "video-automation", "daily-brief");
 
@@ -61,6 +66,7 @@ async function main() {
 
   assertEqual(first.manifest.version, "VIDEO-1B", "manifest version should stay at VIDEO-1B");
   assertMatch(first.manifest.sourceSnapshot.hash, /^[a-f0-9]{64}$/, "source hash should be a SHA-256 hex string");
+  assertEqual(first.manifest.sourceSnapshot.schemaVersion, "video_source_bundle_v1", "source hash should come from the common source bundle schema");
   assertEqual(first.manifest.sourceSnapshot.hash, second.manifest.sourceSnapshot.hash, "source hash must ignore generatedAt");
   assertNotEqual(first.manifest.sourceSnapshot.hash, changed.manifest.sourceSnapshot.hash, "source hash must change when safe source fields change");
   assert(first.manifest.sourceSnapshot.canonicalJsonLength > 1000, "canonical source JSON should include meaningful source fields");
@@ -78,6 +84,10 @@ async function main() {
   assertEqual(first.manifest.uploadPackage.platformUploadsEnabled, false, "platform uploads must stay disabled");
   assertEqual(first.manifest.mp4.renderImplemented, false, "base package MP4 render plan must not claim binary rendering");
   assertEqual(first.manifest.mp4.sourceHash, first.manifest.sourceSnapshot.hash, "MP4 render plan must carry the package source hash");
+  assertEqual(first.manifest.sourceBundle.sourceType, "daily_brief", "manifest should expose common source bundle type");
+  assertEqual(first.manifest.sourceBundle.sourceHash, first.manifest.sourceSnapshot.hash, "source bundle summary hash should match source snapshot");
+  assert(first.manifest.sourceBundle.insightCount >= 4, "Daily Brief source bundle should expose reusable insights");
+  assert(first.manifest.sourceBundle.visualMaterialCount >= first.manifest.sourceBundle.insightCount, "Daily Brief source bundle should expose reusable visual materials");
   assertSideEffects(first.manifest.sideEffectSummary, false, "preview manifest");
 
   const validation = first.manifest.validation;
@@ -101,6 +111,7 @@ async function main() {
   assertSideEffects(readback.sideEffectSummary, false, "readback");
 
   await assertStaleReadbackFixture();
+  assertGenericSourcePipeline(first, fixture);
   assertVoiceoverScript(first, fixture);
 
   assertNoForbiddenSourcePatterns();
@@ -149,6 +160,41 @@ async function assertStaleReadbackFixture() {
   } finally {
     await fs.promises.rm(outputDirectory, { recursive: true, force: true });
   }
+}
+
+function assertGenericSourcePipeline(videoPackage, fixture) {
+  const dailyBundle = buildDailyBriefVideoSourceBundle(fixture);
+  assertEqual(dailyBundle.sourceType, "daily_brief", "Daily Brief adapter should identify source type");
+  assertEqual(dailyBundle.sourceSnapshot.hash, videoPackage.manifest.sourceSnapshot.hash, "Daily Brief adapter hash should match package hash");
+  assert(dailyBundle.insights.length >= 4, "Daily Brief adapter should expose reusable insights");
+  assert(dailyBundle.visualMaterials.length >= dailyBundle.insights.length, "Daily Brief adapter should expose reusable visual materials");
+  assert(assertVideoSourceBundleSafe(dailyBundle), "Daily Brief source bundle should be safe to serialize");
+
+  const dailyScaffold = buildGenericVideoPackageScaffold(dailyBundle);
+  assertEqual(dailyScaffold.sourceHash, dailyBundle.sourceSnapshot.hash, "generic scaffold should preserve source hash");
+  assertEqual(dailyScaffold.uploadEnabled, false, "generic scaffold must keep uploads disabled");
+  assertEqual(dailyScaffold.platformUploadsEnabled, false, "generic scaffold must keep platform uploads disabled");
+
+  const dailyScriptPlan = buildVideoScriptPlan(dailyBundle);
+  assertEqual(dailyScriptPlan.sourceHash, dailyBundle.sourceSnapshot.hash, "generic script plan should preserve source hash");
+  assertIncludes(dailyScriptPlan.fullScript, fixture.title, "generic script should include source title");
+  assertIncludes(dailyScriptPlan.fullScript, "투자 조언이 아닙니다", "generic script should include source risk note");
+
+  const contentBundle = buildContentItemVideoSourceBundle(buildFixtureContentItem(), [buildFixtureContentAsset()]);
+  const serializedContentBundle = JSON.stringify(contentBundle);
+  assertEqual(contentBundle.sourceType, "content_item", "content item adapter should identify source type");
+  assertMatch(contentBundle.sourceSnapshot.hash, /^[a-f0-9]{64}$/, "content item source hash should be a SHA-256 hex string");
+  assert(contentBundle.insights.length >= 3, "content item adapter should expose reusable insights");
+  assert(contentBundle.visualMaterials.some((item) => item.kind === "thumbnail" || item.kind === "image"), "content item adapter should expose safe image material metadata");
+  assert(!serializedContentBundle.includes("STORAGE_PATH_SHOULD_NOT_APPEAR"), "content item bundle must not expose asset storage paths");
+  assert(!serializedContentBundle.includes("THUMBNAIL_PATH_SHOULD_NOT_APPEAR"), "content item bundle must not expose asset thumbnail paths");
+  assert(!serializedContentBundle.includes("client_secret"), "content item bundle must redact secret markers from flexible source fields");
+  assert(assertVideoSourceBundleSafe(contentBundle), "content item source bundle should be safe to serialize");
+
+  const contentScaffold = buildGenericVideoPackageScaffold(contentBundle);
+  assertEqual(contentScaffold.sourceHash, contentBundle.sourceSnapshot.hash, "content scaffold should preserve source hash");
+  assertEqual(contentScaffold.uploadEnabled, false, "content scaffold must keep uploads disabled");
+  assertEqual(contentScaffold.platformUploadsEnabled, false, "content scaffold must keep platform uploads disabled");
 }
 
 function buildFixtureRun(id = "daily-video-fixture-2026-07-14") {
@@ -286,6 +332,52 @@ function buildFixtureRun(id = "daily-video-fixture-2026-07-14") {
     warnings: [],
     sideEffectSummary,
     createdAt: "2026-07-14T00:00:00.000Z",
+    updatedAt: "2026-07-14T00:10:00.000Z"
+  };
+}
+
+function buildFixtureContentItem() {
+  return {
+    id: "content-video-source-fixture",
+    blogId: "blog-fixture",
+    brandProfileId: null,
+    mode: "seo_keyword",
+    status: "drafted",
+    title: "블로그 글 기반 영상 자동화 소재",
+    targetKeyword: "영상 자동화",
+    sourceMemo: "블로그 글에서 핵심 인사이트를 뽑아 카드와 대본으로 재사용합니다.",
+    planJson: {
+      angle: "read-only video source",
+      unsafeFlexibleValue: "client_secret_SHOULD_NOT_APPEAR"
+    },
+    draftMarkdown: "## 핵심 인사이트\n블로그 본문은 영상 대사의 공통 소재가 됩니다.\n## 카드 소재\n이미지와 본문 요약을 함께 씁니다.",
+    draftHtml: "<article><h2>핵심 인사이트</h2><p>블로그 본문은 영상 대사의 공통 소재가 됩니다.</p><h2>카드 소재</h2><p>이미지와 본문 요약을 함께 씁니다.</p></article>",
+    qualityScore: 87,
+    scheduledAt: null,
+    publishedAt: null,
+    createdAt: "2026-07-14T00:00:00.000Z",
+    updatedAt: "2026-07-14T00:20:00.000Z"
+  };
+}
+
+function buildFixtureContentAsset() {
+  return {
+    id: "asset-video-source-fixture",
+    contentItemId: "content-video-source-fixture",
+    assetType: "image",
+    fileName: "safe-card-source.png",
+    originalName: "safe-card-source.png",
+    mimeType: "image/png",
+    fileSize: 67890,
+    storagePath: "/tmp/STORAGE_PATH_SHOULD_NOT_APPEAR/safe-card-source.png",
+    thumbnailPath: "/tmp/THUMBNAIL_PATH_SHOULD_NOT_APPEAR/safe-card-source.png",
+    caption: "영상 카드 소재 이미지",
+    altText: "카드뉴스용 시각 소재",
+    userNote: "본문 첫 카드에 사용",
+    placementHint: "intro",
+    sortOrder: 1,
+    isPrimary: true,
+    createdAt: "2026-07-14T00:10:00.000Z",
     updatedAt: "2026-07-14T00:10:00.000Z"
   };
 }
