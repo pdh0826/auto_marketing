@@ -6,6 +6,8 @@ Connected VIDEO-4 source previews to a generic local package generator.
 
 - Added `video_source_package` manifest version `VIDEO-5`.
 - Added generic package cards, storyboard, subtitles, script, cover/card HTML, and MP4 render plan outputs.
+- Added concise subtitle generation rules so subtitle cues contain key points only.
+- Added deterministic text-card image generation as local SVG files for cover/card scenes.
 - Added `POST /api/video-sources/package` with `write=false` preview and `write=true` local package generation.
 - Added `/wizard/video` local package generation controls and file summary.
 - Added safety coverage for source package preview/write, source hash preservation, local-only output path, disabled upload flags, and no secret/LLM/external-write side effects.
@@ -13,6 +15,7 @@ Connected VIDEO-4 source previews to a generic local package generator.
 Safety:
 
 - Package writes are local-only under `local-data/video-automation/sources`.
+- Text-card images are local SVG artifacts under the package `cards/` directory.
 - No Blogger/Tistory publishing, platform upload, scheduler mutation, external service write, secret read, or LLM call is added.
 - Content item package generation may read an existing content item and assets, but does not mutate content or asset rows.
 - Generic MP4 rendering remains plan-only until a separate renderer connection patch.

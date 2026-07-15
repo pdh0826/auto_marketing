@@ -79,6 +79,12 @@ Package route:
 
 `write=false` or omitted returns a package preview. `write=true` writes local package files under `local-data/video-automation/sources`.
 
+VIDEO-5 package writes include concise subtitles and local SVG text-card images:
+
+- `text-card-images.json`
+- `cards/cover.svg`
+- `cards/card-{index}-{cardId}.svg`
+
 No route uploads to external platforms, calls LLM/TTS providers, mutates scheduler state, or publishes content.
 
 ## UI
@@ -97,6 +103,6 @@ The UI shows:
 
 ## Next Steps
 
-- Connect generic source packages to card PNG, MP4, and local voiceover renderers.
+- Convert generic source package SVG cards to PNG/MP4 and connect local voiceover renderers.
 - Add persisted source recipe definitions only after approval and a no-secret storage review.
 - Add real read-only network collection only behind allowlisted domains, bounded snippets, attribution, timeout controls, and tests that block cookies, credentials, and non-GET operations.

@@ -53,6 +53,8 @@ Expected:
 - `/wizard/video` exposes source selection and read-only source preview without package write or upload.
 - VIDEO-5 source package preview preserves source hash and keeps MP4 render as plan-only.
 - VIDEO-5 source package write creates only local files under `local-data/video-automation/sources`.
+- VIDEO-5 source package creates one local SVG text-card image per package card.
+- VIDEO-5 subtitles stay concise with key-point cues of 56 characters or fewer.
 - VIDEO-5 package side-effect summary marks local file write only for package generation and keeps external write, upload, LLM, secret read, and scheduler mutation false.
 - `/wizard/video` can generate a local package from the selected source and shows output directory plus file summary.
 - Capture `storagePath` and secret-like markers are excluded from emitted manifests.

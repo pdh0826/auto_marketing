@@ -7,6 +7,9 @@ export type VideoSourcePackageFileKind =
   | "subtitles_srt"
   | "subtitles_vtt"
   | "script_txt"
+  | "text_card_manifest_json"
+  | "cover_svg"
+  | "card_svg"
   | "card_news_html"
   | "cover_html"
   | "mp4_render_plan_json";
@@ -63,6 +66,30 @@ export interface VideoSourcePackageSubtitleCue {
   text: string;
 }
 
+export interface VideoSourcePackageTextCardImage {
+  kind: "cover_svg" | "card_svg";
+  cardId: string;
+  fileName: string;
+  relativePath: string;
+  width: 1080;
+  height: 1920;
+  format: "svg";
+}
+
+export interface VideoSourcePackageTextCardImagePlan {
+  format: "svg";
+  width: 1080;
+  height: 1920;
+  rules: {
+    titleMaxChars: number;
+    bodyLineMaxChars: number;
+    bodyLineMaxCount: number;
+    subtitleMaxChars: number;
+    subtitleMaxLines: 1;
+  };
+  images: VideoSourcePackageTextCardImage[];
+}
+
 export interface VideoSourcePackageManifest {
   kind: "video_source_package";
   version: "VIDEO-5";
@@ -93,6 +120,7 @@ export interface VideoSourcePackageManifest {
   };
   scriptPlan: VideoScriptPlan;
   cards: VideoSourcePackageCard[];
+  textCardImagePlan: VideoSourcePackageTextCardImagePlan;
   storyboard: VideoSourcePackageStoryboardScene[];
   subtitles: VideoSourcePackageSubtitleCue[];
   mp4: {

@@ -113,6 +113,9 @@ Generated files:
 - `subtitles.srt`
 - `subtitles.vtt`
 - `script.txt`
+- `text-card-images.json`
+- `cards/cover.svg`
+- `cards/card-{index}-{cardId}.svg`
 - `card-news.html`
 - `cover.html`
 - `mp4-render-plan.json`
@@ -124,11 +127,23 @@ The package manifest keeps:
 - source collection summary
 - script plan
 - deterministic cards/storyboard/subtitles
+- concise subtitle cues with key points only
+- text-card image plan and local SVG image artifacts
 - MP4 render plan only
 - upload package with platform uploads disabled
 - local-only side-effect summary
 
-VIDEO-5 still does not render generic PNG cards, generic MP4 binaries, generic voiceover audio, or upload to any platform. Those require a later explicit renderer connection patch.
+VIDEO-5 creates text-card image artifacts as SVG files. It still does not convert generic cards to PNG, render generic MP4 binaries, render generic voiceover audio, or upload to any platform. Those require a later explicit renderer connection patch.
+
+Text-card/subtitle rules:
+
+- text-card image size: `1080x1920`
+- text-card format: SVG
+- title max: 38 characters
+- body line max: 34 characters
+- body line count max: 4
+- subtitle max: 56 characters
+- subtitle lines: 1
 
 ## VIDEO-1A Implementation
 

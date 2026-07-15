@@ -294,6 +294,11 @@ async function assertSourcePackageWrite(sourcePreview, generatedAt) {
   assertEqual(packagePreview.manifest.sideEffectSummary.localFileWrite, false, "source package preview must not write files");
   assert(packagePreview.manifest.cards.some((card) => card.id === "closing-risk-note"), "source package should include closing risk note");
   assert(packagePreview.manifest.files.some((file) => file.kind === "script_txt"), "source package should include script file record");
+  assert(packagePreview.manifest.subtitles.every((subtitle) => subtitle.text.length <= 56), "source package subtitles should be concise key points");
+  assertEqual(packagePreview.manifest.textCardImagePlan.format, "svg", "source package text cards should be generated as image specs");
+  assertEqual(packagePreview.manifest.textCardImagePlan.images.length, packagePreview.manifest.cards.length, "source package should create one text-card image per card");
+  assert(packagePreview.manifest.files.some((file) => file.kind === "cover_svg"), "source package should include cover image record");
+  assert(packagePreview.manifest.files.some((file) => file.kind === "card_svg"), "source package should include card image records");
 
   const written = await writeVideoSourcePackage(sourcePreview, generatedAt);
   assert(written.outputDirectory, "written source package should return output directory");
@@ -310,6 +315,8 @@ async function assertSourcePackageWrite(sourcePreview, generatedAt) {
     assert(written.files.some((file) => file.kind === "storyboard_json" && file.bytes > 0), "written source package should include storyboard bytes");
     assert(written.files.some((file) => file.kind === "subtitles_srt" && file.bytes > 0), "written source package should include subtitles bytes");
     assert(written.files.some((file) => file.kind === "script_txt" && file.bytes > 0), "written source package should include script bytes");
+    assert(written.files.some((file) => file.kind === "cover_svg" && file.bytes > 0), "written source package should include cover image bytes");
+    assert(written.files.some((file) => file.kind === "card_svg" && file.bytes > 0), "written source package should include card image bytes");
     const serialized = JSON.stringify(written.manifest);
     assert(!serialized.includes("client_secret"), "written source package must not include client secret markers");
     assert(!serialized.includes("token.json"), "written source package must not include token markers");
