@@ -9,13 +9,16 @@ on:
       - "scripts/verify_video_automation_safety.mjs"
       - "src/lib/video-automation/**"
       - "src/app/api/daily-brief/runs/**/video-package/**"
+      - "src/app/api/video-sources/**"
       - "src/app/wizard/daily-brief/**"
+      - "src/app/wizard/video/**"
       - "documents/09_TEST_PLAN.md"
       - "documents/13_CHANGELOG.md"
       - "documents/14_NEXT_SESSION_BRIEF.md"
       - "documents/20_VIDEO_AUTOMATION.md"
       - "documents/21_VIDEO_AUDIO_DESIGN.md"
       - "documents/22_VIDEO_OPERATOR_RUNBOOK.md"
+      - "documents/23_VIDEO_SOURCE_COLLECTION.md"
   push:
     branches:
       - "codex/video-automation-v1"
@@ -26,13 +29,16 @@ on:
       - "scripts/verify_video_automation_safety.mjs"
       - "src/lib/video-automation/**"
       - "src/app/api/daily-brief/runs/**/video-package/**"
+      - "src/app/api/video-sources/**"
       - "src/app/wizard/daily-brief/**"
+      - "src/app/wizard/video/**"
       - "documents/09_TEST_PLAN.md"
       - "documents/13_CHANGELOG.md"
       - "documents/14_NEXT_SESSION_BRIEF.md"
       - "documents/20_VIDEO_AUTOMATION.md"
       - "documents/21_VIDEO_AUDIO_DESIGN.md"
       - "documents/22_VIDEO_OPERATOR_RUNBOOK.md"
+      - "documents/23_VIDEO_SOURCE_COLLECTION.md"
 
 jobs:
   verify-video-automation:

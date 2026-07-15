@@ -45,6 +45,12 @@ Expected:
 - Content item adapter creates a safe read-only source bundle from an existing content item plus image asset metadata.
 - Content item source bundle excludes asset storage paths and redacts unsafe flexible source values.
 - Generic video package scaffold preserves source hash and keeps upload flags disabled.
+- VIDEO-4 source collection previews support manual input, existing content item, Daily Brief, site recipe fixture, and generic URL preview.
+- Manual source preview produces deterministic source hash for the same input.
+- Existing content item preview marks DB read but keeps content item/asset mutation and DB write disabled.
+- Site recipe fixture parser validates allowed domains, extracts selector evidence/visual candidates, and performs no network read.
+- Generic URL preview validates URL and keeps automatic network fetch disabled.
+- `/wizard/video` exposes source selection and read-only source preview without package write or upload.
 - Capture `storagePath` and secret-like markers are excluded from emitted manifests.
 - Upload readiness and platform upload enablement remain false.
 - MP4 in the base package remains a render plan boundary, not an upload-ready artifact.
@@ -56,6 +62,7 @@ Expected:
 - Package/readback side-effect summaries keep DB writes, external service writes, Blogger/Tistory writes, platform uploads, scheduler mutation, LLM calls, and secret reads false.
 - Readback guards keep operating repo touch, server 3004 touch, external write routes, scheduler mutation, and secret-read requirement false.
 - Static source scan blocks DB/prisma imports, `process.env` access, secret file references, network `fetch` calls, and enabled external-write flags in video automation code.
+- Static route scan blocks writes, DB mutations, network fetches, secret references, and enabled external-write flags under `/api/video-sources`.
 - Static source scan blocks external audio-provider URLs, provider calls, and enabled external-provider flags.
 - GitHub Actions runs `npm run verify:video-automation` for VIDEO-related path changes.
 

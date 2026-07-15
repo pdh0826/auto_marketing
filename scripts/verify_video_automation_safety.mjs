@@ -40,6 +40,11 @@ const { buildContentItemVideoSourceBundle } = require("../src/lib/video-automati
 const { assertVideoSourceBundleSafe } = require("../src/lib/video-automation/core/source-bundle.ts");
 const { buildGenericVideoPackageScaffold } = require("../src/lib/video-automation/core/package-builder.ts");
 const { buildVideoScriptPlan } = require("../src/lib/video-automation/core/script-builder.ts");
+const { buildManualVideoSourcePreview } = require("../src/lib/video-automation/source-collection/manual-source.ts");
+const { buildContentItemVideoSourcePreview } = require("../src/lib/video-automation/source-collection/content-item-collector.ts");
+const { buildDailyBriefVideoSourcePreview } = require("../src/lib/video-automation/source-collection/daily-brief-collector.ts");
+const { buildSiteRecipeVideoSourcePreview } = require("../src/lib/video-automation/source-collection/site-recipe-source.ts");
+const { buildGenericUrlVideoSourcePreview } = require("../src/lib/video-automation/source-collection/generic-url-source.ts");
 
 const videoOutputRoot = path.join(projectRoot, "local-data", "video-automation", "daily-brief");
 
@@ -112,9 +117,11 @@ async function main() {
 
   await assertStaleReadbackFixture();
   assertGenericSourcePipeline(first, fixture);
+  assertSourceCollectionLayer(first, fixture);
   assertVoiceoverScript(first, fixture);
 
   assertNoForbiddenSourcePatterns();
+  assertVideoSourceRoutesReadOnly();
   assertVoiceoverLocalOnly();
 
   console.log("video_automation_safety_ok");
@@ -195,6 +202,104 @@ function assertGenericSourcePipeline(videoPackage, fixture) {
   assertEqual(contentScaffold.sourceHash, contentBundle.sourceSnapshot.hash, "content scaffold should preserve source hash");
   assertEqual(contentScaffold.uploadEnabled, false, "content scaffold must keep uploads disabled");
   assertEqual(contentScaffold.platformUploadsEnabled, false, "content scaffold must keep platform uploads disabled");
+}
+
+function assertSourceCollectionLayer(videoPackage, fixture) {
+  const collectedAt = "2026-07-14T02:00:00.000Z";
+  const manualPreview = buildManualVideoSourcePreview(
+    {
+      title: "사용자 직접 입력 영상 소재",
+      sourceText: "첫 번째 인사이트는 수집 방식이 여러 개여야 한다는 점입니다. 두 번째 인사이트는 모든 수집 결과가 같은 영상 소스 번들로 합쳐져야 한다는 점입니다.",
+      referenceUrls: ["https://example.com/manual-source"],
+      platformHint: "shortform"
+    },
+    collectedAt
+  );
+  const manualPreviewAgain = buildManualVideoSourcePreview(
+    {
+      title: "사용자 직접 입력 영상 소재",
+      sourceText: "첫 번째 인사이트는 수집 방식이 여러 개여야 한다는 점입니다. 두 번째 인사이트는 모든 수집 결과가 같은 영상 소스 번들로 합쳐져야 한다는 점입니다.",
+      referenceUrls: ["https://example.com/manual-source"],
+      platformHint: "shortform"
+    },
+    collectedAt
+  );
+  assertSourcePreviewBoundary(manualPreview, "manual preview");
+  assertEqual(manualPreview.sourceBundle.sourceType, "manual_collection", "manual source type should be reusable");
+  assertEqual(manualPreview.sourceBundle.sourceSnapshot.hash, manualPreviewAgain.sourceBundle.sourceSnapshot.hash, "manual source hash should be deterministic for same source input");
+  assertIncludes(manualPreview.scriptPlan.fullScript, "사용자 직접 입력 영상 소재", "manual script should include source title");
+
+  const contentPreview = buildContentItemVideoSourcePreview(buildFixtureContentItem(), [buildFixtureContentAsset()], collectedAt);
+  assertSourcePreviewBoundary(contentPreview, "content item preview");
+  assertEqual(contentPreview.collection.sideEffectSummary.dbRead, true, "content item preview should explicitly mark DB read boundary");
+  assertEqual(contentPreview.sourceBundle.sourceType, "content_item", "content item source type should be reusable");
+  assert(!JSON.stringify(contentPreview).includes("STORAGE_PATH_SHOULD_NOT_APPEAR"), "content preview must not expose storage paths");
+  assert(!JSON.stringify(contentPreview).includes("client_secret"), "content preview must redact unsafe flexible values");
+
+  const dailyPreview = buildDailyBriefVideoSourcePreview(fixture, collectedAt);
+  assertSourcePreviewBoundary(dailyPreview, "Daily Brief source preview");
+  assertEqual(dailyPreview.sourceBundle.sourceSnapshot.hash, videoPackage.manifest.sourceSnapshot.hash, "Daily Brief source preview should preserve package hash");
+
+  const sitePreview = buildSiteRecipeVideoSourcePreview({
+    recipe: {
+      id: "fixture-site",
+      name: "Fixture Site",
+      allowedDomains: ["example.com"],
+      sourceUrl: "https://example.com/report",
+      titleSelector: "#video-title",
+      summarySelector: "[data-video-source=\"summary\"]",
+      evidenceSelectors: [".evidence"],
+      visualSelectors: [".visual"],
+      maxSnippetChars: 180,
+      requireAttribution: true
+    },
+    html: [
+      "<main>",
+      "<h1 id=\"video-title\">사이트 Recipe 영상 소재</h1>",
+      "<section data-video-source=\"summary\">요약 영역은 짧은 preview snippet으로만 저장합니다.</section>",
+      "<article class=\"evidence\">첫 번째 근거는 selector fixture에서 추출됩니다.</article>",
+      "<article class=\"evidence\">두 번째 근거도 원문 전체가 아니라 제한된 snippet입니다.</article>",
+      "<img class=\"visual\" src=\"/chart.png\" alt=\"차트 후보\" width=\"1080\" height=\"720\" />",
+      "</main>"
+    ].join("")
+  });
+  assertSourcePreviewBoundary(sitePreview, "site recipe preview");
+  assertEqual(sitePreview.sourceBundle.sourceType, "site_recipe", "site recipe source type should be reusable");
+  assertEqual(sitePreview.collection.sideEffectSummary.networkRead, false, "site recipe fixture parser must not perform network read");
+  assert(sitePreview.collection.evidenceCount >= 2, "site recipe should extract selector evidence");
+  assert(sitePreview.collection.visualCandidateCount >= 1, "site recipe should extract visual candidates");
+
+  const genericPreview = buildGenericUrlVideoSourcePreview({
+    url: "https://example.com/article",
+    title: "일반 URL 영상 소재",
+    excerpt: "일반 URL은 아직 fetch 없이 사용자가 제공한 요약으로 preview만 생성합니다.",
+    collectedAt
+  });
+  assertSourcePreviewBoundary(genericPreview, "generic URL preview");
+  assertEqual(genericPreview.sourceBundle.sourceType, "generic_url", "generic URL source type should be reusable");
+  assertEqual(genericPreview.collection.sideEffectSummary.networkRead, false, "generic URL preview must not fetch network content");
+  assert(genericPreview.readiness.warnings.includes("generic_url_fetch_not_implemented_preview_only"), "generic URL preview should expose fetch-not-implemented warning");
+}
+
+function assertSourcePreviewBoundary(preview, label) {
+  assertEqual(preview.kind, "video_source_preview", `${label} kind mismatch`);
+  assertEqual(preview.version, "VIDEO-4", `${label} version mismatch`);
+  assert(preview.readiness.ready, `${label} should be ready`);
+  assertMatch(preview.sourceBundle.sourceSnapshot.hash, /^[a-f0-9]{64}$/, `${label} source hash should be SHA-256`);
+  assertEqual(preview.packageScaffold.uploadEnabled, false, `${label} uploadEnabled must stay false`);
+  assertEqual(preview.packageScaffold.platformUploadsEnabled, false, `${label} platform uploads must stay false`);
+  assertEqual(preview.collection.safetyPolicy.mode, "read_only_preview", `${label} safety mode mismatch`);
+  assertEqual(preview.collection.safetyPolicy.storeFullBody, false, `${label} must not store full body`);
+  assertEqual(preview.collection.safetyPolicy.externalWriteEnabled, false, `${label} external write must stay disabled`);
+  assertEqual(preview.collection.safetyPolicy.secretReadEnabled, false, `${label} secret read must stay disabled`);
+  assertEqual(preview.collection.safetyPolicy.llmCallEnabled, false, `${label} LLM call must stay disabled`);
+  assertEqual(preview.collection.sideEffectSummary.sourceWrite, false, `${label} sourceWrite must stay false`);
+  assertEqual(preview.collection.sideEffectSummary.dbWrite, false, `${label} dbWrite must stay false`);
+  assertEqual(preview.collection.sideEffectSummary.localFileWrite, false, `${label} localFileWrite must stay false`);
+  assertEqual(preview.collection.sideEffectSummary.externalServiceWrite, false, `${label} externalServiceWrite must stay false`);
+  assertEqual(preview.collection.sideEffectSummary.secretRead, false, `${label} secretRead must stay false`);
+  assertEqual(preview.collection.sideEffectSummary.llmCall, false, `${label} llmCall must stay false`);
+  assertEqual(preview.collection.sideEffectSummary.schedulerMutation, false, `${label} schedulerMutation must stay false`);
 }
 
 function buildFixtureRun(id = "daily-video-fixture-2026-07-14") {
@@ -448,6 +553,24 @@ function assertVoiceoverLocalOnly() {
   ];
 
   for (const file of listVideoAutomationSourceFiles()) {
+    const source = fs.readFileSync(path.join(projectRoot, file), "utf8");
+    for (const item of forbidden) {
+      assert(!item.pattern.test(source), `${file} must not contain ${item.label}`);
+    }
+  }
+}
+
+function assertVideoSourceRoutesReadOnly() {
+  const forbidden = [
+    { pattern: /\bfetch\s*\(/, label: "network fetch" },
+    { pattern: /\b(?:writeFile|appendFile|mkdir|rm|unlink|rmdir)\s*\(/, label: "local file write" },
+    { pattern: /\b(?:create|update|delete|upsert|createMany|updateMany|deleteMany)\s*\(/, label: "database mutation" },
+    { pattern: /process\.env/, label: "environment secret access" },
+    { pattern: /(^|[^a-zA-Z0-9_])(?:\.env|token\.json|credentials\.json|client_secret|[^\s"'`]+\.pem\b|[^\s"'`]+\.key\b)/, label: "secret file references" },
+    { pattern: /youtubeUpload:\s*true|instagramUpload:\s*true|tiktokUpload:\s*true|externalServiceWrite:\s*true|secretRead:\s*true/, label: "enabled external-write flags" }
+  ];
+
+  for (const file of listFiles("src/app/api/video-sources").filter((item) => item.endsWith(".ts"))) {
     const source = fs.readFileSync(path.join(projectRoot, file), "utf8");
     for (const item of forbidden) {
       assert(!item.pattern.test(source), `${file} must not contain ${item.label}`);

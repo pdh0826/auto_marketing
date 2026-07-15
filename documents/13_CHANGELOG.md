@@ -1,5 +1,26 @@
 # 13_CHANGELOG
 
+## VIDEO-4A-4H Source Collection Layer
+
+Added a read-only source collection layer so video automation can start from more than Daily Brief.
+
+- Added `CollectedVideoSource`, evidence, visual candidate, safety policy, side-effect summary, and preview result contracts.
+- Added manual source preview for operator-provided text, links, and visual metadata.
+- Added content item source preview route for read-only existing content item and asset metadata.
+- Added Daily Brief source preview route on the common collection contract.
+- Added site recipe fixture parser with allowlisted domain validation and selector-based extraction.
+- Added generic URL preview guard that does not fetch network content.
+- Added `/wizard/video` for selecting source type and reviewing source hash, counts, safety flags, and script preview.
+- Expanded safety tests for VIDEO-4 source previews and route read-only boundaries.
+- Added `documents/23_VIDEO_SOURCE_COLLECTION.md`.
+
+Safety:
+
+- Preview routes do not write package files, upload, publish, call LLM/TTS providers, mutate scheduler state, or read secrets.
+- Existing content item preview may read DB rows but does not mutate content items or assets.
+- Site recipe and generic URL collectors do not perform network fetches in VIDEO-4.
+- Upload flags remain disabled in the generic scaffold.
+
 ## VIDEO-3A-3H Common Video Source Pipeline
 
 Refactored video automation so Daily Brief is one adapter on top of a reusable video source pipeline.

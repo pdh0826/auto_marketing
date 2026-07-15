@@ -48,6 +48,47 @@ The generic package scaffold is intentionally non-publishing:
 
 Daily Brief manifests now include `sourceBundle` summary counts so the wizard can show source type, reusable insight count, visual material count, provenance count, and the common source hash.
 
+## Source Collection Layer
+
+VIDEO-4 adds source collection before `VideoSourceBundle`.
+
+```text
+manual input / content item / Daily Brief / site recipe fixture / generic URL preview
+→ CollectedVideoSource
+→ VideoSourceBundle
+→ common script and package preparation
+```
+
+Implemented source previews:
+
+- `POST /api/video-sources/manual/preview`
+- `GET /api/video-sources/content-items/[id]/preview`
+- `GET /api/video-sources/daily-brief/[runId]/preview`
+- `POST /api/video-sources/site-recipe/preview`
+- `POST /api/video-sources/generic-url/preview`
+
+Operator UI:
+
+- `/wizard/video`
+
+VIDEO-4 source previews are read-only. They expose bounded evidence snippets, attribution, visual candidate metadata, source hash, package scaffold counts, and script preview.
+
+Safety boundaries:
+
+- no source mutation
+- no content item mutation
+- no DB write
+- no local package file write
+- no network fetch in site recipe or generic URL preview
+- no LLM call
+- no secret read
+- no upload or publish
+- no scheduler mutation
+
+Existing content item preview may perform DB reads to load a content item and its assets. That DB access is isolated to the preview route and tested for no mutation patterns.
+
+See `documents/23_VIDEO_SOURCE_COLLECTION.md`.
+
 ## VIDEO-1A Implementation
 
 VIDEO-1A adds the first safe vertical slice:
