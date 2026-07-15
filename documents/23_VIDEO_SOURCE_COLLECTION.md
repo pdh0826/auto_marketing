@@ -73,7 +73,13 @@ Preview-only routes:
 - `POST /api/video-sources/site-recipe/preview`
 - `POST /api/video-sources/generic-url/preview`
 
-No route writes local package files, uploads to external platforms, calls LLM/TTS providers, mutates scheduler state, or publishes content.
+Package route:
+
+- `POST /api/video-sources/package`
+
+`write=false` or omitted returns a package preview. `write=true` writes local package files under `local-data/video-automation/sources`.
+
+No route uploads to external platforms, calls LLM/TTS providers, mutates scheduler state, or publishes content.
 
 ## UI
 
@@ -91,6 +97,6 @@ The UI shows:
 
 ## Next Steps
 
-- Connect selected source previews to the existing local package generator.
+- Connect generic source packages to card PNG, MP4, and local voiceover renderers.
 - Add persisted source recipe definitions only after approval and a no-secret storage review.
 - Add real read-only network collection only behind allowlisted domains, bounded snippets, attribution, timeout controls, and tests that block cookies, credentials, and non-GET operations.

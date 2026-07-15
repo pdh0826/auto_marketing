@@ -51,6 +51,10 @@ Expected:
 - Site recipe fixture parser validates allowed domains, extracts selector evidence/visual candidates, and performs no network read.
 - Generic URL preview validates URL and keeps automatic network fetch disabled.
 - `/wizard/video` exposes source selection and read-only source preview without package write or upload.
+- VIDEO-5 source package preview preserves source hash and keeps MP4 render as plan-only.
+- VIDEO-5 source package write creates only local files under `local-data/video-automation/sources`.
+- VIDEO-5 package side-effect summary marks local file write only for package generation and keeps external write, upload, LLM, secret read, and scheduler mutation false.
+- `/wizard/video` can generate a local package from the selected source and shows output directory plus file summary.
 - Capture `storagePath` and secret-like markers are excluded from emitted manifests.
 - Upload readiness and platform upload enablement remain false.
 - MP4 in the base package remains a render plan boundary, not an upload-ready artifact.

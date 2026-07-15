@@ -1,5 +1,22 @@
 # 13_CHANGELOG
 
+## VIDEO-5 Source Preview to Local Package
+
+Connected VIDEO-4 source previews to a generic local package generator.
+
+- Added `video_source_package` manifest version `VIDEO-5`.
+- Added generic package cards, storyboard, subtitles, script, cover/card HTML, and MP4 render plan outputs.
+- Added `POST /api/video-sources/package` with `write=false` preview and `write=true` local package generation.
+- Added `/wizard/video` local package generation controls and file summary.
+- Added safety coverage for source package preview/write, source hash preservation, local-only output path, disabled upload flags, and no secret/LLM/external-write side effects.
+
+Safety:
+
+- Package writes are local-only under `local-data/video-automation/sources`.
+- No Blogger/Tistory publishing, platform upload, scheduler mutation, external service write, secret read, or LLM call is added.
+- Content item package generation may read an existing content item and assets, but does not mutate content or asset rows.
+- Generic MP4 rendering remains plan-only until a separate renderer connection patch.
+
 ## VIDEO-4A-4H Source Collection Layer
 
 Added a read-only source collection layer so video automation can start from more than Daily Brief.

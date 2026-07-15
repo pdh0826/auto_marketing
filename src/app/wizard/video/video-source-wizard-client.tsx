@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ApiResult, requestJson } from "@/lib/form-utils";
 import type { VideoSourcePreviewResult } from "@/lib/video-automation/source-collection/types";
+import type { VideoSourcePackageResult } from "@/lib/video-automation/source-package/types";
 
 type SourceMode = "manual" | "content_item" | "daily_brief" | "site_recipe" | "generic_url";
 
@@ -27,6 +28,7 @@ export function VideoSourceWizardClient() {
   const [siteRecipeUrl, setSiteRecipeUrl] = useState("https://example.com/report");
   const [siteRecipeHtml, setSiteRecipeHtml] = useState(SAMPLE_SITE_HTML);
   const [preview, setPreview] = useState<VideoSourcePreviewResult | null>(null);
+  const [sourcePackage, setSourcePackage] = useState<VideoSourcePackageResult | null>(null);
   const [running, setRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -45,18 +47,21 @@ export function VideoSourceWizardClient() {
           })
         });
         setPreview(response.data);
+        setSourcePackage(null);
       } else if (mode === "content_item") {
         if (!contentItemId.trim()) {
           throw new Error("Content item id를 입력하세요.");
         }
         const response = await requestJson<ApiResult<VideoSourcePreviewResult>>(`/api/video-sources/content-items/${contentItemId.trim()}/preview`);
         setPreview(response.data);
+        setSourcePackage(null);
       } else if (mode === "daily_brief") {
         if (!dailyBriefRunId.trim()) {
           throw new Error("Daily Brief run id를 입력하세요.");
         }
         const response = await requestJson<ApiResult<VideoSourcePreviewResult>>(`/api/video-sources/daily-brief/${dailyBriefRunId.trim()}/preview`);
         setPreview(response.data);
+        setSourcePackage(null);
       } else if (mode === "site_recipe") {
         const response = await requestJson<ApiResult<VideoSourcePreviewResult>>("/api/video-sources/site-recipe/preview", {
           method: "POST",
@@ -77,6 +82,7 @@ export function VideoSourceWizardClient() {
           })
         });
         setPreview(response.data);
+        setSourcePackage(null);
       } else {
         const response = await requestJson<ApiResult<VideoSourcePreviewResult>>("/api/video-sources/generic-url/preview", {
           method: "POST",
@@ -87,12 +93,93 @@ export function VideoSourceWizardClient() {
           })
         });
         setPreview(response.data);
+        setSourcePackage(null);
       }
     } catch (previewError) {
       setError(previewError instanceof Error ? previewError.message : "영상 소스 preview 실패");
     } finally {
       setRunning(false);
     }
+  }
+
+  async function generateSourcePackage() {
+    setRunning(true);
+    setError(null);
+    try {
+      const response = await requestJson<ApiResult<VideoSourcePackageResult>>("/api/video-sources/package", {
+        method: "POST",
+        body: JSON.stringify({
+          ...buildPackageRequestPayload(),
+          write: true
+        })
+      });
+      setPreview(response.data.preview);
+      setSourcePackage(response.data);
+    } catch (packageError) {
+      setError(packageError instanceof Error ? packageError.message : "영상 소스 패키지 생성 실패");
+    } finally {
+      setRunning(false);
+    }
+  }
+
+  function buildPackageRequestPayload() {
+    if (mode === "manual") {
+      return {
+        sourceKind: "manual" as const,
+        manual: {
+          title: manualTitle,
+          sourceText: manualText,
+          referenceUrls: manualUrl ? [manualUrl] : [],
+          platformHint: "shortform"
+        }
+      };
+    }
+    if (mode === "content_item") {
+      if (!contentItemId.trim()) {
+        throw new Error("Content item id를 입력하세요.");
+      }
+      return {
+        sourceKind: "content_item" as const,
+        contentItemId: contentItemId.trim()
+      };
+    }
+    if (mode === "daily_brief") {
+      if (!dailyBriefRunId.trim()) {
+        throw new Error("Daily Brief run id를 입력하세요.");
+      }
+      return {
+        sourceKind: "daily_brief" as const,
+        runId: dailyBriefRunId.trim()
+      };
+    }
+    if (mode === "site_recipe") {
+      return {
+        sourceKind: "site_recipe" as const,
+        siteRecipe: {
+          recipe: {
+            id: "operator-defined-site-recipe",
+            name: "Operator Defined Site Recipe",
+            allowedDomains: [new URL(siteRecipeUrl).hostname],
+            sourceUrl: siteRecipeUrl,
+            titleSelector: "#video-title",
+            summarySelector: "[data-video-source=\"summary\"]",
+            evidenceSelectors: [".evidence"],
+            visualSelectors: [".visual"],
+            maxSnippetChars: 420,
+            requireAttribution: true
+          },
+          html: siteRecipeHtml
+        }
+      };
+    }
+    return {
+      sourceKind: "generic_url" as const,
+      genericUrl: {
+        url: genericUrl,
+        title: genericTitle,
+        excerpt: genericExcerpt
+      }
+    };
   }
 
   return (
@@ -183,10 +270,13 @@ export function VideoSourceWizardClient() {
         <button className="button" type="button" disabled={running} onClick={() => void runPreview()}>
           {running ? "Preview 생성 중" : "소스 Preview"}
         </button>
+        <button className="button secondary" type="button" disabled={running} onClick={() => void generateSourcePackage()}>
+          {running ? "처리 중" : "로컬 패키지 생성"}
+        </button>
       </div>
 
       <div className="notice">
-        모든 VIDEO-4 preview는 read-only입니다. 외부 업로드, 발행, scheduler 변경, LLM 호출, secret read는 비활성입니다.
+        VIDEO-5는 선택한 소스를 로컬 패키지 파일로만 연결합니다. 외부 업로드, 발행, scheduler 변경, LLM 호출, secret read는 비활성입니다.
       </div>
       {error ? <div className="notice error">{error}</div> : null}
 
@@ -231,6 +321,53 @@ export function VideoSourceWizardClient() {
             대본 preview
             <textarea readOnly value={preview.scriptPlan.fullScript} />
           </label>
+        </div>
+      ) : null}
+
+      {sourcePackage ? (
+        <div className="read-block">
+          <div className="notice success">
+            로컬 패키지 생성: {sourcePackage.manifest.packageSlug} / output {sourcePackage.outputDirectory ?? "preview-only"}
+          </div>
+          <dl className="detail-grid">
+            <div>
+              <dt>Package</dt>
+              <dd>{sourcePackage.manifest.version}</dd>
+            </div>
+            <div>
+              <dt>Readiness</dt>
+              <dd>{sourcePackage.manifest.readiness.canGeneratePackage ? "ready" : sourcePackage.manifest.readiness.blockingReasons.join(", ")}</dd>
+            </div>
+            <div>
+              <dt>Package counts</dt>
+              <dd>
+                cards {sourcePackage.manifest.cards.length} / scenes {sourcePackage.manifest.storyboard.length} / subtitles{" "}
+                {sourcePackage.manifest.subtitles.length}
+              </dd>
+            </div>
+            <div>
+              <dt>Local write</dt>
+              <dd>{String(sourcePackage.manifest.sideEffectSummary.localFileWrite)}</dd>
+            </div>
+          </dl>
+          <table>
+            <thead>
+              <tr>
+                <th>파일</th>
+                <th>종류</th>
+                <th>크기</th>
+              </tr>
+            </thead>
+            <tbody>
+              {sourcePackage.files.map((file) => (
+                <tr key={`${file.kind}-${file.fileName}`}>
+                  <td>{file.relativePath}</td>
+                  <td>{file.kind}</td>
+                  <td>{file.bytes ?? "pending"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       ) : null}
     </section>

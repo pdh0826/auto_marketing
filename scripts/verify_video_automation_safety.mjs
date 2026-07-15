@@ -45,8 +45,10 @@ const { buildContentItemVideoSourcePreview } = require("../src/lib/video-automat
 const { buildDailyBriefVideoSourcePreview } = require("../src/lib/video-automation/source-collection/daily-brief-collector.ts");
 const { buildSiteRecipeVideoSourcePreview } = require("../src/lib/video-automation/source-collection/site-recipe-source.ts");
 const { buildGenericUrlVideoSourcePreview } = require("../src/lib/video-automation/source-collection/generic-url-source.ts");
+const { buildVideoSourcePackagePreview, writeVideoSourcePackage } = require("../src/lib/video-automation/source-package/package.ts");
 
 const videoOutputRoot = path.join(projectRoot, "local-data", "video-automation", "daily-brief");
+const videoSourceOutputRoot = path.join(projectRoot, "local-data", "video-automation", "sources");
 
 const forbiddenFalseKeys = [
   "dailyBriefRunWrite",
@@ -117,7 +119,7 @@ async function main() {
 
   await assertStaleReadbackFixture();
   assertGenericSourcePipeline(first, fixture);
-  assertSourceCollectionLayer(first, fixture);
+  await assertSourceCollectionLayer(first, fixture);
   assertVoiceoverScript(first, fixture);
 
   assertNoForbiddenSourcePatterns();
@@ -204,7 +206,7 @@ function assertGenericSourcePipeline(videoPackage, fixture) {
   assertEqual(contentScaffold.platformUploadsEnabled, false, "content scaffold must keep platform uploads disabled");
 }
 
-function assertSourceCollectionLayer(videoPackage, fixture) {
+async function assertSourceCollectionLayer(videoPackage, fixture) {
   const collectedAt = "2026-07-14T02:00:00.000Z";
   const manualPreview = buildManualVideoSourcePreview(
     {
@@ -228,6 +230,7 @@ function assertSourceCollectionLayer(videoPackage, fixture) {
   assertEqual(manualPreview.sourceBundle.sourceType, "manual_collection", "manual source type should be reusable");
   assertEqual(manualPreview.sourceBundle.sourceSnapshot.hash, manualPreviewAgain.sourceBundle.sourceSnapshot.hash, "manual source hash should be deterministic for same source input");
   assertIncludes(manualPreview.scriptPlan.fullScript, "사용자 직접 입력 영상 소재", "manual script should include source title");
+  await assertSourcePackageWrite(manualPreview, collectedAt);
 
   const contentPreview = buildContentItemVideoSourcePreview(buildFixtureContentItem(), [buildFixtureContentAsset()], collectedAt);
   assertSourcePreviewBoundary(contentPreview, "content item preview");
@@ -279,6 +282,40 @@ function assertSourceCollectionLayer(videoPackage, fixture) {
   assertEqual(genericPreview.sourceBundle.sourceType, "generic_url", "generic URL source type should be reusable");
   assertEqual(genericPreview.collection.sideEffectSummary.networkRead, false, "generic URL preview must not fetch network content");
   assert(genericPreview.readiness.warnings.includes("generic_url_fetch_not_implemented_preview_only"), "generic URL preview should expose fetch-not-implemented warning");
+}
+
+async function assertSourcePackageWrite(sourcePreview, generatedAt) {
+  const packagePreview = buildVideoSourcePackagePreview(sourcePreview, generatedAt);
+  assertEqual(packagePreview.manifest.version, "VIDEO-5", "source package version should be VIDEO-5");
+  assertEqual(packagePreview.manifest.sourceSnapshot.hash, sourcePreview.sourceBundle.sourceSnapshot.hash, "source package must preserve source hash");
+  assertEqual(packagePreview.manifest.readiness.canUpload, false, "source package upload readiness must stay false");
+  assertEqual(packagePreview.manifest.mp4.renderImplemented, false, "source package MP4 render must stay plan-only");
+  assertEqual(packagePreview.manifest.uploadPackage.platformUploadsEnabled, false, "source package platform upload flag must stay false");
+  assertEqual(packagePreview.manifest.sideEffectSummary.localFileWrite, false, "source package preview must not write files");
+  assert(packagePreview.manifest.cards.some((card) => card.id === "closing-risk-note"), "source package should include closing risk note");
+  assert(packagePreview.manifest.files.some((file) => file.kind === "script_txt"), "source package should include script file record");
+
+  const written = await writeVideoSourcePackage(sourcePreview, generatedAt);
+  assert(written.outputDirectory, "written source package should return output directory");
+  assert(
+    written.outputDirectory.startsWith(`${videoSourceOutputRoot}${path.sep}`),
+    "written source package output directory must stay inside local-data video source path"
+  );
+  try {
+    assertEqual(written.manifest.sideEffectSummary.localFileWrite, true, "written source package should mark localFileWrite=true");
+    assertEqual(written.manifest.sideEffectSummary.externalServiceWrite, false, "written source package must not mark external writes");
+    assertEqual(written.manifest.sideEffectSummary.llmCall, false, "written source package must not call LLM");
+    assertEqual(written.manifest.sideEffectSummary.secretRead, false, "written source package must not read secrets");
+    assert(written.files.some((file) => file.kind === "manifest_json" && file.bytes > 0), "written source package should include manifest bytes");
+    assert(written.files.some((file) => file.kind === "storyboard_json" && file.bytes > 0), "written source package should include storyboard bytes");
+    assert(written.files.some((file) => file.kind === "subtitles_srt" && file.bytes > 0), "written source package should include subtitles bytes");
+    assert(written.files.some((file) => file.kind === "script_txt" && file.bytes > 0), "written source package should include script bytes");
+    const serialized = JSON.stringify(written.manifest);
+    assert(!serialized.includes("client_secret"), "written source package must not include client secret markers");
+    assert(!serialized.includes("token.json"), "written source package must not include token markers");
+  } finally {
+    await fs.promises.rm(written.outputDirectory, { recursive: true, force: true });
+  }
 }
 
 function assertSourcePreviewBoundary(preview, label) {

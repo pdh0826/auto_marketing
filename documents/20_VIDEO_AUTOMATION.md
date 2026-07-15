@@ -89,6 +89,47 @@ Existing content item preview may perform DB reads to load a content item and it
 
 See `documents/23_VIDEO_SOURCE_COLLECTION.md`.
 
+## Generic Source Package
+
+VIDEO-5 connects a selected source preview to a generic local package generator.
+
+Route:
+
+- `POST /api/video-sources/package`
+
+Request behavior:
+
+- `write=false` or omitted returns a package preview only.
+- `write=true` writes local package files under:
+
+```text
+local-data/video-automation/sources/{collectionKind}-{sourceId}-{hashPrefix}/
+```
+
+Generated files:
+
+- `manifest.json`
+- `storyboard.json`
+- `subtitles.srt`
+- `subtitles.vtt`
+- `script.txt`
+- `card-news.html`
+- `cover.html`
+- `mp4-render-plan.json`
+
+The package manifest keeps:
+
+- `version: "VIDEO-5"`
+- common source hash
+- source collection summary
+- script plan
+- deterministic cards/storyboard/subtitles
+- MP4 render plan only
+- upload package with platform uploads disabled
+- local-only side-effect summary
+
+VIDEO-5 still does not render generic PNG cards, generic MP4 binaries, generic voiceover audio, or upload to any platform. Those require a later explicit renderer connection patch.
+
 ## VIDEO-1A Implementation
 
 VIDEO-1A adds the first safe vertical slice:
